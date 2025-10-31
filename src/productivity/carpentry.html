@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carpentry Productivity Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 30px auto;
+      padding: 20px;
+      background: #f4f7f9;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+    }
+    label, select, input, button {
+      display: block;
+      width: 100%;
+      margin-bottom: 12px;
+    }
+    input, select {
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px;
+      background: #2980b9;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #3498db;
+    }
+    #result {
+      margin-top: 20px;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h2>Carpentry Productivity Calculator</h2>
+
+  <label for="projectSize">Project Size:</label>
+  <select id="projectSize">
+    <option value="small">Small (&lt;$50K)</option>
+    <option value="medium">Medium ($50K–$500K)</option>
+    <option value="large">Large (&gt;$500K)</option>
+  </select>
+
+  <label for="region">Region:</label>
+  <select id="region">
+    <option value="lower48">Lower 48</option>
+    <option value="urbanAK">Urban Alaska</option>
+    <option value="ruralAK">Rural Alaska</option>
+    <option value="remoteAK">Remote Alaska</option>
+  </select>
+
+  <label for="task">Task:</label>
+  <select id="task">
+    <option value="framing_sf">Framing (SF)</option>
+    <option value="sheathing_sf">Sheathing (SF)</option>
+    <option value="trim_lf">Trim Installation (LF)</option>
+    <option value="decking_sf">Decking (SF)</option>
+    <option value="drywall_sf">Drywall Install (SF)</option>
+    <option value="siding_sf">Siding Install (SF)</option>
+    <option value="roofing_sf">Roof Framing (SF)</option>
+    <option value="blocking_lf">Blocking & Bracing (LF)</option>
+  </select>
+
+  <label for="units">Quantity of Work Units:</label>
+  <input type="number" id="units" placeholder="Enter quantity (e.g. 1200 SF)">
+
+  <button onclick="calculateProductivity()">Calculate</button>
+
+  <div id="result"></div>
+
+  <script>
+    const baseRates = {
+      framing_sf: 20,
+      sheathing_sf: 25,
+      trim_lf: 14,
+      decking_sf: 22,
+      drywall_sf: 18,
+      siding_sf: 16,
+      roofing_sf: 17,
+      blocking_lf: 12
+    };
+
+    const regionMultipliers = {
+      lower48: 1.0,
+      urbanAK: 0.85,
+      ruralAK: 0.7,
+      remoteAK: 0.55
+    };
+
+    const sizeMultipliers = {
+      small: 0.9,
+      medium: 1.0,
+      large: 1.1
+    };
+
+    function calculateProductivity() {
+      const size = document.getElementById('projectSize').value;
+      const region = document.getElementById('region').value;
+      const task = document.getElementById('task').value;
+      const units = parseFloat(document.getElementById('units').value);
+      const resultDiv = document.getElementById('result');
+
+      if (isNaN(units) || units <= 0) {
+        resultDiv.textContent = 'Please enter a valid quantity.';
+        return;
+      }
+
+      const base = baseRates[task];
+      const adjustedRate = base * regionMultipliers[region] * sizeMultipliers[size];
+      const estimatedHours = units / adjustedRate;
+
+      resultDiv.textContent = `Estimated Labor: ${estimatedHours.toFixed(1)} hrs (based on ${adjustedRate.toFixed(2)} units/hr)`;
+    }
+  </script>
+</body>
+</html>

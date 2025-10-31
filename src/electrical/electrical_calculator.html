@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Electrical Conduit & Wire Estimator</title>
+  <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+  <div class="calculator-container">
+  <h2>Electrical Conduit & Wire Estimator</h2>
+  <label>Number of Devices:
+    <input type="number" id="devices" value="0">
+  </label>
+  <label>
+    Project Type / Industry Standard Spacing:
+    <select id="spacingType" onchange="setSpacing()">
+      <option value="residential">Residential (10 LF)</option>
+      <option value="commercial" selected>Commercial (15 LF)</option>
+      <option value="industrial">Industrial (20 LF)</option>
+      <option value="healthcare">Healthcare (12 LF)</option>
+      <option value="school">School (14 LF)</option>
+      <option value="custom">Custom</option>
+    </select>
+  </label>
+  <label>
+    LF Between Devices:
+    <input type="number" id="spacing" value="15" min="1">
+    <small>(Auto-fills with standard, or override for custom)</small>
+  </label>
+  <button onclick="calculate()">Calculate</button>
+  <div class="result" id="result"></div>
+  <script>
+    function setSpacing() {
+      const type = document.getElementById('spacingType').value;
+      let val = 15; // default for commercial
+      if (type === "residential") val = 10;
+      if (type === "commercial") val = 15;
+      if (type === "industrial") val = 20;
+      if (type === "healthcare") val = 12;
+      if (type === "school") val = 14;
+      if (type === "custom") return; // leave user input alone
+      document.getElementById('spacing').value = val;
+    }
+
+    function calculate() {
+      const devices = parseFloat(document.getElementById('devices').value);
+      const spacing = parseFloat(document.getElementById('spacing').value);
+      const total = devices * spacing;
+
+      const conduit1 = total * 0.20;
+      const conduit3_4 = total * 0.45;
+      const conduit1_2 = total * 0.35;
+
+      const wire8 = conduit1 * 5;
+      const wire10 = conduit3_4 * 5;
+      const wire12 = conduit1_2 * 5;
+
+      document.getElementById('result').innerHTML = `
+        <table>
+          <tr><th>Material</th><th>Estimated Quantity</th><th>Unit</th></tr>
+          <tr><td>1" diameter EMT conduit</td><td>${conduit1.toFixed(2)}</td><td>LF</td></tr>
+          <tr><td>3/4" diameter EMT conduit</td><td>${conduit3_4.toFixed(2)}</td><td>LF</td></tr>
+          <tr><td>1/2" diameter EMT conduit</td><td>${conduit1_2.toFixed(2)}</td><td>LF</td></tr>
+          <tr><td>#8 XHHW conductors</td><td>${wire8.toFixed(2)}</td><td>LF</td></tr>
+          <tr><td>#10 XHHW conductors</td><td>${wire10.toFixed(2)}</td><td>LF</td></tr>
+          <tr><td>#12 XHHW conductors</td><td>${wire12.toFixed(2)}</td><td>LF</td></tr>
+        </table>
+      `;
+    }
+  </script>
+</body>
+</html>

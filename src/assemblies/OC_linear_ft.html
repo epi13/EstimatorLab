@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>On-Center Linear Footage Calculator</title>
+<style>
+    :root {
+        --bg: #0f172a;
+        --panel: #1e293b;
+        --accent: #38bdf8;
+        --text-main: #f8fafc;
+        --text-dim: #94a3b8;
+        --border: #334155;
+        --radius-lg: 1rem;
+        --radius-sm: 0.5rem;
+    }
+
+    body {
+        background-color: var(--bg);
+        color: var(--text-main);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        line-height: 1.4;
+        padding: 2rem;
+        display: flex;
+        justify-content: center;
+    }
+
+    .app-shell {
+        width: 100%;
+        max-width: 900px;
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 1.5rem;
+    }
+
+    @media (max-width: 800px) {
+        .app-shell {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .card {
+        background-color: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.4);
+        padding: 1.25rem 1.5rem;
+    }
+
+    h1 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-main);
+        display: flex;
+        align-items: baseline;
+        gap: .5rem;
+        margin: 0 0 1rem 0;
+    }
+    h1 span {
+        font-size: .8rem;
+        font-weight: 400;
+        color: var(--text-dim);
+    }
+
+    .row {
+        display: grid;
+        grid-template-columns: 1fr 130px;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        align-items: end;
+    }
+
+    .row.long {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .field {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .field label {
+        font-size: .8rem;
+        font-weight: 500;
+        color: var(--text-dim);
+        margin-bottom: .4rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+    }
+
+    .field small {
+        font-size: .7rem;
+        color: var(--text-dim);
+        font-weight: 400;
+    }
+
+    input[type="number"] {
+        width: 100%;
+        background-color: #0f172a;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        color: var(--text-main);
+        font-size: 1rem;
+        padding: .6rem .7rem;
+        font-family: inherit;
+        box-sizing: border-box;
+    }
+
+    input[type="number"]:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 0;
+        border-color: var(--accent);
+    }
+
+    .results-card {
+        border-radius: var(--radius-lg);
+        background: radial-gradient(circle at 20% 20%, rgba(56,189,248,0.16) 0%, rgba(15,23,42,0) 70%);
+        border: 1px solid var(--border);
+        padding: 1rem 1.25rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem 1.5rem;
+        position: relative;
+    }
+
+    @media (max-width: 460px) {
+        .results-card {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .results-card h2 {
+        font-size: .75rem;
+        font-weight: 500;
+        color: var(--text-dim);
+        margin: 0 0 .4rem 0;
+    }
+
+    .results-value {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: var(--text-main);
+        line-height: 1.2;
+        word-break: break-word;
+    }
+
+    .results-sub {
+        font-size: .7rem;
+        color: var(--text-dim);
+        line-height: 1.2;
+        margin-top: .3rem;
+    }
+
+    .diagram-card {
+        position: relative;
+        border-radius: var(--radius-lg);
+        background-color: var(--panel);
+        border: 1px solid var(--border);
+        box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 2px 4px rgba(0,0,0,0.4);
+        padding: 1rem 1rem 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: .75rem;
+        min-height: 360px;
+    }
+
+    .diagram-head {
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+    }
+    .diagram-title {
+        font-size: .8rem;
+        font-weight: 600;
+        color: var(--text-main);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+    }
+    .diagram-hint {
+        font-size: .7rem;
+        color: var(--text-dim);
+        line-height: 1.3;
+    }
+
+    .diagram-wrap {
+        background-color: #0f172a;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        flex: 1;
+        display: grid;
+        place-items: center;
+        position: relative;
+        overflow: hidden;
+        min-height: 220px;
+    }
+
+    svg {
+        width: 90%;
+        max-width: 260px;
+        height: auto;
+    }
+
+    .legend {
+        display: grid;
+        grid-template-columns: 1fr;
+        row-gap: .4rem;
+        font-size: .7rem;
+        color: var(--text-dim);
+    }
+    .legend-line {
+        color: var(--accent);
+        font-weight: 500;
+        font-size: .7rem;
+    }
+
+    .footer-note {
+        font-size: .65rem;
+        line-height: 1.4;
+        color: var(--text-dim);
+        text-align: center;
+        margin-top: .5rem;
+    }
+
+    .accent {
+        color: var(--accent);
+        font-weight: 500;
+    }
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+    <!-- Left column: inputs + results -->
+    <div class="card">
+        <h1>
+            On-Center Linear Foot Calculator
+            <span>Snowmelt / Radiant / Heat Trace takeoff</span>
+        </h1>
+
+        <div class="row long">
+            <div class="field">
+                <label>
+                    <span>Coverage Area</span>
+                    <small>ft²</small>
+                </label>
+                <input type="number" id="areaSqFt" value="500" min="0" step="0.01">
+            </div>
+
+            <div class="field">
+                <label>
+                    <span>On-Center Spacing</span>
+                    <small>inches</small>
+                </label>
+                <input type="number" id="ocInches" value="6" min="0" step="0.01">
+            </div>
+        </div>
+
+        <div class="row long">
+            <div class="field">
+                <label>
+                    <span>Waste / Extra %</span>
+                    <small>optional</small>
+                </label>
+                <input type="number" id="wastePct" value="5" min="0" step="0.1">
+            </div>
+
+            <div class="field">
+                <label>
+                    <span>Round Coil Length</span>
+                    <small>ft (for reference)</small>
+                </label>
+                <input type="number" id="coilLen" value="250" min="0" step="1">
+            </div>
+        </div>
+
+        <div class="results-card" id="resultsCard">
+            <div>
+                <h2>Total Linear Feet</h2>
+                <div class="results-value" id="totalLF">–</div>
+                <div class="results-sub">Without waste. Continuous run length assumed.</div>
+            </div>
+
+            <div>
+                <h2>Total w/ Waste</h2>
+                <div class="results-value" id="totalWithWaste">–</div>
+                <div class="results-sub"><span class="accent" id="wasteUsedPct">0%</span> extra added.</div>
+            </div>
+
+            <div>
+                <h2>LF / ft²</h2>
+                <div class="results-value" id="lfPerSf">–</div>
+                <div class="results-sub">How many linear feet per square foot at this spacing.</div>
+            </div>
+
+            <div>
+                <h2>Coils Needed</h2>
+                <div class="results-value" id="coilsNeeded">–</div>
+                <div class="results-sub">Based on <span class="accent" id="coilLenEcho">250</span> ft coil length.</div>
+            </div>
+        </div>
+
+        <div class="footer-note">
+            Assumptions: straight parallel runs, uniform spacing, rectangular-ish layout.<br/>
+            Good for budgeting radiant tubing, roof heat trace, slab snowmelt cable, etc.
+        </div>
+    </div>
+
+    <!-- Right column: visual -->
+    <div class="diagram-card">
+        <div class="diagram-head">
+            <div class="diagram-title">
+                <span>Layout Preview (Not to scale)</span>
+                <span id="previewDims" style="color:var(--accent);font-weight:500;font-size:.7rem;"></span>
+            </div>
+            <div class="diagram-hint">
+                Parallel runs at fixed on-center spacing. Total LF is basically
+                <span class="accent">(Area ÷ Spacing_ft)</span>.
+                We approximate equivalent rectangle dimensions of your input area.
+            </div>
+        </div>
+
+        <div class="diagram-wrap">
+            <!-- Dynamic SVG -->
+            <svg viewBox="0 0 200 140" id="layoutSVG" aria-label="wire layout diagram">
+                <!-- Rect and lines will be drawn by JS -->
+            </svg>
+        </div>
+
+        <div class="legend">
+            <div><span class="legend-line">▌</span> Heating / trace run</div>
+            <div>OC spacing: <span class="accent" id="legendOC">6 in</span></div>
+            <div>Approx dims: <span class="accent" id="legendDims">–</span></div>
+        </div>
+
+        <div class="footer-note">
+            In the field, tighten for edges/doorways and add extra for terminations.
+        </div>
+    </div>
+</div>
+
+<script>
+(function(){
+
+    const areaInput = document.getElementById('areaSqFt');
+    const ocInput = document.getElementById('ocInches');
+    const wasteInput = document.getElementById('wastePct');
+    const coilInput = document.getElementById('coilLen');
+
+    const totalLFEl = document.getElementById('totalLF');
+    const totalWithWasteEl = document.getElementById('totalWithWaste');
+    const lfPerSfEl = document.getElementById('lfPerSf');
+    const coilsNeededEl = document.getElementById('coilsNeeded');
+    const wasteUsedPctEl = document.getElementById('wasteUsedPct');
+    const coilLenEchoEl = document.getElementById('coilLenEcho');
+
+    const layoutSVG = document.getElementById('layoutSVG');
+    const legendOCEl = document.getElementById('legendOC');
+    const legendDimsEl = document.getElementById('legendDims');
+    const previewDimsEl = document.getElementById('previewDims');
+
+    function calcAndRender(){
+        const areaSqFt = parseFloat(areaInput.value) || 0;
+        const ocIn = parseFloat(ocInput.value) || 0;
+        const wastePct = parseFloat(wasteInput.value) || 0;
+        const coilLen = parseFloat(coilInput.value) || 0;
+
+        // core math:
+        // oc in inches -> feet
+        // lf/ft² = 1 / (oc_ft)
+        // totalLF = areaSqFt * lf/ft²
+        let ocFt = ocIn / 12.0;
+        let lfPerSf = ocFt > 0 ? (1 / ocFt) : 0;
+        let totalLF = areaSqFt * lfPerSf;
+
+        // waste/extra
+        let totalWithWaste = totalLF * (1 + (wastePct/100));
+
+        // coils
+        let coilsNeeded = (coilLen > 0) ? (totalWithWaste / coilLen) : 0;
+
+        // round for display
+        function nice(x){
+            return isFinite(x) ? x.toLocaleString(undefined,{maximumFractionDigits:2}) : "–";
+        }
+
+        totalLFEl.textContent = nice(totalLF);
+        totalWithWasteEl.textContent = nice(totalWithWaste);
+        lfPerSfEl.textContent = nice(lfPerSf);
+        coilsNeededEl.textContent = nice(coilsNeeded);
+
+        wasteUsedPctEl.textContent = nice(wastePct) + "%";
+        coilLenEchoEl.textContent = nice(coilLen);
+
+        // update legend text
+        legendOCEl.textContent = ocIn ? ocIn + " in" : "–";
+
+        // For diagram:
+        // We'll make a pretend rectangle of areaSqFt with an aspect ratio bias ~1.5:1
+        // width_ft * height_ft = areaSqFt
+        // pick width_ft = sqrt(area * 1.5), height_ft = area/width
+        let width_ft = Math.sqrt(areaSqFt * 1.5);
+        let height_ft = (width_ft > 0) ? (areaSqFt / width_ft) : 0;
+
+        // echo dims
+        function dimStr(w,h){
+            if(!isFinite(w) || !isFinite(h)) return "–";
+            return w.toFixed(1) + "ft x " + h.toFixed(1) + "ft";
+        }
+        legendDimsEl.textContent = dimStr(width_ft,height_ft);
+        previewDimsEl.textContent = dimStr(width_ft,height_ft);
+
+        drawRectAndLines(width_ft, height_ft, ocFt);
+    }
+
+    function drawRectAndLines(width_ft, height_ft, oc_ft){
+        // Clear SVG
+        while(layoutSVG.firstChild){
+            layoutSVG.removeChild(layoutSVG.firstChild);
+        }
+
+        // guard
+        if(!(isFinite(width_ft) && isFinite(height_ft) && width_ft>0 && height_ft>0)){
+            return;
+        }
+
+        // We'll fit rectangle into 180x120 inside the 200x140 viewBox
+        const padX = 10;
+        const padY = 10;
+        const maxW = 180;
+        const maxH = 120;
+
+        // scale to fit
+        let scale = Math.min(maxW/width_ft, maxH/height_ft);
+        let drawW = width_ft * scale;
+        let drawH = height_ft * scale;
+
+        // offset so it's centered-ish
+        let offX = (200 - drawW)/2;
+        let offY = (140 - drawH)/2;
+
+        // RECT
+        const rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
+        rect.setAttribute("x", offX.toFixed(2));
+        rect.setAttribute("y", offY.toFixed(2));
+        rect.setAttribute("width", drawW.toFixed(2));
+        rect.setAttribute("height", drawH.toFixed(2));
+        rect.setAttribute("fill", "rgba(15,23,42,0.4)");
+        rect.setAttribute("stroke", "rgba(56,189,248,0.6)");
+        rect.setAttribute("stroke-width", "1.5");
+        layoutSVG.appendChild(rect);
+
+        // draw parallel runs across the short dimension
+        // we'll assume the runs go "vertically" (top to bottom),
+        // spaced along width, every oc_ft.
+        if(oc_ft > 0){
+            let runCount = Math.floor(width_ft / oc_ft) + 1;
+            for(let i=0; i<runCount; i++){
+                let x_ft = i * oc_ft;
+                if(x_ft > width_ft) break;
+                let x_px = offX + x_ft * scale;
+
+                const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+                line.setAttribute("x1", x_px.toFixed(2));
+                line.setAttribute("y1", offY.toFixed(2));
+                line.setAttribute("x2", x_px.toFixed(2));
+                line.setAttribute("y2", (offY+drawH).toFixed(2));
+                line.setAttribute("stroke", "rgba(56,189,248,0.9)");
+                line.setAttribute("stroke-width", "1.2");
+                layoutSVG.appendChild(line);
+            }
+        }
+
+        // dimension labels (simple)
+        // width arrow
+        const wLine = document.createElementNS("http://www.w3.org/2000/svg","line");
+        wLine.setAttribute("x1", offX.toFixed(2));
+        wLine.setAttribute("y1", (offY+drawH+8).toFixed(2));
+        wLine.setAttribute("x2", (offX+drawW).toFixed(2));
+        wLine.setAttribute("y2", (offY+drawH+8).toFixed(2));
+        wLine.setAttribute("stroke", "rgba(148,163,184,0.8)");
+        wLine.setAttribute("stroke-width", "1");
+        layoutSVG.appendChild(wLine);
+
+        // width text
+        const wText = document.createElementNS("http://www.w3.org/2000/svg","text");
+        wText.setAttribute("x", (offX+drawW/2).toFixed(2));
+        wText.setAttribute("y", (offY+drawH+16).toFixed(2));
+        wText.setAttribute("fill", "rgba(148,163,184,0.9)");
+        wText.setAttribute("font-size", "8");
+        wText.setAttribute("text-anchor", "middle");
+        wText.textContent = width_ft.toFixed(1) + " ft";
+        layoutSVG.appendChild(wText);
+
+        // height arrow
+        const hLine = document.createElementNS("http://www.w3.org/2000/svg","line");
+        hLine.setAttribute("x1", (offX+drawW+8).toFixed(2));
+        hLine.setAttribute("y1", offY.toFixed(2));
+        hLine.setAttribute("x2", (offX+drawW+8).toFixed(2));
+        hLine.setAttribute("y2", (offY+drawH).toFixed(2));
+        hLine.setAttribute("stroke", "rgba(148,163,184,0.8)");
+        hLine.setAttribute("stroke-width", "1");
+        layoutSVG.appendChild(hLine);
+
+        // height text
+        const hText = document.createElementNS("http://www.w3.org/2000/svg","text");
+        hText.setAttribute("x", (offX+drawW+14).toFixed(2));
+        hText.setAttribute("y", (offY+drawH/2).toFixed(2));
+        hText.setAttribute("fill", "rgba(148,163,184,0.9)");
+        hText.setAttribute("font-size", "8");
+        hText.setAttribute("dominant-baseline", "middle");
+        hText.textContent = height_ft.toFixed(1) + " ft";
+        layoutSVG.appendChild(hText);
+    }
+
+    // hook inputs
+    [areaInput, ocInput, wasteInput, coilInput].forEach(el=>{
+        el.addEventListener('input', calcAndRender);
+    });
+
+    // initial
+    calcAndRender();
+
+})();
+</script>
+</body>
+</html>

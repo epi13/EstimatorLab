@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculator Hub</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    nav {
+      width: 250px;
+      background: linear-gradient(135deg, #34495e, #2c3e50);
+      color: #ecf0f1;
+      padding: 20px;
+      box-sizing: border-box;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    }
+    nav h1 {
+      font-size: 1.5em;
+      margin-bottom: 1em;
+      text-align: center;
+    }
+    nav ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    nav ul li {
+      margin-bottom: 10px;
+    }
+    nav ul li a {
+      color: #ecf0f1;
+      text-decoration: none;
+      display: block;
+      padding: 10px;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    nav ul li a:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .nav-list > li {
+      margin-bottom: 10px;
+    }
+    .nav-list a, .cat-btn {
+      color: #ecf0f1;
+      text-decoration: none;
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 10px;
+      border: none;
+      background: none;
+      font-size: 1em;
+      cursor: pointer;
+      box-sizing: border-box;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    .nav-list a:hover, .cat-btn:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .sub-list {
+      list-style: none;
+      padding: 0 0 0 15px;
+      margin: 5px 0;
+      display: none;
+    }
+    .category.open > .sub-list {
+      display: block;
+    }
+    .cat-btn::after {
+      content: '\25B6'; /* arrow */
+      float: right;
+      transition: transform 0.3s;
+    }
+    .category.open > .cat-btn::after {
+      transform: rotate(90deg);
+    }
+    #content {
+      flex-grow: 1;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <h1>Calculator Hub</h1>
+    <ul class="nav-list">
+      <li><a href="src/home.html" target="calculatorFrame">Home</a></li>
+      <li><a href="src/search/fuzzy_search.html" target="calculatorFrame">JSON Search</a></li>
+      <li><a href="src/miscellaneous/units.html" target="calculatorFrame">Unit Conversion</a></li>
+
+      
+	<li class="category">
+        <button class="cat-btn" type="button">Take-off</button>
+        <ul class="sub-list">
+	  <li><a href="src/take_off/takeOff.html" target="calculatorFrame">Take Off</a></li>          
+          <li><a href="src/take_off/gridTO.html" target="calculatorFrame">Tables</a></li>
+        </ul>
+      </li>
+
+	<li class="category">
+        <button class="cat-btn" type="button">PDF tools</button>
+        <ul class="sub-list">
+      <li><a href="src/pdf/PDFsearch.html" target="calculatorFrame">PDF Search</a></li>
+      <li><a href="src/pdf/extract.html" target="calculatorFrame">PDF Extractor</a></li>
+      <li><a href="src/pdf/markUp.html" target="calculatorFrame">PDF Mark-Up</a></li>
+      </ul>
+     </li>
+
+      <li class="category">
+        <button class="cat-btn" type="button">Volume</button>
+        <ul class="sub-list">
+          <li><a href="src/volume/cy_from_sfdepth.html" target="calculatorFrame">Cubic Yard from SF</a></li>
+          <li><a href="src/volume/l_w_h.html" target="calculatorFrame">Volume from L×WxH</a></li>
+          <li><a href="src/volume/trench_cy.html" target="calculatorFrame">Trench Excavation Calculator</a></li>
+	  <li><a href="src/volume/wireframe-box.html" target="calculatorFrame">Wire Frame</a></li>
+        </ul>
+      </li>
+
+      <li class="category">
+        <button class="cat-btn" type="button">Area</button>
+        <ul class="sub-list">          
+          <li><a href="src/area/triangle_area.html" target="calculatorFrame">Area of Triangle</a></li>
+      </ul>
+      </li>
+
+      <li class="category">
+        <button class="cat-btn" type="button">Weight</button>
+        <ul class="sub-list">
+          <li><a href="src/weight/fill_weight.html" target="calculatorFrame">Dry Weight Calculator</a></li>
+          <li><a href="src/weight/metal_weight.html" target="calculatorFrame">Metal Weight Calculator</a></li>
+          <li><a href="src/weight/rebar_calculator.html" target="calculatorFrame">Rebar Calculator</a></li>
+          <li><a href="src/weight/machine_weight.html" target="calculatorFrame">Machine Weight</a></li>
+        </ul>
+      </li>
+
+      <li class="category">
+        <button class="cat-btn" type="button">Structural</button>
+        <ul class="sub-list">          
+          <li><a href="src/structural/pan_concrete.html" target="calculatorFrame">Concrete Filled Decking</a></li>
+          <li><a href="src/structural/welding.html" target="calculatorFrame">Welding</a></li>
+      </ul>
+      </li>
+
+      <li class="category">
+        <button class="cat-btn" type="button">Finishes</button>
+        <ul class="sub-list">          
+          <li><a href="src/finishes/coatings.html" target="calculatorFrame">Paint and Coatings</a></li>
+          <li><a href="src/finishes/flooring.html" target="calculatorFrame">Flooring</a></li>
+      </ul>
+      </li>
+
+      <li class="category">
+        <button class="cat-btn" type="button">Electrical</button>
+        <ul class="sub-list">
+          <li><a href="src/electrical/electrical_calculator.html" target="calculatorFrame">Electrical Calculator</a></li>
+          <li><a href="src/electrical/telecom.html" target="calculatorFrame">Network Devices</a></li>
+	  <li><a href="src/electrical/panelboard.html" target="calculatorFrame">Panelboard Pricing</a></li>
+          <li><a href="src/electrical/service.html" target="calculatorFrame">Service Calculator</a></li>
+          <li><a href="src/electrical/light_fixtures.html" target="calculatorFrame">Lighting Fixtures</a></li>
+          <li><a href="src/electrical/fill_and_bend.html" target="calculatorFrame">Conduit fill and bend</a></li>
+        </ul>
+      </li>
+
+      <li class="category">
+        <button class="cat-btn" type="button">Mechanical</button>
+        <ul class="sub-list">          
+          <li><a href="src/mechanical/ducting.html" target="calculatorFrame">Duct Calculator</a></li>
+          <li><a href="src/mechanical/boiler.html" target="calculatorFrame">Boilers</a></li>
+          <li><a href="src/mechanical/ddc.html" target="calculatorFrame">DDC</a></li>
+          <li><a href="src/mechanical/diffuser.html" target="calculatorFrame">Vents and Diffuser</a></li>
+          <li><a href="src/mechanical/exhaust.html" target="calculatorFrame">Exhaust Fans</a></li>
+          <li><a href="src/mechanical/fuel.html" target="calculatorFrame">Fuel Systems</a></li>
+          <li><a href="src/mechanical/gas.html" target="calculatorFrame">Gas Systems</a></li>
+          <li><a href="src/mechanical/HRV.html" target="calculatorFrame">HRV Calculator</a></li>
+          <li><a href="src/mechanical/septic.html" target="calculatorFrame">Septic System</a></li>
+        </ul>
+      </li>
+
+      <li class="category">
+        <button class="cat-btn" type="button">Fire</button>
+        <ul class="sub-list">          
+          <li><a href="src/fire/alarm.html" target="calculatorFrame">Fire Alarm</a></li>
+          <li><a href="src/fire/suppression.html" target="calculatorFrame">Fire Suppression</a></li>
+        </ul>
+      </li>
+
+      <li class="category">
+        <button class="cat-btn" type="button">Assemblies</button>
+        <ul class="sub-list">
+          <li><a href="src/assemblies/doors.html" target="calculatorFrame">Door Calculator</a></li>
+	  <li><a href="src/assemblies/resilient_channel_calculator.html" target="calculatorFrame">Resilent Channel Calculator</a></li>
+          <li><a href="src/assemblies/insulation.html" target="calculatorFrame">Insulation</a></li>
+          <li><a href="src/assemblies/pemb.html" target="calculatorFrame">PEMB</a></li>  
+          <li><a href="src/assemblies/OC_linear_ft.html" target="calculatorFrame">OC_LF</a></li>  
+        </ul>
+      </li>
+
+      <li class="category">
+        <button class="cat-btn" type="button">Logistics</button>
+        <ul class="sub-list">          
+          <li><a href="src/logistics/freight.html" target="calculatorFrame">Freight</a></li>
+          <li><a href="src/logistics/gen_req.html" target="calculatorFrame">General Requirments</a></li>
+          <li><a href="src/logistics/labor.html" target="calculatorFrame">Labor</a></li>
+        </ul>
+      </li>
+
+      <li class="category">
+        <button class="cat-btn" type="button">Productivity</button>
+        <ul class="sub-list">
+          <li><a href="src/productivity/carpentry.html" target="calculatorFrame">Carpentry Productivity</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+  <div id="content">
+    <iframe name="calculatorFrame" src="src/home.html"></iframe>
+  </div>
+  <script>
+    document.querySelectorAll('.cat-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        btn.parentElement.classList.toggle('open');
+      });
+    });
+  </script>
+</body>
+</html>

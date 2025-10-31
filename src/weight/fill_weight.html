@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Material Weight Calculator</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: auto; padding: 20px; }
+    label, select, input { display: block; margin-top: 10px; width: 100%; padding: 5px; }
+    .output { margin-top: 20px; font-size: 1.2em; }
+    .history { margin-top: 20px; background: #f0f0f0; padding: 10px; border: 1px solid #ccc; font-size: 0.9em; }
+    .description { margin-top: 10px; font-style: italic; color: #555; }
+  </style>
+</head>
+<body>
+  <h2>Bulk Material Weight Calculator</h2>
+
+  <label for="material">Select Material:</label>
+  <select id="material" onchange="updateDescription(); calculate()">
+    <option value="topsoil">Topsoil</option>
+    <option value="nfs">NFS Fill</option>
+    <option value="d1">D1</option>
+    <option value="e1">E1</option>
+    <option value="pea_gravel">Pea Gravel</option>
+    <option value="sand">Sand</option>
+    <option value="septic_rock">Septic Rock</option>
+    <option value="unclassified">Unclassified Fill</option>
+    <option value="mulch">Mulch</option>
+    <option value="concrete">Concrete</option>
+    <option value="asphalt">Asphalt</option>
+    <option value="riprap">Riprap</option>
+  </select>
+
+  <div class="description" id="description"></div>
+
+  <label for="moisture">Condition:</label>
+  <select id="moisture" onchange="calculate()">
+    <option value="dry">Dry</option>
+    <option value="moist">Moist</option>
+  </select>
+
+  <label for="unit">Volume Unit:</label>
+  <select id="unit" onchange="calculate()">
+    <option value="yd3">Cubic Yards (yd³)</option>
+    <option value="ft3">Cubic Feet (ft³)</option>
+    <option value="m3">Cubic Meters (m³)</option>
+  </select>
+
+  <label for="volume">Enter Volume:</label>
+  <input type="number" id="volume" step="any" oninput="calculate()">
+
+  <div class="output">
+    <h3 id="result">Weight: —</h3>
+  </div>
+
+  <div class="history" id="history">History:<br></div>
+
+  <script>
+    const materials = {
+      topsoil:        { dry: 1.2, moist: 1.4, desc: "Nutrient-rich soil often used for landscaping and gardens." },
+      nfs:            { dry: 1.4, moist: 1.6, desc: "Non-Frost Susceptible - compactable soil used for backfill and grading." },
+      d1:             { dry: 1.6, moist: 1.7, desc: "Gravel with fines used for base layers in roads and pads." },
+      e1:             { dry: 1.55, moist: 1.65, desc: "Engineered fill often used for structural backfill." },
+      pea_gravel:     { dry: 1.5, moist: 1.55, desc: "Small rounded stones used for drainage or landscaping." },
+      sand:           { dry: 1.5, moist: 1.6, desc: "Fine granular material used in concrete and leveling." },
+      septic_rock:    { dry: 1.7, moist: 1.75, desc: "Washed gravel used in septic systems for drainage." },
+      unclassified:   { dry: 1.6, moist: 1.7, desc: "General purpose fill with unknown composition." },
+      mulch:          { dry: 0.5, moist: 0.6, desc: "Organic ground cover used in landscaping." },
+      concrete:       { dry: 2.4, moist: 2.5, desc: "Hardened concrete broken for recycling or as fill." },
+      asphalt:        { dry: 2.2, moist: 2.3, desc: "Recycled or broken asphalt used for road base or patch." },
+      riprap:         { dry: 1.8, moist: 1.85, desc: "Large angular stone used for erosion control." }
+    };
+
+    function updateDescription() {
+      const mat = document.getElementById("material").value;
+      document.getElementById("description").innerText = materials[mat].desc;
+    }
+
+    function calculate() {
+      const mat = document.getElementById("material").value;
+      const volume = parseFloat(document.getElementById("volume").value);
+      const unit = document.getElementById("unit").value;
+      const condition = document.getElementById("moisture").value;
+      const resultDiv = document.getElementById("result");
+      if (isNaN(volume) || volume <= 0) {
+        resultDiv.innerText = "Weight: —";
+        return;
+      }
+      let yd3 = volume;
+      if (unit === "ft3") yd3 = volume / 27;
+      if (unit === "m3") yd3 = volume * 1.30795;
+      const tons = yd3 * materials[mat][condition];
+      resultDiv.innerText = `Weight: ${tons.toFixed(2)} tons`;
+      addToHistory(mat, volume, unit, tons, condition);
+    }
+
+    function addToHistory(material, volume, unit, weight, condition) {
+      const names = {
+        topsoil: "Topsoil", nsf: "NSF Fill", d1: "D1", e1: "E1", pea_gravel: "Pea Gravel",
+        sand: "Sand", septic_rock: "Septic Rock", unclassified: "Unclassified Fill",
+        mulch: "Mulch", concrete: "Concrete", asphalt: "Asphalt", riprap: "Riprap"
+      };
+      const line = document.createElement("div");
+      line.innerText = `${names[material]} (${condition}) — ${volume} ${unit} = ${weight.toFixed(2)} tons`;
+      document.getElementById("history").appendChild(line);
+    }
+
+    // Initialize
+    updateDescription();
+  </script>
+</body>
+</html>

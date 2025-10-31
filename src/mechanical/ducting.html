@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ductwork Take-Off & Budget Calculator (AK) — Materials + PDF OCR (Fixed)</title>
+<style>
+  :root{
+    --bg:#0f1115;--card:#171a21;--muted:#a9b0bc;--accent:#7bd389;--warn:#ffd166;--err:#ef476f;--line:#242a33;
+  }
+  html,body{background:var(--bg);color:#e9edf3;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0}
+  *,*::before,*::after{box-sizing:border-box}
+  h1{font-size:1.25rem;margin:16px 12px}
+  .wrap{max-width:1260px;margin:0 auto;padding:12px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+  label{font-size:.85rem;color:var(--muted);display:block;margin-bottom:4px}
+  input,select,textarea,button{
+    background:#0c0f14;color:#e9edf3;border:1px solid var(--line);border-radius:10px;
+    padding:8px 10px;font-size:.95rem;outline:none;max-width:100%
+  }
+  input:focus,select:focus,textarea:focus{border-color:#3a4353;box-shadow:0 0 0 2px #3a435355}
+  input.num{width:110px}
+  input.size{width:140px}
+  select.compact{width:140px}
+  button{cursor:pointer}
+  button.primary{background:var(--accent);color:#0b0d10;border:0;font-weight:600}
+  button.ghost{background:transparent}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#0d1219;border:1px solid var(--line);font-size:.75rem;color:#b7bfc9}
+  .mini{font-size:.8rem;color:var(--muted)}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+  .nowrap{white-space:nowrap}
+  .hidden{display:none !important}
+
+  /* Responsive table shell */
+  .table-wrap{width:100%;overflow:auto;border:1px solid var(--line);border-radius:12px}
+  table{width:max(1320px,100%);border-collapse:collapse}
+  thead th, tbody td, tfoot td{
+    border-bottom:1px solid var(--line);padding:8px;vertical-align:middle;
+    font-variant-numeric:tabular-nums
+  }
+  thead th{color:#b7bfc9;font-size:.82rem;text-align:right}
+  tbody td, tfoot td{text-align:right}
+  td:first-child, th:first-child{text-align:left}
+  .tight td{padding:6px}
+  .btn-cell{min-width:44px}
+  .cost-col.hidden, .demo-col.hidden{display:none}
+  .progress{height:8px;background:#0c0f14;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .progress > div{height:100%;background:var(--accent);width:0%}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Ductwork Take-Off & Budget Calculator (Alaska) — Materials + PDF OCR</h1>
+
+    <!-- Global Settings -->
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>Auto-Gauge Mode</label>
+          <select id="autoMode" class="compact">
+            <option value="perimeter">Perimeter-based</option>
+            <option value="smacna" selected>SMACNA by Pressure Class</option>
+          </select>
+        </div>
+        <div>
+          <label>Pressure Class</label>
+          <select id="pressClass" class="compact">
+            <option value="+2">+2 in.wg</option>
+            <option value="-2">-2 in.wg</option>
+            <option value="+3">+3 in.wg</option>
+            <option value="+4" selected>+4 in.wg</option>
+            <option value="+6">+6 in.wg</option>
+          </select>
+          <div class="mini">Also drives Auto Labor</div>
+        </div>
+        <div>
+          <label>Mech. Labor Rate ($/hr)</label>
+          <input type="number" id="laborRate" value="92" step="1" class="num" />
+          <div class="mini">Anchorage default</div>
+        </div>
+        <div>
+          <label>Labor Unit Default (hr/LF)</label>
+          <input type="number" id="laborUnit" value="0.22" step="0.01" class="num" />
+        </div>
+        <div>
+          <label>Waste Factor (%)</label>
+          <input type="number" id="wastePct" value="10" step="1" class="num" />
+        </div>
+        <div>
+          <label>Shipping (%)</label>
+          <input type="number" id="shipPct" value="12" step="1" class="num" />
+        </div>
+        <div>
+          <label>Handling (%)</label>
+          <input type="number" id="handPct" value="5" step="1" class="num" />
+        </div>
+        <div>
+          <label>Remote Add (%)</label>
+          <input type="number" id="remotePct" value="15" step="1" class="num" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label><input type="checkbox" id="applyRemote" checked /> Apply Remote Add (%)</label>
+        </div>
+        <div>
+          <label><input type="checkbox" id="demoMode" /> Demolition / Removal mode</label>
+          <div class="mini">Focus on LBS and optional disposal cost</div>
+        </div>
+        <div id="demoInputs" class="hidden">
+          <label>Disposal Rate ($/lb)</label>
+          <input type="number" id="dispPerLb" value="0.15" step="0.01" class="num" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="pill">Material Pricing ($/lb)</div>
+        <div>
+          <label>Galvanized</label>
+          <input type="number" id="priceGalv" value="1.50" step="0.01" class="num" />
+        </div>
+        <div>
+          <label>Stainless</label>
+          <input type="number" id="priceSS" value="3.90" step="0.01" class="num" />
+        </div>
+        <div>
+          <label>Aluminum</label>
+          <input type="number" id="priceAl" value="2.75" step="0.01" class="num" />
+        </div>
+        <div>
+          <label>Black steel</label>
+          <input type="number" id="priceBlk" value="1.45" step="0.01" class="num" />
+        </div>
+      </div>
+
+      <div class="mini">
+        Area = <span class="mono">perimeter(in)/12 × LF</span> (rect) or <span class="mono">πD/12 × LF</span> (round).
+        Weight = area × (base-gauge lb/sf × material factor + liner lb/sf + adders) + LF × (adders lb/LF) + joints × (flange lb/joint).
+      </div>
+    </div>
+
+    <!-- Paste + PDF OCR -->
+    <div class="row">
+      <div class="card" style="flex:1 1 560px">
+        <div class="pill">Paste Blueprint Text</div>
+        <label class="mini">e.g., “78/28 SA, 24/18 RA, Ø18 SA …”</label>
+        <div class="row">
+          <textarea id="paste" rows="4" style="flex:1 1 420px" placeholder="Paste schedule/notes here…"></textarea>
+          <div>
+            <label>&nbsp;</label>
+            <button class="primary" id="extract">Extract ➜ Rows</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1 1 560px">
+        <div class="pill">Upload PDF & Auto-Extract (Text + OCR)</div>
+        <div class="row">
+          <div>
+            <label>PDF file</label>
+            <input type="file" id="pdfFile" accept="application/pdf" />
+          </div>
+          <div>
+            <label>Pages (e.g., 1-3 or 2,5)</label>
+            <input type="text" id="pdfPages" class="size" placeholder="blank = all" />
+          </div>
+          <div>
+            <label>Max pages</label>
+            <input type="number" id="pdfMax" value="5" min="1" class="num" />
+          </div>
+          <div>
+            <label>OCR DPI</label>
+            <input type="number" id="pdfDpi" value="160" step="10" class="num" />
+          </div>
+          <div>
+            <label>&nbsp;</label>
+            <button class="primary" id="runPdf">Run Extract</button>
+          </div>
+        </div>
+        <div class="mini" id="pdfStatus">No PDF processed.</div>
+        <div class="progress"><div id="pdfProg"></div></div>
+      </div>
+    </div>
+
+    <!-- Round → Rect helper -->
+    <div class="card">
+      <div class="pill">Round → Rect (Equal Area)</div>
+      <div class="row">
+        <div>
+          <label>Round Diameter (in)</label>
+          <input type="number" id="rr_diam" value="18" step="0.1" class="num">
+        </div>
+        <div>
+          <label>Aspect Ratio (W:H)</label>
+          <input type="text" id="rr_aspect" value="2:1" class="size" />
+          <div class="mini">Use 1:1 for square</div>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="primary" id="rr_calc">Compute</button>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="ghost" id="rr_add">+ Add to Rows</button>
+        </div>
+      </div>
+      <div id="rr_out" class="mini mono"></div>
+    </div>
+
+    <!-- Line Items -->
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div class="pill">Line Items</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="primary" id="addRow">+ Add Row</button>
+          <button class="ghost" id="exportCsv">Export CSV</button>
+          <button class="ghost" id="reset">Clear All</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Size (in)</th>
+              <th>LF</th>
+              <th>Material</th>
+              <th>Gauge</th>
+              <th>Auto G</th>
+              <th>Unit Labor (hr/LF)</th>
+              <th>Auto Labor</th>
+              <th>Liner</th>
+              <th>+ lb/sf</th>
+              <th>+ lb/LF</th>
+              <th>Flange</th>
+              <th>Joint Spacing (ft)</th>
+              <th class="nowrap">Perim (in)</th>
+              <th class="nowrap">Area (sf)</th>
+              <th class="nowrap">Weight (lb)</th>
+              <th class="nowrap cost-col">Material $</th>
+              <th class="nowrap cost-col">Ship/Hand $</th>
+              <th class="nowrap cost-col">Labor $</th>
+              <th class="nowrap demo-col hidden">Disposal $</th>
+              <th class="nowrap">Total $</th>
+              <th class="btn-cell"></th>
+            </tr>
+          </thead>
+          <tbody id="body"></tbody>
+          <tfoot>
+            <tr class="tight">
+              <td colspan="13" class="mini">Totals</td>
+              <td id="tPerim" class="mono"></td>
+              <td id="tArea" class="mono"></td>
+              <td id="tWeight" class="mono"></td>
+              <td id="tMat" class="mono cost-col"></td>
+              <td id="tShip" class="mono cost-col"></td>
+              <td id="tLabor" class="mono cost-col"></td>
+              <td id="tDisp" class="mono demo-col hidden"></td>
+              <td id="tTotal" class="mono" style="font-weight:700;color:var(--accent)"></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="mini">
+        Base gauge lb/sf (Galv.): 26ga 0.903 | 24ga 1.219 | 22ga 1.500 | 20ga 1.875 | 18ga 2.344 | 16ga 2.969.  
+        Material factors: Galv=1.00, Stainless≈1.02, Aluminum≈0.35, Black steel≈1.00 (edit pricing above as needed).
+      </div>
+    </div>
+  </div>
+
+<!-- ✅ PDF.js UMD (3.x) so window.pdfjsLib exists -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha512-Ir5k6qV9f7MJ6MZbGqStsF3tqZcQWnQxQkJY+GyTpdC9jPQKj5V+No2B3X4Q4+0b5jLC5VuYQjC+9C9wP7oKMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  } else {
+    console.error("PDF.js failed to load — pdfjsLib is undefined.");
+  }
+</script>
+
+<!-- ✅ Tesseract.js (OCR fallback) -->
+<script src="https://unpkg.com/tesseract.js@5.0.3/dist/tesseract.min.js"></script>
+
+<script>
+(function(){
+  // ---------- Constants ----------
+  const GAUGE_LB_SF = { "26":0.903, "24":1.219, "22":1.500, "20":1.875, "18":2.344, "16":2.969 };
+
+  // Material factors (multiplier on base galvanized lb/sf)
+  const MATERIALS = {
+    "Galvanized": { factor: 1.00, priceKey: "priceGalv" },
+    "Stainless":  { factor: 1.02, priceKey: "priceSS" },
+    "Aluminum":   { factor: 0.35, priceKey: "priceAl" },
+    "Black":      { factor: 1.00, priceKey: "priceBlk" }
+  };
+
+  // Liner presets (lb/sf)
+  const LINER_LB_SF = { "none":0.0, '1"':0.15, '1.5"':0.19, '2"':0.25 };
+
+  // Pressure-class-based labor (hr/LF) — baseline budgetary
+  const LABOR_HR_PER_LF_PC = { "+2":0.18, "-2":0.18, "+3":0.20, "+4":0.22, "+6":0.26 };
+  const SIZE_BUMP_PER_IN = 0.0006; // add to hr/LF: bump * (perimeter in)
+
+  // Flange systems: per joint material & labor adders
+  const FLANGE = {
+    "none": { lb_per_joint:0.0, hr_per_joint:0.00 },
+    "S&D":  { lb_per_joint:1.5, hr_per_joint:0.05 },
+    "TDC":  { lb_per_joint:2.5, hr_per_joint:0.08 },
+    "TDF":  { lb_per_joint:3.0, hr_per_joint:0.10 }
+  };
+
+  // Perimeter-based auto-gauge (fallback)
+  function autoGaugePerimeter(perimIn){
+    if (perimIn <= 60) return "26";
+    if (perimIn <= 90) return "24";
+    if (perimIn <= 130) return "22";
+    if (perimIn <= 170) return "20";
+    if (perimIn <= 210) return "18";
+    return "16";
+  }
+
+  // Simplified SMACNA-style gauge by pressure class and short side (in)
+  function smacnaGauge(pressClass, shortSideIn){
+    const pc = String(pressClass);
+    let g;
+    if (pc === "+2" || pc === "-2") {
+      if (shortSideIn <= 20) g = "26";
+      else if (shortSideIn <= 30) g = "24";
+      else if (shortSideIn <= 40) g = "22";
+      else if (shortSideIn <= 60) g = "20";
+      else g = "18";
+    } else if (pc === "+3" || pc === "+4") {
+      if (shortSideIn <= 20) g = "24";
+      else if (shortSideIn <= 30) g = "22";
+      else if (shortSideIn <= 40) g = "20";
+      else if (shortSideIn <= 60) g = "18";
+      else g = "16";
+    } else { // +6 and higher
+      if (shortSideIn <= 20) g = "22";
+      else if (shortSideIn <= 30) g = "20";
+      else if (shortSideIn <= 40) g = "18";
+      else g = "16";
+    }
+    return g;
+  }
+
+  // ---------- Helpers ----------
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  function currency(x){ return isFinite(x) ? x.toLocaleString(undefined,{style:'currency',currency:'USD'}) : ""; }
+  function fixed(x,d=2){ return isFinite(x) ? x.toLocaleString(undefined,{maximumFractionDigits:d}) : ""; }
+
+  function parseSize(str, type){
+    const s = (str||"").trim();
+    if(!s) return null;
+    if(type === "round"){
+      const m = s.match(/(\d+(\.\d+)?)/);
+      if(!m) return null;
+      return { type:"round", d: parseFloat(m[1]) };
+    }
+    const m = s.match(/(\d+(\.\d+)?)\s*(?:[xX\/])\s*(\d+(\.\d+)?)/);
+    if(!m) return null;
+    return { type:"rect", w: parseFloat(m[1]), h: parseFloat(m[3]) };
+  }
+  function perimeterIn(parsed){
+    if(!parsed) return 0;
+    if(parsed.type==="rect") return 2*((parsed.w||0)+(parsed.h||0));
+    if(parsed.type==="round") return Math.PI*(parsed.d||0);
+    return 0;
+  }
+  function shortSideIn(parsed){
+    if(!parsed) return 0;
+    if(parsed.type==="rect") return Math.min(parsed.w||0, parsed.h||0);
+    if(parsed.type==="round") return parsed.d||0;
+    return 0;
+  }
+
+  function readGlobals(){
+    return {
+      autoMode: $("#autoMode").value,
+      pressClass: $("#pressClass").value,
+      wastePct: (parseFloat($("#wastePct").value)||0)/100,
+      shipPct: (parseFloat($("#shipPct").value)||0)/100,
+      handPct: (parseFloat($("#handPct").value)||0)/100,
+      remotePct: (parseFloat($("#remotePct").value)||0)/100,
+      laborRate: parseFloat($("#laborRate").value)||0,
+      laborUnitDefault: parseFloat($("#laborUnit").value)||0,
+      applyRemote: $("#applyRemote").checked,
+      demoMode: $("#demoMode").checked,
+      dispPerLb: parseFloat($("#dispPerLb").value)||0,
+      priceGalv: parseFloat($("#priceGalv").value)||0,
+      priceSS:   parseFloat($("#priceSS").value)||0,
+      priceAl:   parseFloat($("#priceAl").value)||0,
+      priceBlk:  parseFloat($("#priceBlk").value)||0
+    };
+  }
+
+  function pricePerLbFor(material, G){
+    const key = MATERIALS[material]?.priceKey || "priceGalv";
+    return G[key] ?? G.priceGalv;
+  }
+  function materialFactor(material){
+    return MATERIALS[material]?.factor ?? 1.0;
+  }
+
+  // ---------- Row UI ----------
+  const body = $("#body");
+  function rowTemplate(){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <select class="type compact">
+          <option value="rect">Rect</option>
+          <option value="round">Round</option>
+        </select>
+      </td>
+      <td><input class="size size" placeholder="24/18 or 18 (Ø)" /></td>
+      <td><input class="lf num" type="number" min="0" step="0.01" value="0"></td>
+
+      <td>
+        <select class="material compact">
+          <option>Galvanized</option>
+          <option>Stainless</option>
+          <option>Aluminum</option>
+          <option>Black</option>
+        </select>
+      </td>
+
+      <td>
+        <select class="gauge compact">
+          <option value="26">26</option><option value="24">24</option>
+          <option value="22">22</option><option value="20">20</option>
+          <option value="18">18</option><option value="16">16</option>
+        </select>
+      </td>
+      <td><label class="mini"><input type="checkbox" class="autoG" checked> Auto</label></td>
+
+      <td><input class="laborUnit num" type="number" step="0.01"></td>
+      <td><label class="mini"><input type="checkbox" class="autoLabor" checked> Auto</label></td>
+
+      <td>
+        <select class="liner compact">
+          <option value="none">None</option>
+          <option value='1"'>1"</option>
+          <option value='1.5"'>1.5"</option>
+          <option value='2"'>2"</option>
+        </select>
+      </td>
+      <td><input class="addLbSf num" type="number" step="0.01" value="0"></td>
+      <td><input class="addLbLf num" type="number" step="0.01" value="0"></td>
+
+      <td>
+        <select class="flange compact">
+          <option value="none">None</option>
+          <option value="S&D">S&amp;D</option>
+          <option value="TDC">TDC</option>
+          <option value="TDF">TDF</option>
+        </select>
+      </td>
+      <td><input class="jointFt num" type="number" step="0.1" value="5"></td>
+
+      <td class="perim mono"></td>
+      <td class="area mono"></td>
+      <td class="weight mono"></td>
+      <td class="mat mono cost-col"></td>
+      <td class="ship mono cost-col"></td>
+      <td class="labor mono cost-col"></td>
+      <td class="disp mono demo-col hidden"></td>
+      <td class="total mono"></td>
+      <td class="btn-cell"><button class="ghost del">✕</button></td>
+    `;
+    return tr;
+  }
+
+  function addRow(prefill){
+    const tr = rowTemplate();
+    body.appendChild(tr);
+
+    const G = readGlobals();
+    tr.querySelector(".laborUnit").value = G.laborUnitDefault;
+
+    if(prefill){
+      tr.querySelector(".type").value = prefill.type || "rect";
+      tr.querySelector(".size").value = prefill.size || "";
+      if(prefill.lf != null) tr.querySelector(".lf").value = prefill.lf;
+      if(prefill.material) tr.querySelector(".material").value = prefill.material;
+      if(prefill.gauge) tr.querySelector(".gauge").value = prefill.gauge;
+    }
+
+    bindRow(tr);
+    recalc();
+  }
+
+  function bindRow(tr){
+    tr.addEventListener("input", recalc);
+    tr.querySelector(".del").addEventListener("click", ()=>{ tr.remove(); recalc(); });
+    tr.querySelector(".type").addEventListener("change", ()=>{
+      tr.querySelector(".size").placeholder =
+        (tr.querySelector(".type").value === "round") ? "Diameter (e.g., 18)" : "24/18 or 24x18";
+      recalc();
+    });
+  }
+
+  // ---------- Totals + Recalc ----------
+  const totals = {
+    perim: $("#tPerim"), area: $("#tArea"), weight: $("#tWeight"),
+    mat: $("#tMat"), ship: $("#tShip"), labor: $("#tLabor"), disp: $("#tDisp"), total: $("#tTotal")
+  };
+
+  function recalc(){
+    const G = readGlobals();
+
+    // toggle demo vs cost columns
+    $$(".cost-col").forEach(el=> el.classList.toggle("hidden", G.demoMode));
+    $$(".demo-col").forEach(el=> el.classList.toggle("hidden", !G.demoMode));
+    $("#demoInputs").classList.toggle("hidden", !G.demoMode);
+
+    let tPerim=0, tArea=0, tWeight=0, tMat=0, tShip=0, tLabor=0, tDisp=0, tTotal=0;
+
+    $$("#body tr").forEach(tr=>{
+      const type = tr.querySelector(".type").value;
+      const sizeStr = tr.querySelector(".size").value;
+      const lf = parseFloat(tr.querySelector(".lf").value)||0;
+
+      const material = tr.querySelector(".material").value;
+      const matFactor = materialFactor(material);
+
+      const autoG = tr.querySelector(".autoG").checked;
+      const gSel = tr.querySelector(".gauge").value;
+
+      const autoLabor = tr.querySelector(".autoLabor").checked;
+      let unitHr = parseFloat(tr.querySelector(".laborUnit").value)||0;
+
+      const linerKey = tr.querySelector(".liner").value;
+      const addLbSf = parseFloat(tr.querySelector(".addLbSf").value)||0;
+      const addLbLf = parseFloat(tr.querySelector(".addLbLf").value)||0;
+
+      const flangeKey = tr.querySelector(".flange").value;
+      const jointFt = Math.max(0.1, parseFloat(tr.querySelector(".jointFt").value)||5);
+      const joints = lf>0 ? (lf / jointFt) : 0;
+
+      let perimIn=0, areaSf=0, weightLb=0, matCost=0, shipCost=0, laborCost=0, dispCost=0, total=0;
+
+      const parsed = parseSize(sizeStr, type);
+      if(parsed && lf>0){
+        perimIn = perimeterIn(parsed);
+        const waste = 1 + (G.wastePct||0);
+        areaSf = (perimIn/12) * lf * waste;
+
+        // Gauge
+        let gUse = gSel;
+        if(autoG){
+          if(G.autoMode === "smacna") gUse = smacnaGauge(G.pressClass, shortSideIn(parsed));
+          else gUse = autoGaugePerimeter(perimIn);
+          tr.querySelector(".gauge").title = `Auto → ${gUse}ga`;
+        } else {
+          tr.querySelector(".gauge").title = '';
+        }
+
+        // Auto Labor by pressure class (+ size bump)
+        if(autoLabor){
+          unitHr = (LABOR_HR_PER_LF_PC[G.pressClass] ?? G.laborUnitDefault) + (SIZE_BUMP_PER_IN * perimIn);
+          tr.querySelector(".laborUnit").value = unitHr.toFixed(3);
+          tr.querySelector(".laborUnit").title = `Auto from ${G.pressClass} + size bump`;
+        } else {
+          tr.querySelector(".laborUnit").title = '';
+        }
+
+        // Weight calc
+        const lbPerSfMetalBase = GAUGE_LB_SF[gUse] || 0;       // galvanized base
+        const lbPerSfMetal = lbPerSfMetalBase * matFactor;     // adjust for material
+        const lbPerSfLiner = LINER_LB_SF[linerKey] ?? 0;
+        const lbPerSfTotal = lbPerSfMetal + lbPerSfLiner + addLbSf;
+
+        const flange = FLANGE[flangeKey] || FLANGE.none;
+        const flangeLb = joints * flange.lb_per_joint;
+        const flangeHr = joints * flange.hr_per_joint;
+
+        weightLb = areaSf * lbPerSfTotal + (lf * addLbLf) + flangeLb;
+
+        if(!G.demoMode){
+          const priceLb = pricePerLbFor(material, G);
+          matCost = weightLb * priceLb;
+          shipCost = matCost * (G.shipPct + G.handPct);
+          if(G.applyRemote) shipCost += (matCost + shipCost) * G.remotePct;
+
+          laborCost = (lf * unitHr + flangeHr) * G.laborRate;
+          total = matCost + shipCost + laborCost;
+        } else {
+          dispCost = weightLb * G.dispPerLb;
+          total = dispCost;
+        }
+      }
+
+      tr.querySelector(".perim").textContent = perimIn ? fixed(perimIn) : "";
+      tr.querySelector(".area").textContent  = areaSf ? fixed(areaSf)  : "";
+      tr.querySelector(".weight").textContent= weightLb ? fixed(weightLb):"";
+
+      if(!G.demoMode){
+        tr.querySelector(".mat").textContent   = matCost ? currency(matCost):"";
+        tr.querySelector(".ship").textContent  = shipCost? currency(shipCost):"";
+        tr.querySelector(".labor").textContent = laborCost?currency(laborCost):"";
+        tr.querySelector(".disp").textContent  = "";
+      } else {
+        tr.querySelector(".mat").textContent   = "";
+        tr.querySelector(".ship").textContent  = "";
+        tr.querySelector(".labor").textContent = "";
+        tr.querySelector(".disp").textContent  = dispCost?currency(dispCost):"";
+      }
+      tr.querySelector(".total").textContent = total?currency(total):"";
+
+      tPerim += perimIn||0;
+      tArea  += areaSf||0;
+      tWeight+= weightLb||0;
+      if(!G.demoMode){
+        tMat   += matCost||0;
+        tShip  += shipCost||0;
+        tLabor += laborCost||0;
+      } else {
+        tDisp  += (dispCost||0);
+      }
+      tTotal += total||0;
+    });
+
+    totals.perim.textContent = fixed(tPerim);
+    totals.area.textContent  = fixed(tArea);
+    totals.weight.textContent= fixed(tWeight);
+    if(!readGlobals().demoMode){
+      totals.mat.textContent   = currency(tMat);
+      totals.ship.textContent  = currency(tShip);
+      totals.labor.textContent = currency(tLabor);
+      totals.disp.textContent  = "";
+    } else {
+      totals.mat.textContent   = "";
+      totals.ship.textContent  = "";
+      totals.labor.textContent = "";
+      totals.disp.textContent  = currency(tDisp);
+    }
+    totals.total.textContent = currency(tTotal);
+  }
+
+  // ---------- Extract from pasted text ----------
+  $("#extract").addEventListener("click", ()=>{
+    const text = $("#paste").value||"";
+    const found = extractDuctTokens(text);
+    if(found.length===0){ alert("No sizes detected. Try patterns like 24/18, 24x18, Ø18."); return; }
+    found.forEach(it => addRow({ type: it.type, size: it.size, lf: 0 }));
+  });
+
+  function extractDuctTokens(text){
+    const found = [];
+    const uniq = new Set();
+
+    // Rectangular: 24/18, 24x18
+    const rectRe = /(\d+(?:\.\d+)?)\s*(?:[xX\/])\s*(\d+(?:\.\d+)?)/g;
+    let m;
+    while((m = rectRe.exec(text))!==null){
+      const key = `${m[1]}/${m[2]}`;
+      const tag = JSON.stringify({type:"rect", size:key});
+      if(!uniq.has(tag)){ uniq.add(tag); found.push({type:"rect", size:key}); }
+    }
+
+    // Round: Ø18, DIA 18
+    for (const mm of text.matchAll(/Ø\s*(\d+(?:\.\d+)?)/g)){
+      const tag = JSON.stringify({type:"round", size:mm[1]});
+      if(!uniq.has(tag)){ uniq.add(tag); found.push({type:"round", size:mm[1]}); }
+    }
+    for (const mm of text.matchAll(/(?:\bDIA\.?\s*|\bDIAM\.?\s*)(\d+(?:\.\d+)?)/gi)){
+      const tag = JSON.stringify({type:"round", size:mm[1]});
+      if(!uniq.has(tag)){ uniq.add(tag); found.push({type:"round", size:mm[1]}); }
+    }
+    return found;
+  }
+
+  // ---------- PDF: parse page list ----------
+  function parsePageSpec(spec, total){
+    if(!spec) return [...Array(total).keys()].map(i=>i+1);
+    const parts = spec.split(/[,\s]+/).filter(Boolean);
+    const pages = new Set();
+    for(const p of parts){
+      const m = p.match(/^(\d+)-(\d+)$/);
+      if(m){
+        let a = parseInt(m[1],10), b = parseInt(m[2],10);
+        if(a>b) [a,b]=[b,a];
+        for(let i=a;i<=b;i++){ if(i>=1 && i<=total) pages.add(i); }
+      }else{
+        const k = parseInt(p,10);
+        if(k>=1 && k<=total) pages.add(k);
+      }
+    }
+    return [...pages];
+  }
+
+  // ---------- PDF: extract text & OCR fallback ----------
+  $("#runPdf").addEventListener("click", async ()=>{
+    const file = $("#pdfFile").files?.[0];
+    if(!file){ alert("Choose a PDF first."); return; }
+    if(!window.pdfjsLib){ alert("PDF.js failed to load. Check your connection or script includes."); return; }
+
+    const maxPages = Math.max(1, parseInt($("#pdfMax").value||"5",10));
+    const dpi = Math.max(72, parseInt($("#pdfDpi").value||"160",10));
+
+    $("#pdfStatus").textContent = "Loading PDF…";
+    $("#pdfProg").style.width = "0%";
+
+    try{
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+      const pageNums = parsePageSpec($("#pdfPages").value, pdf.numPages).slice(0, maxPages);
+      if(pageNums.length===0){ pageNums.push(1); }
+
+      let totalFound = 0, processed = 0;
+      for (const pn of pageNums){
+        processed++;
+        $("#pdfStatus").textContent = `Processing page ${pn} of ${pdf.numPages}…`;
+        $("#pdfProg").style.width = `${Math.round((processed/pageNums.length)*100)}%`;
+
+        const page = await pdf.getPage(pn);
+        let text = "";
+        try{
+          const tc = await page.getTextContent({normalizeWhitespace:true, disableCombineTextItems:false});
+          text = tc.items.map(it=>it.str).join(" ");
+        }catch(e){ /* ignore */ }
+
+        let hits = extractDuctTokens(text);
+        if(hits.length===0){
+          // OCR fallback
+          const scale = dpi/72;
+          const viewport = page.getViewport({scale});
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          const ctx = canvas.getContext("2d");
+          const renderTask = page.render({canvasContext: ctx, viewport});
+          await renderTask.promise;
+
+          const { data:{ text: ocrText } } = await Tesseract.recognize(canvas, 'eng', { logger:()=>{} });
+          hits = extractDuctTokens(ocrText);
+        }
+
+        hits.forEach(it=>{
+          addRow({ type: it.type, size: it.size, lf: 0 });
+          totalFound++;
+        });
+      }
+
+      $("#pdfStatus").textContent = totalFound>0
+        ? `Done. Added ${totalFound} line items from PDF.`
+        : `No duct tags found in selected pages. Try raising DPI or expanding page range.`;
+      $("#pdfProg").style.width = "100%";
+    }catch(err){
+      console.error(err);
+      $("#pdfStatus").textContent = "PDF processing failed (see console).";
+    }
+  });
+
+  // ---------- Round → Rect ----------
+  function equalAreaRect(diam, aspectStr){
+    const area = Math.PI * (diam*diam) / 4; // in^2
+    const m = (aspectStr||"1:1").match(/^\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\s*$/);
+    let a=1,b=1; if(m){ a=parseFloat(m[1]); b=parseFloat(m[2]); }
+    const ratio = a/b;
+    const H = Math.sqrt(area/ratio), W = ratio*H;
+    return {W,H};
+  }
+  $("#rr_calc").addEventListener("click", ()=>{
+    const d = parseFloat($("#rr_diam").value)||0;
+    const ar = $("#rr_aspect").value||"1:1";
+    if(d<=0){ $("#rr_out").textContent = "Enter a valid diameter."; return; }
+    const {W,H} = equalAreaRect(d, ar);
+    $("#rr_out").textContent = `Equal-area rectangle ≈ ${W.toFixed(1)} / ${H.toFixed(1)} in (to match Ø${d})`;
+  });
+  $("#rr_add").addEventListener("click", ()=>{
+    const d = parseFloat($("#rr_diam").value)||0;
+    const ar = $("#rr_aspect").value||"1:1";
+    if(d<=0) return;
+    const {W,H} = equalAreaRect(d, ar);
+    addRow({ type:"rect", size: `${W.toFixed(1)}/${H.toFixed(1)}`, lf: 0 });
+  });
+
+  // ---------- CSV ----------
+  $("#exportCsv").addEventListener("click", ()=>{
+    const headers = [
+      "Type","Size(in)","LF","Material","Gauge","AutoG","UnitHr/LF","AutoLabor",
+      "Liner","Add_lb_sf","Add_lb_LF","Flange","JointFt",
+      "Perimeter(in)","Area(sf)","Weight(lb)","Material($)","Ship/Hand($)","Labor($)","Disposal($)","Total($)"
+    ];
+    const lines = $$("#body tr").map(tr=>{
+      const txt = sel => (tr.querySelector(sel)?.textContent||"").trim();
+      const val = sel => (tr.querySelector(sel)?.value ?? "").toString().trim();
+      const cost = s => txt(s).replace(/[$,]/g,"");
+      return [
+        val(".type"), val(".size"), val(".lf"), val(".material"), val(".gauge"),
+        tr.querySelector(".autoG").checked ? "Y":"N",
+        val(".laborUnit"), tr.querySelector(".autoLabor").checked ? "Y":"N",
+        val(".liner"), val(".addLbSf"), val(".addLbLf"), val(".flange"), val(".jointFt"),
+        txt(".perim"), txt(".area"), txt(".weight"),
+        cost(".mat"), cost(".ship"), cost(".labor"), cost(".disp"), cost(".total")
+      ].join(",");
+    });
+    const csv = headers.join(",")+"\n"+lines.join("\n");
+    const blob = new Blob([csv],{type:"text/csv;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href=url; a.download="duct_takeoff_materials_ocr.csv"; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // ---------- Add / Clear / Globals ----------
+  $("#addRow").addEventListener("click", ()=>addRow());
+  $("#reset").addEventListener("click", ()=>{ $("#body").innerHTML=""; recalc(); });
+  ["#autoMode","#pressClass","#wastePct","#shipPct","#handPct","#remotePct","#laborRate","#laborUnit","#applyRemote","#demoMode","#dispPerLb",
+   "#priceGalv","#priceSS","#priceAl","#priceBlk"]
+    .forEach(id => $(id).addEventListener("input", recalc));
+
+  // Seed one row and initial calc
+  addRow();
+})();
+</script>
+</body>
+</html>

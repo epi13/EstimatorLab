@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Trench Excavation & Bedding Calculator</title>
+  <link rel="stylesheet" href="../style.css">
+  <style>
+    .calculator-container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 1em;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #f9f9f9;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    label { font-weight: 600; }
+    label span { font-weight: 400; color: #555; }
+    input, select {
+      width: 100%;
+      margin-top: 6px;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    button { margin-top: 12px; padding: 10px 14px; }
+    #warning {
+      background-color: #fff3cd;
+      border: 1px solid #ffeeba;
+      padding: 10px;
+      margin-top: 16px;
+      border-radius: 5px;
+      color: #856404;
+      font-size: 0.9em;
+    }
+    .result-block {
+      background: white;
+      border: 1px solid #e5e5e5;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 16px;
+    }
+    .muted { color:#666; font-size: 0.9em; }
+    .assumptions { margin-top: 8px; }
+    .assumptions li { margin-left: 18px; }
+  </style>
+</head>
+<body>
+  <div class="calculator-container">
+    <h2>Trench Excavation & Bedding Calculator</h2>
+
+    <div class="grid">
+      <div>
+        <label for="diameter">Pipe Diameter (inches)</label>
+        <input type="number" id="diameter" placeholder="e.g. 12" />
+      </div>
+
+      <div>
+        <label for="depth">Trench Depth (ft) <span>(finish grade to trench bottom)</span></label>
+        <input type="number" step="0.01" id="depth" placeholder="e.g. 3" />
+      </div>
+
+      <div>
+        <label for="length">Trench Length (ft)</label>
+        <input type="number" step="0.01" id="length" placeholder="e.g. 100" />
+      </div>
+
+      <div>
+        <label for="method">Excavation Type</label>
+        <select id="method">
+          <option value="sloped">Sloped (2:1 standard)</option>
+          <option value="straight">Straight-walled</option>
+        </select>
+      </div>
+    </div>
+
+    <h3 style="margin-top:16px;">Bedding & Tape Settings (optional)</h3>
+    <div class="grid">
+      <div>
+        <label for="beddingUnder">Bedding Under Pipe (in)</label>
+        <input type="number" id="beddingUnder" value="6" />
+      </div>
+      <div>
+        <label for="sideClear">Side Clearance Each Side (in) <span>(for bedding envelope)</span></label>
+        <input type="number" id="sideClear" value="6" />
+      </div>
+      <div>
+        <label for="initialCover">Initial Backfill Above Crown (in)</label>
+        <input type="number" id="initialCover" value="12" />
+      </div>
+      <div>
+        <label for="aggTonsPerYd">Aggregate Density (tons/yd³)</label>
+        <input type="number" step="0.01" id="aggTonsPerYd" value="1.50" />
+      </div>
+      <div>
+        <label for="tapeRollLen">Marking Tape Roll Length (ft)</label>
+        <input type="number" id="tapeRollLen" value="1000" />
+      </div>
+      <div>
+        <label for="tapeWaste">Marking Tape Waste (%)</label>
+        <input type="number" id="tapeWaste" value="10" />
+      </div>
+    </div>
+
+    <button onclick="calculateTrench()">Calculate</button>
+
+    <div id="result"></div>
+
+    <div id="warning">
+      ⚠️ <strong>OSHA Trench Safety Note:</strong><br>
+      Trenches deeper than 5 feet require a protective system unless made entirely in stable rock. Sloped trenches at a 2:1 ratio (horizontal:vertical) are standard for Type C soils. Always consult OSHA 29 CFR 1926 Subpart P for compliance.
+    </div>
+  </div>
+
+  <script>
+    function toYd3(ft3){ return ft3 / 27; }
+    function tonsFromYd3(yd3, tPerYd){ return yd3 * tPerYd; }
+
+    function calculateTrench() {
+      const diameterIn = parseFloat(document.getElementById('diameter').value);
+      const depthFt    = parseFloat(document.getElementById('depth').value);
+      const lengthFt   = parseFloat(document.getElementById('length').value);
+      const method     = document.getElementById('method').value;
+
+      const beddingUnderIn = parseFloat(document.getElementById('beddingUnder').value);
+      const sideClearIn    = parseFloat(document.getElementById('sideClear').value);
+      const initialCoverIn = parseFloat(document.getElementById('initialCover').value);
+      const aggTonsPerYd   = parseFloat(document.getElementById('aggTonsPerYd').value);
+
+      const tapeRollLenFt  = parseFloat(document.getElementById('tapeRollLen').value);
+      const tapeWastePct   = parseFloat(document.getElementById('tapeWaste').value);
+
+      const resultDiv = document.getElementById('result');
+
+      if ([diameterIn, depthFt, lengthFt].some(v => isNaN(v) || v <= 0)) {
+        resultDiv.innerHTML = '<div class="result-block">Please enter valid positive numbers for diameter, depth, and length.</div>';
+        return;
+      }
+      if ([beddingUnderIn, sideClearIn, initialCoverIn, aggTonsPerYd, tapeRollLenFt, tapeWastePct].some(v => isNaN(v) || v < 0)) {
+        resultDiv.innerHTML = '<div class="result-block">Check optional settings — values cannot be negative.</div>';
+        return;
+      }
+
+      const diameterFt     = diameterIn / 12.0;
+      const beddingUnderFt = beddingUnderIn / 12.0;
+      const sideClearFt    = sideClearIn / 12.0;
+      const initialCoverFt = initialCoverIn / 12.0;
+
+      // --- Excavation Volume ---
+      let excavationFt3 = 0;
+      if (method === 'sloped') {
+        const baseWidth = diameterFt;
+        const topWidth  = baseWidth + 4 * depthFt; // 2:1 slope each side
+        const crossSectionArea = ((topWidth + baseWidth) / 2) * depthFt;
+        excavationFt3 = crossSectionArea * lengthFt;
+      } else { // straight
+        const trenchWidth = diameterFt * 1.5; // simple buffer
+        excavationFt3 = trenchWidth * depthFt * lengthFt;
+      }
+      const excavationYd3 = toYd3(excavationFt3);
+
+      // --- Bedding Envelope Width (used for bedding + initial backfill material) ---
+      // Envelope width = pipe OD + side clearance each side
+      const beddingEnvelopeWidthFt = diameterFt + 2 * sideClearFt;
+
+      // --- Bedding Material (standard) ---
+      // Define "bedding" as: under-pipe bedding + haunch to springline.
+      // Approximate as rectangular: height = beddingUnder + (D/2)
+      const beddingHeightFt = beddingUnderFt + (diameterFt / 2);
+      const beddingFt3 = beddingEnvelopeWidthFt * beddingHeightFt * lengthFt;
+      const beddingYd3 = toYd3(beddingFt3);
+      const beddingTons = tonsFromYd3(beddingYd3, aggTonsPerYd);
+
+      // --- Initial Backfill (same material), from springline to 12" above crown ---
+      // Height = (D/2) + initialCover
+      const initBackfillHeightFt = (diameterFt / 2) + initialCoverFt;
+      const initBackfillFt3 = beddingEnvelopeWidthFt * initBackfillHeightFt * lengthFt;
+      const initBackfillYd3 = toYd3(initBackfillFt3);
+      const initBackfillTons = tonsFromYd3(initBackfillYd3, aggTonsPerYd);
+
+      // --- Totals for bedding-class material ---
+      const beddingClassYd3 = beddingYd3 + initBackfillYd3;
+      const beddingClassTons = beddingTons + initBackfillTons;
+
+      // --- Marking Tape ---
+      // Installed centered over pipe; count as a single run along trench length.
+      const tapeWithWasteFt = lengthFt * (1 + (tapeWastePct / 100));
+      const tapeRolls = tapeRollLenFt > 0 ? Math.ceil(tapeWithWasteFt / tapeRollLenFt) : 0;
+
+      // Render
+      resultDiv.innerHTML = `
+        <div class="result-block">
+          <h3>Results</h3>
+          <div class="grid">
+            <div>
+              <strong>Excavation Volume</strong><br/>
+              ${excavationYd3.toFixed(2)} yd³ <span class="muted">(${excavationFt3.toFixed(0)} ft³)</span>
+            </div>
+            <div>
+              <strong>Bedding (under + haunch to springline)</strong><br/>
+              ${beddingYd3.toFixed(2)} yd³ (${beddingTons.toFixed(2)} tons)
+              <div class="muted">${beddingFt3.toFixed(0)} ft³</div>
+            </div>
+            <div>
+              <strong>Initial Backfill (to ${initialCoverIn}" above crown)</strong><br/>
+              ${initBackfillYd3.toFixed(2)} yd³ (${initBackfillTons.toFixed(2)} tons)
+              <div class="muted">${initBackfillFt3.toFixed(0)} ft³</div>
+            </div>
+            <div>
+              <strong>Total Bedding-Class Material</strong><br/>
+              ${beddingClassYd3.toFixed(2)} yd³ (${beddingClassTons.toFixed(2)} tons)
+            </div>
+            <div>
+              <strong>Marking Tape</strong><br/>
+              ${tapeWithWasteFt.toFixed(0)} LF (incl. waste)
+              <div class="muted">${tapeRolls} roll(s) @ ${tapeRollLenFt} ft/roll</div>
+            </div>
+          </div>
+
+          <div class="assumptions">
+            <h4 style="margin-top:12px;">Assumptions</h4>
+            <ul class="muted">
+              <li>Bedding envelope width = Pipe OD + ${sideClearIn}" side clearance each side.</li>
+              <li>Bedding = ${beddingUnderIn}" under-pipe + haunch to springline (D/2).</li>
+              <li>Initial backfill = from springline to ${initialCoverIn}" above pipe crown.</li>
+              <li>Marking tape counted as single centered run along trench; waste = ${tapeWastePct}%.</li>
+              <li>Aggregate density = ${aggTonsPerYd} tons/yd³ (adjust to your local supply).</li>
+            </ul>
+          </div>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

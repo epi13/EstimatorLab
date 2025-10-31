@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Alaska Machinery Weight Calculator</title>
+<style>
+  :root{
+    --bg:#0b1116; --card:#111923; --muted:#8aa0b2; --text:#e8f0f7; --accent:#3aa0ff; --accent-2:#7bd389;
+    --danger:#ff6b6b; --warn:#ffb86b; --grid:#1a2530;
+  }
+  html,body{height:100%}
+  body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial,sans-serif; background:var(--bg); color:var(--text)}
+  .wrap{max-width:1200px; margin:0 auto; padding:24px}
+  h1{font-size:1.6rem; margin:0 0 8px}
+  .sub{color:var(--muted); margin-bottom:18px}
+  .card{background:var(--card); border:1px solid #16202a; border-radius:14px; padding:16px; box-shadow:0 6px 18px rgba(0,0,0,.25)}
+  .row{display:grid; grid-template-columns: 1.7fr 1.7fr 1.5fr 1.2fr 1fr 1fr 1.2fr .9fr 1fr 1fr auto; gap:8px; align-items:center}
+  .row + .row{margin-top:8px}
+  .th{font-size:.86rem; color:var(--muted)}
+  select, input[type="number"], input[type="text"]{width:100%; padding:10px 12px; border-radius:10px; border:1px solid #1e2a36; background:#0e1620; color:var(--text)}
+  input[readonly]{opacity:.9}
+  .btn{appearance:none; background:var(--accent); border:none; color:#071521; padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer}
+  .btn.secondary{background:#213244; color:var(--text); border:1px solid #2a3b4e}
+  .btn.ghost{background:transparent; border:1px dashed #2a3b4e; color:var(--muted)}
+  .btn.danger{background:transparent; border:1px solid var(--danger); color:var(--danger)}
+  .btn:disabled{opacity:.5; cursor:not-allowed}
+  .bar{display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px}
+  .tag{display:inline-flex; gap:6px; align-items:center; padding:6px 10px; border-radius:999px; font-size:.85rem; background:#0e1620; border:1px solid #213244; color:var(--muted)}
+  .totals{display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px}
+  .kpi{background:#0e1620; border:1px solid #1e2a36; border-radius:14px; padding:14px}
+  .kpi .h{font-size:.8rem; color:var(--muted)}
+  .kpi .v{font-size:1.3rem; font-weight:700}
+  .help{color:var(--muted); font-size:.9rem}
+  .right{justify-self=end}
+  .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0}
+  #testout{margin-top:10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:.9rem; color:var(--muted)}
+  @media (max-width:900px){
+    .row{grid-template-columns: 1.6fr 1.6fr 1.3fr 1.1fr .9fr 1fr 1fr .9fr 1fr .9fr auto}
+  }
+  @media (max-width:720px){
+    .row{grid-template-columns: 1.7fr 1.4fr 1.2fr 1.1fr .9fr 1fr .9fr .9fr .9fr auto}
+  }
+  @media (max-width:620px){
+    .row{grid-template-columns: 1.5fr 1.4fr 1.1fr .9fr .9fr .9fr .9fr .9fr auto}
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Alaska Machinery Weight Calculator</h1>
+    <div class="sub">Compute <b>operating weight</b> in <b>pounds</b> and <b>short tons</b> for rigging and remote shipping. Simplified attachment class keeps the layout tight.</div>
+
+    <div class="card" id="controls">
+      <div class="bar">
+        <button class="btn" id="addRow">+ Add Line</button>
+        <button class="btn secondary" id="exportCsv">Export CSV</button>
+        <button class="btn secondary" id="saveList">Save</button>
+        <button class="btn ghost" id="loadList">Load Last</button>
+        <button class="btn ghost" id="runTests" title="Runs a few built-in checks">Run Self‑Test</button>
+        <span class="tag">Weights include fuel & fluids unless overridden</span>
+      </div>
+
+      <div class="row th">
+        <div>Category</div>
+        <div>Class / Model</div>
+        <div>Configuration</div>
+        <div>Attachment Class</div>
+        <div>Extra (lb)</div>
+        <div>Base (lb)</div>
+        <div>Unit (lb)</div>
+        <div>Unit (tons)</div>
+        <div>Qty</div>
+        <div>Line (lb)</div>
+        <div></div>
+      </div>
+      <div id="lines"></div>
+
+      <div class="totals" style="margin-top:14px">
+        <div class="kpi"><div class="h">Total Weight (lb)</div><div class="v" id="totalLb">0</div></div>
+        <div class="kpi"><div class="h">Total Weight (tons)</div><div class="v" id="totalTons">0</div></div>
+        <div class="kpi"><div class="h">Heaviest Unit (lb)</div><div class="v" id="heaviest">0</div></div>
+        <div class="kpi"><div class="h">Line Count</div><div class="v" id="lineCount">0</div></div>
+      </div>
+      <div id="testout"></div>
+    </div>
+
+    <div style="height:12px"></div>
+
+    <div class="card">
+      <div class="help">
+        <b>Attachment Class</b> is a generalized adder: None (0 lb), Light (+500 lb), Medium (+1,500 lb), Heavy (+4,000 lb).
+        Use <b>Extra (lb)</b> to capture anything else (chains, winter kit, spare tracks, jib sections, etc.). If you know an exact spec weight, override <b>Base (lb)</b> directly.
+      </div>
+    </div>
+  </div>
+
+<script>
+// --- helpers ---
+function uuid(){ return (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2); }
+
+// --- Generalized attachment classes ---
+const ATTACHMENT_CLASSES = {
+  "None": 0,
+  "Light (+500 lb)": 500,
+  "Medium (+1,500 lb)": 1500,
+  "Heavy (+4,000 lb)": 4000
+};
+
+// --- Machinery Knowledge Base (typical operating weights) ---
+const DATA = {
+  "Earthmoving": {
+    "Excavator (Mini 3–6t)": { base_lb: 12000, configs: { "Rubber pads": 0, "Steel pads": 400 } },
+    "Excavator (13–15t)": { base_lb: 32000, configs: { "Std counterweight": 0, "Heavy counterweight": 1800, "Steel pads": 0 } },
+    "Excavator (20–25t)": { base_lb: 54000, configs: { "Std": 0, "Long undercarriage": 1500, "Triple-grouser": 0 } },
+    "Excavator (35–40t)": { base_lb: 88000, configs: { "Std": 0, "Mass excavation": 6000 } },
+    "Dozer (Small D3/D4)": { base_lb: 20000, configs: { "PAT blade": 0, "Winch": 1800, "Ripper": 1200 } },
+    "Dozer (Med D6)": { base_lb: 50000, configs: { "SU blade": 2500, "Sigma blade": 3000, "Single-shank ripper": 4000 } },
+    "Dozer (Large D8/D9)": { base_lb: 90000, configs: { "SU blade": 5000, "U blade": 6500, "Multi-shank ripper": 9000 } },
+    "Wheel Loader (1.5–2.5 yd³)": { base_lb: 24000, configs: { "GP bucket": 0, "Side-dump": 900 } },
+    "Wheel Loader (3–4.5 yd³)": { base_lb: 42000, configs: { "GP bucket": 0 } },
+    "Skid Steer": { base_lb: 8000, configs: { "Wheels": 0, "Over-the-tire tracks": 600 } },
+    "Compact Track Loader": { base_lb: 10500, configs: { "Std": 0, "Wide tracks": 250 } },
+    "Backhoe Loader": { base_lb: 17000, configs: { "4WD": 400, "Extendahoe": 900 } },
+    "Motor Grader": { base_lb: 35000, configs: { "Std": 0, "Ripper/Scarifier": 2800 } },
+    "Articulated Dump Truck (25–30t payload)": { base_lb: 100000, configs: { "Tailgate": 1500, "Liner": 2000 } }
+  },
+  "Compaction & Paving": {
+    "Smooth Drum Roller (7–10t)": { base_lb: 22000, configs: { "ROPS": 0, "Cab": 500 } },
+    "Pneumatic Tire Roller": { base_lb: 26000, configs: { } },
+    "Double Drum Asphalt Roller": { base_lb: 10000, configs: { } },
+    "Asphalt Paver (8–10 ft)": { base_lb: 36000, configs: { "Screed ext": 1200 } }
+  },
+  "Lifting & Access": {
+    "Telehandler (6k–10k)": { base_lb: 18000, configs: { "Std": 0, "Outriggers": 500 } },
+    "Rough Terrain Forklift": { base_lb: 13000, configs: {} },
+    "Warehouse Forklift (Electric 4–5k)": { base_lb: 9000, configs: { "Battery": 1800 } },
+    "Scissor Lift (19–26 ft)": { base_lb: 3500, configs: {} },
+    "Boom Lift (Articulating 45–60 ft)": { base_lb: 16000, configs: {} },
+    "Boom Lift (Straight 80–120 ft)": { base_lb: 40000, configs: {} }
+  },
+  "Cranes": {
+    "Truck Crane (40–60 US ton class)": { base_lb: 90000, configs: { "Full counterweights": 20000, "No counterweights": -20000 } },
+    "All-Terrain Crane (100–130 US ton class)": { base_lb: 120000, configs: { "Full c-weights": 45000, "Partial c-weights": 20000 } },
+    "Rough-Terrain Crane (50–80 US ton class)": { base_lb: 95000, configs: { "Full c-weights": 18000 } },
+    "Crawler Crane (150–250 US ton class)": { base_lb: 220000, configs: { "Wide tracks": 15000 } }
+  },
+  "Piling & Drilling": {
+    "Vibratory Pile Driver + Power Pack": { base_lb: 12000, configs: {} },
+    "Diesel Impact Hammer": { base_lb: 15000, configs: {} },
+    "Piling Rig (Rotary)": { base_lb: 100000, configs: { "Kelly bar": 8000 } },
+    "Drill Rig (Track)": { base_lb: 55000, configs: { "Rod rack": 1200 } }
+  },
+  "Site Support": {
+    "Air Compressor (185 CFM towable)": { base_lb: 2500, configs: {} },
+    "Air Compressor (500–900 CFM)": { base_lb: 12000, configs: {} },
+    "Generator (100–200 kW)": { base_lb: 9000, configs: { "Trailer": 2500 } },
+    "Light Tower": { base_lb: 2000, configs: { "Trailer": 800 } },
+    "Centrifugal Pump (6–10\" skid)": { base_lb: 3500, configs: {} }
+  }
+};
+
+let lines = [];
+
+function tons(lb){ return lb/2000; }
+function fmt(x){ return (Math.round(x)).toLocaleString(); }
+function fmtT(x){ return (Math.round(x*100)/100).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+function catOptions(){ return Object.keys(DATA).map(k=>`<option value="${k}">${k}</option>`).join(""); }
+function classOptions(cat){ const m = DATA[cat]||{}; return Object.keys(m).map(k=>`<option value="${k}">${k}</option>`).join(""); }
+function configOptions(cat, cls){ const cfg=(DATA[cat]&&DATA[cat][cls]&&DATA[cat][cls].configs)||{}; const keys=Object.keys(cfg); if(keys.length===0) return '<option value="">—</option>'; return keys.map(k=>`<option value="${k}">${k} (${cfg[k]>=0?'+':''}${cfg[k]} lb)</option>`).join(''); }
+function attClassOptions(){ return Object.keys(ATTACHMENT_CLASSES).map(k=>`<option value="${k}">${k}</option>`).join(''); }
+
+function newLine(){
+  const id = uuid();
+  const cat = Object.keys(DATA)[0];
+  const cls = Object.keys(DATA[cat])[0];
+  const entry = { id, cat, cls, config: Object.keys(DATA[cat][cls].configs||{})[0]||"", attClass: 'None', extra: 0, qty:1, baseLb: DATA[cat][cls].base_lb };
+  lines.push(entry); render();
+}
+
+function computeLine(e){
+  const base = Number(e.baseLb)||0;
+  const cfg = ((DATA[e.cat]||{})[e.cls]||{}).configs || {};
+  const cfgAdj = e.config && (cfg[e.config]||0) || 0;
+  const attAdj = ATTACHMENT_CLASSES[e.attClass]||0;
+  const extra = Number(e.extra)||0;
+  const unit = base + cfgAdj + attAdj + extra;
+  const lineLb = unit * (Number(e.qty)||0);
+  return {unit, lineLb};
+}
+
+function render(){
+  const host = document.getElementById('lines'); host.innerHTML = '';
+  let totalLb = 0, heaviest = 0;
+
+  lines.forEach(e=>{
+    const {unit, lineLb} = computeLine(e);
+    totalLb += lineLb; heaviest = Math.max(heaviest, unit);
+
+    const row = document.createElement('div'); row.className='row'; row.dataset.id=e.id;
+    row.innerHTML = `
+      <div>
+        <label class="sr-only">Category</label>
+        <select data-role="cat">${catOptions().replace(`value="${e.cat}"`, `value="${e.cat}" selected`)}</select>
+      </div>
+      <div>
+        <label class="sr-only">Class</label>
+        <select data-role="cls">${classOptions(e.cat).replace(`value="${e.cls}"`, `value="${e.cls}" selected`)}</select>
+      </div>
+      <div>
+        <label class="sr-only">Configuration</label>
+        <select data-role="config">${configOptions(e.cat,e.cls)}</select>
+      </div>
+      <div>
+        <label class="sr-only">Attachment Class</label>
+        <select data-role="attClass">${attClassOptions().replace(`value="${e.attClass}"`, `value="${e.attClass}" selected`)}</select>
+      </div>
+      <div>
+        <input type="number" data-role="extra" value="${e.extra}" step="1" min="0" title="Extra adder for miscellaneous items" />
+      </div>
+      <div>
+        <input type="number" data-role="base" value="${e.baseLb}" step="1" min="0" title="Override base weight if you know the spec." />
+      </div>
+      <div>
+        <input type="text" value="${fmt(unit)}" readonly />
+      </div>
+      <div>
+        <input type="text" value="${fmtT(tons(unit))}" readonly />
+      </div>
+      <div>
+        <input type="number" data-role="qty" value="${e.qty}" min="0" step="1" />
+      </div>
+      <div>
+        <input type="text" value="${fmt(lineLb)}" readonly />
+      </div>
+      <div class="right">
+        <button class="btn danger" data-role="del">Remove</button>
+      </div>
+    `;
+
+    // Select current config if present
+    const cfgSel = row.querySelector('select[data-role="config"]');
+    if(cfgSel && e.config){ [...cfgSel.options].forEach(o=>{ if(o.value===e.config) o.selected=true; }); }
+
+    row.addEventListener('change', ev=>{
+      const t = ev.target; const role = t.getAttribute('data-role');
+      if(role==='cat'){
+        e.cat = t.value; e.cls = Object.keys(DATA[e.cat])[0];
+        e.config = Object.keys(DATA[e.cat][e.cls].configs||{})[0]||"";
+        e.baseLb = DATA[e.cat][e.cls].base_lb; render(); return;
+      }
+      if(role==='cls'){
+        e.cls = t.value; e.config = Object.keys(DATA[e.cat][e.cls].configs||{})[0]||"";
+        e.baseLb = DATA[e.cat][e.cls].base_lb; render(); return;
+      }
+      if(role==='config'){ e.config = t.value; updateTotals(); return; }
+      if(role==='attClass'){ e.attClass = t.value; updateTotals(); return; }
+      if(role==='extra'){ e.extra = Number(t.value)||0; updateTotals(); return; }
+      if(role==='qty'){ e.qty = Number(t.value)||0; updateTotals(); return; }
+      if(role==='base'){ e.baseLb = Number(t.value)||0; updateTotals(); return; }
+    });
+
+    row.querySelector('button[data-role="del"]').addEventListener('click', ()=>{ lines = lines.filter(x=>x.id!==e.id); render(); });
+    host.appendChild(row);
+  });
+
+  document.getElementById('lineCount').textContent = lines.length;
+  document.getElementById('totalLb').textContent = fmt(totalLb);
+  document.getElementById('totalTons').textContent = fmtT(tons(totalLb));
+  document.getElementById('heaviest').textContent = fmt(heaviest);
+}
+
+function updateTotals(){ render(); }
+
+function exportCsv(){
+  const headers = ["Category","Class/Model","Configuration","AttachmentClass","Extra_lb","Base_lb","Unit_lb","Unit_ton","Qty","Line_lb","Line_ton"];
+  const rows = lines.map(e=>{
+    const {unit, lineLb} = computeLine(e);
+    return [e.cat, e.cls, e.config||"", e.attClass, e.extra||0, e.baseLb, unit, tons(unit).toFixed(2), e.qty, lineLb, tons(lineLb).toFixed(2)];
+  });
+  // FIX: ensure proper newline separation for CSV rows
+  const csv = [headers.join(','), ...rows.map(r=>r.join(','))].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='machinery_weights.csv'; a.click(); URL.revokeObjectURL(url);
+}
+
+function saveList(){ localStorage.setItem('machinery_weights_v2', JSON.stringify(lines)); flash('Saved current list to your browser.'); }
+function loadList(){ const raw = localStorage.getItem('machinery_weights_v2'); if(!raw){ flash('No saved list found.'); return; } try{ const obj = JSON.parse(raw); if(Array.isArray(obj) && obj.length){ lines = obj; render(); flash('Loaded last saved list.'); } else flash('Saved list is empty.'); }catch{ flash('Could not load saved list.'); } }
+
+function flash(msg){ const t = document.createElement('div'); t.textContent = msg; t.style.position='fixed'; t.style.bottom='20px'; t.style.left='50%'; t.style.transform='translateX(-50%)'; t.style.background='#0e1620'; t.style.border='1px solid #2a3b4e'; t.style.color='var(--text)'; t.style.padding='10px 14px'; t.style.borderRadius='10px'; t.style.zIndex=9999; document.body.appendChild(t); setTimeout(()=>{ t.remove(); }, 1600); }
+
+// --- Self Tests ---
+function runSelfTests(){
+  const out = [];
+  // preserve current list
+  const saved = JSON.stringify(lines);
+
+  // Test Case 1: simple single unit (Skid Steer, None, qty 1)
+  lines = [{ id: uuid(), cat: 'Earthmoving', cls: 'Skid Steer', config: 'Wheels', attClass: 'None', extra: 0, qty: 1, baseLb: DATA['Earthmoving']['Skid Steer'].base_lb }];
+  render();
+  const t1Lb = parseNumber(document.getElementById('totalLb').textContent);
+  out.push(assert('T1 total lb == 8000', t1Lb === 8000));
+
+  // Test Case 2: telehandler with Outriggers + Medium + extra 200, qty 2
+  lines.push({ id: uuid(), cat: 'Lifting & Access', cls: 'Telehandler (6k–10k)', config: 'Outriggers', attClass: 'Medium (+1,500 lb)', extra: 200, qty: 2, baseLb: DATA['Lifting & Access']['Telehandler (6k–10k)'].base_lb });
+  render();
+  const t2TotalLb = parseNumber(document.getElementById('totalLb').textContent); // 8000 + 2*(18000+500+1500+200) = 48400
+  out.push(assert('T2 total lb == 48,400', t2TotalLb === 48400));
+  const heaviest = parseNumber(document.getElementById('heaviest').textContent);
+  out.push(assert('Heaviest unit == 20,200', heaviest === 20200));
+
+  // Test Case 3: CSV newline correctness (should contain exactly one newline between rows)
+  const headers = ["Category","Class/Model","Configuration","AttachmentClass","Extra_lb","Base_lb","Unit_lb","Unit_ton","Qty","Line_lb","Line_ton"];
+  const rows = lines.map(e=>{ const {unit, lineLb} = computeLine(e); return [e.cat, e.cls, e.config||'', e.attClass, e.extra||0, e.baseLb, unit, tons(unit).toFixed(2), e.qty, lineLb, tons(lineLb).toFixed(2)]; });
+  const csv = [headers.join(','), ...rows.map(r=>r.join(','))].join('\n');
+  const newlineCount = (csv.match(/\n/g)||[]).length;
+  out.push(assert('CSV has 3 lines (2 rows + header)', newlineCount === 2));
+
+  // restore
+  lines = JSON.parse(saved||'[]');
+  render();
+
+  document.getElementById('testout').innerHTML = out.join('<br>');
+}
+
+function assert(name, cond){ return `${cond ? '✅' : '❌'} ${name}`; }
+function parseNumber(s){ return Number(String(s).replace(/[^0-9.\-]/g,'')||0); }
+
+// Init
+ document.getElementById('addRow').addEventListener('click', newLine);
+ document.getElementById('exportCsv').addEventListener('click', exportCsv);
+ document.getElementById('saveList').addEventListener('click', saveList);
+ document.getElementById('loadList').addEventListener('click', loadList);
+ document.getElementById('runTests').addEventListener('click', runSelfTests);
+ newLine();
+ newLine();
+</script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Metal Weight Calculator</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+    label, select, input { display: block; margin-top: 10px; width: 100%; padding: 5px; }
+    .output { margin-top: 20px; font-size: 1.2em; }
+    .history { margin-top: 20px; background: #f0f0f0; padding: 10px; border: 1px solid #ccc; font-size: 0.9em; }
+    .description { margin-top: 10px; font-style: italic; color: #555; }
+  </style>
+</head>
+<body>
+  <h2>Structural Steel Weight Calculator</h2>
+
+  <label for="type">Select Metal Type:</label>
+  <select id="type" onchange="updateDescription(); calculate()">
+    <option value="hss_column">HSS Column</option>
+    <option value="hss_bracing">HSS Bracing</option>
+    <option value="w_beam">W-Beam</option>
+    <option value="angle">L-Angle Steel</option>
+    <option value="plate">Plate Steel</option>
+    <option value="piling">Steel Piling</option>
+  </select>
+
+  <div class="description" id="description"></div>
+
+  <label for="length">Enter Length (in feet):</label>
+  <input type="number" id="length" step="any" oninput="calculate()">
+
+  <label for="size">Size (e.g. W12x26 or 3/8"):</label>
+  <input type="text" id="size" oninput="calculate()">
+
+  <div class="output">
+    <h3 id="result">Total Weight: —</h3>
+    <div id="miscResult"></div>
+  </div>
+
+  <div class="history" id="history">History:<br></div>
+
+  <script>
+    const steelData = {
+      hss_column:    { desc: "Hollow Structural Steel used for columns", lbsPerFt: 40, miscRatio: 0.05 },
+      hss_bracing:   { desc: "HSS used for bracing elements in structural frames", lbsPerFt: 28, miscRatio: 0.05 },
+      w_beam:        { desc: "Wide flange beams used in primary load bearing", lbsPerFt: 50, miscRatio: 0.07 },
+      angle:         { desc: "L-angle steel used in supports and connections", lbsPerFt: 12, miscRatio: 0.1 },
+      plate:         { desc: "Flat steel plate by thickness (default = 3/8\")", lbsPerFt: 15, miscRatio: 0.15 },
+      piling:        { desc: "Steel pipe or H-pile used in foundation work", lbsPerFt: 75, miscRatio: 0.08 }
+    };
+
+    const wSectionMap = {
+      "W12x26": 26,
+      "W10x33": 33,
+      "W8x18": 18,
+      "W6x15": 15,
+      "W18x35": 35,
+      "W24x62": 62
+    };
+
+    function updateDescription() {
+      const type = document.getElementById("type").value;
+      document.getElementById("description").innerText = steelData[type].desc;
+    }
+
+    function calculate() {
+      const type = document.getElementById("type").value;
+      const length = parseFloat(document.getElementById("length").value);
+      const size = document.getElementById("size").value.trim();
+      const result = document.getElementById("result");
+      const miscResult = document.getElementById("miscResult");
+
+      if (isNaN(length) || length <= 0) {
+        result.innerText = "Total Weight: —";
+        miscResult.innerText = "";
+        return;
+      }
+
+      let lbsPerFt = steelData[type].lbsPerFt;
+      if (type === "w_beam" && wSectionMap[size]) {
+        lbsPerFt = wSectionMap[size];
+      }
+
+      const miscRatio = steelData[type].miscRatio;
+      const metalWeight = length * lbsPerFt;
+      const miscWeight = metalWeight * miscRatio;
+      const totalWeight = metalWeight + miscWeight;
+
+      result.innerText = `Total Weight: ${totalWeight.toFixed(2)} lbs`;
+      miscResult.innerText = `  (Metal: ${metalWeight.toFixed(2)} lbs, Misc/Connectors: ${miscWeight.toFixed(2)} lbs)`;
+
+      addToHistory(type, size, length, totalWeight, miscWeight);
+    }
+
+    function addToHistory(type, size, length, totalWeight, miscWeight) {
+      const names = {
+        hss_column: "HSS Column", hss_bracing: "HSS Bracing", w_beam: "W-Beam",
+        angle: "L-Angle Steel", plate: "Plate Steel", piling: "Steel Piling"
+      };
+      const line = document.createElement("div");
+      line.innerText = `${names[type]} ${size} — ${length} ft = ${totalWeight.toFixed(2)} lbs (misc: ${miscWeight.toFixed(2)} lbs)`;
+      document.getElementById("history").appendChild(line);
+    }
+
+    window.onload = updateDescription;
+  </script>
+</body>
+</html>

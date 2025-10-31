@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Telecom System Devices Calculator</title>
+
+   <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+   <div class="calculator-container">
+  <h2>Telecom System Devices Calculator</h2>
+  <label>Number of Outlets:
+    <input type="number" id="outlets" value="0">
+  </label>
+  <label>Ports per Outlet:
+    <input type="number" id="ports" value="1">
+  </label>
+  <label>Project Type:
+    <select id="projtype" onchange="setLFandAvgRunLength()">
+      <option value="residential">Residential</option>
+      <option value="commercial" selected>Commercial</option>
+      <option value="government">Government</option>
+      <option value="healthcare">Healthcare</option>
+      <option value="school">School</option>
+      <option value="custom">Custom</option>
+    </select>
+  </label>
+  <label>
+    LF Between Outlets:
+    <input type="number" id="lf" value="15">
+    <small>(Auto-fills with standard, or override for custom)</small>
+  </label>
+  <label>Average Run Length per Port (LF):
+    <input type="number" id="runlen" value="70">
+  </label>
+  <label>Pathway Length (LF): 
+    <input type="number" id="pathlen" value="70">
+    <small>(Main corridor length; default matches average run length)</small>
+  </label>
+  <label>Cables per J-hook Bundle:
+    <input type="number" id="cablebundle" value="24">
+    <small>(Default is 24 for 2" J-hooks)</small>
+  </label>
+  <button onclick="calculate()">Calculate</button>
+  <div class="result" id="result"></div>
+  <script>
+    function setLFandAvgRunLength() {
+      const type = document.getElementById('projtype').value;
+      let lfVal = 15, runlenVal = 70;
+      // Industry standards (customize as needed)
+      if (type === "residential") { lfVal = 10; runlenVal = 50; }
+      if (type === "commercial") { lfVal = 15; runlenVal = 70; }
+      if (type === "government" || type === "healthcare" || type === "school") {
+        lfVal = 12; runlenVal = 90; // You can separate if you wish
+      }
+      if (type === "custom") return; // Don't auto-fill custom
+
+      document.getElementById('lf').value = lfVal;
+      document.getElementById('runlen').value = runlenVal;
+      document.getElementById('pathlen').value = runlenVal; // For pathway, match run length
+    }
+
+    function calculate() {
+      const outlets = parseInt(document.getElementById('outlets').value) || 0;
+      const lf = parseFloat(document.getElementById('lf').value) || 0;
+      const ports = parseInt(document.getElementById('ports').value) || 0;
+      const runlen = parseFloat(document.getElementById('runlen').value) || 70;
+      const pathlen = parseFloat(document.getElementById('pathlen').value) || runlen;
+      const cablesPerBundle = parseInt(document.getElementById('cablebundle').value) || 24;
+
+      const conduit = outlets * lf;
+      const cat6 = outlets * ports * runlen;
+
+      // For J-hooks
+      const totalCables = outlets * ports;
+      const totalBundles = Math.ceil(totalCables / cablesPerBundle);
+      const jhooksPerBundle = Math.ceil(pathlen / 5);
+      const totalJhooks = totalBundles * jhooksPerBundle;
+
+      document.getElementById('result').innerHTML = `
+        <table>
+          <tr>
+            <th>3/4-1" CONDUIT</th>
+            <td>${conduit}</td>
+            <td>LF</td>
+          </tr>
+          <tr>
+            <th>CAT 6 CABLE</th>
+            <td>${cat6}</td>
+            <td>LF</td>
+          </tr>
+          <tr>
+            <th>J-hooks</th>
+            <td>${totalJhooks}</td>
+            <td>Each</td>
+          </tr>
+        </table>
+        <div>
+        <small>Assumes each J-hook supports up to ${cablesPerBundle} cables over a ${pathlen} LF pathway, spaced every 5'.</small>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

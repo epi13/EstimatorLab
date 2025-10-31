@@ -1,0 +1,54 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Resilient Channel Calculator</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+    <div class="calculator-frame">
+        <h2>Resilient Channel Calculator</h2>
+        <form id="rcForm">
+            <label for="wallArea">Wall Area (sq ft):</label>
+            <input type="number" id="wallArea" name="wallArea" required><br>
+
+            <label for="wallHeight">Wall Height (ft):</label>
+            <input type="number" id="wallHeight" name="wallHeight" value="8" required><br>
+
+            <label for="spacing">RC Spacing (inches):</label>
+            <input type="number" id="spacing" name="spacing" value="16" required><br>
+
+            <label for="wasteFactor">Waste Factor (%):</label>
+            <input type="number" id="wasteFactor" name="wasteFactor" value="10"><br>
+
+            <button type="button" onclick="calculateRC()">Calculate</button>
+        </form>
+
+        <h3 id="result"></h3>
+    </div>
+
+    <script>
+        function calculateRC() {
+            const area = parseFloat(document.getElementById('wallArea').value);
+            const height = parseFloat(document.getElementById('wallHeight').value);
+            const spacingInches = parseFloat(document.getElementById('spacing').value);
+            const wasteFactor = parseFloat(document.getElementById('wasteFactor').value) || 0;
+
+            if (!area || !height || !spacingInches) {
+                document.getElementById('result').innerText = "Please fill in all required fields.";
+                return;
+            }
+
+            const wallLength = area / height;
+            const spacingFeet = spacingInches / 12;
+            const rows = Math.floor(height / spacingFeet);
+            const linearFeet = wallLength * rows;
+            const totalWithWaste = linearFeet * (1 + (wasteFactor / 100));
+
+            document.getElementById('result').innerText = 
+                `You need approximately ${Math.ceil(totalWithWaste)} linear feet of RC (including ${wasteFactor}% waste).`;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,427 @@
+/* Layout + theme -------------------------------------------------------- */
+
+:root {
+  --bg-body: #0f172a;          /* slate-900 */
+  --bg-card: #1e253a;          /* custom dark panel */
+  --bg-accent: #334155;        /* slate-700 */
+  --text-main: #f8fafc;        /* slate-50 */
+  --text-dim: #94a3b8;         /* slate-400 */
+  --border-color: #475569;     /* slate-600 */
+  --radius-lg: 1rem;
+  --radius-md: .5rem;
+  --gap-lg: 2rem;
+  --gap-md: 1rem;
+  --gap-sm: .5rem;
+
+  --btn-bg: #1e40af;           /* blue-800 */
+  --btn-bg-hover: #1e3a8a;
+  --btn-success: #15803d;      /* green-700 */
+  --btn-success-hover: #166534;
+  --btn-danger: #7f1d1d;       /* red-900 */
+  --btn-danger-hover: #991b1b;
+  --btn-neutral: #475569;
+  --btn-neutral-hover: #334155;
+
+  --font-stack: system-ui, -apple-system, BlinkMacSystemFont, "Inter", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-stack);
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+h1,h2,h3,h4,h5,h6 {
+  color: var(--text-main);
+  margin: 0 0 .5em 0;
+  line-height: 1.2;
+}
+
+p {
+  margin: 0 0 1em 0;
+  color: var(--text-main);
+}
+p:last-child { margin-bottom: 0; }
+
+ul {
+  margin: 0 0 1em 1.25em;
+  color: var(--text-main);
+}
+
+hr.section-divider {
+  border: 0;
+  border-top: 1px solid var(--border-color);
+  margin: 1.5rem 0;
+}
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1rem 1.5rem;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header-left h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.tagline {
+  margin: 0;
+  font-size: .8rem;
+  color: var(--text-dim);
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.main-layout {
+  flex: 1;
+  display: grid;
+  gap: var(--gap-lg);
+  padding: 1.5rem;
+  grid-template-columns: minmax(260px, 320px) 1fr;
+}
+
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem 1.5rem;
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.8),
+    0 2px 4px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.panel-title {
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  color: var(--text-main);
+  margin-bottom: .75rem;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  margin-bottom: 1rem;
+}
+.form-row.checkbox-row {
+  flex-direction: row;
+  align-items: center;
+  gap: .5rem;
+}
+
+.form-row label {
+  font-size: .8rem;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+input[type="text"],
+textarea,
+.doc-title-input {
+  width: 100%;
+  background-color: var(--bg-body);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: .6rem .75rem;
+  border-radius: var(--radius-md);
+  font-size: .9rem;
+  font-family: var(--font-stack);
+}
+
+textarea {
+  min-height: 8rem;
+  resize: vertical;
+  line-height: 1.4;
+}
+
+.doc-header {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+
+.doc-title-input {
+  font-size: 1rem;
+  font-weight: 600;
+  background-color: var(--bg-accent);
+  border: 1px solid var(--border-color);
+}
+
+.doc-area {
+  flex: 1;
+  min-height: 200px;
+  background-color: var(--bg-body);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  overflow-y: auto;
+  position: relative;
+}
+
+.empty-hint {
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 4rem;
+  font-size: .9rem;
+  user-select: none;
+}
+
+/* Individual blocks preview ---------------------------------------------- */
+
+.block {
+  background-color: var(--bg-accent);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: .75rem .75rem .5rem;
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .75rem;
+  position: relative;
+}
+
+.block-text-area {
+  min-width: 0;
+  word-break: break-word;
+  white-space: pre-wrap;
+  color: var(--text-main);
+  font-size: .9rem;
+  line-height: 1.4;
+}
+
+.block-title {
+  font-weight: 600;
+  margin: 0 0 .5rem 0;
+  font-size: .9rem;
+  color: var(--text-main);
+}
+
+.block img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  display: block;
+}
+
+.block-tools {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  min-width: 3.5rem;
+}
+
+.tool-btn {
+  border: 1px solid var(--border-color);
+  background-color: var(--btn-neutral);
+  color: var(--text-main);
+  font-size: .7rem;
+  padding: .4rem .5rem;
+  border-radius: var(--radius-md);
+  line-height: 1.2;
+  cursor: pointer;
+}
+.tool-btn:hover {
+  background-color: var(--btn-neutral-hover);
+}
+
+.tool-btn.danger {
+  background-color: var(--btn-danger);
+}
+.tool-btn.danger:hover {
+  background-color: var(--btn-danger-hover);
+}
+
+/* Buttons --------------------------------------------------------------- */
+
+.btn {
+  appearance: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  font-size: .8rem;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: .6rem .8rem;
+  background-color: var(--btn-neutral);
+  color: var(--text-main);
+  white-space: nowrap;
+  user-select: none;
+}
+.btn:hover {
+  background-color: var(--btn-neutral-hover);
+}
+
+.btn.primary {
+  background-color: var(--btn-bg);
+}
+.btn.primary:hover {
+  background-color: var(--btn-bg-hover);
+}
+
+.btn.success {
+  background-color: var(--btn-success);
+}
+.btn.success:hover {
+  background-color: var(--btn-success-hover);
+}
+
+.btn.full {
+  width: 100%;
+}
+
+.file-btn {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Footer ---------------------------------------------------------------- */
+
+.app-footer {
+  font-size: .7rem;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 1rem 1.5rem 2rem;
+  border-top: 1px solid var(--border-color);
+  background-color: rgba(15, 23, 42, 0.4);
+}
+
+/* Print layout ---------------------------------------------------------- */
+/* We'll copy blocks into #printArea, then call window.print().
+   During print, hide the app chrome and show printArea styled like paper.
+*/
+
+#printArea {
+  display: none;
+  color: #000;
+  background: #fff;
+  font-family: "Georgia", "Times New Roman", serif;
+  line-height: 1.4;
+  padding: 1in;
+  max-width: 8.5in;
+  margin: 0 auto;
+}
+
+.print-block {
+  page-break-inside: avoid;
+  margin-bottom: 1rem;
+  font-size: 12pt;
+  color: #000;
+  word-break: break-word;
+}
+
+.print-block h2 {
+  font-size: 14pt;
+  font-weight: 600;
+  margin: 0 0 .5rem;
+  color: #000;
+}
+
+.print-block p {
+  font-size: 12pt;
+  margin: 0 0 .5rem;
+  color: #000;
+}
+
+.print-block img {
+  max-width: 100%;
+  height: auto;
+  border-radius: .25rem;
+  border: 1px solid #444;
+  display: block;
+  margin-bottom: .5rem;
+}
+
+/* Markdown-rendered text in print */
+.print-markdown {
+  font-family: "Georgia", "Times New Roman", serif;
+  font-size: 12pt;
+  line-height: 1.4;
+  color: #000;
+}
+.print-markdown h1,
+.print-markdown h2,
+.print-markdown h3,
+.print-markdown h4 {
+  margin: .5rem 0 .25rem;
+  font-weight: 600;
+  color: #000;
+}
+.print-markdown code {
+  font-family: "Courier New", monospace;
+  background: #f0f0f0;
+  padding: 0 .25rem;
+  border-radius: .25rem;
+  font-size: 11pt;
+  color: #000;
+  word-break: break-word;
+}
+.print-markdown pre {
+  background: #f0f0f0;
+  padding: .5rem;
+  border-radius: .25rem;
+  overflow-x: auto;
+  font-size: 11pt;
+  color: #000;
+}
+
+/* Force printable media */
+@media print {
+  body,
+  .app-header,
+  .main-layout,
+  .app-footer {
+    display: none !important;
+  }
+
+  #printArea {
+    display: block !important;
+  }
+
+  @page {
+    size: auto;
+    margin: 0.5in;
+  }
+}
+
+/* Responsive tweaks ---------------------------------------------------- */
+
+@media (max-width: 800px) {
+  .main-layout {
+    grid-template-columns: 1fr;
+  }
+  .doc-area {
+    max-height: 50vh;
+  }
+}

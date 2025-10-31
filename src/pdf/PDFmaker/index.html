@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Local PDF Builder</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <h1>PDF Builder</h1>
+      <p class="tagline">Paste notes + drop screenshots → Save as PDF</p>
+    </div>
+
+    <div class="header-actions">
+      <button id="addTextBtn" class="btn primary">+ Text / Markdown</button>
+      <label class="btn file-btn">
+        + Screenshot / Image
+        <input type="file" id="imageInput" accept="image/*" hidden />
+      </label>
+      <button id="printBtn" class="btn success">Export PDF</button>
+    </div>
+  </header>
+
+  <main class="main-layout">
+    <!-- Left panel: editor controls / new block form -->
+    <section class="editor-panel card">
+      <h2 class="panel-title">New Text Block</h2>
+      <div class="form-row">
+        <label for="blockTitle">Optional Title</label>
+        <input id="blockTitle" type="text" placeholder="e.g. Meeting Notes, Section 1, etc." />
+      </div>
+
+      <div class="form-row">
+        <label for="blockContent">Content (plain or markdown)</label>
+        <textarea id="blockContent" placeholder="Paste anything here..."></textarea>
+      </div>
+
+      <div class="form-row checkbox-row">
+        <input type="checkbox" id="renderMarkdown" />
+        <label for="renderMarkdown">Render Markdown in final PDF</label>
+      </div>
+
+      <div class="form-row">
+        <button id="saveBlockBtn" class="btn primary full">Add Block</button>
+      </div>
+
+      <hr class="section-divider"/>
+
+      <div class="tips">
+        <p><strong>Tips:</strong></p>
+        <ul>
+          <li>Use the buttons on each block to move it up/down or delete it.</li>
+          <li>Images you upload are stored in-memory, not on the internet.</li>
+          <li>When you click "Export PDF", we'll open browser print view. Choose "Save as PDF".</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Right panel: live document -->
+    <section class="document-panel card">
+      <div class="doc-header">
+        <h2 class="panel-title">Document Preview</h2>
+        <input id="docTitle" class="doc-title-input" placeholder="Document Title (shown on first page)"/>
+      </div>
+
+      <div id="docArea" class="doc-area">
+        <!-- Blocks will be inserted here -->
+        <p class="empty-hint" id="emptyHint">No content yet. Add text or images.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Print layout -->
+  <div id="printArea">
+    <h1 id="printDocTitle"></h1>
+    <div id="printBlocks"></div>
+  </div>
+
+  <footer class="app-footer">
+    <p>All local. Nothing uploads anywhere.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
