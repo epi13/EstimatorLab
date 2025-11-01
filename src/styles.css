@@ -428,6 +428,73 @@ body[data-page="assemblies-oc-linear-ft"] .results-card {
             grid-template-columns: 1fr;
         }
 }
+/* Take-off / blueprint viewer layout overrides */
+body[data-page="take-off-takeoff"] {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+/* Disable the default centered max-width for this full-window app */
+body[data-page="take-off-takeoff"] > *:not(script):not(style) {
+  max-width: none;
+  margin: 0;
+}
+
+/* Topbar spans full width and stays visible */
+body[data-page="take-off-takeoff"] .topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 1rem;
+  background: transparent;
+  position: sticky;
+  top: 0;
+  z-index: 60;
+}
+
+/* Main area: side panel + viewer */
+body[data-page="take-off-takeoff"] .wrap {
+  display: flex;
+  gap: 1rem;
+  height: calc(100vh - 64px); /* leave room for topbar */
+  padding: 1rem;
+  box-sizing: border-box;
+  align-items: stretch;
+}
+
+/* Left side panel fixed-ish */
+body[data-page="take-off-takeoff"] .panel {
+  width: 320px;
+  max-width: 35%;
+  min-width: 260px;
+  overflow: auto;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: var(--shadow-soft);
+}
+
+/* Viewer should take remaining space and allow scrolling */
+body[data-page="take-off-takeoff"] .viewer {
+  flex: 1 1 auto;
+  min-width: 0; /* allow flex child to shrink properly */
+  background: transparent;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body[data-page="take-off-takeoff"] .canvas-stack {
+  display: inline-block;
+  max-width: 100%;
+  height: auto;
+}
+
+body[data-page="take-off-takeoff"] .hint { text-align:center; padding: 1rem; }
+
 body[data-page="assemblies-oc-linear-ft"] .results-card h2 {
         font-size: .75rem;
         font-weight: 500;
