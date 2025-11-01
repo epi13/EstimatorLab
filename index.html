@@ -7,146 +7,419 @@
   <link rel="stylesheet" href="src/styles.css">
 </head>
 <body data-page="root-index">
-  <nav class="sidebar">
-    <h1>Calculator Hub</h1>
-    <ul class="nav-list">
-      <li><a href="src/home.html" target="calculatorFrame">Home</a></li>
-      <li><a href="src/search/fuzzy_search.html" target="calculatorFrame">JSON Search</a></li>
-      <li><a href="src/miscellaneous/units.html" target="calculatorFrame">Unit Conversion</a></li>
+  <div class="app-shell" data-app-shell>
+    <aside class="sidebar" aria-label="Calculator navigation">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+            <path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" />
+          </svg>
+        </div>
+        <div class="brand-copy">
+          <h1>Calculator Hub</h1>
+          <p>Your library of estimation tools in one streamlined dashboard.</p>
+        </div>
+      </div>
 
-      
-	<li class="category">
-        <button class="cat-btn" type="button">Take-off</button>
-        <ul class="sub-list">
-	  <li><a href="src/take_off/takeOff.html" target="calculatorFrame">Take Off</a></li>          
-          <li><a href="src/take_off/gridTO.html" target="calculatorFrame">Tables</a></li>
-        </ul>
-      </li>
+      <div class="sidebar-controls">
+        <label class="search" for="navSearch">
+          <span class="sr-only">Search calculators</span>
+          <input id="navSearch" type="search" placeholder="Search calculators" autocomplete="off" spellcheck="false">
+          <span class="search-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+              <path d="M11 4a7 7 0 0 1 5.563 11.194l3.121 3.122a1 1 0 1 1-1.414 1.414l-3.122-3.121A7 7 0 1 1 11 4Zm0 2a5 5 0 1 0 0 10a5 5 0 0 0 0-10Z" />
+            </svg>
+          </span>
+        </label>
+        <button type="button" class="ghost-button" data-collapse>
+          <span class="ghost-button__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+              <path d="M6 8h12a1 1 0 1 0 0-2H6a1 1 0 0 0 0 2Zm0 10h12a1 1 0 1 0 0-2H6a1 1 0 1 0 0 2Zm0-5h12a1 1 0 1 0 0-2H6a1 1 0 0 0 0 2Z" />
+            </svg>
+          </span>
+          <span data-collapse-label>Collapse all</span>
+        </button>
+      </div>
 
-	<li class="category">
-        <button class="cat-btn" type="button">PDF tools</button>
-        <ul class="sub-list">
-      <li><a href="src/pdf/PDFsearch.html" target="calculatorFrame">PDF Search</a></li>
-      <li><a href="src/pdf/extract.html" target="calculatorFrame">PDF Extractor</a></li>
-      <li><a href="src/pdf/markUp.html" target="calculatorFrame">PDF Mark-Up</a></li>
-      </ul>
-     </li>
+      <nav class="nav" data-nav aria-label="Calculator categories"></nav>
+      <p class="nav-empty" data-empty hidden>
+        No calculators match your search. Try a different keyword or clear the filter.
+      </p>
+    </aside>
 
-      <li class="category">
-        <button class="cat-btn" type="button">Volume</button>
-        <ul class="sub-list">
-          <li><a href="src/volume/cy_from_sfdepth.html" target="calculatorFrame">Cubic Yard from SF</a></li>
-          <li><a href="src/volume/l_w_h.html" target="calculatorFrame">Volume from L×WxH</a></li>
-          <li><a href="src/volume/trench_cy.html" target="calculatorFrame">Trench Excavation Calculator</a></li>
-	  <li><a href="src/volume/wireframe-box.html" target="calculatorFrame">Wire Frame</a></li>
-        </ul>
-      </li>
-
-      <li class="category">
-        <button class="cat-btn" type="button">Area</button>
-        <ul class="sub-list">          
-          <li><a href="src/area/triangle_area.html" target="calculatorFrame">Area of Triangle</a></li>
-      </ul>
-      </li>
-
-      <li class="category">
-        <button class="cat-btn" type="button">Weight</button>
-        <ul class="sub-list">
-          <li><a href="src/weight/fill_weight.html" target="calculatorFrame">Dry Weight Calculator</a></li>
-          <li><a href="src/weight/metal_weight.html" target="calculatorFrame">Metal Weight Calculator</a></li>
-          <li><a href="src/weight/rebar_calculator.html" target="calculatorFrame">Rebar Calculator</a></li>
-          <li><a href="src/weight/machine_weight.html" target="calculatorFrame">Machine Weight</a></li>
-        </ul>
-      </li>
-
-      <li class="category">
-        <button class="cat-btn" type="button">Structural</button>
-        <ul class="sub-list">          
-          <li><a href="src/structural/pan_concrete.html" target="calculatorFrame">Concrete Filled Decking</a></li>
-          <li><a href="src/structural/welding.html" target="calculatorFrame">Welding</a></li>
-      </ul>
-      </li>
-
-      <li class="category">
-        <button class="cat-btn" type="button">Finishes</button>
-        <ul class="sub-list">          
-          <li><a href="src/finishes/coatings.html" target="calculatorFrame">Paint and Coatings</a></li>
-          <li><a href="src/finishes/flooring.html" target="calculatorFrame">Flooring</a></li>
-      </ul>
-      </li>
-
-      <li class="category">
-        <button class="cat-btn" type="button">Electrical</button>
-        <ul class="sub-list">
-          <li><a href="src/electrical/electrical_calculator.html" target="calculatorFrame">Electrical Calculator</a></li>
-          <li><a href="src/electrical/telecom.html" target="calculatorFrame">Network Devices</a></li>
-	  <li><a href="src/electrical/panelboard.html" target="calculatorFrame">Panelboard Pricing</a></li>
-          <li><a href="src/electrical/service.html" target="calculatorFrame">Service Calculator</a></li>
-          <li><a href="src/electrical/light_fixtures.html" target="calculatorFrame">Lighting Fixtures</a></li>
-          <li><a href="src/electrical/fill_and_bend.html" target="calculatorFrame">Conduit fill and bend</a></li>
-        </ul>
-      </li>
-
-      <li class="category">
-        <button class="cat-btn" type="button">Mechanical</button>
-        <ul class="sub-list">          
-          <li><a href="src/mechanical/ducting.html" target="calculatorFrame">Duct Calculator</a></li>
-          <li><a href="src/mechanical/boiler.html" target="calculatorFrame">Boilers</a></li>
-          <li><a href="src/mechanical/ddc.html" target="calculatorFrame">DDC</a></li>
-          <li><a href="src/mechanical/diffuser.html" target="calculatorFrame">Vents and Diffuser</a></li>
-          <li><a href="src/mechanical/exhaust.html" target="calculatorFrame">Exhaust Fans</a></li>
-          <li><a href="src/mechanical/fuel.html" target="calculatorFrame">Fuel Systems</a></li>
-          <li><a href="src/mechanical/gas.html" target="calculatorFrame">Gas Systems</a></li>
-          <li><a href="src/mechanical/HRV.html" target="calculatorFrame">HRV Calculator</a></li>
-          <li><a href="src/mechanical/septic.html" target="calculatorFrame">Septic System</a></li>
-        </ul>
-      </li>
-
-      <li class="category">
-        <button class="cat-btn" type="button">Fire</button>
-        <ul class="sub-list">          
-          <li><a href="src/fire/alarm.html" target="calculatorFrame">Fire Alarm</a></li>
-          <li><a href="src/fire/suppression.html" target="calculatorFrame">Fire Suppression</a></li>
-        </ul>
-      </li>
-
-      <li class="category">
-        <button class="cat-btn" type="button">Assemblies</button>
-        <ul class="sub-list">
-          <li><a href="src/assemblies/doors.html" target="calculatorFrame">Door Calculator</a></li>
-	  <li><a href="src/assemblies/resilient_channel_calculator.html" target="calculatorFrame">Resilent Channel Calculator</a></li>
-          <li><a href="src/assemblies/insulation.html" target="calculatorFrame">Insulation</a></li>
-          <li><a href="src/assemblies/pemb.html" target="calculatorFrame">PEMB</a></li>  
-          <li><a href="src/assemblies/OC_linear_ft.html" target="calculatorFrame">OC_LF</a></li>  
-        </ul>
-      </li>
-
-      <li class="category">
-        <button class="cat-btn" type="button">Logistics</button>
-        <ul class="sub-list">          
-          <li><a href="src/logistics/freight.html" target="calculatorFrame">Freight</a></li>
-          <li><a href="src/logistics/gen_req.html" target="calculatorFrame">General Requirments</a></li>
-          <li><a href="src/logistics/labor.html" target="calculatorFrame">Labor</a></li>
-        </ul>
-      </li>
-
-      <li class="category">
-        <button class="cat-btn" type="button">Productivity</button>
-        <ul class="sub-list">
-          <li><a href="src/productivity/carpentry.html" target="calculatorFrame">Carpentry Productivity</a></li>
-        </ul>
-      </li>
-    </ul>
-  </nav>
-  <div id="content">
-    <iframe name="calculatorFrame" src="src/home.html"></iframe>
+    <main class="workspace" aria-live="polite">
+      <header class="workspace-header">
+        <div>
+          <span class="workspace-category" data-selected-category>Quick Access</span>
+          <h2 class="workspace-title" data-selected-title>Home</h2>
+        </div>
+        <button type="button" class="ghost-button" data-refresh title="Reload the current calculator">
+          <span class="ghost-button__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+              <path d="M18.364 5.636A9 9 0 1 0 21 12a1 1 0 0 0-2 0a7 7 0 1 1-2.05-4.95l-1.364 1.364A1 1 0 0 0 17 9V4a1 1 0 0 0-1-1h-5a1 1 0 0 0 0 2h2.99a9 9 0 0 0-8.167 14.026a1 1 0 1 0 1.69-1.082A7 7 0 0 1 17 12c0-.131-.009-.26-.02-.39Z" />
+            </svg>
+          </span>
+          <span>Reload</span>
+        </button>
+      </header>
+      <div class="frame-wrapper">
+        <iframe class="calculator-frame" name="calculatorFrame" src="src/home.html" title="Calculator workspace" loading="lazy"></iframe>
+      </div>
+    </main>
   </div>
-  <script>
-    document.querySelectorAll('.cat-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        btn.parentElement.classList.toggle('open');
+
+  <noscript>
+    <p class="noscript">JavaScript is required to render the navigation tree. Please enable JavaScript to browse the calculators.</p>
+  </noscript>
+
+  <script type="module">
+    const navigationData = [
+      {
+        title: 'Quick Access',
+        icon: 'sparkles',
+        startOpen: true,
+        calculators: [
+          { label: 'Home', href: 'src/home.html', keywords: 'landing overview start' },
+          { label: 'JSON Search', href: 'src/search/fuzzy_search.html', keywords: 'data fuzzy finder' },
+          { label: 'Unit Conversion', href: 'src/miscellaneous/units.html', keywords: 'measurements conversions' }
+        ]
+      },
+      {
+        title: 'Take-off',
+        icon: 'clipboard',
+        calculators: [
+          { label: 'Take Off', href: 'src/take_off/takeOff.html', keywords: 'quantity estimator' },
+          { label: 'Tables', href: 'src/take_off/gridTO.html', keywords: 'grid reference' }
+        ]
+      },
+      {
+        title: 'PDF Tools',
+        icon: 'document',
+        calculators: [
+          { label: 'PDF Search', href: 'src/pdf/PDFsearch.html', keywords: 'documents find text' },
+          { label: 'PDF Extractor', href: 'src/pdf/extract.html', keywords: 'export data' },
+          { label: 'PDF Mark-Up', href: 'src/pdf/markUp.html', keywords: 'annotations notes' }
+        ]
+      },
+      {
+        title: 'Volume',
+        icon: 'cube',
+        calculators: [
+          { label: 'Cubic Yard from SF', href: 'src/volume/cy_from_sfdepth.html', keywords: 'square footage depth' },
+          { label: 'Volume from L×W×H', href: 'src/volume/l_w_h.html', keywords: 'length width height' },
+          { label: 'Trench Excavation Calculator', href: 'src/volume/trench_cy.html', keywords: 'excavation earthwork' },
+          { label: 'Wire Frame', href: 'src/volume/wireframe-box.html', keywords: 'visual 3d box' }
+        ]
+      },
+      {
+        title: 'Area',
+        icon: 'ruler',
+        calculators: [
+          { label: 'Area of Triangle', href: 'src/area/triangle_area.html', keywords: 'geometry surface' }
+        ]
+      },
+      {
+        title: 'Weight',
+        icon: 'scale',
+        calculators: [
+          { label: 'Dry Weight Calculator', href: 'src/weight/fill_weight.html', keywords: 'fill soil' },
+          { label: 'Metal Weight Calculator', href: 'src/weight/metal_weight.html', keywords: 'metals density' },
+          { label: 'Rebar Calculator', href: 'src/weight/rebar_calculator.html', keywords: 'reinforcement steel' },
+          { label: 'Machine Weight', href: 'src/weight/machine_weight.html', keywords: 'equipment load' }
+        ]
+      },
+      {
+        title: 'Structural',
+        icon: 'beam',
+        calculators: [
+          { label: 'Concrete Filled Decking', href: 'src/structural/pan_concrete.html', keywords: 'pan decking slab' },
+          { label: 'Welding', href: 'src/structural/welding.html', keywords: 'joinery fabrication' }
+        ]
+      },
+      {
+        title: 'Finishes',
+        icon: 'palette',
+        calculators: [
+          { label: 'Paint and Coatings', href: 'src/finishes/coatings.html', keywords: 'paint finish' },
+          { label: 'Flooring', href: 'src/finishes/flooring.html', keywords: 'floor coverings' }
+        ]
+      },
+      {
+        title: 'Electrical',
+        icon: 'bolt',
+        calculators: [
+          { label: 'Electrical Calculator', href: 'src/electrical/electrical_calculator.html', keywords: 'power circuits' },
+          { label: 'Network Devices', href: 'src/electrical/telecom.html', keywords: 'telecom communications' },
+          { label: 'Panelboard Pricing', href: 'src/electrical/panelboard.html', keywords: 'panel schedules' },
+          { label: 'Service Calculator', href: 'src/electrical/service.html', keywords: 'distribution load' },
+          { label: 'Lighting Fixtures', href: 'src/electrical/light_fixtures.html', keywords: 'illumination lumens' },
+          { label: 'Conduit Fill and Bend', href: 'src/electrical/fill_and_bend.html', keywords: 'raceway bending' }
+        ]
+      },
+      {
+        title: 'Mechanical',
+        icon: 'fan',
+        calculators: [
+          { label: 'Duct Calculator', href: 'src/mechanical/ducting.html', keywords: 'airflow hvac' },
+          { label: 'Boilers', href: 'src/mechanical/boiler.html', keywords: 'heating systems' },
+          { label: 'DDC', href: 'src/mechanical/ddc.html', keywords: 'controls automation' },
+          { label: 'Vents and Diffuser', href: 'src/mechanical/diffuser.html', keywords: 'air distribution' },
+          { label: 'Exhaust Fans', href: 'src/mechanical/exhaust.html', keywords: 'ventilation fans' },
+          { label: 'Fuel Systems', href: 'src/mechanical/fuel.html', keywords: 'storage piping' },
+          { label: 'Gas Systems', href: 'src/mechanical/gas.html', keywords: 'gas piping' },
+          { label: 'HRV Calculator', href: 'src/mechanical/HRV.html', keywords: 'heat recovery ventilation' },
+          { label: 'Septic System', href: 'src/mechanical/septic.html', keywords: 'wastewater treatment' }
+        ]
+      },
+      {
+        title: 'Fire',
+        icon: 'flame',
+        calculators: [
+          { label: 'Fire Alarm', href: 'src/fire/alarm.html', keywords: 'life safety' },
+          { label: 'Fire Suppression', href: 'src/fire/suppression.html', keywords: 'sprinkler' }
+        ]
+      },
+      {
+        title: 'Assemblies',
+        icon: 'layers',
+        calculators: [
+          { label: 'Door Calculator', href: 'src/assemblies/doors.html', keywords: 'openings hardware' },
+          { label: 'Resilient Channel Calculator', href: 'src/assemblies/resilient_channel_calculator.html', keywords: 'drywall acoustics' },
+          { label: 'Insulation', href: 'src/assemblies/insulation.html', keywords: 'thermal envelope' },
+          { label: 'PEMB', href: 'src/assemblies/pemb.html', keywords: 'pre engineered metal building' },
+          { label: 'OC Linear Ft', href: 'src/assemblies/OC_linear_ft.html', keywords: 'on center spacing' }
+        ]
+      },
+      {
+        title: 'Logistics',
+        icon: 'route',
+        calculators: [
+          { label: 'Freight', href: 'src/logistics/freight.html', keywords: 'shipping transport' },
+          { label: 'General Requirements', href: 'src/logistics/gen_req.html', keywords: 'project administration' },
+          { label: 'Labor', href: 'src/logistics/labor.html', keywords: 'workforce staffing' }
+        ]
+      },
+      {
+        title: 'Productivity',
+        icon: 'chart',
+        calculators: [
+          { label: 'Carpentry Productivity', href: 'src/productivity/carpentry.html', keywords: 'crew output rates' }
+        ]
+      }
+    ];
+
+    const iconPaths = {
+      sparkles: 'M12 2a1 1 0 0 1 .894.553l1.618 3.342l3.695.537a1 1 0 0 1 .554 1.71l-2.671 2.605l.63 3.672a1 1 0 0 1-1.451 1.054L12 13.861l-3.268 1.72a1 1 0 0 1-1.451-1.054l.63-3.672L5.24 8.142a1 1 0 0 1 .554-1.71l3.695-.537l1.618-3.342A1 1 0 0 1 12 2Z',
+      clipboard: 'M9 2a1 1 0 0 0-1 1v1H6a2 2 0 0 0-2 2v12a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V6a2 2 0 0 0-2-2h-2V3a1 1 0 0 0-1-1H9Zm1 2h4v1h-4V4Z',
+      document: 'M7 2h7l5 5v11a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V6a4 4 0 0 1 4-4Zm7 2H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V9h-3a2 2 0 0 1-2-2V4Z',
+      cube: 'M11.447 1.276a1 1 0 0 1 1.106 0l8 5.2A1 1 0 0 1 21 7.333v9.334a1 1 0 0 1-.447.857l-8 5.2a1 1 0 0 1-1.106 0l-8-5.2A1 1 0 0 1 3 16.667V7.333a1 1 0 0 1 .447-.857l8-5.2ZM5 8.28v7.053l6 3.9V12.18L5 8.28Zm14 0-6 3.9v7.053l6-3.9V8.28ZM12 3.086L6.197 7L12 10.914L17.803 7L12 3.086Z',
+      ruler: 'M20 3a1 1 0 0 1 1 1v13.5a2.5 2.5 0 0 1-3.984 2.005L3.28 12.88a2.5 2.5 0 0 1 0-3.535L15.35 2.273A1 1 0 0 1 16 2h4Zm-2 2h-1v1a1 1 0 0 1-2 0V5h-1v1a1 1 0 0 1-2 0V5H9v1a1 1 0 0 1-2 0V5H6.414L4 7.414L16.586 20H17a.5.5 0 0 0 .5-.5V5Z',
+      scale: 'M12 2a1 1 0 0 1 1 1v1.126a4 4 0 0 1 2.5 3.718V12h1.382a3.5 3.5 0 1 1-3.381 4.5H10.5A3.5 3.5 0 1 1 7.118 12H8.5V7.844A4 4 0 0 1 11 4.126V3a1 1 0 0 1 1-1Zm3.5 12H19a1.5 1.5 0 1 0-1.5 1.5V14Zm-10 0A1.5 1.5 0 1 0 6 15.5V14h-.5Z',
+      beam: 'M4 6a2 2 0 0 1 2-2h12a2 2 0 1 1 0 4h-1v8a2 2 0 1 1-4 0V8h-2v8a2 2 0 1 1-4 0V8H6a2 2 0 0 1-2-2Z',
+      palette: 'M13.5 2a8.5 8.5 0 0 1 8.347 10.073a3.874 3.874 0 0 1-4.136 3.13L17 15.12a1.5 1.5 0 0 0-2 1.42a2.46 2.46 0 0 1-2.452 2.46H12a8.5 8.5 0 0 1 1.5-16.997ZM8.5 7a1.25 1.25 0 1 0 0-2.5A1.25 1.25 0 0 0 8.5 7Zm7-1A1.25 1.25 0 1 0 15.5 3 1.25 1.25 0 0 0 15.5 6Zm-9 5A1.25 1.25 0 1 0 5.5 9 1.25 1.25 0 0 0 6.5 11Zm10 1a1.25 1.25 0 1 0 0-2.5 1.25 1.25 0 0 0 0 2.5Z',
+      bolt: 'M12.516 2.11A1 1 0 0 1 13.5 3v6h4a1 1 0 0 1 .78 1.625l-7 9a1 1 0 0 1-1.78-.625V13H5a1 1 0 0 1-.78-1.625l7-9a1 1 0 0 1 1.296-.265Z',
+      fan: 'M13.732 2.084a1 1 0 0 1 1.241.647l1.286 3.857l3.858 1.286a1 1 0 0 1 .282 1.796l-3.27 2.36l.405 4.062a1 1 0 0 1-1.45.97l-3.784-1.89l-3.784 1.89a1 1 0 0 1-1.45-.97l.405-4.062l-3.27-2.36a1 1 0 0 1 .282-1.796l3.858-1.286l1.286-3.857a1 1 0 0 1 1.241-.647L12 2.5l1.732-.416Z',
+      flame: 'M11.445 2.105a1 1 0 0 1 1.11 0C15.23 4.01 19 8.086 19 12.5a7 7 0 0 1-14 0c0-4.414 3.77-8.49 6.445-10.395ZM12 6.382C10.432 7.83 9 10.07 9 12.5a3 3 0 0 0 6 0c0-2.43-1.432-4.67-3-6.118Z',
+      layers: 'M12 2a1 1 0 0 1 .447.105l8 4a1 1 0 0 1 0 1.79L12.447 12.895a1 1 0 0 1-.894 0L3.553 7.895a1 1 0 0 1 0-1.79l8-4A1 1 0 0 1 12 2Zm0 9.618L18.764 9L12 5.382L5.236 9L12 11.618Zm8.447 3.277a1 1 0 0 1-.447 1.342l-8 4a1 1 0 0 1-.894 0l-8-4a1 1 0 1 1 .894-1.788L12 18.618l7.447-3.17a1 1 0 0 1 1.342.447Z',
+      route: 'M7 4a3 3 0 1 1 2.995 3.225l-2.94 9.8A3 3 0 1 1 5 16a2.99 2.99 0 0 1 1.005-2.225l2.94-9.8A3 3 0 0 1 7 4Zm10 6a3 3 0 1 1-.005 6A3 3 0 0 1 17 10Z',
+      chart: 'M6 11a1 1 0 0 1 1 1v6h2V9a1 1 0 0 1 2 0v9h2v-6a1 1 0 1 1 2 0v6h2v-3a1 1 0 1 1 2 0v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6a1 1 0 0 1 1-1h1Zm11-9a1 1 0 0 1 .78 1.625l-4 5a1 1 0 0 1-1.424.144L10.4 7.2l-3.4 3.4a1 1 0 1 1-1.414-1.414l4-4a1 1 0 0 1 1.327-.077l1.91 1.432l3.37-4.212A1 1 0 0 1 17 2Z'
+    };
+
+    const navContainer = document.querySelector('[data-nav]');
+    const collapseButton = document.querySelector('[data-collapse]');
+    const collapseLabel = document.querySelector('[data-collapse-label]');
+    const searchInput = document.getElementById('navSearch');
+    const emptyState = document.querySelector('[data-empty]');
+    const categoryLabel = document.querySelector('[data-selected-category]');
+    const titleLabel = document.querySelector('[data-selected-title]');
+    const refreshButton = document.querySelector('[data-refresh]');
+    const calculatorFrame = document.querySelector('.calculator-frame');
+
+    const sr = (text) => {
+      const span = document.createElement('span');
+      span.className = 'sr-only';
+      span.textContent = text;
+      return span;
+    };
+
+    const createIcon = (name) => {
+      if (!name || !iconPaths[name]) return null;
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('aria-hidden', 'true');
+      svg.setAttribute('focusable', 'false');
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', iconPaths[name]);
+      svg.appendChild(path);
+      return svg;
+    };
+
+    const sectionElements = [];
+
+    const fragment = document.createDocumentFragment();
+    navigationData.forEach((section) => {
+      const sectionEl = document.createElement('section');
+      sectionEl.className = 'nav-section';
+      sectionEl.dataset.sectionTitle = section.title;
+      if (section.startOpen) {
+        sectionEl.dataset.open = 'true';
+      }
+
+      const header = document.createElement('header');
+      header.className = 'nav-section__header';
+
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'nav-section__toggle';
+      toggle.setAttribute('aria-expanded', section.startOpen ? 'true' : 'false');
+      toggle.appendChild(sr(section.startOpen ? `Collapse ${section.title}` : `Expand ${section.title}`));
+
+      const toggleContent = document.createElement('div');
+      toggleContent.className = 'nav-section__label';
+      const icon = createIcon(section.icon);
+      if (icon) {
+        const iconWrapper = document.createElement('span');
+        iconWrapper.className = 'nav-section__icon';
+        iconWrapper.appendChild(icon);
+        toggleContent.appendChild(iconWrapper);
+      }
+      const title = document.createElement('span');
+      title.textContent = section.title;
+      toggleContent.appendChild(title);
+      toggle.appendChild(toggleContent);
+
+      const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      chevron.setAttribute('viewBox', '0 0 24 24');
+      chevron.setAttribute('aria-hidden', 'true');
+      chevron.setAttribute('focusable', 'false');
+      chevron.classList.add('nav-section__chevron');
+      const chevronPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      chevronPath.setAttribute('d', 'M7.293 9.293a1 1 0 0 1 1.414 0L12 12.586l3.293-3.293a1 1 0 0 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414Z');
+      chevron.appendChild(chevronPath);
+      toggle.appendChild(chevron);
+
+      header.appendChild(toggle);
+      sectionEl.appendChild(header);
+
+      const list = document.createElement('ul');
+      list.className = 'nav-section__list';
+      section.calculators.forEach((calc) => {
+        const item = document.createElement('li');
+        item.className = 'nav-section__item';
+        item.dataset.search = `${section.title} ${calc.label} ${calc.keywords || ''}`.toLowerCase();
+
+        const link = document.createElement('a');
+        link.className = 'nav-section__link';
+        link.href = calc.href;
+        link.textContent = calc.label;
+        link.target = 'calculatorFrame';
+        link.rel = 'noopener';
+        link.dataset.sectionTitle = section.title;
+        link.dataset.calculator = calc.label;
+
+        item.appendChild(link);
+        list.appendChild(item);
       });
+
+      sectionEl.appendChild(list);
+      fragment.appendChild(sectionEl);
+      sectionElements.push(sectionEl);
     });
+
+    navContainer.appendChild(fragment);
+
+    const navLinks = () => navContainer.querySelectorAll('.nav-section__link');
+
+    const setSectionOpen = (sectionEl, open) => {
+      const toggle = sectionEl.querySelector('.nav-section__toggle');
+      if (!toggle) return;
+      if (open) {
+        sectionEl.dataset.open = 'true';
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.querySelector('.sr-only').textContent = `Collapse ${sectionEl.dataset.sectionTitle}`;
+      } else {
+        sectionEl.dataset.open = 'false';
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.querySelector('.sr-only').textContent = `Expand ${sectionEl.dataset.sectionTitle}`;
+      }
+    };
+
+    navContainer.addEventListener('click', (event) => {
+      const toggle = event.target.closest('.nav-section__toggle');
+      if (toggle) {
+        const sectionEl = toggle.closest('.nav-section');
+        const isOpen = sectionEl.dataset.open === 'true';
+        setSectionOpen(sectionEl, !isOpen);
+      }
+    });
+
+    navContainer.addEventListener('click', (event) => {
+      const link = event.target.closest('.nav-section__link');
+      if (!link) return;
+
+      navLinks().forEach((item) => {
+        item.removeAttribute('aria-current');
+        item.parentElement.classList.remove('is-active');
+      });
+
+      link.setAttribute('aria-current', 'page');
+      link.parentElement.classList.add('is-active');
+      categoryLabel.textContent = link.dataset.sectionTitle;
+      titleLabel.textContent = link.dataset.calculator;
+    });
+
+    const applyFilter = (value) => {
+      const query = value.trim().toLowerCase();
+      let hasMatches = false;
+      sectionElements.forEach((sectionEl) => {
+        const items = Array.from(sectionEl.querySelectorAll('.nav-section__item'));
+        let visibleCount = 0;
+        items.forEach((item) => {
+          const match = !query || item.dataset.search.includes(query);
+          item.hidden = !match;
+          if (match) {
+            visibleCount += 1;
+          }
+        });
+        if (visibleCount) {
+          sectionEl.hidden = false;
+          setSectionOpen(sectionEl, true);
+          hasMatches = true;
+        } else {
+          sectionEl.hidden = true;
+        }
+      });
+      emptyState.hidden = hasMatches;
+    };
+
+    searchInput.addEventListener('input', (event) => {
+      applyFilter(event.target.value);
+    });
+
+    collapseButton.addEventListener('click', () => {
+      const shouldCollapse = collapseButton.dataset.state !== 'collapsed';
+      sectionElements.forEach((sectionEl) => setSectionOpen(sectionEl, !shouldCollapse));
+      collapseButton.dataset.state = shouldCollapse ? 'collapsed' : 'expanded';
+      collapseLabel.textContent = shouldCollapse ? 'Expand all' : 'Collapse all';
+    });
+
+    refreshButton.addEventListener('click', () => {
+      calculatorFrame.contentWindow?.location.reload();
+    });
+
+    calculatorFrame.addEventListener('load', () => {
+      const currentSrc = calculatorFrame.getAttribute('src');
+      const activeLink = Array.from(navLinks()).find((link) => link.getAttribute('href') === currentSrc);
+      if (activeLink) {
+        activeLink.click();
+      }
+    }, { once: true });
+
+    const defaultLink = navContainer.querySelector('.nav-section__link');
+    if (defaultLink) {
+      defaultLink.parentElement.classList.add('is-active');
+      defaultLink.setAttribute('aria-current', 'page');
+    }
   </script>
 </body>
 </html>
