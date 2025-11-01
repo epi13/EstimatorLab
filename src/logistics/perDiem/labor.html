@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="labor.css">
+  <style>
+    /* Additional styles can be added here if needed */
+  </style>
+
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Man-Days & Per-Diem Calculator (Offline, Auto Crew/Subs)</title>
+</head>
+<body data-page="logistics-labor">
+<header><h1>Man-Days & Per-Diem Calculator — Offline (Auto Crew/Subs)</h1></header>
+<div class="wrap">
+  <div class="grid">
+
+    <!-- MANPOWER INPUTS -->
+    <div class="card">
+      <h2>1) Manpower & Duration</h2>
+      <div class="row">
+        <div class="span-4">
+          <label>Total Field Labor $ (burdened)</label>
+          <input id="labor_total" type="number" step="100" placeholder="e.g., 250000">
+        </div>
+        <div class="span-4">
+          <label>Project Duration (work days)</label>
+          <input id="days" type="number" step="1" value="20">
+        </div>
+        <div class="span-4">
+          <label>Hours per Work Day</label>
+          <input id="hours_day" type="number" value="10" min="1" max="16">
+        </div>
+      </div>
+      <div class="row">
+        <div class="span-4">
+          <label>Blended Labor Rate ($/hr)</label>
+          <input id="blended_rate" type="number" value="90" min="1">
+          <div class="help">Anchorage guideline: Civil $82, Arch $87, Struct $90, Mech $92, Elec $96.</div>
+        </div>
+        <div class="span-4">
+          <label>Utilization (%)</label>
+          <input id="util" type="number" value="92" min="50" max="100">
+          <div class="help">Accounts for Alaska/remote inefficiencies.</div>
+        </div>
+        <div class="span-4">
+          <label>Subs Share of Headcount (%)</label>
+          <input id="subs_pct" type="number" value="25" min="0" max="100">
+          <div class="help">Used to split auto headcount into Crew vs Subs. Override below if needed.</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="span-3">
+          <label class="inline">Crew (auto)</label>
+          <input id="crew" type="number" min="0" disabled>
+          <div class="toggle"><input type="checkbox" id="crew_override"><label for="crew_override">Override</label></div>
+        </div>
+        <div class="span-3">
+          <label class="inline">Subs (auto)</label>
+          <input id="subs" type="number" min="0" disabled>
+          <div class="toggle"><input type="checkbox" id="subs_override"><label for="subs_override">Override</label></div>
+        </div>
+        <div class="span-3">
+          <label class="inline">Rooms (auto = Crew+Subs)</label>
+          <input id="rooms" type="number" min="0" disabled>
+          <div class="toggle"><input type="checkbox" id="rooms_override"><label for="rooms_override">Override</label></div>
+        </div>
+        <div class="span-3">
+          <label class="inline">Nights (auto = Days)</label>
+          <input id="nights" type="number" min="0" disabled>
+          <div class="toggle"><input type="checkbox" id="nights_override"><label for="nights_override">Override</label></div>
+        </div>
+      </div>
+
+      <div>
+        <span class="pill">Suggested Headcount: <b id="headcount">—</b></span>
+        <span class="pill">Man-Days: <b id="man_days">—</b></span>
+        <span class="pill">Man-Hours: <b id="man_hours">—</b></span>
+      </div>
+      <div class="help">Headcount = ceil( Labor$ ÷ (Rate × Hours/Day × Days × Util) ). Split by Subs % → Crew & Subs. Rooms = Crew+Subs; Nights = Days. You can override any of these.</div>
+    </div>
+
+    <!-- PER DIEM -->
+    <div class="card">
+      <h2>2) Per-Diem & Lodging</h2>
+      <label>Upload Per-Diem JSON (DoD OCONUS incl. Alaska)</label>
+      <input type="file" id="file_input" accept=".json">
+      <div id="file_status" class="help">No file loaded</div>
+      <hr>
+      <div id="perdiem_section" class="hidden">
+        <div class="row">
+          <div class="span-6">
+            <label>Locality</label>
+            <input id="locality_search" type="text" placeholder="e.g., ANCHORAGE, BARROW, ADAK…">
+          </div>
+          <div class="span-3">
+            <label>Season</label>
+            <select id="season"></select>
+          </div>
+          <div class="span-3">
+            <label>Effective Date</label>
+            <input id="effective" type="text" disabled>
+          </div>
+        </div>
+        <div class="row">
+          <div class="span-3"><label>M&IE (Meals+Incidental)</label><input id="mie" disabled></div>
+          <div class="span-3"><label>Lodging Cap</label><input id="lodging_cap" disabled></div>
+          <div class="span-3"><label>Lodging Override</label><input id="lodging_rate" type="number" placeholder="blank = cap"></div>
+          <div class="span-3"><label>Proportional Meals</label><input id="proportional_meals" disabled></div>
+        </div>
+        <div>
+          <span class="pill">M&IE Total: <b id="mie_total">—</b></span>
+          <span class="pill">Lodging Total: <b id="lodging_total">—</b></span>
+          <span class="pill">Grand Total: <b id="perdiem_total">—</b></span>
+        </div>
+        <div class="help">M&IE Total = M&IE × (Crew + Subs) × Nights. Lodging Total = (Override or Cap) × Rooms × Nights.</div>
+      </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="card">
+      <h2>Assumptions</h2>
+      <ul class="small">
+        <li>Anchorage labor rates (guideline): Civil $82, Arch $87, Struct $90, Mech $92, Elec $96. Adjust blended rate to your mix.</li>
+        <li>Utilization reduces effective hours for Alaska/remote logistics & weather.</li>
+        <li>Headcount split uses “Subs % of Headcount” (default 25%). You can override Crew, Subs, Rooms, Nights directly.</li>
+        <li>Rooms auto-assumes single occupancy per person; adjust via override if sharing rooms.</li>
+        <li>Nights default to project days; adjust for travel/staging days via override.</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<script src="labor.js"></script>
+</body>
+</html>
