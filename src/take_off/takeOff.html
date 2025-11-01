@@ -14,7 +14,7 @@
   </script>
 </head>
 <body data-page="take-off-takeoff">
-  <div class="topbar">
+  <header class="topbar" role="banner">
     <div class="brand">📐 Blueprint Measure</div>
     <div class="pill">
       <input id="file" type="file" accept="application/pdf"/>
@@ -54,47 +54,53 @@
       <button class="tool" id="exportJson">⇩ Export JSON</button>
       <button class="tool" id="exportPng">📸 Snapshot</button>
     </div>
-  </div>
+  </header>
 
-  <div class="wrap">
-    <div class="panel" id="side">
-      <h3>Session</h3>
-      <div class="kvs" id="sessionKVS">
-        <div class="k">Status</div><div id="statusVal">Load a PDF…</div>
-        <div class="k">Calibrated</div><div id="calVal" class="num">No</div>
-        <div class="k">Current tool</div><div id="toolVal">Pan</div>
-        <div class="k">Last length</div><div id="lenVal" class="num">–</div>
-        <div class="k">Last area</div><div id="areaVal" class="num">–</div>
-      </div>
+  <main class="wrap" role="main">
+    <aside class="panel" id="side">
+      <section class="panel-section">
+        <h3>Session</h3>
+        <div class="kvs" id="sessionKVS">
+          <div class="k">Status</div><div id="statusVal">Load a PDF…</div>
+          <div class="k">Calibrated</div><div id="calVal" class="num">No</div>
+          <div class="k">Current tool</div><div id="toolVal">Pan</div>
+          <div class="k">Last length</div><div id="lenVal" class="num">–</div>
+          <div class="k">Last area</div><div id="areaVal" class="num">–</div>
+        </div>
+      </section>
 
-      <h3 style="margin-top:1rem">How to use</h3>
-      <ol class="small" style="line-height:1.4;opacity:.95">
-        <li>Load a PDF (use <b>Demo</b> if you like).</li>
-        <li>Click <b>Calibrate</b>, pick 2 known points, enter real distance + units.</li>
-        <li>Select <b>Line</b> or <b>Area</b>. Click to measure; double‑click to close a polygon.</li>
-        <li>Mouse wheel = zoom. Hold <b>Space</b> and drag to pan (or use Pan tool).</li>
-        <li>Use <b>Export JSON</b> to save measurements.</li>
-      </ol>
+      <section class="panel-section">
+        <h3>How to use</h3>
+        <ol class="small instructions">
+          <li>Load a PDF (use <b>Demo</b> if you like).</li>
+          <li>Click <b>Calibrate</b>, pick 2 known points, enter real distance + units.</li>
+          <li>Select <b>Line</b> or <b>Area</b>. Click to measure; double‑click to close a polygon.</li>
+          <li>Mouse wheel = zoom. Hold <b>Space</b> and drag to pan (or use Pan tool).</li>
+          <li>Use <b>Export JSON</b> to save measurements.</li>
+        </ol>
 
-      <div class="row" style="margin-top:.8rem">
-        <button class="btn secondary" id="toggleLabels">Toggle labels</button>
-        <button class="btn secondary" id="toggleSnaps">Snap</button>
-      </div>
-      <div class="note" style="margin-top:.5rem">Snapping: end‑points & last point, useful for closing shapes cleanly.</div>
+        <div class="row row-spaced">
+          <button class="btn secondary" id="toggleLabels">Toggle labels</button>
+          <button class="btn secondary" id="toggleSnaps">Snap</button>
+        </div>
+        <div class="note muted-note">Snapping: end‑points & last point, useful for closing shapes cleanly.</div>
+      </section>
 
-      <h3 style="margin-top:1rem">Measurements</h3>
-      <div id="measList" class="list small"></div>
-    </div>
+      <section class="panel-section grow">
+        <h3>Measurements</h3>
+        <div id="measList" class="list small"></div>
+      </section>
+    </aside>
 
-    <div class="viewer" id="viewer">
+    <section class="viewer" id="viewer" aria-live="polite">
       <div class="canvas-stack" id="stack" style="display:none">
         <canvas id="pdf"></canvas>
         <canvas id="overlay"></canvas>
         <canvas id="labels"></canvas>
       </div>
       <div class="hint" id="hint">Load a PDF to begin.</div>
-    </div>
-  </div>
+    </section>
+  </main>
 
   <!-- Calibration Modal -->
   <div class="modal" id="calModal">
@@ -134,6 +140,7 @@
     calibrated: false,
     showLabels: true,
     snap: false,
+    snapPoints: [],
     measures: [],
     drawing: null, // {type:'line'|'area', points:[{x,y}], temp: {x,y}}
     lastLen: null,
@@ -271,6 +278,17 @@
   function polygonPerimeterPx(points){
     let s=0; for(let i=0;i<points.length;i++){ s+=dist(points[i], points[(i+1)%points.length]); } return s;
   }
+  function refreshSnapPoints(){
+    const pts = [];
+    for(const m of state.measures){
+      if(m.type==='line'){
+        pts.push(m.a, m.b);
+      } else if(m.type==='area'){
+        pts.push(...m.points);
+      }
+    }
+    state.snapPoints = pts;
+  }
 
   function setStatus(txt){ els.session.status.textContent = txt; }
   function setTool(name){
@@ -303,7 +321,12 @@
   }
   async function renderPage(){
     if(!state.pdf) return;
-    if(renderTask) { try{ await renderTask.cancel(); }catch{} }
+    if(renderTask) {
+      try{
+        await renderTask.cancel();
+      }catch{}
+      renderTask = null;
+    }
     const page = await state.pdf.getPage(state.pageNum);
     state.page = page;
     const viewport = page.getViewport({ scale: state.zoom * state.dpr });
@@ -325,6 +348,7 @@
     const renderCtx = { canvasContext: ctx, viewport };
     renderTask = page.render(renderCtx);
     await renderTask.promise;
+    renderTask = null;
     drawOverlay();
     updateZoomLbl();
   }
@@ -373,15 +397,10 @@
   }
   function snapIfNeeded(p){
     if(!state.snap) return p;
-    const pts = [];
-    // snap to last point of current drawing
-    if(state.drawing && state.drawing.points.length){ pts.push(state.drawing.points[state.drawing.points.length-1]); }
-    // snap to first point for closing
-    if(state.drawing && state.drawing.points.length){ pts.push(state.drawing.points[0]); }
-    // snap to all endpoints of existing measures
-    for(const m of state.measures){
-      if(m.type==='line') { pts.push(m.a, m.b); }
-      else if(m.type==='area') { for(const q of m.points) pts.push(q); }
+    const pts = state.snapPoints.slice();
+    if(state.drawing && state.drawing.points.length){
+      const last = state.drawing.points[state.drawing.points.length-1];
+      pts.push(last, state.drawing.points[0]);
     }
     let best=p, bestD=8*state.dpr; // 8px radius snap
     for(const q of pts){ const d=dist(p,q); if(d<bestD){ best=q; bestD=d; } }
@@ -557,15 +576,15 @@
       const pts = state.drawing.points.slice();
       const areaPx2 = polygonAreaPx(pts);
       const perPx = polygonPerimeterPx(pts);
-      state.measures.push({type:'area', points:pts, areaPx2, perimeterPx: perPx});
       state.lastArea = areaPxToWorld(areaPx2); els.session.area.textContent = fmtArea(state.lastArea);
-      state.drawing = null; drawOverlay(); refreshList();
+      state.drawing = null;
+      addMeasure({type:'area', points:pts, areaPx2, perimeterPx: perPx});
     }
   }
   els.finish.addEventListener('click', finishPolygon);
 
   els.clear.addEventListener('click', ()=>{
-    state.measures = []; state.drawing=null; state.lastLen=null; state.lastArea=null; els.session.len.textContent='–'; els.session.area.textContent='–'; drawOverlay(); refreshList();
+    state.measures = []; state.drawing=null; state.lastLen=null; state.lastArea=null; els.session.len.textContent='–'; els.session.area.textContent='–'; refreshSnapPoints(); drawOverlay(); refreshList();
   });
 
   // Export
@@ -625,9 +644,9 @@
     else if(state.drawing.type==='line' && state.drawing.points.length===1){
       const a = state.drawing.points[0]; const b = p;
       const Lpx = dist(a,b);
-      state.measures.push({type:'line', a,b, lengthPx:Lpx});
       state.lastLen = lenPxToWorld(Lpx); els.session.len.textContent = fmtLen(state.lastLen);
-      state.drawing = null; drawOverlay(); refreshList();
+      state.drawing = null;
+      addMeasure({type:'line', a,b, lengthPx:Lpx});
     }
   }
 
@@ -639,6 +658,13 @@
   }
 
   // List UI
+  function addMeasure(measure){
+    state.measures.push(measure);
+    refreshSnapPoints();
+    drawOverlay();
+    refreshList();
+  }
+
   function refreshList(){
     els.measList.innerHTML = '';
     state.measures.forEach((m,i)=>{
@@ -656,6 +682,8 @@
   }
 
   // ====== Init defaults ======
+  refreshSnapPoints();
+  els.toggleSnaps.classList.toggle('ghost', !state.snap);
   setTool('pan'); updateScaleLabel(); updateZoomLbl();
 
   </script>
