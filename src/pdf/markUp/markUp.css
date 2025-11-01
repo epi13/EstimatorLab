@@ -1,0 +1,56 @@
+/* pdf/markUp.html */
+body[data-page="pdf-markup"] {
+      --bg:#0f1216; --panel:#171b21; --panel-2:#1d232c; --ink:#e3e8ef; --muted:#96a0af;
+      --red:#e11d48; --red-2:#f43f5e; --accent:#3b82f6; --accent-2:#22c55e; --shadow:0 10px 30px rgb(0 0 0 / .35);
+      --border:#263041; --hi:#ffed4a; --focus:#60a5fa; --yellow:#f59e0b;
+    }
+body[data-page="pdf-markup"] * { box-sizing:border-box }
+body[data-page="pdf-markup"] html, body[data-page="pdf-markup"] { margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, Noto Sans, sans-serif }
+body[data-page="pdf-markup"] button, body[data-page="pdf-markup"] input, body[data-page="pdf-markup"] select, body[data-page="pdf-markup"] textarea { color:inherit; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:6px 10px }
+body[data-page="pdf-markup"] button { cursor:pointer }
+body[data-page="pdf-markup"] button:focus, body[data-page="pdf-markup"] input:focus, body[data-page="pdf-markup"] select:focus, body[data-page="pdf-markup"] textarea:focus { outline:2px solid var(--focus); outline-offset:1px }
+body[data-page="pdf-markup"] .app { display:grid; grid-template-rows:auto 1fr auto; height:100% }
+body[data-page="pdf-markup"] header, body[data-page="pdf-markup"] footer { background:var(--panel); border-bottom:1px solid var(--border); box-shadow:var(--shadow); position:relative; z-index:2 }
+body[data-page="pdf-markup"] footer { border-top:1px solid var(--border); border-bottom:none }
+body[data-page="pdf-markup"] .toolbar { display:flex; gap:8px; padding:8px 10px; align-items:center; overflow:auto }
+body[data-page="pdf-markup"] .toolbar .group { display:flex; gap:6px; padding:4px; border:1px solid var(--border); border-radius:10px; background:var(--panel-2); align-items:center }
+body[data-page="pdf-markup"] .toolbar .sep { width:1px; height:26px; background:var(--border); margin:0 8px }
+body[data-page="pdf-markup"] .toolbar label { font-size:12px; color:var(--muted) }
+body[data-page="pdf-markup"] .main { display:grid; grid-template-columns:260px 1fr 300px; gap:8px; padding:8px }
+body[data-page="pdf-markup"] .side, body[data-page="pdf-markup"] .props { background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; min-height:0 }
+body[data-page="pdf-markup"] .tabs { display:flex; }
+body[data-page="pdf-markup"] .tab { flex:1; text-align:center; padding:8px; cursor:pointer; border-bottom:1px solid var(--border); background:var(--panel) }
+body[data-page="pdf-markup"] .tab.active { background:var(--panel-2) }
+body[data-page="pdf-markup"] .thumbs, body[data-page="pdf-markup"] .layers, body[data-page="pdf-markup"] .comments { overflow:auto; padding:8px; gap:8px; display:flex; flex-direction:column; flex:1; min-height:0 }
+body[data-page="pdf-markup"] .thumb { border:1px solid var(--border); border-radius:8px; padding:6px; background:#0b0e12; cursor:pointer }
+body[data-page="pdf-markup"] .thumb canvas { width:100%; height:auto; display:block }
+body[data-page="pdf-markup"] .viewport-wrap { position:relative; background:#0b0e12; border:1px solid var(--border); border-radius:12px; overflow:hidden; min-height:0 }
+body[data-page="pdf-markup"] .rulers { position:absolute; inset:0; pointer-events:none }
+body[data-page="pdf-markup"] .ruler-h { position:absolute; left:32px; right:0; top:0; height:24px; background:#0c1118; border-bottom:1px solid var(--border) }
+body[data-page="pdf-markup"] .ruler-v { position:absolute; top:24px; bottom:0; left:0; width:32px; background:#0c1118; border-right:1px solid var(--border) }
+body[data-page="pdf-markup"] .viewport { position:absolute; top:24px; left:32px; right:0; bottom:0; overflow:auto; outline:none }
+body[data-page="pdf-markup"] .page { position:relative; margin:24px auto; box-shadow:0 6px 30px rgba(0,0,0,.3); background:white }
+body[data-page="pdf-markup"] .page canvas { display:block }
+body[data-page="pdf-markup"] .overlay { position:absolute; inset:0; pointer-events:auto }
+body[data-page="pdf-markup"] .overlay svg { position:absolute; inset:0; width:100%; height:100% }
+
+/* selection + handles */
+body[data-page="pdf-markup"] .handle { fill:var(--surface); stroke:#000; stroke-width:1; }
+body[data-page="pdf-markup"] .ghost { stroke-dasharray:4 4 }
+body[data-page="pdf-markup"] .props .section { border-top:1px solid var(--border); padding:8px 10px }
+body[data-page="pdf-markup"] .props h3 { margin:8px 0 4px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em }
+body[data-page="pdf-markup"] .row { display:flex; align-items:center; gap:8px; margin:6px 0 }
+body[data-page="pdf-markup"] .row input[type="color"] { padding:0; width:32px; height:28px; background:transparent; border:none }
+body[data-page="pdf-markup"] .status { display:flex; align-items:center; gap:12px; padding:6px 10px; color:var(--muted) }
+body[data-page="pdf-markup"] .badge { background:var(--panel-2); border:1px solid var(--border); padding:2px 8px; border-radius:999px; color:var(--ink) }
+body[data-page="pdf-markup"] .tooltip { position:fixed; pointer-events:none; background:#111827; border:1px solid var(--border); padding:6px 8px; border-radius:8px; font-size:12px; color:#cbd5e1; z-index:99; transform:translate(-50%, calc(-100% - 10px)); }
+body[data-page="pdf-markup"] .context { position:fixed; z-index:200; background:var(--panel); border:1px solid var(--border); border-radius:8px; min-width:200px; padding:6px; display:none; box-shadow:var(--shadow) }
+body[data-page="pdf-markup"] .context button { display:block; width:100%; text-align:left; padding:8px 10px; background:transparent; border:none; border-radius:6px }
+body[data-page="pdf-markup"] .context button:hover { background:var(--panel-2) }
+body[data-page="pdf-markup"] .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0 }
+@media (max-width: 1100px){
+body[data-page="pdf-markup"] .main { grid-template-columns: 1fr; }
+body[data-page="pdf-markup"] .side { order:2 }
+body[data-page="pdf-markup"] .props { order:3 }
+body[data-page="pdf-markup"] .viewport-wrap { order:1; height:60vh }
+}

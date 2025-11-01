@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="PDFsearch.css">
+  <style>
+    /* Additional styles can be added here if needed */
+  </style>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fuzzy PDF Search (Client‑side, OCR fallback)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/7.0.0/fuse.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.5/tesseract.min.js"></script>
+  <script src="PDFsearch.js" defer></script>
+</head>
+<body data-page="pdf-pdfsearch">
+  <header>
+    <div class="wrap">
+      <div class="toolbar">
+        <div class="row wrap">
+          <div>
+            <input id="urlInput" type="text" placeholder="Paste PDF URL (https://...) or leave empty to use File/Drop" />
+            <button id="loadUrlBtn" class="primary">Load URL</button>
+          </div>
+          <div>
+            <input id="fileInput" class="input" type="file" accept="application/pdf" />
+            <button id="clearBtn" class="ghost">Clear</button>
+          </div>
+        </div>
+        <div class="row">
+          <div class="status" id="status">No PDF loaded.</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="grid">
+    <aside id="leftcol">
+      <div id="drop" class="card" tabindex="0">
+        <div style="font-weight:700;font-size:14px;margin-bottom:6px">Drag & drop a PDF here</div>
+        <div class="status">or use the controls above</div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="align-items:flex-end;gap:8px">
+          <div style="flex:1">
+            <label for="q">Search</label>
+            <input id="q" type="text" placeholder="Type your query... supports fuzzy, regex, multi-term" />
+          </div>
+          <button id="searchBtn" class="primary">Search</button>
+        </div>
+        <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
+          <div>
+            <label>Mode</label>
+            <select id="mode">
+              <option value="fuzzy">Fuzzy (Fuse.js)</option>
+              <option value="regex">Regex</option>
+              <option value="exact">Exact</option>
+              <option value="phonetic">Phonetic (Double‑Metaphone)</option>
+            </select>
+          </div>
+          <div>
+            <label>Fuzziness</label>
+            <input id="thres" type="number" min="0" max="1" step="0.02" value="0.35"/>
+          </div>
+          <div>
+            <label>Proximity (chars)</label>
+            <input id="prox" type="number" min="20" max="800" step="10" value="120"/>
+          </div>
+          <div>
+            <label>Case sensitive</label>
+            <select id="case">
+              <option value="false" selected>No</option>
+              <option value="true">Yes</option>
+            </select>
+          </div>
+          <div>
+            <label>OCR fallback</label>
+            <select id="ocr">
+              <option value="auto" selected>Auto (only pages with no text)</option>
+              <option value="off">Off</option>
+              <option value="force">Force (all pages)</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button id="exportBtn">Export results (.json)</button>
+          <button id="clearMarksBtn" class="ghost">Clear highlights</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-weight:700">Results</div>
+          <span class="badge" id="countBadge">0</span>
+        </div>
+        <div id="results"></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-weight:700">Document Stats</div>
+        </div>
+        <div class="kvs">
+          <div class="item"><div class="meta">Pages</div><div id="kvPages" style="font-weight:700">–</div></div>
+          <div class="item"><div class="meta">Indexed text</div><div id="kvChars" style="font-weight:700">–</div></div>
+          <div class="item"><div class="meta">OCR pages</div><div id="kvOCR" style="font-weight:700">–</div></div>
+          <div class="item"><div class="meta">Render scale</div><div id="kvScale" style="font-weight:700">1.25</div></div>
+        </div>
+      </div>
+
+      <div class="footer status">All processing happens locally in your browser. No uploads.</div>
+    </aside>
+
+    <section id="rightcol">
+      <div id="viewer" class="wrapv"></div>
+    </section>
+  </main>
+
+</body>
+</html>

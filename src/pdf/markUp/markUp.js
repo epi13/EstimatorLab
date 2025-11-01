@@ -1,245 +1,4 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <link rel="stylesheet" href="../styles.css">
-  <style>
-    /* pdf/markUp.html */
-    body[data-page="pdf-markup"] {
-          --bg:#0f1216; --panel:#171b21; --panel-2:#1d232c; --ink:#e3e8ef; --muted:#96a0af;
-          --red:#e11d48; --red-2:#f43f5e; --accent:#3b82f6; --accent-2:#22c55e; --shadow:0 10px 30px rgb(0 0 0 / .35);
-          --border:#263041; --hi:#ffed4a; --focus:#60a5fa; --yellow:#f59e0b;
-        }
-    body[data-page="pdf-markup"] * { box-sizing:border-box }
-    body[data-page="pdf-markup"] html, body[data-page="pdf-markup"] { margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, Noto Sans, sans-serif }
-    body[data-page="pdf-markup"] button, body[data-page="pdf-markup"] input, body[data-page="pdf-markup"] select, body[data-page="pdf-markup"] textarea { color:inherit; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:6px 10px }
-    body[data-page="pdf-markup"] button { cursor:pointer }
-    body[data-page="pdf-markup"] button:focus, body[data-page="pdf-markup"] input:focus, body[data-page="pdf-markup"] select:focus, body[data-page="pdf-markup"] textarea:focus { outline:2px solid var(--focus); outline-offset:1px }
-    body[data-page="pdf-markup"] .app { display:grid; grid-template-rows:auto 1fr auto; height:100% }
-    body[data-page="pdf-markup"] header, body[data-page="pdf-markup"] footer { background:var(--panel); border-bottom:1px solid var(--border); box-shadow:var(--shadow); position:relative; z-index:2 }
-    body[data-page="pdf-markup"] footer { border-top:1px solid var(--border); border-bottom:none }
-    body[data-page="pdf-markup"] .toolbar { display:flex; gap:8px; padding:8px 10px; align-items:center; overflow:auto }
-    body[data-page="pdf-markup"] .toolbar .group { display:flex; gap:6px; padding:4px; border:1px solid var(--border); border-radius:10px; background:var(--panel-2); align-items:center }
-    body[data-page="pdf-markup"] .toolbar .sep { width:1px; height:26px; background:var(--border); margin:0 8px }
-    body[data-page="pdf-markup"] .toolbar label { font-size:12px; color:var(--muted) }
-    body[data-page="pdf-markup"] .main { display:grid; grid-template-columns:260px 1fr 300px; gap:8px; padding:8px }
-    body[data-page="pdf-markup"] .side, body[data-page="pdf-markup"] .props { background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; min-height:0 }
-    body[data-page="pdf-markup"] .tabs { display:flex; }
-    body[data-page="pdf-markup"] .tab { flex:1; text-align:center; padding:8px; cursor:pointer; border-bottom:1px solid var(--border); background:var(--panel) }
-    body[data-page="pdf-markup"] .tab.active { background:var(--panel-2) }
-    body[data-page="pdf-markup"] .thumbs, body[data-page="pdf-markup"] .layers, body[data-page="pdf-markup"] .comments { overflow:auto; padding:8px; gap:8px; display:flex; flex-direction:column; flex:1; min-height:0 }
-    body[data-page="pdf-markup"] .thumb { border:1px solid var(--border); border-radius:8px; padding:6px; background:#0b0e12; cursor:pointer }
-    body[data-page="pdf-markup"] .thumb canvas { width:100%; height:auto; display:block }
-    body[data-page="pdf-markup"] .viewport-wrap { position:relative; background:#0b0e12; border:1px solid var(--border); border-radius:12px; overflow:hidden; min-height:0 }
-    body[data-page="pdf-markup"] .rulers { position:absolute; inset:0; pointer-events:none }
-    body[data-page="pdf-markup"] .ruler-h { position:absolute; left:32px; right:0; top:0; height:24px; background:#0c1118; border-bottom:1px solid var(--border) }
-    body[data-page="pdf-markup"] .ruler-v { position:absolute; top:24px; bottom:0; left:0; width:32px; background:#0c1118; border-right:1px solid var(--border) }
-    body[data-page="pdf-markup"] .viewport { position:absolute; top:24px; left:32px; right:0; bottom:0; overflow:auto; outline:none }
-    body[data-page="pdf-markup"] .page { position:relative; margin:24px auto; box-shadow:0 6px 30px rgba(0,0,0,.3); background:white }
-    body[data-page="pdf-markup"] .page canvas { display:block }
-    body[data-page="pdf-markup"] .overlay { position:absolute; inset:0; pointer-events:auto }
-    body[data-page="pdf-markup"] .overlay svg { position:absolute; inset:0; width:100%; height:100% }
-
-    /* selection + handles */
-    body[data-page="pdf-markup"] .handle { fill:var(--surface); stroke:#000; stroke-width:1; }
-    body[data-page="pdf-markup"] .ghost { stroke-dasharray:4 4 }
-    body[data-page="pdf-markup"] .props .section { border-top:1px solid var(--border); padding:8px 10px }
-    body[data-page="pdf-markup"] .props h3 { margin:8px 0 4px; font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em }
-    body[data-page="pdf-markup"] .row { display:flex; align-items:center; gap:8px; margin:6px 0 }
-    body[data-page="pdf-markup"] .row input[type="color"] { padding:0; width:32px; height:28px; background:transparent; border:none }
-    body[data-page="pdf-markup"] .status { display:flex; align-items:center; gap:12px; padding:6px 10px; color:var(--muted) }
-    body[data-page="pdf-markup"] .badge { background:var(--panel-2); border:1px solid var(--border); padding:2px 8px; border-radius:999px; color:var(--ink) }
-    body[data-page="pdf-markup"] .tooltip { position:fixed; pointer-events:none; background:#111827; border:1px solid var(--border); padding:6px 8px; border-radius:8px; font-size:12px; color:#cbd5e1; z-index:99; transform:translate(-50%, calc(-100% - 10px)); }
-    body[data-page="pdf-markup"] .context { position:fixed; z-index:200; background:var(--panel); border:1px solid var(--border); border-radius:8px; min-width:200px; padding:6px; display:none; box-shadow:var(--shadow) }
-    body[data-page="pdf-markup"] .context button { display:block; width:100%; text-align:left; padding:8px 10px; background:transparent; border:none; border-radius:6px }
-    body[data-page="pdf-markup"] .context button:hover { background:var(--panel-2) }
-    body[data-page="pdf-markup"] .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0 }
-    @media (max-width: 1100px){
-    body[data-page="pdf-markup"] .main { grid-template-columns: 1fr; }
-    body[data-page="pdf-markup"] .side { order:2 }
-    body[data-page="pdf-markup"] .props { order:3 }
-    body[data-page="pdf-markup"] .viewport-wrap { order:1; height:60vh }
-    }
-  </style>
-
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PDF Redline Editor</title>
-  <meta name="description" content="Browser-based PDF markup editor (HTML + TypeScript-style JS + PDF.js + SVG overlay). Single-file demo." />
-  <!-- Minimal, modern, utility-ish CSS (no framework) -->
-</head>
-<body data-page="pdf-markup">
-<div class="app" aria-label="PDF Redline Editor">
-  <header>
-    <div class="toolbar" role="toolbar" aria-label="Main toolbar">
-      <div class="group" role="group" aria-label="File">
-        <input aria-label="Open PDF" type="file" id="openPDF" accept="application/pdf" />
-        <button id="saveJSON" title="Save Project (JSON)">Save</button>
-        <button id="loadJSON" title="Load Project (JSON)">Load</button>
-        <button id="exportPNG" title="Export PNG/JPEG">Export PNG/JPEG</button>
-        <button id="exportPDF" title="Export Flattened PDF">Export PDF</button>
-        <button id="exportAnn" title="Export Annotation-only PDF">Export Ann.</button>
-      </div>
-      <div class="group" role="group" aria-label="Navigation">
-        <button id="prevPage" title="Previous Page (PgUp)">◀</button>
-        <div id="pageInfo" aria-live="polite">– / –</div>
-        <button id="nextPage" title="Next Page (PgDn)">▶</button>
-        <div class="sep"></div>
-        <button id="zoomOut" title="Zoom Out (Ctrl/Cmd -)">-</button>
-        <span id="zoomPct" class="badge" aria-live="polite">100%</span>
-        <button id="zoomIn" title="Zoom In (Ctrl/Cmd +)">+</button>
-        <button id="fitW" title="Fit Width">Fit W</button>
-        <button id="fitP" title="Fit Page">Fit P</button>
-      </div>
-      <div class="group" role="group" aria-label="Tools">
-        <button data-tool="select" title="V — Select">🖱️</button>
-        <button data-tool="text" title="T — Text">T</button>
-        <button data-tool="highlighter" title="H — Highlighter">🖍️</button>
-        <button data-tool="pen" title="P — Pen">✒️</button>
-        <button data-tool="line" title="L — Line">／</button>
-        <button data-tool="arrow" title="A — Arrow">➤</button>
-        <button data-tool="rect" title="R — Rectangle">▭</button>
-        <button data-tool="ellipse" title="O — Ellipse">◯</button>
-        <button data-tool="callout" title="C — Callout">💬</button>
-        <button data-tool="image" title="G — Image">🖼️</button>
-        <button data-tool="table" title="Table">#️⃣</button>
-        <button data-tool="eraser" title="Eraser">🩹</button>
-        <button data-tool="note" title="Sticky Note">🗒️</button>
-        <div class="sep"></div>
-        <button id="stampBtn" title="Stamps">Stamp</button>
-      </div>
-      <div class="group" role="group" aria-label="Edit">
-        <button id="undo" title="Undo (Ctrl/Cmd+Z)">↶</button>
-        <button id="redo" title="Redo (Ctrl/Cmd+Y)">↷</button>
-        <button id="del" title="Delete (Del)">Del</button>
-        <button id="dup" title="Alt-drag or Duplicate">⎘</button>
-        <button id="group" title="Group">Group</button>
-        <button id="ungroup" title="Ungroup">Ungroup</button>
-        <div class="sep"></div>
-        <button id="alignL">⯇</button><button id="alignC">⯈⯇</button><button id="alignR">⯈</button>
-        <button id="alignT">⯅</button><button id="alignM">⯆⯅</button><button id="alignB">⯆</button>
-        <button id="distH" title="Distribute H">⇔</button>
-        <button id="distV" title="Distribute V">⇕</button>
-      </div>
-      <div class="group" role="group" aria-label="Text & Number formatting">
-        <label>Font
-          <select id="fontFamily" aria-label="Font family">
-            <option>Inter</option>
-            <option>Arial</option>
-            <option>Times New Roman</option>
-            <option>Courier New</option>
-          </select>
-        </label>
-        <label>Size <input id="fontSize" type="number" value="14" min="6" max="96" style="width:72px"/></label>
-        <button id="bold" title="Ctrl/Cmd+B">B</button>
-        <button id="italic" title="Ctrl/Cmd+I"><i>I</i></button>
-        <button id="underline" title="Ctrl/Cmd+U"><u>U</u></button>
-        <button id="strike" title="Strikethrough"><s>S</s></button>
-        <label>Color <input id="textColor" type="color" value="#e11d48"/></label>
-        <label>Fill <input id="textBg" type="color" value="#000000"/></label>
-        <button id="numPalette" title="Number redline palette">123⇄</button>
-      </div>
-    </div>
-  </header>
-
-  <div class="main" role="main">
-    <aside class="side" aria-label="Sidebar">
-      <div class="tabs" role="tablist">
-        <div class="tab active" role="tab" aria-selected="true" data-tab="thumbs">Thumbnails</div>
-        <div class="tab" role="tab" aria-selected="false" data-tab="layers">Layers</div>
-        <div class="tab" role="tab" aria-selected="false" data-tab="comments">Comments</div>
-      </div>
-      <div class="thumbs" id="thumbs" role="tabpanel" aria-label="Page Thumbnails"></div>
-      <div class="layers" id="layers" role="tabpanel" aria-label="Layers" hidden></div>
-      <div class="comments" id="comments" role="tabpanel" aria-label="Comments" hidden></div>
-    </aside>
-
-    <section class="viewport-wrap" aria-label="Document viewport">
-      <div class="rulers" aria-hidden="true">
-        <div class="ruler-h" id="rulerH"></div>
-        <div class="ruler-v" id="rulerV"></div>
-      </div>
-      <div class="viewport" id="viewport" tabindex="0" aria-label="Pages container"></div>
-    </section>
-
-    <aside class="props" aria-label="Style & Properties Panel">
-      <div class="section">
-        <h3>Styles</h3>
-        <div class="row">
-          <label>Stroke <input id="strokeColor" type="color" value="#e11d48"/></label>
-          <label>Fill <input id="fillColor" type="color" value="#000000"/></label>
-        </div>
-        <div class="row">
-          <label>Width <input id="strokeWidth" type="number" min="0" value="2" style="width:80px"/></label>
-          <label>Opacity <input id="opacity" type="range" min="0" max="1" step="0.05" value="1"/></label>
-        </div>
-        <div class="row">
-          <label>Dash <select id="dash">
-            <option value="">Solid</option>
-            <option value="4,4">4-4</option>
-            <option value="8,4">8-4</option>
-            <option value="12,6">12-6</option>
-          </select></label>
-          <label>Arrow <select id="arrow">
-            <option value="none">None</option>
-            <option value="end">End ▶</option>
-            <option value="start">◀ Start</option>
-            <option value="both">◀▶ Both</option>
-          </select></label>
-          <label><input id="shadow" type="checkbox"/> Shadow</label>
-        </div>
-        <div class="row">
-          <button id="addPreset">+ Preset</button>
-          <select id="presets"><option>Preset styles…</option></select>
-        </div>
-      </div>
-      <div class="section">
-        <h3>Object</h3>
-        <div class="row">
-          <button id="lock">Lock</button>
-          <button id="hide">Hide</button>
-          <button id="bringFront">Front</button>
-          <button id="sendBack">Back</button>
-        </div>
-        <div class="row">
-          <label><input id="snapGrid" type="checkbox" checked /> Snap to grid/guides</label>
-        </div>
-      </div>
-      <div class="section">
-        <h3>Export</h3>
-        <div class="row">
-          <label>Range <input id="exportRange" value="1-1" style="width:100px"/></label>
-          <select id="exportFmt">
-            <option value="png">PNG</option>
-            <option value="jpeg">JPEG</option>
-          </select>
-        </div>
-      </div>
-    </aside>
-  </div>
-
-  <footer class="status" role="status" aria-live="polite">
-    <span id="statusTool" class="badge">Select</span>
-    <span id="statusHint">Space: pan • Shift: constrain • Alt: duplicate</span>
-    <span id="statusCoord">x:– y:–</span>
-    <span id="statusZoom">zoom: 100%</span>
-  </footer>
-</div>
-
-<div id="context" class="context" role="menu" aria-label="Context menu"></div>
-<div id="tooltip" class="tooltip" hidden></div>
-
-<!-- PDF.js & pdf-lib via CDN (no UI frameworks) -->
-<script src="https://unpkg.com/pdfjs-dist@4.7.76/build/pdf.min.js"></script>
-<script>
-  // Point the worker to the same CDN version
-  if (window['pdfjsLib']) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.7.76/build/pdf.worker.min.js';
-  }
-</script>
-<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-
-<!-- Single-module TypeScript-flavored JS (JSDoc + // @ts-check for editor tooling). -->
-<script type="module">// @ts-check
+// @ts-check
 /**
  * PDF Redline Editor — Single-file browser app
  * Architecture (modular within one ES module):
@@ -740,7 +499,7 @@
    const a=document.createElement('a'); a.href=dataURL; a.download=name; a.click(); 
  }
  function makeZipData(items){
-   // Minimal fallback: bundle as JSON (page->dataURL). Many viewers will still save as .zip but it’s JSON content.
+   // Minimal fallback: bundle as JSON (page->dataURL). Many viewers will still save as .zip but it's JSON content.
    const json = JSON.stringify(items, null, 2);
    return 'data:application/octet-stream;base64,' + btoa(unescape(encodeURIComponent(json)));
  }
@@ -963,10 +722,43 @@
  }
 
  // -----------------------------
+ // Missing Functions
+ // -----------------------------
+function eraserDown(pv, p, e){
+  // Simple eraser: remove objects at click point
+  const st=Store.state; const ids=[...st.order].reverse().filter(id=>st.objects[id].page===pv.index && !st.objects[id].hidden);
+  for(const id of ids){ 
+    const obj=st.objects[id]; const bb=pv.bboxOf(obj); const local = toLocal(p, obj.transform);
+    if(Util.ptInRect(local, {x:bb.x,y:bb.y,w:bb.w,h:bb.h})){ 
+      delete Store.state.objects[id]; Store.state.order=Store.state.order.filter(i=>i!==id); 
+      pv.refreshAnnotations(); autosave(); break; 
+    }
+  }
+}
+
+function exportRangeToImages(format){
+  // Export all pages as images
+  const fmt = format || 'png';
+  for(let i=0; i<App.pages.length; i++){
+    const pv = App.pages[i];
+    const canvas = pv.canvas;
+    canvas.toBlob(blob => {
+      if(blob) downloadBlob(blob, `page_${i+1}.${fmt}`);
+    }, `image/${fmt}`);
+  }
+}
+
+function exportFlattenedPDF(){
+  // Export PDF with annotations flattened
+  alert('Export flattened PDF - not implemented in this demo');
+}
+
+function exportAnnotationOnlyPDF(){
+  // Export only annotations as PDF
+  alert('Export annotation-only PDF - not implemented in this demo');
+}
+
+ // -----------------------------
  // Boot
  // -----------------------------
  App.init();
-
-</script>
-</body>
-</html>
