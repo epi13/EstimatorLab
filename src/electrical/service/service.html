@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8" />
   <link rel="stylesheet" href="../styles.css">
-  <link rel="stylesheet" href="service.css">
   <style>
     /* Additional styles can be added here if needed */
   </style>
@@ -12,8 +11,8 @@
   <title>Electrical Service & Distribution Calculator — Core (NEC‑aware)</title>
 </head>
 <body data-page="electrical-service">
-  <header>
-    <div class="wrap">
+  <header class="header-sticky">
+    <div class="wrap-1180">
       <div class="flex">
         <div>
           <h1>Electrical Service & Distribution Calculator — Core</h1>
@@ -27,12 +26,12 @@
     </div>
   </header>
 
-  <main>
+  <main class="main-1180">
     <!-- LEFT COLUMN: INPUTS -->
     <section class="card">
       <h2>Inputs</h2>
       <div class="body grid">
-        <div class="row">
+        <div class="grid-2">
           <div>
             <label>System Type</label>
             <select id="system">
@@ -52,7 +51,7 @@
           </div>
         </div>
 
-        <div class="row">
+        <div class="grid-2">
           <div>
             <label>Conductor Material</label>
             <select id="condMat">
@@ -111,7 +110,7 @@
           <div></div>
         </div>
 
-        <div class="row">
+        <div class="grid-2">
           <div>
             <label>Parallel Sets</label>
             <input id="sets" type="number" value="1" min="1" />
@@ -200,7 +199,7 @@
 
         <div class="hr"></div>
 
-        <div class="row">
+        <div class="grid-2">
           <div>
             <div class="section-title">Conductor & Conduit Takeoff</div>
             <table id="takeoffTbl">
@@ -264,7 +263,7 @@
     </section>
   </main>
 
-  <footer>
+  <footer class="footer-fixed">
     <div class="wrap flex">
       <div class="small">This tool is a design‑assist & estimating aid. Always verify against the latest NEC and project specifications.</div>
       <div class="right chips">

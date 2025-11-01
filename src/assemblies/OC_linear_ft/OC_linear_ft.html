@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="stylesheet" href="../styles.css">
-  <link rel="stylesheet" href="OC_linear_ft.css">
   <style>
     /* Additional styles can be added here if needed */
   </style>
@@ -12,7 +11,7 @@
 <title>On-Center Linear Footage Calculator</title>
 </head>
 <body data-page="assemblies-oc-linear-ft">
-<div class="app-shell">
+<div class="app-shell-900">
 
     <!-- Left column: inputs + results -->
     <div class="card">
@@ -21,11 +20,11 @@
             <span>Snowmelt / Radiant / Heat Trace takeoff</span>
         </h1>
 
-        <div class="row long">
+        <div class="row-custom row-long">
             <div class="field">
                 <label>
                     <span>Coverage Area</span>
-                    <small>ft²</small>
+                    <small class="field-small">ft²</small>
                 </label>
                 <input type="number" id="areaSqFt" value="500" min="0" step="0.01">
             </div>
@@ -33,17 +32,17 @@
             <div class="field">
                 <label>
                     <span>On-Center Spacing</span>
-                    <small>inches</small>
+                    <small class="field-small">inches</small>
                 </label>
                 <input type="number" id="ocInches" value="6" min="0" step="0.01">
             </div>
         </div>
 
-        <div class="row long">
+        <div class="row-custom row-long">
             <div class="field">
                 <label>
                     <span>Waste / Extra %</span>
-                    <small>optional</small>
+                    <small class="field-small">optional</small>
                 </label>
                 <input type="number" id="wastePct" value="5" min="0" step="0.1">
             </div>
@@ -51,7 +50,7 @@
             <div class="field">
                 <label>
                     <span>Round Coil Length</span>
-                    <small>ft (for reference)</small>
+                    <small class="field-small">ft (for reference)</small>
                 </label>
                 <input type="number" id="coilLen" value="250" min="0" step="1">
             </div>
@@ -59,25 +58,25 @@
 
         <div class="results-card" id="resultsCard">
             <div>
-                <h2>Total Linear Feet</h2>
+                <h2 class="results-title">Total Linear Feet</h2>
                 <div class="results-value" id="totalLF">–</div>
                 <div class="results-sub">Without waste. Continuous run length assumed.</div>
             </div>
 
             <div>
-                <h2>Total w/ Waste</h2>
+                <h2 class="results-title">Total w/ Waste</h2>
                 <div class="results-value" id="totalWithWaste">–</div>
                 <div class="results-sub"><span class="accent" id="wasteUsedPct">0%</span> extra added.</div>
             </div>
 
             <div>
-                <h2>LF / ft²</h2>
+                <h2 class="results-title">LF / ft²</h2>
                 <div class="results-value" id="lfPerSf">–</div>
                 <div class="results-sub">How many linear feet per square foot at this spacing.</div>
             </div>
 
             <div>
-                <h2>Coils Needed</h2>
+                <h2 class="results-title">Coils Needed</h2>
                 <div class="results-value" id="coilsNeeded">–</div>
                 <div class="results-sub">Based on <span class="accent" id="coilLenEcho">250</span> ft coil length.</div>
             </div>
@@ -105,7 +104,7 @@
 
         <div class="diagram-wrap">
             <!-- Dynamic SVG -->
-            <svg viewBox="0 0 200 140" id="layoutSVG" aria-label="wire layout diagram">
+            <svg class="diagram-svg" viewBox="0 0 200 140" id="layoutSVG" aria-label="wire layout diagram">
                 <!-- Rect and lines will be drawn by JS -->
             </svg>
         </div>
