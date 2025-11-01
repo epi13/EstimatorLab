@@ -1,15 +1,52 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="en">
   <head>
     <meta charset="utf-8">
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23111827'/%3E%3Cpath d='M18 20h28' stroke='%23f8fafc' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M18 32h20' stroke='%23f8fafc' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M18 44h28' stroke='%23f8fafc' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E"
+    />
+    <link rel="preload" href="styles.css" as="style" />
     <link rel="stylesheet" href="styles.css">
     <title>Estimation Calculator Home</title>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
-    /* home.html */
-    body[data-page="home"] { font-family: Arial, sans-serif; margin: 2em; }
-    body[data-page="home"] h2, body[data-page="home"] h3 { color: var(--heading); }
-    body[data-page="home"] .equation { background: var(--surface-muted); border-left: 4px solid var(--heading); margin: 1em 0; padding: 1em; font-size: 1.1em; }
+      /* home.html */
+      body[data-page="home"] {
+        margin: 2.5rem auto;
+        font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont,
+          "Helvetica Neue", Arial, sans-serif;
+      }
+
+      body[data-page="home"] h2,
+      body[data-page="home"] h3 {
+        color: var(--heading);
+      }
+
+      body[data-page="home"] .equation {
+        background: var(--surface-muted);
+        border-left: 4px solid var(--heading);
+        margin: 1.25rem 0;
+        padding: 1rem 1.25rem;
+        border-radius: 0 14px 14px 0;
+        box-shadow: none;
+      }
+
+      body[data-page="home"] .equation strong {
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+
+      body[data-page="home"] .equation .math-expression {
+        font-family: "JetBrains Mono", "Fira Code", "SFMono-Regular", Consolas, monospace;
+        font-size: 1.05em;
+        margin: 0;
+        color: var(--heading);
+      }
+
+      body[data-page="home"] .equation .note {
+        margin-top: 0.5rem;
+        color: var(--text-muted);
+      }
     </style>
   </head>
   <body data-page="home">
@@ -32,95 +69,35 @@
 
     <h3>Common Estimation Equations</h3>
     <div class="equation">
-      <strong>Area of a Rectangle:</strong><br>
-      <math xmlns="http://www.w3.org/1998/Math/MathML">
-        <mi>Area</mi>
-        <mo>=</mo>
-        <mi>Length</mi>
-        <mo>&#215;</mo>
-        <mi>Width</mi>
-      </math>
-      <br>
-      <em>Example:</em> Floor, wall, or roof area calculations.
+      <strong>Area of a Rectangle</strong>
+      <p class="math-expression">Area = Length × Width</p>
+      <p class="note">Useful for floor, wall, or roof area calculations.</p>
     </div>
     <div class="equation">
-      <strong>Volume of a Cuboid (Cubic Feet or Yards):</strong><br>
-      <math xmlns="http://www.w3.org/1998/Math/MathML">
-        <mi>Volume</mi>
-        <mo>=</mo>
-        <mi>Length</mi>
-        <mo>&#215;</mo>
-        <mi>Width</mi>
-        <mo>&#215;</mo>
-        <mi>Height</mi>
-      </math>
-      <br>
-      <em>To convert cubic feet to cubic yards, divide by 27.</em>
+      <strong>Volume of a Cuboid (ft³ or yd³)</strong>
+      <p class="math-expression">Volume = Length × Width × Height</p>
+      <p class="note">Convert cubic feet to cubic yards by dividing the result by 27.</p>
     </div>
     <div class="equation">
-      <strong>Circular Area:</strong><br>
-      <math xmlns="http://www.w3.org/1998/Math/MathML">
-        <mi>Area</mi>
-        <mo>=</mo>
-        <mi>&#960;</mi>
-        <msup>
-          <mi>Radius</mi>
-          <mn>2</mn>
-        </msup>
-      </math>
-      <br>
-      <em>Use for round slabs, piers, or tanks.</em>
+      <strong>Circular Area</strong>
+      <p class="math-expression">Area = π × Radius²</p>
+      <p class="note">Use for round slabs, piers, or tanks.</p>
     </div>
     <div class="equation">
-      <strong>Right Triangle (Pythagorean Theorem):</strong><br>
-      <math xmlns="http://www.w3.org/1998/Math/MathML">
-        <msup>
-          <mi>c</mi>
-          <mn>2</mn>
-        </msup>
-        <mo>=</mo>
-        <msup>
-          <mi>a</mi>
-          <mn>2</mn>
-        </msup>
-        <mo>+</mo>
-        <msup>
-          <mi>b</mi>
-          <mn>2</mn>
-        </msup>
-      </math>
-      <br>
-      <em>Use for slope, diagonal, or rafter length calculations.</em>
+      <strong>Right Triangle (Pythagorean Theorem)</strong>
+      <p class="math-expression">c² = a² + b²</p>
+      <p class="note">Ideal for slopes, diagonals, or rafter length calculations.</p>
     </div>
     <div class="equation">
-      <strong>Material Waste Factor:</strong><br>
-      <math xmlns="http://www.w3.org/1998/Math/MathML">
-        <mi>Total&nbsp;Required</mi>
-        <mo>=</mo>
-        <mi>Base&nbsp;Quantity</mi>
-        <mo>&#215;</mo>
-        <mo>(</mo>
-        <mn>1</mn>
-        <mo>+</mo>
-        <mi>Waste&nbsp;Percentage</mi>
-        <mo>)</mo>
-      </math>
-      <br>
-      <em>Add a typical waste factor (e.g., 10%) for cutting and fitting materials.</em>
+      <strong>Material Waste Factor</strong>
+      <p class="math-expression">Total Required = Base Quantity × (1 + Waste Percentage)</p>
+      <p class="note">Add a typical waste factor (e.g., 10%) for cutting and fitting materials.</p>
     </div>
-<div class="equation">
-  <strong>Man-Hours Calculation:</strong><br>
-  <math xmlns="http://www.w3.org/1998/Math/MathML">
-    <mi>Man&#8209;Hours</mi>
-    <mo>=</mo>
-    <mfrac>
-      <mi>Total&#160;Work&#160;Units</mi>
-      <mi>Productivity&#160;Rate</mi>
-    </mfrac>
-  </math>
-  <br>
-  <em>For example, if productivity is 50 sq ft/hour and you have 2000 sq ft: 2000 / 50 = 40 man-hours.</em>
-</div>
+    <div class="equation">
+      <strong>Man-Hours Calculation</strong>
+      <p class="math-expression">Man-Hours = Total Work Units ÷ Productivity Rate</p>
+      <p class="note">For example, 2,000 sq ft at 50 sq ft/hour → 2,000 ÷ 50 = 40 man-hours.</p>
+    </div>
 
 
   </body>
