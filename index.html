@@ -235,10 +235,8 @@
     const refreshButton = document.querySelector('[data-refresh]');
     const calculatorFrame = document.querySelector('.calculator-frame');
 
+    const navLinkElements = [];
     const hrefToLink = new Map();
-    const sectionsState = [];
-    let currentActiveLink = null;
-    let lastFilterQuery = '';
 
     const sr = (text) => {
       const span = document.createElement('span');
@@ -326,13 +324,9 @@
         item.appendChild(link);
         list.appendChild(item);
 
+        navLinkElements.push(link);
         hrefToLink.set(calc.href, link);
         hrefToLink.set(new URL(calc.href, window.location.href).href, link);
-
-        sectionState.items.push({
-          element: item,
-          searchText: item.dataset.search
-        });
       });
 
       sectionEl.appendChild(list);
@@ -343,22 +337,15 @@
     navContainer.appendChild(fragment);
 
     const setActiveLink = (link) => {
-      if (currentActiveLink === link) return;
-
-      if (currentActiveLink) {
-        currentActiveLink.removeAttribute('aria-current');
-        currentActiveLink.parentElement.classList.remove('is-active');
-      }
+      navLinkElements.forEach((item) => {
+        item.removeAttribute('aria-current');
+        item.parentElement.classList.remove('is-active');
+      });
 
       link.setAttribute('aria-current', 'page');
       link.parentElement.classList.add('is-active');
       categoryLabel.textContent = link.dataset.sectionTitle;
       titleLabel.textContent = link.dataset.calculator;
-      const parentSection = link.closest('.nav-section');
-      if (parentSection && parentSection.dataset.open !== 'true') {
-        setSectionOpen(parentSection, true);
-      }
-      currentActiveLink = link;
     };
 
     const setSectionOpen = (sectionEl, open) => {
