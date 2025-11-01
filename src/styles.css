@@ -47,7 +47,7 @@ body {
 }
 
 body[data-page] > *:not(script):not(style) {
-  max-width: min(960px, 100%);
+  max-width: min(1500px, 100%);
   margin-left: auto;
   margin-right: auto;
 }
