@@ -197,6 +197,23 @@
     pdf: els.pdf.getContext('2d'),
     overlay: els.overlay.getContext('2d'),
     labels: els.labels.getContext('2d')
+  };
+
+  const overlayStyles = {
+    stroke: 'rgba(111, 182, 255, 0.95)',
+    areaFill: 'rgba(130, 224, 170, 0.22)',
+    guide: 'rgba(255, 255, 255, 0.35)',
+    bubble: 'rgba(0, 0, 0, 0.55)',
+    bubbleText: '#e7ecf3'
+  };
+
+  function roundRect(ctx,x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
   }
 
   // ====== Helpers ======
@@ -408,21 +425,18 @@
   }
 
   function drawOverlay(){
-    const K = 1; // already using device pixels
     const o = ctxs.overlay; const l = ctxs.labels;
     o.clearRect(0,0,els.overlay.width,els.overlay.height);
     l.clearRect(0,0,els.labels.width,els.labels.height);
 
-    // Style helpers
-    function stroke(ctx){ ctx.lineWidth = 2*state.dpr; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle = 'rgba(111,182,255,0.95)'; }
-    function fillPoly(ctx){ ctx.fillStyle = 'rgba(130,224,170,0.22)'; }
-    function guide(ctx){ ctx.setLineDash([6*state.dpr,6*state.dpr]); ctx.strokeStyle='rgba(255,255,255,.35)'; ctx.lineWidth=1.5*state.dpr; }
-    function label(ctx){ ctx.fillStyle='rgba(0,0,0,.65)'; }
-
     // Draw existing measures
     for(const m of state.measures){
       if(m.type==='line'){
-        o.save(); stroke(o);
+        o.save();
+        o.lineWidth = 2*state.dpr;
+        o.lineCap='round';
+        o.lineJoin='round';
+        o.strokeStyle = overlayStyles.stroke;
         o.beginPath(); o.moveTo(m.a.x,m.a.y); o.lineTo(m.b.x,m.b.y); o.stroke();
         o.restore();
         if(state.showLabels){
@@ -432,7 +446,12 @@
           drawLabel(mid.x, mid.y, text);
         }
       } else if(m.type==='area'){
-        o.save(); stroke(o); fillPoly(o);
+        o.save();
+        o.lineWidth = 2*state.dpr;
+        o.lineCap='round';
+        o.lineJoin='round';
+        o.strokeStyle = overlayStyles.stroke;
+        o.fillStyle = overlayStyles.areaFill;
         o.beginPath(); m.points.forEach((p,i)=> i?o.lineTo(p.x,p.y):o.moveTo(p.x,p.y)); o.closePath(); o.fill(); o.stroke();
         o.restore();
         if(state.showLabels){
@@ -448,7 +467,10 @@
     if(state.drawing){
       const d = state.drawing;
       if(d.type==='line' && d.points.length){
-        o.save(); guide(o);
+        o.save();
+        o.setLineDash([6*state.dpr,6*state.dpr]);
+        o.strokeStyle = overlayStyles.guide;
+        o.lineWidth = 1.5*state.dpr;
         const a = d.points[0]; const b = d.temp || a;
         o.beginPath(); o.moveTo(a.x,a.y); o.lineTo(b.x,b.y); o.stroke();
         o.restore();
@@ -456,7 +478,10 @@
         if(len!=null && state.showLabels) drawLabel((a.x+b.x)/2,(a.y+b.y)/2, fmtLen(len));
       }
       if(d.type==='area' && d.points.length){
-        o.save(); guide(o);
+        o.save();
+        o.setLineDash([6*state.dpr,6*state.dpr]);
+        o.strokeStyle = overlayStyles.guide;
+        o.lineWidth = 1.5*state.dpr;
         o.beginPath(); d.points.forEach((p,i)=> i?o.lineTo(p.x,p.y):o.moveTo(p.x,p.y));
         if(d.temp){ o.lineTo(d.temp.x, d.temp.y); }
         o.stroke(); o.restore();
@@ -477,19 +502,12 @@
       const w = metrics.width + pad*2, h = 20*state.dpr;
       const bx = x - w/2, by = y - h - 8*state.dpr;
       // bubble
-      l.fillStyle='rgba(0,0,0,.55)';
+      l.fillStyle = overlayStyles.bubble;
       roundRect(l, bx,by,w,h,r); l.fill();
       // text
-      l.fillStyle='#e7ecf3'; l.fillText(text, bx+pad, by+14*state.dpr);
+      l.fillStyle = overlayStyles.bubbleText;
+      l.fillText(text, bx+pad, by+14*state.dpr);
       l.restore();
-    }
-    function roundRect(ctx,x,y,w,h,r){
-      ctx.beginPath();
-      ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-      ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-      ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-      ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
-      ctx.closePath();
     }
   }
 
