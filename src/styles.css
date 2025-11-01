@@ -423,8 +423,20 @@ body[data-page="assemblies-oc-linear-ft"] .results-card {
 /* Take-off / blueprint viewer layout overrides */
 body[data-page="take-off-takeoff"] {
   margin: 0;
-  padding: clamp(0.5rem, 1.2vw, 1.25rem);
   min-height: 100vh;
+  --takeoff-gutter: clamp(0.9rem, 1.8vw, 1.4rem);
+  --takeoff-gap: var(--takeoff-gutter);
+  padding: var(--takeoff-gutter);
+  display: flex;
+  flex-direction: column;
+}
+
+body[data-page="take-off-takeoff"] .takeoff-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--takeoff-gap);
+  min-height: calc(100vh - (var(--takeoff-gutter) * 2));
+  flex: 1 1 auto;
 }
 
 /* Disable the default centered max-width for this full-window app */
@@ -438,32 +450,33 @@ body[data-page="take-off-takeoff"] .topbar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 1rem;
+  gap: calc(var(--takeoff-gap) * 0.6);
+  padding: calc(var(--takeoff-gap) * 0.6) var(--takeoff-gutter);
   background: transparent;
   position: sticky;
-  top: 0;
+  top: var(--takeoff-gutter);
   z-index: 60;
 }
 
 body[data-page="take-off-takeoff"] .topbar--compact {
-  gap: 0.5rem;
-  padding: 0.4rem 0.75rem;
+  gap: calc(var(--takeoff-gap) * 0.5);
+  padding: calc(var(--takeoff-gap) * 0.5) var(--takeoff-gutter);
 }
 
 /* Main area: side panel + viewer */
 body[data-page="take-off-takeoff"] .wrap {
   display: flex;
-  gap: 1rem;
-  height: calc(100vh - 64px); /* leave room for topbar */
-  padding: 1rem;
+  gap: var(--takeoff-gap);
+  flex: 1 1 auto;
+  padding: var(--takeoff-gutter);
   box-sizing: border-box;
   align-items: stretch;
+  min-height: 0;
 }
 
 body[data-page="take-off-takeoff"] .wrap--compact {
-  gap: 0.75rem;
-  padding: 0.75rem;
+  gap: var(--takeoff-gap);
+  padding: var(--takeoff-gutter);
 }
 
 /* Left side panel fixed-ish */
@@ -482,6 +495,7 @@ body[data-page="take-off-takeoff"] .panel {
 body[data-page="take-off-takeoff"] .viewer {
   flex: 1 1 auto;
   min-width: 0; /* allow flex child to shrink properly */
+  min-height: 0;
   background: transparent;
   overflow: auto;
   display: flex;
