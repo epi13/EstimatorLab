@@ -14,109 +14,111 @@
   </script>
 </head>
 <body data-page="take-off-takeoff">
-  <header class="topbar topbar--compact" role="banner">
-    <div class="topbar__row topbar__row--layout">
-      <div class="brand" aria-label="Blueprint Measure">
-        <span class="brand-icon" aria-hidden="true">📐</span>
-        <div class="brand-copy">
-          <h1>Blueprint Measure</h1>
-          <p>Calibrate drawings, trace geometry, and capture precise takeoffs.</p>
-        </div>
-      </div>
-      <div class="topbar__clusters" aria-label="Primary controls">
-        <div class="pill pill--file">
-          <div class="pill__stack">
-            <label class="small" for="file">Upload PDF</label>
-            <input id="file" type="file" accept="application/pdf" />
+  <div class="takeoff-shell">
+    <header class="topbar topbar--compact" role="banner">
+      <div class="topbar__row topbar__row--layout">
+        <div class="brand" aria-label="Blueprint Measure">
+          <span class="brand-icon" aria-hidden="true">📐</span>
+          <div class="brand-copy">
+            <h1>Blueprint Measure</h1>
+            <p>Calibrate drawings, trace geometry, and capture precise takeoffs.</p>
           </div>
-          <span id="fileName" class="file-name small">No document loaded</span>
-          <button id="demoBtn" class="tool ghost" type="button" title="Load demo PDF">Demo</button>
         </div>
-        <div class="pill pill--nav" aria-label="Page navigation">
-          <button class="tool" id="prev" type="button" title="Previous page">◀</button>
-          <span class="small">Page <span id="pageNum" class="num">–</span>/<span id="pageCount" class="num">–</span></span>
-          <button class="tool" id="next" type="button" title="Next page">▶</button>
-        </div>
-        <div class="pill pill--zoom" aria-label="Zoom controls">
-          <button class="tool" id="zoomOut" type="button" title="Zoom out">–</button>
-          <span class="small num" id="zoomLbl">100%</span>
-          <button class="tool" id="zoomIn" type="button" title="Zoom in">+</button>
-          <button class="tool ghost" id="zoomReset" type="button" title="Reset zoom">Reset</button>
-        </div>
-        <div class="pill pill--export" aria-label="Export">
-          <button class="tool" id="exportJson" type="button">⇩ Export JSON</button>
-          <button class="tool" id="exportPng" type="button">📸 Snapshot</button>
+        <div class="topbar__clusters" aria-label="Primary controls">
+          <div class="pill pill--file">
+            <div class="pill__stack">
+              <label class="small" for="file">Upload PDF</label>
+              <input id="file" type="file" accept="application/pdf" />
+            </div>
+            <span id="fileName" class="file-name small">No document loaded</span>
+            <button id="demoBtn" class="tool ghost" type="button" title="Load demo PDF">Demo</button>
+          </div>
+          <div class="pill pill--nav" aria-label="Page navigation">
+            <button class="tool" id="prev" type="button" title="Previous page">◀</button>
+            <span class="small">Page <span id="pageNum" class="num">–</span>/<span id="pageCount" class="num">–</span></span>
+            <button class="tool" id="next" type="button" title="Next page">▶</button>
+          </div>
+          <div class="pill pill--zoom" aria-label="Zoom controls">
+            <button class="tool" id="zoomOut" type="button" title="Zoom out">–</button>
+            <span class="small num" id="zoomLbl">100%</span>
+            <button class="tool" id="zoomIn" type="button" title="Zoom in">+</button>
+            <button class="tool ghost" id="zoomReset" type="button" title="Reset zoom">Reset</button>
+          </div>
+          <div class="pill pill--export" aria-label="Export">
+            <button class="tool" id="exportJson" type="button">⇩ Export JSON</button>
+            <button class="tool" id="exportPng" type="button">📸 Snapshot</button>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="topbar__row topbar__row--tools">
-      <div class="pill pill--tools" id="toolGroup" aria-label="Measurement tools">
-        <button class="tool" data-tool="pan" type="button" title="Pan (hold Space to pan)">🖐️ Pan</button>
-        <button class="tool" data-tool="calibrate" type="button" title="Calibrate scale">🎯 Calibrate</button>
-        <button class="tool" data-tool="line" type="button" title="Measure line">📏 Line</button>
-        <button class="tool" data-tool="area" type="button" title="Measure polygon area">▱ Area</button>
-        <button class="tool" id="undo" type="button" title="Undo last point">↶ Undo</button>
-        <button class="tool" id="finish" type="button" title="Finish polygon">✔ Finish</button>
-        <button class="tool" id="clearMeasures" type="button" title="Clear measurements">🧹 Clear</button>
+      <div class="topbar__row topbar__row--tools">
+        <div class="pill pill--tools" id="toolGroup" aria-label="Measurement tools">
+          <button class="tool" data-tool="pan" type="button" title="Pan (hold Space to pan)">🖐️ Pan</button>
+          <button class="tool" data-tool="calibrate" type="button" title="Calibrate scale">🎯 Calibrate</button>
+          <button class="tool" data-tool="line" type="button" title="Measure line">📏 Line</button>
+          <button class="tool" data-tool="area" type="button" title="Measure polygon area">▱ Area</button>
+          <button class="tool" id="undo" type="button" title="Undo last point">↶ Undo</button>
+          <button class="tool" id="finish" type="button" title="Finish polygon">✔ Finish</button>
+          <button class="tool" id="clearMeasures" type="button" title="Clear measurements">🧹 Clear</button>
+        </div>
+        <div class="pill pill--units" aria-label="Display units">
+          <span class="small">Units</span>
+          <select id="units">
+            <option value="ft">ft</option>
+            <option value="in">in</option>
+            <option value="m">m</option>
+          </select>
+          <span class="small">Scale</span>
+          <span id="scaleLbl" class="badge mono">–</span>
+        </div>
       </div>
-      <div class="pill pill--units" aria-label="Display units">
-        <span class="small">Units</span>
-        <select id="units">
-          <option value="ft">ft</option>
-          <option value="in">in</option>
-          <option value="m">m</option>
-        </select>
-        <span class="small">Scale</span>
-        <span id="scaleLbl" class="badge mono">–</span>
-      </div>
-    </div>
-  </header>
+    </header>
 
-  <main class="wrap wrap--compact" role="main">
-    <aside class="panel" id="side">
-      <section class="panel-section">
-        <h3>Session</h3>
-        <div class="kvs" id="sessionKVS">
-          <div class="k">Status</div><div id="statusVal">Load a PDF…</div>
-          <div class="k">Calibrated</div><div id="calVal" class="num">No</div>
-          <div class="k">Current tool</div><div id="toolVal">Pan</div>
-          <div class="k">Last length</div><div id="lenVal" class="num">–</div>
-          <div class="k">Last area</div><div id="areaVal" class="num">–</div>
+    <main class="wrap wrap--compact" role="main">
+      <aside class="panel" id="side">
+        <section class="panel-section">
+          <h3>Session</h3>
+          <div class="kvs" id="sessionKVS">
+            <div class="k">Status</div><div id="statusVal">Load a PDF…</div>
+            <div class="k">Calibrated</div><div id="calVal" class="num">No</div>
+            <div class="k">Current tool</div><div id="toolVal">Pan</div>
+            <div class="k">Last length</div><div id="lenVal" class="num">–</div>
+            <div class="k">Last area</div><div id="areaVal" class="num">–</div>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h3>How to use</h3>
+          <ol class="small instructions">
+            <li>Load a PDF (use <b>Demo</b> if you like).</li>
+            <li>Click <b>Calibrate</b>, pick 2 known points, enter real distance + units.</li>
+            <li>Select <b>Line</b> or <b>Area</b>. Click to measure; double‑click to close a polygon.</li>
+            <li>Mouse wheel = zoom. Hold <b>Space</b> and drag to pan (or use Pan tool).</li>
+            <li>Use <b>Export JSON</b> to save measurements.</li>
+          </ol>
+
+          <div class="row row-spaced">
+            <button class="btn secondary" id="toggleLabels">Toggle labels</button>
+            <button class="btn secondary" id="toggleSnaps">Snap</button>
+          </div>
+          <div class="note muted-note">Snapping: end‑points & last point, useful for closing shapes cleanly.</div>
+        </section>
+
+        <section class="panel-section grow">
+          <h3>Measurements</h3>
+          <div id="measList" class="list small"></div>
+        </section>
+      </aside>
+
+      <section class="viewer" id="viewer" aria-live="polite">
+        <div class="canvas-stack" id="stack" style="display:none">
+          <canvas id="pdf"></canvas>
+          <canvas id="overlay"></canvas>
+          <canvas id="labels"></canvas>
         </div>
+        <div class="hint" id="hint">Load a PDF to begin.</div>
       </section>
-
-      <section class="panel-section">
-        <h3>How to use</h3>
-        <ol class="small instructions">
-          <li>Load a PDF (use <b>Demo</b> if you like).</li>
-          <li>Click <b>Calibrate</b>, pick 2 known points, enter real distance + units.</li>
-          <li>Select <b>Line</b> or <b>Area</b>. Click to measure; double‑click to close a polygon.</li>
-          <li>Mouse wheel = zoom. Hold <b>Space</b> and drag to pan (or use Pan tool).</li>
-          <li>Use <b>Export JSON</b> to save measurements.</li>
-        </ol>
-
-        <div class="row row-spaced">
-          <button class="btn secondary" id="toggleLabels">Toggle labels</button>
-          <button class="btn secondary" id="toggleSnaps">Snap</button>
-        </div>
-        <div class="note muted-note">Snapping: end‑points & last point, useful for closing shapes cleanly.</div>
-      </section>
-
-      <section class="panel-section grow">
-        <h3>Measurements</h3>
-        <div id="measList" class="list small"></div>
-      </section>
-    </aside>
-
-    <section class="viewer" id="viewer" aria-live="polite">
-      <div class="canvas-stack" id="stack" style="display:none">
-        <canvas id="pdf"></canvas>
-        <canvas id="overlay"></canvas>
-        <canvas id="labels"></canvas>
-      </div>
-      <div class="hint" id="hint">Load a PDF to begin.</div>
-    </section>
-  </main>
+    </main>
+  </div>
 
   <!-- Calibration Modal -->
   <div class="modal" id="calModal">
