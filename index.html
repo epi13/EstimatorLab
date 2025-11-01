@@ -237,6 +237,7 @@
 
     const navLinkElements = [];
     const hrefToLink = new Map();
+    let lastFilterQuery = '';
 
     const sr = (text) => {
       const span = document.createElement('span');
@@ -265,11 +266,6 @@
       if (section.startOpen) {
         sectionEl.dataset.open = 'true';
       }
-
-      const sectionState = {
-        element: sectionEl,
-        items: []
-      };
 
       const header = document.createElement('header');
       header.className = 'nav-section__header';
@@ -331,10 +327,12 @@
 
       sectionEl.appendChild(list);
       fragment.appendChild(sectionEl);
-      sectionsState.push(sectionState);
     });
 
     navContainer.appendChild(fragment);
+    collapseButton.dataset.state = 'expanded';
+
+    const getSections = () => Array.from(navContainer.querySelectorAll('.nav-section'));
 
     const setActiveLink = (link) => {
       navLinkElements.forEach((item) => {
@@ -346,6 +344,8 @@
       link.parentElement.classList.add('is-active');
       categoryLabel.textContent = link.dataset.sectionTitle;
       titleLabel.textContent = link.dataset.calculator;
+      collapseButton.dataset.state = 'expanded';
+      collapseLabel.textContent = 'Collapse all';
     };
 
     const setSectionOpen = (sectionEl, open) => {
@@ -390,6 +390,10 @@
       }
 
       setActiveLink(link);
+      const sectionEl = link.closest('.nav-section');
+      if (sectionEl) {
+        setSectionOpen(sectionEl, true);
+      }
     });
 
     const applyFilter = (value) => {
@@ -398,34 +402,33 @@
       lastFilterQuery = query;
       let hasMatches = false;
 
-      sectionsState.forEach(({ element: sectionEl, items }) => {
+      getSections().forEach((sectionEl) => {
+        const items = Array.from(sectionEl.querySelectorAll('.nav-section__item'));
         let visibleCount = 0;
 
-        items.forEach(({ element: item, searchText }) => {
+        items.forEach((item) => {
+          const searchText = item.dataset.search || '';
           const match = !query || searchText.includes(query);
-          const shouldHideItem = !match;
-          if (item.hidden !== shouldHideItem) {
-            item.hidden = shouldHideItem;
-          }
+          item.hidden = !match;
           if (match) {
             visibleCount += 1;
           }
         });
 
         const shouldHideSection = visibleCount === 0;
-        if (sectionEl.hidden !== shouldHideSection) {
-          sectionEl.hidden = shouldHideSection;
-        }
+        sectionEl.hidden = shouldHideSection;
 
         if (!shouldHideSection) {
-          if (sectionEl.dataset.open !== 'true') {
-            setSectionOpen(sectionEl, true);
-          }
+          setSectionOpen(sectionEl, true);
           hasMatches = true;
         }
       });
 
       emptyState.hidden = hasMatches;
+      if (hasMatches) {
+        collapseButton.dataset.state = 'expanded';
+        collapseLabel.textContent = 'Collapse all';
+      }
     };
 
     searchInput.addEventListener('input', (event) => {
@@ -434,7 +437,7 @@
 
     collapseButton.addEventListener('click', () => {
       const shouldCollapse = collapseButton.dataset.state !== 'collapsed';
-      sectionsState.forEach(({ element }) => setSectionOpen(element, !shouldCollapse));
+      getSections().forEach((sectionEl) => setSectionOpen(sectionEl, !shouldCollapse));
       collapseButton.dataset.state = shouldCollapse ? 'collapsed' : 'expanded';
       collapseLabel.textContent = shouldCollapse ? 'Expand all' : 'Collapse all';
     });
@@ -449,12 +452,20 @@
       const activeLink = hrefToLink.get(attributeSrc || '') || hrefToLink.get(propertySrc || '');
       if (activeLink) {
         setActiveLink(activeLink);
+        const sectionEl = activeLink.closest('.nav-section');
+        if (sectionEl) {
+          setSectionOpen(sectionEl, true);
+        }
       }
     });
 
     const defaultLink = navContainer.querySelector('.nav-section__link');
     if (defaultLink) {
       setActiveLink(defaultLink);
+      const defaultSection = defaultLink.closest('.nav-section');
+      if (defaultSection) {
+        setSectionOpen(defaultSection, true);
+      }
     }
   </script>
 </body>
