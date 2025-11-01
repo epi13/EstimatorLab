@@ -2,35 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+
+    <link rel="stylesheet" href="../styles.css">
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Man-Days & Per-Diem Calculator (Offline, Auto Crew/Subs)</title>
-<style>
-  :root { --bg:#0b0f14; --card:#111823; --muted:#b1c0d8; --text:#e9eef7; --accent:#66b3ff; --ok:#55c28a; }
-  body{margin:0;background:#0b0f14;color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;}
-  header{padding:18px 22px;border-bottom:1px solid #1c2736;background:#0e141d;}
-  h1{margin:0;font-size:18px;letter-spacing:.2px}
-  .wrap{max-width:1100px;margin:0 auto;padding:18px}
-  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
-  .card{grid-column:span 12;background:var(--card);border:1px solid #1a2432;border-radius:14px;padding:16px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
-  .card h2{margin:.2rem 0 1rem;font-size:16px}
-  label{display:block;font-size:12px;color:var(--muted);margin:.25rem 0 .35rem}
-  input,select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #2a3850;background:#0e1520;color:var(--text);}
-  input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(102,179,255,.2)}
-  .row{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin-bottom:10px}
-  .span-2{grid-column:span 2}.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-6{grid-column:span 6}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
-  .pill{background:#0c131c;border:1px solid #213147;border-radius:999px;padding:10px 14px;display:inline-block;margin:4px}
-  .pill b{color:var(--ok)}
-  .help{font-size:12px;color:var(--muted);margin-top:6px}
-  .small{font-size:12px}
-  .hidden{display:none}
-  .inline{display:flex;align-items:center;gap:8px}
-  .toggle{display:flex;align-items:center;gap:8px;margin-top:6px}
-  .toggle input[type="checkbox"]{transform:scale(1.1)}
-  .right{justify-content:flex-end}
-  @media (max-width:900px){ .span-2,.span-3,.span-4,.span-6,.span-8{grid-column:span 12} }
-</style>
 </head>
-<body>
+<body data-page="logistics-labor">
 <header><h1>Man-Days & Per-Diem Calculator — Offline (Auto Crew/Subs)</h1></header>
 <div class="wrap">
   <div class="grid">

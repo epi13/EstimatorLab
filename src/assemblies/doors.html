@@ -2,42 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+
+    <link rel="stylesheet" href="../styles.css">
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Door Pricing Calculator (AK, March 2025 Basis)</title>
-<style>
-  :root { --bg:#0f172a; --card:#111827; --muted:#1f2937; --text:#e5e7eb; --sub:#9ca3af; --accent:#22c55e; }
-  * { box-sizing: border-box; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; }
-  body { margin: 0; background: linear-gradient(120deg, #0b1220, #0e1220 35%, #0b1020); color: var(--text); }
-  .wrap { max-width: 1200px; margin: 32px auto; padding: 0 16px; }
-  .grid { display: grid; gap: 16px; grid-template-columns: repeat(12, 1fr); }
-  .card { background: linear-gradient(180deg, #0f172a, #0f172a 60%, #0c1323); border: 1px solid #1f2937; border-radius: 14px; padding: 16px; }
-  .shadow { box-shadow: 0 10px 25px rgba(0,0,0,.35); }
-  .col-4 { grid-column: span 4; } .col-5 { grid-column: span 5; } .col-6 { grid-column: span 6; } .col-7 { grid-column: span 7; }
-  .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
-  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing:.2px }
-  h2 { font-size: 18px; margin: 0 0 10px; color: var(--sub); font-weight: 600; }
-  label { font-size: 12px; color: var(--sub); display:block; margin-bottom: 4px; }
-  input, select, textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #273244; background: #0b1220; color: var(--text); }
-  textarea { min-height: 120px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 12.5px; }
-  .row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
-  .row > div { grid-column: span 12; }
-  .row .third { grid-column: span 4; } .row .half { grid-column: span 6; }
-  .btn { background: #16a34a; border: none; color: white; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; }
-  .btn.secondary { background: #334155; }
-  table { width:100%; border-collapse: collapse; }
-  th, td { text-align: right; padding: 8px 6px; border-bottom: 1px dashed #233049; }
-  th:first-child, td:first-child { text-align: left; }
-  .t-sub { color: var(--sub); font-size: 12px; }
-  .total { font-size: 22px; font-weight: 800; color: #a7f3d0; }
-  .note { font-size: 12.5px; color: var(--sub); }
-  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
-  .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #2b3a55; color:#c7d2fe; font-size:11px; }
-  details { border:1px solid #243047; border-radius:10px; padding:8px 10px; }
-  details summary { cursor:pointer; color:#cbd5e1; }
-  @media (max-width: 960px) { .col-4, .col-5, .col-6, .col-7, .col-8, .col-12 { grid-column: span 12; } }
-</style>
 </head>
-<body>
+<body data-page="assemblies-doors">
 <div class="wrap">
   <div class="grid">
     <div class="col-8 card shadow">

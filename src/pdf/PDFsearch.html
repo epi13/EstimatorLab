@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    <link rel="stylesheet" href="../styles.css">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Fuzzy PDF Search (Client‑side, OCR fallback)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,54 +13,8 @@
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/7.0.0/fuse.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.5/tesseract.min.js"></script>
-  <style>
-    :root{--bg:#0b1020;--panel:#121a33;--card:#161f3f;--muted:#8ea2c9;--ink:#e8f1ff;--accent:#7aa2ff;--accent2:#4ade80;--warn:#f59e0b;}
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,#0b1020,#0b142a 40%,#0a0f21);color:var(--ink)}
-    header{position:sticky;top:0;z-index:10;background:rgba(10,14,30,.8);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06)}
-    .wrap{max-width:1200px;margin:0 auto;padding:16px}
-    .toolbar{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    .input, input[type="text"], input[type="number"], select{
-      background:var(--panel); border:1px solid rgba(255,255,255,.08); color:var(--ink);
-      padding:10px 12px; border-radius:12px; outline:none; min-width:160px;
-    }
-    input[type="text"]{width:100%}
-    button{
-      border:1px solid rgba(255,255,255,.08); background:var(--card); color:var(--ink);
-      padding:10px 14px; border-radius:12px; cursor:pointer; font-weight:600;
-    }
-    button.primary{background:linear-gradient(135deg,var(--accent),#62e0ff); color:#041326; border:none}
-    button.ghost{background:transparent}
-    label{font-size:12px;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:340px 1fr;gap:14px;padding:16px}
-    #leftcol{display:flex;flex-direction:column;gap:14px}
-    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px}
-    #drop{border:2px dashed rgba(255,255,255,.15);padding:16px;border-radius:14px;text-align:center}
-    #drop.drag{border-color:var(--accent)}
-    .kvs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .kvs .item{background:var(--panel);padding:8px;border-radius:10px}
-    #results{max-height:45vh;overflow:auto}
-    .res{padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.06);margin-bottom:8px;background:rgba(255,255,255,.03);cursor:pointer}
-    .res:hover{outline:2px solid rgba(122,162,255,.35)}
-    .res .title{font-weight:700}
-    .res .meta{color:var(--muted);font-size:12px}
-    .res .snip{margin-top:6px;color:#dce8ff}
-    #viewer{position:relative;}
-    .page{position:relative;margin:0 0 16px 0;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,.35)}
-    .textLayer{position:absolute;left:0;top:0;right:0;bottom:0;pointer-events:none}
-    .hl{position:absolute;background:rgba(122,162,255,.35);outline:1px solid rgba(122,162,255,.7);mix-blend-mode:multiply;border-radius:2px}
-    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;background:rgba(122,162,255,.2);border:1px solid rgba(122,162,255,.5)}
-    .status{font-size:12px;color:var(--muted)}
-    .footer{padding:16px;text-align:center;color:var(--muted)}
-    .row.wrap>div{display:flex;gap:8px;align-items:center}
-    .progress{height:6px;background:#0f1530;border-radius:8px;overflow:hidden}
-    .progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0%}
-    @media (max-width: 1024px){.grid{grid-template-columns:1fr}}
-  </style>
-</head>
-<body>
+  </head>
+<body data-page="pdf-pdfsearch">
   <header>
     <div class="wrap">
       <div class="toolbar">

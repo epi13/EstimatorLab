@@ -2,71 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    <link rel="stylesheet" href="../styles.css">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Blueprint Measure</title>
-  <style>
-    :root{
-      --bg:#0c0f14;/* deep slate */
-      --panel:#141923;/* panel */
-      --ink:#e7ecf3;/* text */
-      --muted:#a7b1c2;/* muted */
-      --brand:#6fb6ff;/* accent */
-      --brand-2:#82e0aa;/* secondary accent */
-      --warn:#ffd166;
-      --danger:#ff6b6b;
-      --ok:#95d47a;
-      --shadow:0 6px 20px rgba(0,0,0,.35);
-      --radius:16px;
-    }
-    html,body{height:100%;}
-    body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;}
-    /* Top bar */
-    .topbar{position:sticky;top:0;z-index:30;display:flex;gap:.75rem;align-items:center;padding:.75rem 1rem;background:linear-gradient(180deg,rgba(10,14,20,.95),rgba(10,14,20,.65));backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,.06)}
-    .brand{font-weight:700;letter-spacing:.2px;opacity:.95}
-    .pill{display:inline-flex;align-items:center;gap:.5rem;background:var(--panel);border:1px solid rgba(255,255,255,.06);border-radius:999px;padding:.4rem .7rem;box-shadow:var(--shadow)}
-    .tool{cursor:pointer;border:none;background:transparent;color:var(--ink);padding:.45rem .7rem;border-radius:999px;transition:.15s ease;}
-    .tool:hover{background:rgba(255,255,255,.06)}
-    .tool.active{background:var(--brand);color:#0b1020;}
-    .sep{width:1px;height:28px;background:rgba(255,255,255,.08);}
-    .small{font-size:.85rem;color:var(--muted)}
-    .num{font-variant-numeric:tabular-nums}
-    input[type="file"],select,input[type="number"],input[type="text"]{background:var(--panel);color:var(--ink);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:.45rem .6rem}
-    input[type="number"]{width:7ch}
-    .ghost{opacity:.8}
-
-    /* Layout */
-    .wrap{display:grid;grid-template-columns: 280px 1fr;gap:1rem;padding:1rem;}
-    .panel{background:var(--panel);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);padding:1rem;box-shadow:var(--shadow);}
-    .panel h3{margin:.2rem 0 0.6rem;font-size:.95rem;color:#cfe3ff;font-weight:700}
-    .kvs{display:grid;grid-template-columns:1fr auto;row-gap:.35rem;column-gap:.5rem;font-size:.9rem}
-    .kvs .k{color:var(--muted)}
-    .btn{background:var(--brand);color:#0b1020;border:none;border-radius:12px;padding:.55rem .75rem;font-weight:700;cursor:pointer}
-    .btn.secondary{background:transparent;color:var(--ink);border:1px solid rgba(255,255,255,.14)}
-    .btn.warn{background:var(--warn);color:#1a1300}
-    .btn.danger{background:var(--danger);color:#200}
-    .btn:disabled{opacity:.4;cursor:not-allowed}
-
-    /* Viewer */
-    .viewer{position:relative;border-radius:var(--radius);overflow:auto;border:1px solid rgba(255,255,255,.06);background:#0a0d12;min-height:70vh;box-shadow:var(--shadow)}
-    .canvas-stack{position:relative;display:inline-block}
-    canvas{display:block;}
-    #overlay{position:absolute;left:0;top:0;pointer-events:auto}
-    #labels{position:absolute;left:0;top:0;pointer-events:none}
-    .hint{position:absolute;right:1rem;bottom:1rem;background:rgba(0,0,0,.5);padding:.45rem .6rem;border-radius:10px;font-size:.85rem;color:var(--muted)}
-
-    /* Modal */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50}
-    .modal .sheet{background:var(--panel);border:1px solid rgba(255,255,255,.08);border-radius:16px;min-width:320px;max-width:92vw;padding:1rem 1.1rem;box-shadow:var(--shadow)}
-    .sheet h4{margin:.2rem 0 .8rem}
-    .row{display:flex;gap:.6rem;align-items:center;margin:.4rem 0}
-    .grow{flex:1}
-    .note{font-size:.85rem;color:var(--muted)}
-    .badge{font-size:.75rem;background:rgba(255,255,255,.08);padding:.15rem .45rem;border-radius:999px;color:#cfe3ff}
-    .list{max-height:30vh;overflow:auto;border-top:1px dashed rgba(255,255,255,.1);margin-top:.6rem;padding-top:.6rem}
-    .row-between{display:flex;align-items:center;justify-content:space-between}
-    .muted{color:var(--muted)}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
-  </style>
   <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script>
@@ -74,7 +13,7 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   </script>
 </head>
-<body>
+<body data-page="take-off-takeoff">
   <div class="topbar">
     <div class="brand">📐 Blueprint Measure</div>
     <div class="pill">

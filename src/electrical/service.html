@@ -2,61 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    <link rel="stylesheet" href="../styles.css">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Electrical Service & Distribution Calculator — Core (NEC‑aware)</title>
-  <style>
-    :root {
-      --bg: #0f172a;     /* slate-900 */
-      --panel: #111827;  /* gray-900 */
-      --muted: #1f2937;  /* gray-800 */
-      --ink: #e5e7eb;    /* gray-200 */
-      --accent: #22d3ee; /* cyan-400 */
-      --accent-2: #14b8a6;/* teal-500 */
-      --warn: #f59e0b;   /* amber-500 */
-      --bad: #ef4444;    /* red-500 */
-      --good: #22c55e;   /* green-500 */
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-    header{position:sticky;top:0;background:linear-gradient(180deg,var(--panel),rgba(17,24,39,0.85));backdrop-filter: blur(8px);z-index:5;border-bottom:1px solid #1f2937}
-    .wrap{max-width:1180px;margin:0 auto;padding:18px}
-    h1{margin:6px 0 0;font-size:22px;font-weight:700;letter-spacing:.2px}
-    .sub{opacity:.75;font-size:13px;margin-top:4px}
-    main{max-width:1180px;margin:20px auto;display:grid;grid-template-columns: 360px 1fr;gap:16px;padding:0 18px 64px}
-    .card{background:var(--panel);border:1px solid var(--muted);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    .card h2{margin:0 0 10px;padding:14px 16px;border-bottom:1px solid var(--muted);font-size:16px;letter-spacing:.3px}
-    .card .body{padding:14px 16px}
-    label{display:block;font-size:12px;opacity:.9;margin:10px 0 6px}
-    input,select,button,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:var(--ink);outline:none}
-    input:focus,select:focus,textarea:focus{border-color:var(--accent)}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-    .row4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-    .pill{display:inline-grid;grid-auto-flow:column;gap:6px;align-items:center;padding:8px 10px;border:1px solid #2a3448;border-radius:999px;background:#0b1220;font-size:12px}
-    .flex{display:flex;gap:10px;align-items:center}
-    .right{margin-left:auto}
-    .small{font-size:12px;opacity:.8}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid #222;vertical-align:top}
-    th{font-size:12px;text-transform:uppercase;letter-spacing:.6px;text-align:left;opacity:.8}
-    .tag{display:inline-block;padding:3px 8px;border-radius:999px;background:#0b1220;border:1px solid #243045;font-size:11px}
-    .ok{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
-    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace}
-    .grid{display:grid;gap:12px}
-    .muted{opacity:.8}
-    .section-title{margin:16px 0 8px;font-weight:700;opacity:.9}
-    .btn{cursor:pointer;background:linear-gradient(135deg,var(--accent),var(--accent-2));border:0;color:#06111a;font-weight:700}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .ghost{background:#0b1220;border:1px solid #2a3448;color:var(--ink)}
-    .hr{height:1px;background:#1f2937;margin:10px 0}
-    footer{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(0deg,var(--panel),rgba(17,24,39,0.7));border-top:1px solid var(--muted)}
-    .chips{display:flex;flex-wrap:wrap;gap:8px}
-    .hide{display:none}
-    details{border:1px solid #233049;border-radius:10px;padding:8px;background:#0b1220}
-    summary{cursor:pointer;font-weight:600}
-  </style>
-</head>
-<body>
+  </head>
+<body data-page="electrical-service">
   <header>
     <div class="wrap">
       <div class="flex">
