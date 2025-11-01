@@ -1,10 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-  
-    <link rel="stylesheet" href="../styles.css">
-<title>Rebar Weight Calculator</title>
-  </head>
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* weight/rebar_calculator.html */
+    body[data-page="weight-rebar-calculator"] {
+          font-family: Arial, sans-serif;
+          max-width: 450px;
+          margin: 50px auto;
+          padding: 20px;
+          border: 1px solid var(--border);
+          border-radius: 10px;
+        }
+    body[data-page="weight-rebar-calculator"] label, body[data-page="weight-rebar-calculator"] select, body[data-page="weight-rebar-calculator"] input, body[data-page="weight-rebar-calculator"] button {
+          display: block;
+          width: 100%;
+          margin-bottom: 10px;
+        }
+    body[data-page="weight-rebar-calculator"] input, body[data-page="weight-rebar-calculator"] select {
+          padding: 8px;
+          box-sizing: border-box;
+        }
+    body[data-page="weight-rebar-calculator"] button {
+          padding: 10px;
+        }
+    body[data-page="weight-rebar-calculator"] #result {
+          margin-top: 15px;
+          font-weight: bold;
+        }
+  </style>
+  <title>Rebar Weight Calculator</title>
+</head>
 <body data-page="weight-rebar-calculator">
   <h2>Rebar Weight Calculator</h2>
 

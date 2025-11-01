@@ -2,10 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  
-    <link rel="stylesheet" href="../styles.css">
-<title>Triangle Area Calculator</title>
-  </head>
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* area/triangle_area.html */
+    body[data-page="area-triangle-area"] { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+    body[data-page="area-triangle-area"] label { display: block; margin-top: 10px; }
+    body[data-page="area-triangle-area"] input, body[data-page="area-triangle-area"] select { width: 100%; padding: 5px; margin-top: 5px; }
+    body[data-page="area-triangle-area"] .section { display: none; margin-top: 20px; }
+    body[data-page="area-triangle-area"] .visible { display: block; }
+    body[data-page="area-triangle-area"] svg { margin-top: 10px; max-width: 100%; height: auto; }
+    body[data-page="area-triangle-area"] .output { margin-top: 20px; font-size: 1.2em; }
+    body[data-page="area-triangle-area"] .history { margin-top: 20px; font-size: 0.9em; background: var(--surface-muted); padding: 10px; border: 1px solid var(--border); }
+  </style>
+  <title>Triangle Area Calculator</title>
+</head>
 <body data-page="area-triangle-area">
   <h2>Triangle Area Calculator</h2>
 

@@ -1,10 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* mechanical/ducting.html */
+    body[data-page="mechanical-ducting"] {
+        --bg:#0f1115;--card:#171a21;--muted:#a9b0bc;--accent:#7bd389;--warn:#ffd166;--err:#ef476f;--line:#242a33;
+      }
+    body[data-page="mechanical-ducting"] html, body[data-page="mechanical-ducting"] {background:var(--bg);color:#e9edf3;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0}
+    body[data-page="mechanical-ducting"] *, body[data-page="mechanical-ducting"] *::before, body[data-page="mechanical-ducting"] *::after {box-sizing:border-box}
+    body[data-page="mechanical-ducting"] h1 {font-size:1.25rem;margin:16px 12px}
+    body[data-page="mechanical-ducting"] .wrap {max-width:1260px;margin:0 auto;padding:12px}
+    body[data-page="mechanical-ducting"] .row {display:flex;gap:12px;flex-wrap:wrap;margin:8px 0}
+    body[data-page="mechanical-ducting"] .card {background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+    body[data-page="mechanical-ducting"] label {font-size:.85rem;color:var(--muted);display:block;margin-bottom:4px}
+    body[data-page="mechanical-ducting"] input, body[data-page="mechanical-ducting"] select, body[data-page="mechanical-ducting"] textarea, body[data-page="mechanical-ducting"] button {
+        background:#0c0f14;color:#e9edf3;border:1px solid var(--line);border-radius:10px;
+        padding:8px 10px;font-size:.95rem;outline:none;max-width:100%
+      }
+    body[data-page="mechanical-ducting"] input:focus, body[data-page="mechanical-ducting"] select:focus, body[data-page="mechanical-ducting"] textarea:focus {border-color:#3a4353;box-shadow:0 0 0 2px #3a435355}
+    body[data-page="mechanical-ducting"] input.num {width:110px}
+    body[data-page="mechanical-ducting"] input.size {width:140px}
+    body[data-page="mechanical-ducting"] select.compact {width:140px}
+    body[data-page="mechanical-ducting"] button {cursor:pointer}
+    body[data-page="mechanical-ducting"] button.primary {background:var(--accent);color:#0b0d10;border:0;font-weight:600}
+    body[data-page="mechanical-ducting"] button.ghost {background:transparent}
+    body[data-page="mechanical-ducting"] .pill {display:inline-block;padding:2px 8px;border-radius:999px;background:#0d1219;border:1px solid var(--line);font-size:.75rem;color:#b7bfc9}
+    body[data-page="mechanical-ducting"] .mini {font-size:.8rem;color:var(--muted)}
+    body[data-page="mechanical-ducting"] .mono {font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+    body[data-page="mechanical-ducting"] .nowrap {white-space:nowrap}
+    body[data-page="mechanical-ducting"] .hidden {display:none !important}
 
-    <link rel="stylesheet" href="../styles.css">
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+    /* Responsive table shell */
+    body[data-page="mechanical-ducting"] .table-wrap {width:100%;overflow:auto;border:1px solid var(--line);border-radius:12px}
+    body[data-page="mechanical-ducting"] table {width:max(1320px,100%);border-collapse:collapse}
+    body[data-page="mechanical-ducting"] thead th, body[data-page="mechanical-ducting"] tbody td, body[data-page="mechanical-ducting"] tfoot td {
+        border-bottom:1px solid var(--line);padding:8px;vertical-align:middle;
+        font-variant-numeric:tabular-nums
+      }
+    body[data-page="mechanical-ducting"] thead th {color:#b7bfc9;font-size:.82rem;text-align:right}
+    body[data-page="mechanical-ducting"] tbody td, body[data-page="mechanical-ducting"] tfoot td {text-align:right}
+    body[data-page="mechanical-ducting"] td:first-child, body[data-page="mechanical-ducting"] th:first-child {text-align:left}
+    body[data-page="mechanical-ducting"] .tight td {padding:6px}
+    body[data-page="mechanical-ducting"] .btn-cell {min-width:44px}
+    body[data-page="mechanical-ducting"] .cost-col.hidden, body[data-page="mechanical-ducting"] .demo-col.hidden {display:none}
+    body[data-page="mechanical-ducting"] .progress {height:8px;background:#0c0f14;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+    body[data-page="mechanical-ducting"] .progress > div {height:100%;background:var(--accent);width:0%}
+  </style>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Ductwork Take-Off & Budget Calculator (AK) — Materials + PDF OCR (Fixed)</title>
 </head>
 <body data-page="mechanical-ducting">

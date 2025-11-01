@@ -2,9 +2,53 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  
-    <link rel="stylesheet" href="../styles.css">
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* volume/trench_cy.html */
+    body[data-page="volume-trench-cy"] .calculator-container {
+          max-width: 720px;
+          margin: 0 auto;
+          padding: 1em;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          background: var(--surface-muted);
+        }
+    body[data-page="volume-trench-cy"] .grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 12px;
+        }
+    body[data-page="volume-trench-cy"] label { font-weight: 600; }
+    body[data-page="volume-trench-cy"] label span { font-weight: 400; color: var(--text-muted); }
+    body[data-page="volume-trench-cy"] input, body[data-page="volume-trench-cy"] select {
+          width: 100%;
+          margin-top: 6px;
+          padding: 8px;
+          box-sizing: border-box;
+        }
+    body[data-page="volume-trench-cy"] button { margin-top: 12px; padding: 10px 14px; }
+    body[data-page="volume-trench-cy"] #warning {
+          background-color: var(--surface)3cd;
+          border: 1px solid #ffeeba;
+          padding: 10px;
+          margin-top: 16px;
+          border-radius: 5px;
+          color: #856404;
+          font-size: 0.9em;
+        }
+    body[data-page="volume-trench-cy"] .result-block {
+          background: white;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 12px;
+          margin-top: 16px;
+        }
+    body[data-page="volume-trench-cy"] .muted { color:var(--text-muted); font-size: 0.9em; }
+    body[data-page="volume-trench-cy"] .assumptions { margin-top: 8px; }
+    body[data-page="volume-trench-cy"] .assumptions li { margin-left: 18px; }
+  </style>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Trench Excavation & Bedding Calculator</title>
 </head>
 <body data-page="volume-trench-cy">

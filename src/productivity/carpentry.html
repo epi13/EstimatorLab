@@ -2,11 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  
-    <link rel="stylesheet" href="../styles.css">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* productivity/carpentry.html */
+    body[data-page="productivity-carpentry"] {
+          font-family: Arial, sans-serif;
+          max-width: 600px;
+          margin: 30px auto;
+          padding: 20px;
+          background: #f4f7f9;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+    body[data-page="productivity-carpentry"] h2 {
+          text-align: center;
+          color: #2c3e50;
+        }
+    body[data-page="productivity-carpentry"] label, body[data-page="productivity-carpentry"] select, body[data-page="productivity-carpentry"] input, body[data-page="productivity-carpentry"] button {
+          display: block;
+          width: 100%;
+          margin-bottom: 12px;
+        }
+    body[data-page="productivity-carpentry"] input, body[data-page="productivity-carpentry"] select {
+          padding: 10px;
+          border-radius: 4px;
+          border: 1px solid var(--border);
+          box-sizing: border-box;
+        }
+    body[data-page="productivity-carpentry"] button {
+          padding: 10px;
+          background: #2980b9;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        }
+    body[data-page="productivity-carpentry"] button:hover {
+          background: #3498db;
+        }
+    body[data-page="productivity-carpentry"] #result {
+          margin-top: 20px;
+          font-weight: bold;
+          text-align: center;
+        }
+  </style>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Carpentry Productivity Calculator</title>
-  </head>
+</head>
 <body data-page="productivity-carpentry">
   <h2>Carpentry Productivity Calculator</h2>
 

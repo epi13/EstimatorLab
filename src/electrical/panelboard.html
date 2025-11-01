@@ -2,11 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  
-    <link rel="stylesheet" href="../styles.css">
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* electrical/panelboard.html */
+    body[data-page="electrical-panelboard"] {
+          --bg:#0b1220; --card:#121a2b; --muted:#8aa0c6; --text:#e8eefc; --accent:#5aa9ff; --good:#34d399; --bad:#ef4444;
+        }
+    body[data-page="electrical-panelboard"] * {box-sizing:border-box}
+    body[data-page="electrical-panelboard"] {margin:0;font:16px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text)}
+    body[data-page="electrical-panelboard"] header {padding:16px 20px;border-bottom:1px solid #1f2b47;background:#0e1830;position:sticky;top:0;z-index:2}
+    body[data-page="electrical-panelboard"] header h1 {margin:0;font-size:20px}
+    body[data-page="electrical-panelboard"] header small {display:block;color:var(--muted)}
+    body[data-page="electrical-panelboard"] .wrap {display:grid;grid-template-columns:360px 1fr;gap:18px;padding:18px;align-items:start}
+    body[data-page="electrical-panelboard"] .card {background:var(--card);border:1px solid #1f2b47;border-radius:14px;padding:16px}
+    body[data-page="electrical-panelboard"] .card h2 {margin:0 0 10px;font-size:16px;color:#cfe2ff}
+    body[data-page="electrical-panelboard"] label {display:block;margin:10px 0 6px;color:#c0d3ff}
+    body[data-page="electrical-panelboard"] input, body[data-page="electrical-panelboard"] select, body[data-page="electrical-panelboard"] textarea {width:100%;padding:10px;border-radius:10px;border:1px solid #273659;background:#0f1525;color:var(--text)}
+    body[data-page="electrical-panelboard"] .grid-2 {display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    body[data-page="electrical-panelboard"] .grid-3 {display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    body[data-page="electrical-panelboard"] .row {display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    body[data-page="electrical-panelboard"] .row > * {flex:1}
+    body[data-page="electrical-panelboard"] .muted {color:var(--muted);font-size:13px}
+    body[data-page="electrical-panelboard"] .btn {background:#163b63;border:1px solid #1f4c82;color:#e2eeff;padding:10px 12px;border-radius:10px;cursor:pointer}
+    body[data-page="electrical-panelboard"] .btn:hover {filter:brightness(1.1)}
+    body[data-page="electrical-panelboard"] table {width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden}
+    body[data-page="electrical-panelboard"] th, body[data-page="electrical-panelboard"] td {padding:10px;border-bottom:1px solid #243358;text-align:left}
+    body[data-page="electrical-panelboard"] th {background:#0f223f;color:#cfe2ff}
+    body[data-page="electrical-panelboard"] tfoot td {font-weight:700}
+    body[data-page="electrical-panelboard"] .pill {display:inline-block;padding:4px 8px;border-radius:999px;background:#0f223f;border:1px solid #1f2b47;color:#cfe2ff;font-size:12px}
+    body[data-page="electrical-panelboard"] .flex {display:flex;gap:10px;align-items:center}
+    body[data-page="electrical-panelboard"] details {border:1px dashed #2a3c64;border-radius:12px;padding:10px;margin-top:10px}
+    body[data-page="electrical-panelboard"] details[open] {background:#0e1a31}
+    body[data-page="electrical-panelboard"] .right {text-align:right}
+    body[data-page="electrical-panelboard"] .hr {height:1px;background:#1f2b47;margin:12px 0}
+    body[data-page="electrical-panelboard"] .tag {font-size:12px;color:#9fb7e6}
+    body[data-page="electrical-panelboard"] .badge {display:inline-block;padding:2px 6px;border-radius:6px;font-size:12px}
+    body[data-page="electrical-panelboard"] .ok {background:#12351f;color:#a8efc0;border:1px solid #1e5f35}
+    body[data-page="electrical-panelboard"] .fail {background:#3a1a1a;color:#ffc7c7;border:1px solid #7a2b2b}
+  </style>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Electrical Panelboard Price Calculator</title>
-  </head>
+</head>
 <body data-page="electrical-panelboard">
   <header>
     <h1>Electrical Panelboard Price Calculator</h1>

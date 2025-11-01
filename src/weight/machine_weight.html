@@ -1,10 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* weight/machine_weight.html */
+    body[data-page="weight-machine-weight"] {
+        --bg:#0b1116; --card:#111923; --muted:#8aa0b2; --text:#e8f0f7; --accent:#3aa0ff; --accent-2:#7bd389;
+        --danger:#ff6b6b; --warn:#ffb86b; --grid:#1a2530;
+      }
+    body[data-page="weight-machine-weight"] html, body[data-page="weight-machine-weight"] {height:100%}
+    body[data-page="weight-machine-weight"] {margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Inter,Arial,sans-serif; background:var(--bg); color:var(--text)}
+    body[data-page="weight-machine-weight"] .wrap {max-width:1200px; margin:0 auto; padding:24px}
+    body[data-page="weight-machine-weight"] h1 {font-size:1.6rem; margin:0 0 8px}
+    body[data-page="weight-machine-weight"] .sub {color:var(--muted); margin-bottom:18px}
+    body[data-page="weight-machine-weight"] .card {background:var(--card); border:1px solid #16202a; border-radius:14px; padding:16px; box-shadow:0 6px 18px rgba(0,0,0,.25)}
+    body[data-page="weight-machine-weight"] .row {display:grid; grid-template-columns: 1.7fr 1.7fr 1.5fr 1.2fr 1fr 1fr 1.2fr .9fr 1fr 1fr auto; gap:8px; align-items:center}
+    body[data-page="weight-machine-weight"] .row + .row {margin-top:8px}
+    body[data-page="weight-machine-weight"] .th {font-size:.86rem; color:var(--muted)}
+    body[data-page="weight-machine-weight"] select, body[data-page="weight-machine-weight"] input[type="number"], body[data-page="weight-machine-weight"] input[type="text"] {width:100%; padding:10px 12px; border-radius:10px; border:1px solid #1e2a36; background:#0e1620; color:var(--text)}
+    body[data-page="weight-machine-weight"] input[readonly] {opacity:.9}
+    body[data-page="weight-machine-weight"] .btn {appearance:none; background:var(--accent); border:none; color:#071521; padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer}
+    body[data-page="weight-machine-weight"] .btn.secondary {background:#213244; color:var(--text); border:1px solid #2a3b4e}
+    body[data-page="weight-machine-weight"] .btn.ghost {background:transparent; border:1px dashed #2a3b4e; color:var(--muted)}
+    body[data-page="weight-machine-weight"] .btn.danger {background:transparent; border:1px solid var(--danger); color:var(--danger)}
+    body[data-page="weight-machine-weight"] .btn:disabled {opacity:.5; cursor:not-allowed}
+    body[data-page="weight-machine-weight"] .bar {display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px}
+    body[data-page="weight-machine-weight"] .tag {display:inline-flex; gap:6px; align-items:center; padding:6px 10px; border-radius:999px; font-size:.85rem; background:#0e1620; border:1px solid #213244; color:var(--muted)}
+    body[data-page="weight-machine-weight"] .totals {display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:12px}
+    body[data-page="weight-machine-weight"] .kpi {background:#0e1620; border:1px solid #1e2a36; border-radius:14px; padding:14px}
+    body[data-page="weight-machine-weight"] .kpi .h {font-size:.8rem; color:var(--muted)}
+    body[data-page="weight-machine-weight"] .kpi .v {font-size:1.3rem; font-weight:700}
+    body[data-page="weight-machine-weight"] .help {color:var(--muted); font-size:.9rem}
+    body[data-page="weight-machine-weight"] .right {justify-self=end}
+    body[data-page="weight-machine-weight"] .sr-only {position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0}
+    body[data-page="weight-machine-weight"] #testout {margin-top:10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:.9rem; color:var(--muted)}
+    @media (max-width:900px){
+    body[data-page="weight-machine-weight"] .row {grid-template-columns: 1.6fr 1.6fr 1.3fr 1.1fr .9fr 1fr 1fr .9fr 1fr .9fr auto}
+    }
+    @media (max-width:720px){
+    body[data-page="weight-machine-weight"] .row {grid-template-columns: 1.7fr 1.4fr 1.2fr 1.1fr .9fr 1fr .9fr .9fr .9fr auto}
+    }
+    @media (max-width:620px){
+    body[data-page="weight-machine-weight"] .row {grid-template-columns: 1.5fr 1.4fr 1.1fr .9fr .9fr .9fr .9fr .9fr auto}
+    }
+  </style>
 
-    <link rel="stylesheet" href="../styles.css">
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Alaska Machinery Weight Calculator</title>
 </head>
 <body data-page="weight-machine-weight">
