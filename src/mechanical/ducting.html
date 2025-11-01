@@ -2,54 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+
+    <link rel="stylesheet" href="../styles.css">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Ductwork Take-Off & Budget Calculator (AK) — Materials + PDF OCR (Fixed)</title>
-<style>
-  :root{
-    --bg:#0f1115;--card:#171a21;--muted:#a9b0bc;--accent:#7bd389;--warn:#ffd166;--err:#ef476f;--line:#242a33;
-  }
-  html,body{background:var(--bg);color:#e9edf3;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0}
-  *,*::before,*::after{box-sizing:border-box}
-  h1{font-size:1.25rem;margin:16px 12px}
-  .wrap{max-width:1260px;margin:0 auto;padding:12px}
-  .row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
-  label{font-size:.85rem;color:var(--muted);display:block;margin-bottom:4px}
-  input,select,textarea,button{
-    background:#0c0f14;color:#e9edf3;border:1px solid var(--line);border-radius:10px;
-    padding:8px 10px;font-size:.95rem;outline:none;max-width:100%
-  }
-  input:focus,select:focus,textarea:focus{border-color:#3a4353;box-shadow:0 0 0 2px #3a435355}
-  input.num{width:110px}
-  input.size{width:140px}
-  select.compact{width:140px}
-  button{cursor:pointer}
-  button.primary{background:var(--accent);color:#0b0d10;border:0;font-weight:600}
-  button.ghost{background:transparent}
-  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#0d1219;border:1px solid var(--line);font-size:.75rem;color:#b7bfc9}
-  .mini{font-size:.8rem;color:var(--muted)}
-  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
-  .nowrap{white-space:nowrap}
-  .hidden{display:none !important}
-
-  /* Responsive table shell */
-  .table-wrap{width:100%;overflow:auto;border:1px solid var(--line);border-radius:12px}
-  table{width:max(1320px,100%);border-collapse:collapse}
-  thead th, tbody td, tfoot td{
-    border-bottom:1px solid var(--line);padding:8px;vertical-align:middle;
-    font-variant-numeric:tabular-nums
-  }
-  thead th{color:#b7bfc9;font-size:.82rem;text-align:right}
-  tbody td, tfoot td{text-align:right}
-  td:first-child, th:first-child{text-align:left}
-  .tight td{padding:6px}
-  .btn-cell{min-width:44px}
-  .cost-col.hidden, .demo-col.hidden{display:none}
-  .progress{height:8px;background:#0c0f14;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-  .progress > div{height:100%;background:var(--accent);width:0%}
-</style>
 </head>
-<body>
+<body data-page="mechanical-ducting">
   <div class="wrap">
     <h1>Ductwork Take-Off & Budget Calculator (Alaska) — Materials + PDF OCR</h1>
 

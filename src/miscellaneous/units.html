@@ -2,64 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
+    <link rel="stylesheet" href="../styles.css">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Universal Construction Unit Converter</title>
-  <style>
-    :root{
-      --bg:#0e0f12; --panel:#151720; --muted:#8b93a7; --text:#e8ecf3; --accent:#69d2ff;
-      --bad:#ff6b6b; --ok:#ffd166; --good:#06d6a0; --card:#1b1f2b; --chip:#23283a;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; font:500 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial;
-      color:var(--text); background:linear-gradient(180deg,#0b0c10, var(--bg) 20%);
-    }
-    .wrap{max-width:1100px;margin:0 auto;padding:24px}
-    header{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:18px}
-    h1{font-size:20px;letter-spacing:.3px;margin:0}
-    .subtitle{color:var(--muted);font-size:13px}
-    .card{background:var(--panel);border:1px solid #1d2234;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25);}
-    .row{display:grid;gap:12px}
-    .controls{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr auto;gap:12px;align-items:end;padding:16px;border-bottom:1px solid #22283b}
-    .controls label{font-size:12px;color:var(--muted)}
-    .controls input, .controls select{
-      width:100%; padding:10px 12px; border-radius:10px; border:1px solid #232a3f; background:var(--card); color:var(--text);
-      outline:none; transition:border .15s ease, box-shadow .15s ease;
-    }
-    .controls input:focus, .controls select:focus{border-color:#2b375c; box-shadow:0 0 0 3px rgba(105,210,255,.15)}
-    .controls .stack{display:flex;flex-direction:column;gap:6px}
-    .btn{appearance:none;border:1px solid #2a344f;background:linear-gradient(180deg,#1f2536,#181c2a);color:var(--text);
-      padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:600;letter-spacing:.2px}
-    .btn:hover{border-color:#334066}
-    .btn-primary{background:linear-gradient(180deg,#3a7bd5,#00d2ff);color:#051018;border:0}
-    .btn-ghost{background:transparent;border:1px dashed #2a344f;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:1fr;}
-    @media(min-width:880px){.grid{grid-template-columns: 2.1fr 1fr}}
-    .panel{padding:16px}
-    .results{max-height:52vh;overflow:auto}
-    table{width:100%;border-collapse:separate;border-spacing:0}
-    th,td{padding:12px 10px;border-bottom:1px solid #22283b;vertical-align:middle}
-    thead th{position:sticky;top:0;background:linear-gradient(180deg,#1b2030, #181c2a);z-index:2}
-    tbody tr:hover{background:#161a27}
-    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;}
-    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--chip);border:1px solid #2a314b;color:#b3bdd7;font-size:12px}
-    .right{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
-    .small{font-size:12px;color:var(--muted)}
-    .footer{margin-top:16px;color:var(--muted);font-size:12px}
-    .badge{background:#122f3a;color:#8ce4ff;border:1px solid #1c4454;border-radius:8px;padding:2px 6px;font-size:12px}
-    .fav{cursor:pointer}
-    .notice{padding:10px 12px;border-radius:10px;background:#132018;border:1px solid #1f3b2c;color:#a9e7c6;font-size:13px}
-    .danger{background:#2a1a1a;border-color:#513030;color:#ffb3b3}
-    .inline{display:inline-block}
-    .muted{color:var(--muted)}
-    .unit-search{display:flex;gap:8px;align-items:center}
-    .unit-search input{flex:1}
-    .chips{display:flex;gap:8px;flex-wrap:wrap}
-    .section-title{display:flex;align-items:center;gap:10px;margin:0 0 6px 0}
-  </style>
-</head>
-<body>
+  </head>
+<body data-page="miscellaneous-units">
   <div class="wrap">
     <header>
       <div>
