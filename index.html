@@ -235,6 +235,11 @@
     const refreshButton = document.querySelector('[data-refresh]');
     const calculatorFrame = document.querySelector('.calculator-frame');
 
+    const hrefToLink = new Map();
+    const sectionsState = [];
+    let currentActiveLink = null;
+    let lastFilterQuery = '';
+
     const sr = (text) => {
       const span = document.createElement('span');
       span.className = 'sr-only';
@@ -254,8 +259,6 @@
       return svg;
     };
 
-    const sectionElements = [];
-
     const fragment = document.createDocumentFragment();
     navigationData.forEach((section) => {
       const sectionEl = document.createElement('section');
@@ -264,6 +267,11 @@
       if (section.startOpen) {
         sectionEl.dataset.open = 'true';
       }
+
+      const sectionState = {
+        element: sectionEl,
+        items: []
+      };
 
       const header = document.createElement('header');
       header.className = 'nav-section__header';
@@ -312,27 +320,52 @@
         link.className = 'nav-section__link';
         link.href = calc.href;
         link.textContent = calc.label;
-        link.target = 'calculatorFrame';
-        link.rel = 'noopener';
         link.dataset.sectionTitle = section.title;
         link.dataset.calculator = calc.label;
 
         item.appendChild(link);
         list.appendChild(item);
+
+        hrefToLink.set(calc.href, link);
+        hrefToLink.set(new URL(calc.href, window.location.href).href, link);
+
+        sectionState.items.push({
+          element: item,
+          searchText: item.dataset.search
+        });
       });
 
       sectionEl.appendChild(list);
       fragment.appendChild(sectionEl);
-      sectionElements.push(sectionEl);
+      sectionsState.push(sectionState);
     });
 
     navContainer.appendChild(fragment);
 
-    const navLinks = () => navContainer.querySelectorAll('.nav-section__link');
+    const setActiveLink = (link) => {
+      if (currentActiveLink === link) return;
+
+      if (currentActiveLink) {
+        currentActiveLink.removeAttribute('aria-current');
+        currentActiveLink.parentElement.classList.remove('is-active');
+      }
+
+      link.setAttribute('aria-current', 'page');
+      link.parentElement.classList.add('is-active');
+      categoryLabel.textContent = link.dataset.sectionTitle;
+      titleLabel.textContent = link.dataset.calculator;
+      const parentSection = link.closest('.nav-section');
+      if (parentSection && parentSection.dataset.open !== 'true') {
+        setSectionOpen(parentSection, true);
+      }
+      currentActiveLink = link;
+    };
 
     const setSectionOpen = (sectionEl, open) => {
       const toggle = sectionEl.querySelector('.nav-section__toggle');
       if (!toggle) return;
+      const isOpen = sectionEl.dataset.open === 'true';
+      if (isOpen === open) return;
       if (open) {
         sectionEl.dataset.open = 'true';
         toggle.setAttribute('aria-expanded', 'true');
@@ -348,47 +381,63 @@
       const toggle = event.target.closest('.nav-section__toggle');
       if (toggle) {
         const sectionEl = toggle.closest('.nav-section');
-        const isOpen = sectionEl.dataset.open === 'true';
-        setSectionOpen(sectionEl, !isOpen);
+        if (sectionEl) {
+          const isOpen = sectionEl.dataset.open === 'true';
+          setSectionOpen(sectionEl, !isOpen);
+        }
+        return;
       }
-    });
 
-    navContainer.addEventListener('click', (event) => {
       const link = event.target.closest('.nav-section__link');
       if (!link) return;
 
-      navLinks().forEach((item) => {
-        item.removeAttribute('aria-current');
-        item.parentElement.classList.remove('is-active');
-      });
+      const isModifiedClick = event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0;
+      if (isModifiedClick) {
+        return;
+      }
 
-      link.setAttribute('aria-current', 'page');
-      link.parentElement.classList.add('is-active');
-      categoryLabel.textContent = link.dataset.sectionTitle;
-      titleLabel.textContent = link.dataset.calculator;
+      event.preventDefault();
+      const href = link.getAttribute('href');
+      if (href && calculatorFrame.getAttribute('src') !== href) {
+        calculatorFrame.setAttribute('src', href);
+      }
+
+      setActiveLink(link);
     });
 
     const applyFilter = (value) => {
       const query = value.trim().toLowerCase();
+      if (query === lastFilterQuery) return;
+      lastFilterQuery = query;
       let hasMatches = false;
-      sectionElements.forEach((sectionEl) => {
-        const items = Array.from(sectionEl.querySelectorAll('.nav-section__item'));
+
+      sectionsState.forEach(({ element: sectionEl, items }) => {
         let visibleCount = 0;
-        items.forEach((item) => {
-          const match = !query || item.dataset.search.includes(query);
-          item.hidden = !match;
+
+        items.forEach(({ element: item, searchText }) => {
+          const match = !query || searchText.includes(query);
+          const shouldHideItem = !match;
+          if (item.hidden !== shouldHideItem) {
+            item.hidden = shouldHideItem;
+          }
           if (match) {
             visibleCount += 1;
           }
         });
-        if (visibleCount) {
-          sectionEl.hidden = false;
-          setSectionOpen(sectionEl, true);
+
+        const shouldHideSection = visibleCount === 0;
+        if (sectionEl.hidden !== shouldHideSection) {
+          sectionEl.hidden = shouldHideSection;
+        }
+
+        if (!shouldHideSection) {
+          if (sectionEl.dataset.open !== 'true') {
+            setSectionOpen(sectionEl, true);
+          }
           hasMatches = true;
-        } else {
-          sectionEl.hidden = true;
         }
       });
+
       emptyState.hidden = hasMatches;
     };
 
@@ -398,7 +447,7 @@
 
     collapseButton.addEventListener('click', () => {
       const shouldCollapse = collapseButton.dataset.state !== 'collapsed';
-      sectionElements.forEach((sectionEl) => setSectionOpen(sectionEl, !shouldCollapse));
+      sectionsState.forEach(({ element }) => setSectionOpen(element, !shouldCollapse));
       collapseButton.dataset.state = shouldCollapse ? 'collapsed' : 'expanded';
       collapseLabel.textContent = shouldCollapse ? 'Expand all' : 'Collapse all';
     });
@@ -408,17 +457,17 @@
     });
 
     calculatorFrame.addEventListener('load', () => {
-      const currentSrc = calculatorFrame.getAttribute('src');
-      const activeLink = Array.from(navLinks()).find((link) => link.getAttribute('href') === currentSrc);
+      const attributeSrc = calculatorFrame.getAttribute('src');
+      const propertySrc = calculatorFrame.src;
+      const activeLink = hrefToLink.get(attributeSrc || '') || hrefToLink.get(propertySrc || '');
       if (activeLink) {
-        activeLink.click();
+        setActiveLink(activeLink);
       }
-    }, { once: true });
+    });
 
     const defaultLink = navContainer.querySelector('.nav-section__link');
     if (defaultLink) {
-      defaultLink.parentElement.classList.add('is-active');
-      defaultLink.setAttribute('aria-current', 'page');
+      setActiveLink(defaultLink);
     }
   </script>
 </body>
