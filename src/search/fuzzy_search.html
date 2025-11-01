@@ -1,10 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-
-    <link rel="stylesheet" href="../styles.css">
-<title>Fuzzy JSONL Search</title>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* search/fuzzy_search.html */
+    body[data-page="search-fuzzy-search"] { --pad: 10px; --gap: 8px; }
+    body[data-page="search-fuzzy-search"] { font-family: system-ui, sans-serif; margin: 1.25rem; }
+    body[data-page="search-fuzzy-search"] h1 { margin-bottom: .5rem; }
+    body[data-page="search-fuzzy-search"] .row { display: grid; grid-template-columns: 1fr; gap: var(--gap); margin-bottom: var(--pad); }
+    body[data-page="search-fuzzy-search"] .controls { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); }
+    @media (min-width: 900px) {
+    body[data-page="search-fuzzy-search"] .controls { grid-template-columns: 2fr 1fr 1fr 1fr; }
+    }
+    body[data-page="search-fuzzy-search"] input[type="text"], body[data-page="search-fuzzy-search"] input[type="file"], body[data-page="search-fuzzy-search"] select, body[data-page="search-fuzzy-search"] button {
+        padding: .6rem; font-size: 1rem;
+      }
+    body[data-page="search-fuzzy-search"] fieldset { border: 1px solid var(--border); padding: var(--pad); }
+    body[data-page="search-fuzzy-search"] legend { padding: 0 .4rem; }
+    body[data-page="search-fuzzy-search"] #columnsWrap, body[data-page="search-fuzzy-search"] #searchKeysWrap { max-height: 160px; overflow: auto; display: grid; gap: 4px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+    body[data-page="search-fuzzy-search"] table { width: 100%; border-collapse: collapse; margin-top: .6rem; }
+    body[data-page="search-fuzzy-search"] th, body[data-page="search-fuzzy-search"] td { border: 1px solid #ddd; padding: .45rem; vertical-align: top; }
+    body[data-page="search-fuzzy-search"] th { background: var(--surface-muted); position: sticky; top: 0; }
+    body[data-page="search-fuzzy-search"] #status { font-size: .9rem; color: var(--text-muted); }
+  </style>
+  <title>Fuzzy JSONL Search</title>
 </head>
 <body data-page="search-fuzzy-search">
 

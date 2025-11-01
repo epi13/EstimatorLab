@@ -1,10 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* logistics/labor.html */
+    body[data-page="logistics-labor"] { --bg:#0b0f14; --card:#111823; --muted:#b1c0d8; --text:#e9eef7; --accent:#66b3ff; --ok:#55c28a; }
+    body[data-page="logistics-labor"] {margin:0;background:#0b0f14;color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;}
+    body[data-page="logistics-labor"] header {padding:18px 22px;border-bottom:1px solid #1c2736;background:#0e141d;}
+    body[data-page="logistics-labor"] h1 {margin:0;font-size:18px;letter-spacing:.2px}
+    body[data-page="logistics-labor"] .wrap {max-width:1100px;margin:0 auto;padding:18px}
+    body[data-page="logistics-labor"] .grid {display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+    body[data-page="logistics-labor"] .card {grid-column:span 12;background:var(--card);border:1px solid #1a2432;border-radius:14px;padding:16px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+    body[data-page="logistics-labor"] .card h2 {margin:.2rem 0 1rem;font-size:16px}
+    body[data-page="logistics-labor"] label {display:block;font-size:12px;color:var(--muted);margin:.25rem 0 .35rem}
+    body[data-page="logistics-labor"] input, body[data-page="logistics-labor"] select {width:100%;padding:10px 12px;border-radius:10px;border:1px solid #2a3850;background:#0e1520;color:var(--text);}
+    body[data-page="logistics-labor"] input:focus, body[data-page="logistics-labor"] select:focus {border-color:var(--accent);box-shadow:0 0 0 3px rgba(102,179,255,.2)}
+    body[data-page="logistics-labor"] .row {display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin-bottom:10px}
+    body[data-page="logistics-labor"] .span-2 {grid-column:span 2}
+    body[data-page="logistics-labor"] .span-3 {grid-column:span 3}
+    body[data-page="logistics-labor"] .span-4 {grid-column:span 4}
+    body[data-page="logistics-labor"] .span-6 {grid-column:span 6}
+    body[data-page="logistics-labor"] .span-8 {grid-column:span 8}
+    body[data-page="logistics-labor"] .span-12 {grid-column:span 12}
+    body[data-page="logistics-labor"] .pill {background:#0c131c;border:1px solid #213147;border-radius:999px;padding:10px 14px;display:inline-block;margin:4px}
+    body[data-page="logistics-labor"] .pill b {color:var(--ok)}
+    body[data-page="logistics-labor"] .help {font-size:12px;color:var(--muted);margin-top:6px}
+    body[data-page="logistics-labor"] .small {font-size:12px}
+    body[data-page="logistics-labor"] .hidden {display:none}
+    body[data-page="logistics-labor"] .inline {display:flex;align-items:center;gap:8px}
+    body[data-page="logistics-labor"] .toggle {display:flex;align-items:center;gap:8px;margin-top:6px}
+    body[data-page="logistics-labor"] .toggle input[type="checkbox"] {transform:scale(1.1)}
+    body[data-page="logistics-labor"] .right {justify-content:flex-end}
+    @media (max-width:900px){
+    body[data-page="logistics-labor"] .span-2, body[data-page="logistics-labor"] .span-3, body[data-page="logistics-labor"] .span-4, body[data-page="logistics-labor"] .span-6, body[data-page="logistics-labor"] .span-8 {grid-column:span 12}
+    }
+  </style>
 
-    <link rel="stylesheet" href="../styles.css">
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Man-Days & Per-Diem Calculator (Offline, Auto Crew/Subs)</title>
 </head>
 <body data-page="logistics-labor">

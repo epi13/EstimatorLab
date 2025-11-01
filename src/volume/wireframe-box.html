@@ -2,11 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  
-    <link rel="stylesheet" href="../styles.css">
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* volume/wireframe-box.html */
+    body[data-page="volume-wireframe-box"] { --bg:#0b1020; --panel:#121a33; --ink:#e9edf6; --muted:#9fb0d0; --accent:#7cc3ff; }
+    body[data-page="volume-wireframe-box"] * { box-sizing: border-box; }
+    body[data-page="volume-wireframe-box"] { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    body[data-page="volume-wireframe-box"] header { padding: 14px 18px; border-bottom: 1px solid #1e274a; display:flex; gap:12px; align-items:center; justify-content:space-between; }
+    body[data-page="volume-wireframe-box"] .brand { font-weight: 700; letter-spacing: .2px; }
+    body[data-page="volume-wireframe-box"] .wrap { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100dvh - 52px); }
+    body[data-page="volume-wireframe-box"] aside { padding: 16px; background: var(--panel); border-right: 1px solid #1e274a; }
+    body[data-page="volume-wireframe-box"] main { position: relative; }
+    body[data-page="volume-wireframe-box"] canvas { width: 100%; height: 100%; display: block; }
+    body[data-page="volume-wireframe-box"] fieldset { border: 1px solid #1e274a; border-radius: 12px; padding: 12px; margin: 0 0 12px; }
+    body[data-page="volume-wireframe-box"] legend { color: var(--muted); padding: 0 6px; }
+    body[data-page="volume-wireframe-box"] label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; margin: 8px 0; }
+    body[data-page="volume-wireframe-box"] select, body[data-page="volume-wireframe-box"] input[type="number"], body[data-page="volume-wireframe-box"] button { background: #0e1530; color: var(--ink); border: 1px solid #28335b; border-radius: 10px; padding: 8px 10px; }
+    body[data-page="volume-wireframe-box"] button { cursor: pointer; }
+    body[data-page="volume-wireframe-box"] .row { display:flex; gap:8px; flex-wrap:wrap; }
+    body[data-page="volume-wireframe-box"] .kpi { display:grid; gap:8px; }
+    body[data-page="volume-wireframe-box"] .kpi .card { background:#0e1530; border:1px solid #27325a; border-radius:12px; padding:10px; }
+    body[data-page="volume-wireframe-box"] .kpi .card h3 { margin:0 0 6px; font-size:12px; color:var(--muted); font-weight:600; letter-spacing:.3px; }
+    body[data-page="volume-wireframe-box"] .kpi .card .val { font-size:18px; font-weight:700; }
+    body[data-page="volume-wireframe-box"] .hint { color: var(--muted); font-size: 12px; }
+    body[data-page="volume-wireframe-box"] .badge { padding:2px 6px; border-radius:999px; background:#102040; border:1px solid #26406d; color:#cfe5ff; font-size:11px; }
+    body[data-page="volume-wireframe-box"] .footer { color:var(--muted); font-size:11px; margin-top:10px; }
+  </style>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Draggable Wireframe Box – Lengths & Volume</title>
-  </head>
+</head>
 <body data-page="volume-wireframe-box">
   <header>
     <div class="brand">Wireframe Box • Draggable Nodes</div>

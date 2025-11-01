@@ -2,11 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  
-    <link rel="stylesheet" href="../styles.css">
-<title>PDF Page Extractor (Client‑Side)</title>
+  <link rel="stylesheet" href="../styles.css">
+  <style>
+    /* pdf/extract.html */
+    body[data-page="pdf-extract"] { font: 16px/1.4 system-ui, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 16px; }
+    body[data-page="pdf-extract"] label { display:block; margin-top: 16px; font-weight: 600; }
+    body[data-page="pdf-extract"] input[type="file"], body[data-page="pdf-extract"] input[type="text"] { width: 100%; padding: 10px; margin-top: 6px; }
+    body[data-page="pdf-extract"] button { margin-top: 16px; padding: 10px 14px; cursor: pointer; }
+    body[data-page="pdf-extract"] small { color:var(--text-muted); display:block; margin-top:6px; }
+    body[data-page="pdf-extract"] .muted { color:var(--text-muted); }
+    body[data-page="pdf-extract"] .row { display:flex; gap:10px; align-items:center; }
+    body[data-page="pdf-extract"] .row > * { flex: 1; }
+    body[data-page="pdf-extract"] .status { margin-top: 12px; min-height: 1.4em; }
+    body[data-page="pdf-extract"] .ok { color: #0a7b35; }
+    body[data-page="pdf-extract"] .err { color: #b00020; }
+  </style>
+  <title>PDF Page Extractor (Client‑Side)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  </head>
+</head>
 <body data-page="pdf-extract">
   <h1>PDF Page Extractor</h1>
   <p class="muted">All processing happens in your browser. No upload.</p>
