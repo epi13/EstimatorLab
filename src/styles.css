@@ -423,7 +423,7 @@ body[data-page="assemblies-oc-linear-ft"] .results-card {
 /* Take-off / blueprint viewer layout overrides */
 body[data-page="take-off-takeoff"] {
   margin: 0;
-  padding: 0;
+  padding: clamp(0.5rem, 1.2vw, 1.25rem);
   min-height: 100vh;
 }
 
@@ -446,6 +446,11 @@ body[data-page="take-off-takeoff"] .topbar {
   z-index: 60;
 }
 
+body[data-page="take-off-takeoff"] .topbar--compact {
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+}
+
 /* Main area: side panel + viewer */
 body[data-page="take-off-takeoff"] .wrap {
   display: flex;
@@ -454,6 +459,11 @@ body[data-page="take-off-takeoff"] .wrap {
   padding: 1rem;
   box-sizing: border-box;
   align-items: stretch;
+}
+
+body[data-page="take-off-takeoff"] .wrap--compact {
+  gap: 0.75rem;
+  padding: 0.75rem;
 }
 
 /* Left side panel fixed-ish */
