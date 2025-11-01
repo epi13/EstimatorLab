@@ -1,0 +1,89 @@
+:root {
+  --bg: #0f172a;         /* slate-900 */
+  --panel: #111827;      /* gray-900 */
+  --muted: #334155;      /* slate-700 */
+  --ink: #e5e7eb;        /* gray-200 */
+  --accent: #38bdf8;     /* sky-400 */
+  --accent-2: #22c55e;   /* green-500 */
+  --warn: #f59e0b;       /* amber-500 */
+  --danger: #ef4444;     /* red-500 */
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  color: var(--ink); background: linear-gradient(145deg, #0b1223, #0a0f1d 40%, #0b1223);
+  min-height: 100vh; display: grid; grid-template-columns: 340px 1fr 360px;
+  gap: 14px; padding: 14px;
+}
+h1 { font-size: 1.1rem; margin: 0 0 8px; font-weight: 700; letter-spacing: .3px;}
+h2 { font-size: 0.95rem; margin: 16px 0 6px; font-weight: 700; letter-spacing: .2px;}
+.panel {
+  background: rgba(17, 24, 39, 0.72);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(51, 65, 85, 0.45);
+  border-radius: 14px; padding: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.left > .group:not(:last-child) { margin-bottom: 14px; }
+label { font-size: .82rem; color: #cbd5e1; display: block; margin-bottom: 6px; }
+input[type="number"], input[type="text"], select, button {
+  width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(51,65,85,.6);
+  background: #0b1221; color: var(--ink); outline: none;
+}
+input[type="range"] { width: 100%; }
+button {
+  cursor: pointer; font-weight: 600; letter-spacing: .2px;
+  transition: transform .04s ease, box-shadow .2s ease, background .2s ease;
+  background: linear-gradient(180deg, #0d1b2a, #0a1420);
+}
+button:hover { box-shadow: 0 8px 24px rgba(56, 189, 248, .14); }
+button:active { transform: translateY(1px); }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tiny { font-size: .78rem; color: #94a3b8; }
+.kbd { display: inline-block; padding: 2px 6px; border-radius: 6px; border: 1px solid #334155; background: #0b1221; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.accent { border-color: rgba(56,189,248,.5); }
+.good { border-color: rgba(34,197,94,.45); }
+.warn { border-color: rgba(245,158,11,.45); }
+.danger { border-color: rgba(239,68,68,.45); }
+
+.center {
+  display: grid; grid-template-rows: auto 1fr; gap: 10px; min-height: 0;
+}
+.view-tabs {
+  display: flex; gap: 10px; align-items: center;
+}
+.tab-btn {
+  padding: 8px 12px; border-radius: 10px; background: #0b1221; border: 1px solid #334155;
+  color: #cbd5e1; cursor: pointer; font-weight: 700;
+}
+.tab-btn.active { border-color: #38bdf8; color: #e2f3ff; }
+.canvas-wrap {
+  position: relative; width: 100%; height: calc(100vh - 140px);
+  background: repeating-conic-gradient(from 45deg, #0a0e19 0 15deg, #0c1322 0 30deg);
+  border-radius: 14px; border: 1px solid #334155; overflow: hidden;
+}
+.layer { position: absolute; inset: 0; }
+canvas { display: block; width: 100%; height: 100%; image-rendering: crisp-edges; }
+svg { width: 100%; height: 100%; }
+
+.toolbar {
+  position: absolute; right: 10px; top: 10px; display: flex; gap: 8px; flex-wrap: wrap;
+  z-index: 10;
+}
+.tool { padding: 6px 10px; border-radius: 8px; border: 1px solid #334155; background: #0b1221; color: #cbd5e1; cursor: pointer; }
+.tool.active { border-color: #38bdf8; color: #e2f3ff; }
+
+.node { fill: #38bdf8; stroke: #082f49; stroke-width: 1; cursor: pointer; }
+.edge { stroke: #22c55e; stroke-width: 2; fill: none; }
+.poly-fill { fill: rgba(34,197,94,.15); stroke: #22c55e; stroke-width: 2; }
+.cal-line { stroke: #f59e0b; stroke-dasharray: 6 6; stroke-width: 2; }
+.cal-node { fill: #f59e0b; stroke: #3f2f05; stroke-width: 1; }
+
+.right .stat { padding: 10px; border-radius: 10px; border: 1px solid #334155; background: #0b1221; }
+.mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
+
+.pill {
+  display: inline-flex; gap: 6px; align-items: center; padding: 4px 8px; border-radius: 999px;
+  background: #0b1221; border: 1px solid #334155; font-size: .8rem; color: #cbd5e1;
+}
+
+.footer-note { font-size: .8rem; color: #9ca3af; margin-top: 10px; }
