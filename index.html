@@ -257,8 +257,6 @@
       return svg;
     };
 
-    const sectionElements = [];
-
     const fragment = document.createDocumentFragment();
     navigationData.forEach((section) => {
       const sectionEl = document.createElement('section');
@@ -267,6 +265,11 @@
       if (section.startOpen) {
         sectionEl.dataset.open = 'true';
       }
+
+      const sectionState = {
+        element: sectionEl,
+        items: []
+      };
 
       const header = document.createElement('header');
       header.className = 'nav-section__header';
@@ -328,7 +331,7 @@
 
       sectionEl.appendChild(list);
       fragment.appendChild(sectionEl);
-      sectionElements.push(sectionEl);
+      sectionsState.push(sectionState);
     });
 
     navContainer.appendChild(fragment);
@@ -348,6 +351,8 @@
     const setSectionOpen = (sectionEl, open) => {
       const toggle = sectionEl.querySelector('.nav-section__toggle');
       if (!toggle) return;
+      const isOpen = sectionEl.dataset.open === 'true';
+      if (isOpen === open) return;
       if (open) {
         sectionEl.dataset.open = 'true';
         toggle.setAttribute('aria-expanded', 'true');
@@ -363,12 +368,13 @@
       const toggle = event.target.closest('.nav-section__toggle');
       if (toggle) {
         const sectionEl = toggle.closest('.nav-section');
-        const isOpen = sectionEl.dataset.open === 'true';
-        setSectionOpen(sectionEl, !isOpen);
+        if (sectionEl) {
+          const isOpen = sectionEl.dataset.open === 'true';
+          setSectionOpen(sectionEl, !isOpen);
+        }
+        return;
       }
-    });
 
-    navContainer.addEventListener('click', (event) => {
       const link = event.target.closest('.nav-section__link');
       if (!link) return;
 
@@ -388,25 +394,37 @@
 
     const applyFilter = (value) => {
       const query = value.trim().toLowerCase();
+      if (query === lastFilterQuery) return;
+      lastFilterQuery = query;
       let hasMatches = false;
-      sectionElements.forEach((sectionEl) => {
-        const items = Array.from(sectionEl.querySelectorAll('.nav-section__item'));
+
+      sectionsState.forEach(({ element: sectionEl, items }) => {
         let visibleCount = 0;
-        items.forEach((item) => {
-          const match = !query || item.dataset.search.includes(query);
-          item.hidden = !match;
+
+        items.forEach(({ element: item, searchText }) => {
+          const match = !query || searchText.includes(query);
+          const shouldHideItem = !match;
+          if (item.hidden !== shouldHideItem) {
+            item.hidden = shouldHideItem;
+          }
           if (match) {
             visibleCount += 1;
           }
         });
-        if (visibleCount) {
-          sectionEl.hidden = false;
-          setSectionOpen(sectionEl, true);
+
+        const shouldHideSection = visibleCount === 0;
+        if (sectionEl.hidden !== shouldHideSection) {
+          sectionEl.hidden = shouldHideSection;
+        }
+
+        if (!shouldHideSection) {
+          if (sectionEl.dataset.open !== 'true') {
+            setSectionOpen(sectionEl, true);
+          }
           hasMatches = true;
-        } else {
-          sectionEl.hidden = true;
         }
       });
+
       emptyState.hidden = hasMatches;
     };
 
@@ -416,7 +434,7 @@
 
     collapseButton.addEventListener('click', () => {
       const shouldCollapse = collapseButton.dataset.state !== 'collapsed';
-      sectionElements.forEach((sectionEl) => setSectionOpen(sectionEl, !shouldCollapse));
+      sectionsState.forEach(({ element }) => setSectionOpen(element, !shouldCollapse));
       collapseButton.dataset.state = shouldCollapse ? 'collapsed' : 'expanded';
       collapseLabel.textContent = shouldCollapse ? 'Expand all' : 'Collapse all';
     });
