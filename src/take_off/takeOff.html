@@ -15,44 +15,60 @@
 </head>
 <body data-page="take-off-takeoff">
   <header class="topbar" role="banner">
-    <div class="brand">📐 Blueprint Measure</div>
-    <div class="pill">
-      <input id="file" type="file" accept="application/pdf"/>
-      <button id="demoBtn" class="tool" title="Load demo PDF">Demo</button>
+    <div class="topbar__row topbar__row--primary">
+      <div class="brand" aria-label="Blueprint Measure">
+        <span class="brand-icon" aria-hidden="true">📐</span>
+        <div class="brand-copy">
+          <h1>Blueprint Measure</h1>
+          <p>Calibrate drawings, trace geometry, and capture precise takeoffs.</p>
+        </div>
+      </div>
+      <div class="pill-group" aria-label="Primary controls">
+        <div class="pill pill--file">
+          <div class="pill__stack">
+            <label class="small" for="file">Upload PDF</label>
+            <input id="file" type="file" accept="application/pdf" />
+          </div>
+          <span id="fileName" class="file-name small">No document loaded</span>
+          <button id="demoBtn" class="tool ghost" type="button" title="Load demo PDF">Demo</button>
+        </div>
+        <div class="pill pill--nav" aria-label="Page navigation">
+          <button class="tool" id="prev" type="button" title="Previous page">◀</button>
+          <span class="small">Page <span id="pageNum" class="num">–</span>/<span id="pageCount" class="num">–</span></span>
+          <button class="tool" id="next" type="button" title="Next page">▶</button>
+        </div>
+        <div class="pill pill--zoom" aria-label="Zoom controls">
+          <button class="tool" id="zoomOut" type="button" title="Zoom out">–</button>
+          <span class="small num" id="zoomLbl">100%</span>
+          <button class="tool" id="zoomIn" type="button" title="Zoom in">+</button>
+          <button class="tool ghost" id="zoomReset" type="button" title="Reset zoom">Reset</button>
+        </div>
+        <div class="pill pill--export" aria-label="Export">
+          <button class="tool" id="exportJson" type="button">⇩ Export JSON</button>
+          <button class="tool" id="exportPng" type="button">📸 Snapshot</button>
+        </div>
+      </div>
     </div>
-    <div class="pill">
-      <button class="tool" id="prev">◀</button>
-      <span class="small">Page <span id="pageNum" class="num">–</span>/<span id="pageCount" class="num">–</span></span>
-      <button class="tool" id="next">▶</button>
-    </div>
-    <div class="pill">
-      <button class="tool" id="zoomOut" title="Zoom out">–</button>
-      <span class="small num" id="zoomLbl">100%</span>
-      <button class="tool" id="zoomIn" title="Zoom in">+</button>
-      <button class="tool" id="zoomReset" title="Reset zoom">Reset</button>
-    </div>
-    <div class="pill" id="toolGroup">
-      <button class="tool" data-tool="pan" title="Pan (hold Space to pan)">🖐️ Pan</button>
-      <button class="tool" data-tool="calibrate" title="Calibrate scale">🎯 Calibrate</button>
-      <button class="tool" data-tool="line" title="Measure line">📏 Line</button>
-      <button class="tool" data-tool="area" title="Measure polygon area">▱ Area</button>
-      <button class="tool" id="undo" title="Undo last point">↶ Undo</button>
-      <button class="tool" id="finish" title="Finish polygon">✔ Finish</button>
-      <button class="tool" id="clearMeasures" title="Clear measurements">🧹 Clear</button>
-    </div>
-    <div class="pill">
-      <span class="small">Units</span>
-      <select id="units">
-        <option value="ft">ft</option>
-        <option value="in">in</option>
-        <option value="m">m</option>
-      </select>
-      <span class="small">Scale:</span>
-      <span id="scaleLbl" class="badge mono">–</span>
-    </div>
-    <div class="pill">
-      <button class="tool" id="exportJson">⇩ Export JSON</button>
-      <button class="tool" id="exportPng">📸 Snapshot</button>
+    <div class="topbar__row topbar__row--secondary">
+      <div class="pill pill--tools" id="toolGroup" aria-label="Measurement tools">
+        <button class="tool" data-tool="pan" type="button" title="Pan (hold Space to pan)">🖐️ Pan</button>
+        <button class="tool" data-tool="calibrate" type="button" title="Calibrate scale">🎯 Calibrate</button>
+        <button class="tool" data-tool="line" type="button" title="Measure line">📏 Line</button>
+        <button class="tool" data-tool="area" type="button" title="Measure polygon area">▱ Area</button>
+        <button class="tool" id="undo" type="button" title="Undo last point">↶ Undo</button>
+        <button class="tool" id="finish" type="button" title="Finish polygon">✔ Finish</button>
+        <button class="tool" id="clearMeasures" type="button" title="Clear measurements">🧹 Clear</button>
+      </div>
+      <div class="pill pill--units" aria-label="Display units">
+        <span class="small">Units</span>
+        <select id="units">
+          <option value="ft">ft</option>
+          <option value="in">in</option>
+          <option value="m">m</option>
+        </select>
+        <span class="small">Scale</span>
+        <span id="scaleLbl" class="badge mono">–</span>
+      </div>
     </div>
   </header>
 
@@ -169,6 +185,7 @@
     exportPng: document.getElementById('exportPng'),
     side: document.getElementById('side'),
     measList: document.getElementById('measList'),
+    fileName: document.getElementById('fileName'),
     session: {
       status: document.getElementById('statusVal'),
       cal: document.getElementById('calVal'),
@@ -334,6 +351,7 @@
       await renderPage();
     }catch(e){
       console.error(e); setStatus('Failed to load PDF');
+      if(els.fileName) els.fileName.textContent = 'No document loaded';
     }
   }
   async function renderPage(){
@@ -516,6 +534,7 @@
   els.file.addEventListener('change', async (e)=>{
     const f = e.target.files[0];
     if(!f) return;
+    if(els.fileName) els.fileName.textContent = f.name;
     setStatus('Loading…');
     const buf = await f.arrayBuffer();
     loadPDF({data: buf});
@@ -523,6 +542,7 @@
 
   // Demo document (simple single-page grid created on the fly)
   els.demoBtn.addEventListener('click', async ()=>{
+    if(els.fileName) els.fileName.textContent = 'Sample demo plan.pdf';
     // Fetch a tiny embedded PDF (data URL) for demo
     // For portability, generate on the fly using a prebuilt minimal PDF string
     const pdfData = atob("JVBERi0xLjMKJcTl8uXrp/Og0MTGCjEgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovUmVzb3VyY2VzIDw8Ci9Qcm9jU2V0IFsvUERGL1RleHRdCi9Gb250IDw8Ci9GMCAzIDAgUgo+PgovWE9iamVjdCA8PC9JbWFnZSA8PC9XaWR0aCA2MDAvSGVpZ2h0IDg0MC9Db2xvclNwYWNlIC9EZXZpY2VSR0IvQml0c1BlckNvbXBvbmVudCA4Pj4+PgovRXh0R1N0YXRlIDw8Pj4+PgovTWVkaWFCb3hbMCAwIDU5NSA4MzVdCi9Db250ZW50cyA0IDAgUgo+PgplbmRvYmoKMiAwIG9iago8PAovVHlwZSAvUGFnZXMKL0tpZHMgWyAxIDAgUiBdCi9Db3VudCAxCj4+CmVuZG9iagozIDAgb2JqCjw8Ci9UeXBlIC9Gb250Ci9TdWJ0eXBlIC9UeXBlMQovTmFtZSAvRjAKL0Jhc2VGb250IC9IZWx2ZXRpY2EKL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCAyMDY+PgpzdHJlYW0KQlQKIC9GMCBUIDEyIFRmCiAgMCA3ODAgVGQKICAoR2VuZXJhdGVkIERlbW8gR3JpZCBGb3IgTWVhc3VyZW1lbnQpIFRqCkJUCiAgL0YwIFQgMTIgVGYKICAxMDAgNzEwIFRkCiAgKDIwIGZ0IG1ham9yIGdyaWQ6IGVhY2ggcXVhcmUgaXMgMSBmdClUagpCVApFcwpRVQplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA3CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDEwMCAwMDAwMCBuIAowMDAwMDAwMDg3IDAwMDAwIG4gCjAwMDAwMDAxODIgMDAwMDAgbiAKMDAwMDAwMDMxMSAwMDAwMCBuIAowMDAwMDAwNTE5IDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNwo+PgpzdGFydHhyZWYKNTM3CiUlRU9G");
