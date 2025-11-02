@@ -1,1 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Alaska Welding Estimator</title>
+<style>
+    :root {
+        --bg: #0f172a;
+        --panel: #1e2538;
+        --accent: #38bdf8;
+        --text-main: #f8fafc;
+        --text-dim: #94a3b8;
+        --border: #2d3748;
+        --radius-lg: 1rem;
+        --radius-sm: .5rem;
+        --gap: 1rem;
+        --font-stack: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        background-color: var(--bg);
+        color: var(--text-main);
+        font-family: var(--font-stack);
+        margin: 0;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: .5rem;
+    }
+
+    header .title-block h1 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+        color: var(--text-main);
+        line-height: 1.4;
+    }
+
+    header .title-block p {
+        font-size: .8rem;
+        margin: 0;
+        color: var(--text-dim);
+        line-height: 1.4;
+    }
+
+    .layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--gap);
+    }
+
+    @media(max-width:900px){
+        .layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .card {
+        background-color: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 1rem 1rem 1.25rem;
+        box-shadow: 0 30px 80px rgba(0,0,0,.6);
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .card h2 {
+        margin: 0;
+        font-size: .9rem;
+        font-weight: 600;
+        color: var(--text-main);
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+    }
+
+    .subtext {
+        font-size: .7rem;
+        color: var(--text-dim);
+        line-height: 1.4;
+    }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--gap);
+    }
+
+    .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: var(--gap);
+    }
+
+    label {
+        font-size: .7rem;
+        font-weight: 500;
+        color: var(--text-main);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: .25rem;
+    }
+
+    label span.hint {
+        font-size: .6rem;
+        font-weight: 400;
+        color: var(--text-dim);
+    }
+
+    input, select, textarea {
+        width: 100%;
+        background-color: rgba(15,23,42,.4);
+        border: 1px solid var(--border);
+        color: var(--text-main);
+        border-radius: var(--radius-sm);
+        padding: .6rem .6rem;
+        font-size: .8rem;
+        font-family: inherit;
+        outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(56,189,248,.25);
+    }
+
+    .row-inline {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        flex-wrap: wrap;
+    }
+
+    .mini-label {
+        font-size: .65rem;
+        color: var(--text-dim);
+    }
+
+    .results-block {
+        background-color: rgba(0,0,0,.2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: .75rem;
+        font-size: .8rem;
+        line-height: 1.5;
+        display: grid;
+        gap: .75rem;
+    }
+
+    .results-section {
+        background-color: rgba(15,23,42,.5);
+        border-radius: var(--radius-sm);
+        padding: .75rem;
+        border: 1px solid rgba(148,163,184,.15);
+    }
+
+    .results-section h3 {
+        margin: 0 0 .5rem;
+        font-size: .75rem;
+        font-weight: 600;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+    }
+
+    .line {
+        display: flex;
+        justify-content: space-between;
+        font-size: .75rem;
+        margin-bottom: .25rem;
+    }
+
+    .line .lbl {
+        color: var(--text-dim);
+    }
+
+    .line .val {
+        color: var(--text-main);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .total-line {
+        border-top: 1px solid rgba(148,163,184,.2);
+        padding-top: .4rem;
+        margin-top: .4rem;
+        font-weight: 600;
+        color: var(--text-main);
+        display: flex;
+        justify-content: space-between;
+        font-size: .8rem;
+    }
+
+    .assumptions-card {
+        font-size: .7rem;
+        line-height: 1.5;
+        color: var(--text-dim);
+        white-space: pre-wrap;
+        background-color: rgba(0,0,0,.15);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 1rem;
+    }
+
+    .footer-bar {
+        font-size: .6rem;
+        color: var(--text-dim);
+        text-align: center;
+        margin-top: .5rem;
+    }
+
+    .inline-num {
+        font-size: .7rem;
+        color: var(--accent);
+        font-weight: 600;
+    }
+
+    button.export-btn {
+        background-color: rgba(56,189,248,.1);
+        border: 1px solid var(--accent);
+        border-radius: var(--radius-sm);
+        color: var(--accent);
+        font-size: .7rem;
+        padding: .5rem .75rem;
+        cursor: pointer;
+    }
+    button.export-btn:hover {
+        background-color: rgba(56,189,248,.2);
+    }
+
+</style>
+</head>
+<body>
+
+<header>
+    <div class="title-block">
+        <h1>Alaska Welding Estimator</h1>
+        <p>Budgetary material + freight + labor breakdown for welding work, adjusted for Alaska conditions.</p>
+    </div>
+    <div class="row-inline">
+        <button class="export-btn" id="exportJsonBtn">Export JSON</button>
+        <button class="export-btn" id="exportCsvBtn">Export CSV</button>
+    </div>
+</header>
+
+<div class="layout">
+    <!-- INPUTS -->
+    <section class="card">
+        <h2>
+            Inputs
+            <span style="font-size:.7rem;color:var(--text-dim);font-weight:400;">All editable</span>
+        </h2>
+
+        <div class="grid-2">
+            <div>
+                <label>Process
+                    <span class="hint">Affects productivity</span>
+                </label>
+                <select id="process">
+                    <option value="fcaw">Flux-Core (FCAW)</option>
+                    <option value="mig">MIG / GMAW</option>
+                    <option value="smaw">Stick / SMAW</option>
+                    <option value="tig">TIG / GTAW</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Material Type
+                    <span class="hint">Affects filler density $/lb</span>
+                </label>
+                <select id="materialType">
+                    <option value="carbon">Carbon Steel (A36)</option>
+                    <option value="stainless">Stainless 304</option>
+                    <option value="aluminum">Aluminum 6061</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div>
+                <label>Total Weld Length
+                    <span class="hint">LF or inches</span>
+                </label>
+                <input id="weldLength" type="number" min="0" step="0.01" value="20" />
+            </div>
+
+            <div>
+                <label>Length Units</label>
+                <select id="lengthUnits">
+                    <option value="lf">Linear Feet</option>
+                    <option value="in">Inches</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div>
+                <label>Fillet Size (in)
+                    <span class="hint">e.g. 0.25 for 1/4"</span>
+                </label>
+                <input id="filletSize" type="number" min="0" step="0.01" value="0.25" />
+            </div>
+
+            <div>
+                <label>Pass Count
+                    <span class="hint">multi-pass?</span>
+                </label>
+                <input id="passCount" type="number" min="1" step="1" value="1" />
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div>
+                <label>Welder Rate ($/hr)
+                    <span class="hint">Burdened</span>
+                </label>
+                <input id="welderRate" type="number" min="0" step="1" value="96" />
+            </div>
+
+            <div>
+                <label>Freight/Handling (%)
+                    <span class="hint">AK logistics</span>
+                </label>
+                <input id="freightPct" type="number" min="0" step="1" value="12" />
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <div>
+                <label>Filler $/lb
+                    <span class="hint">wire/rod</span>
+                </label>
+                <input id="fillerCostLb" type="number" min="0" step="0.01" value="4.00" />
+            </div>
+
+            <div>
+                <label>Shield Gas $/ft
+                    <span class="hint">MIG/TIG</span>
+                </label>
+                <input id="gasCostFt" type="number" min="0" step="0.01" value="0.50" />
+            </div>
+
+            <div>
+                <label>Consumables %
+                    <span class="hint">grinding etc</span>
+                </label>
+                <input id="consumablesPct" type="number" min="0" step="1" value="5" />
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div>
+                <label>Base Metal $/lb
+                    <span class="hint">stock steel cost</span>
+                </label>
+                <input id="baseMetalCostLb" type="number" min="0" step="0.01" value="1.20" />
+            </div>
+            <div>
+                <label>Base Metal Weight (lb)
+                    <span class="hint">total pieces joined</span>
+                </label>
+                <input id="baseMetalWeightLb" type="number" min="0" step="0.1" value="200" />
+            </div>
+        </div>
+
+        <div class="row-inline">
+            <input type="checkbox" id="includeGas" checked />
+            <label for="includeGas" style="margin:0;font-size:.7rem;color:var(--text-main);font-weight:500;">
+                Include shielding gas cost
+            </label>
+        </div>
+
+        <div>
+            <button class="export-btn" id="calcBtn" style="width:100%;text-align:center;margin-top:.5rem;">
+                Recalculate
+            </button>
+        </div>
+
+        <div class="subtext">
+            Notes:
+            <br>- Weld volume assumes 0.707 × leg² per inch fillet.
+            <br>- Labor time already includes Alaska slowdown (fit-up, PPE, weather).
+        </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="card">
+        <h2>
+            Results
+            <span style="font-size:.7rem;color:var(--text-dim);font-weight:400;" id="timestampNote"></span>
+        </h2>
+
+        <div class="results-block">
+            <div class="results-section">
+                <h3>
+                    Material
+                    <span id="matSubtotal">$0.00</span>
+                </h3>
+                <div class="line">
+                    <div class="lbl">Base Metal Cost</div>
+                    <div class="val" id="baseMetalCostVal">$0.00</div>
+                </div>
+                <div class="line">
+                    <div class="lbl">Filler Metal Cost</div>
+                    <div class="val" id="fillerCostVal">$0.00</div>
+                </div>
+                <div class="line">
+                    <div class="lbl">Shield Gas / Consumables</div>
+                    <div class="val" id="gasConsumableCostVal">$0.00</div>
+                </div>
+                <div class="total-line">
+                    <div>Total Material</div>
+                    <div id="materialTotalVal">$0.00</div>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h3>
+                    Shipping / Handling
+                    <span id="shipSubtotal">$0.00</span>
+                </h3>
+                <div class="line">
+                    <div class="lbl">Logistics Adder (%)</div>
+                    <div class="val" id="freightPctVal">0%</div>
+                </div>
+                <div class="line">
+                    <div class="lbl">Freight/Handling Cost</div>
+                    <div class="val" id="freightCostVal">$0.00</div>
+                </div>
+                <div class="total-line">
+                    <div>Total w/ Freight</div>
+                    <div id="withFreightVal">$0.00</div>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h3>
+                    Labor
+                    <span id="laborSubtotal">$0.00</span>
+                </h3>
+                <div class="line">
+                    <div class="lbl">Deposition Rate (lb/hr)</div>
+                    <div class="val" id="depoRateVal">--</div>
+                </div>
+                <div class="line">
+                    <div class="lbl">Filler Weight (lb)</div>
+                    <div class="val" id="fillerWeightVal">--</div>
+                </div>
+                <div class="line">
+                    <div class="lbl">Hours (incl. fit-up)</div>
+                    <div class="val" id="laborHoursVal">--</div>
+                </div>
+                <div class="line">
+                    <div class="lbl">Welder Rate ($/hr)</div>
+                    <div class="val" id="welderRateVal">$0.00</div>
+                </div>
+                <div class="total-line">
+                    <div>Total Labor</div>
+                    <div id="laborTotalVal">$0.00</div>
+                </div>
+            </div>
+
+            <div class="results-section">
+                <h3>
+                    Grand Total
+                    <span id="grandTotal">$0.00</span>
+                </h3>
+                <div class="line">
+                    <div class="lbl">Material + Freight</div>
+                    <div class="val" id="matPlusFreightVal">$0.00</div>
+                </div>
+                <div class="line">
+                    <div class="lbl">Labor</div>
+                    <div class="val" id="laborOnlyVal">$0.00</div>
+                </div>
+                <div class="total-line">
+                    <div>Overall Budget</div>
+                    <div id="overallTotalVal">$0.00</div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<section class="assumptions-card" id="assumptionsText">
+    <strong>Estimator Notes / Assumptions (paste into your RFI / clarifications):</strong>
+
+    • Welding productivity assumes Alaska field conditions (PPE, weather, access, staging).
+    • Labor rate is burdened welder cost, including payroll, insurance, and standard Alaska labor load.
+    • Freight/handling includes barge / air cargo / road haul markup for delivery to site.
+    • Consumables include grinding discs, tips, nozzles, wire feed parts, etc.
+    • Weld quantity is based on estimator takeoff, not final shop drawings.
+    • This is a budgetary estimate only; final contract pricing may vary based on WPS, inspection / NDE requirements, preheat, PWHT, welding position (1G vs 6G), or certified specialty processes.
+</section>
+
+<div class="footer-bar">
+    Poor Louis Labs • Welding Estimator • v0.1
+</div>
+
+<script>
+(function(){
+
+    // Density lb/in^3 for material (used to convert weld volume -> filler weight)
+    // Mild steel ~0.283, stainless ~0.285, aluminum ~0.098
+    const DENSITY = {
+        carbon: 0.283,
+        stainless: 0.285,
+        aluminum: 0.098
+    };
+
+    // Deposition rate (lb/hr) realistic effective for Alaska (already derated)
+    // We assume this already bakes in downtime, so we do not apply 60% again.
+    const DEPOSITION = {
+        fcaw: 8.0,   // flux-core high production
+        mig:  6.0,   // MIG / GMAW
+        smaw: 4.0,   // stick
+        tig:  2.0    // TIG
+    };
+
+    // Utility formatters
+    function fmtMoney(v){
+        if(isNaN(v)) return "$0.00";
+        return "$" + v.toFixed(2);
+    }
+    function fmtNum(v,dec=2){
+        if(isNaN(v)) return "--";
+        return v.toFixed(dec);
+    }
+
+    function calcAll(){
+        const process          = document.getElementById("process").value;
+        const materialType     = document.getElementById("materialType").value;
+        const weldLength       = parseFloat(document.getElementById("weldLength").value || "0");
+        const lengthUnits      = document.getElementById("lengthUnits").value;
+        const filletSize       = parseFloat(document.getElementById("filletSize").value || "0");
+        const passCount        = parseFloat(document.getElementById("passCount").value || "1");
+
+        const welderRate       = parseFloat(document.getElementById("welderRate").value || "0");
+        const freightPct       = parseFloat(document.getElementById("freightPct").value || "0");
+        const fillerCostLb     = parseFloat(document.getElementById("fillerCostLb").value || "0");
+        const gasCostFt        = parseFloat(document.getElementById("gasCostFt").value || "0");
+        const consumablesPct   = parseFloat(document.getElementById("consumablesPct").value || "0");
+
+        const baseMetalCostLb  = parseFloat(document.getElementById("baseMetalCostLb").value || "0");
+        const baseMetalWeight  = parseFloat(document.getElementById("baseMetalWeightLb").value || "0");
+
+        const includeGas       = document.getElementById("includeGas").checked;
+
+        // 1. Normalize weld length to inches
+        let totalInches = 0;
+        if(lengthUnits === "lf"){
+            totalInches = weldLength * 12.0;
+        } else {
+            totalInches = weldLength;
+        }
+
+        // 2. Fillet weld volume per inch (in^3/in)
+        //    volume = 0.707 * leg^2
+        const volPerInch = 0.707 * filletSize * filletSize;
+
+        // 3. Total weld volume = per inch * inches * passes
+        const totalVolumeIn3 = volPerInch * totalInches * passCount;
+
+        // 4. Filler weight (lb) = volume * density(material)
+        const density = DENSITY[materialType] || DENSITY["carbon"];
+        const fillerWeightLb = totalVolumeIn3 * density;
+
+        // 5. Filler cost
+        const fillerCost = fillerWeightLb * fillerCostLb;
+
+        // 6. Shield gas + consumables:
+        //    gas cost is per FOOT of weld (use LF for that)
+        const weldFeet = totalInches / 12.0;
+        const gasCost = includeGas ? (weldFeet * gasCostFt) : 0;
+        const consumableCost = (fillerCost * (consumablesPct/100.0));
+        const gasConsumablesCost = gasCost + consumableCost;
+
+        // 7. Base metal cost:
+        const baseMetalCost = baseMetalWeight * baseMetalCostLb;
+
+        // 8. Material total (no freight yet)
+        const materialSubtotal = baseMetalCost + fillerCost + gasConsumablesCost;
+
+        // 9. Freight/handling
+        const freightCost = materialSubtotal * (freightPct/100.0);
+        const materialPlusFreight = materialSubtotal + freightCost;
+
+        // 10. Labor calc
+        // deposition rate lbs/hr from process
+        const depRateLbHr = DEPOSITION[process] || 4.0; // fallback
+        // hours = fillerWeight / depRate
+        // This "depRateLbHr" already represents realistic field output.
+        const weldHours = (depRateLbHr > 0) ? (fillerWeightLb / depRateLbHr) : 0;
+        // Labor cost
+        const laborCost = weldHours * welderRate;
+
+        // 11. Grand total
+        const grandTotal = materialPlusFreight + laborCost;
+
+        // 12. Update UI
+        document.getElementById("baseMetalCostVal").textContent     = fmtMoney(baseMetalCost);
+        document.getElementById("fillerCostVal").textContent        = fmtMoney(fillerCost);
+        document.getElementById("gasConsumableCostVal").textContent = fmtMoney(gasConsumablesCost);
+        document.getElementById("materialTotalVal").textContent     = fmtMoney(materialSubtotal);
+        document.getElementById("matSubtotal").textContent          = fmtMoney(materialSubtotal);
+
+        document.getElementById("freightPctVal").textContent        = freightPct.toFixed(1) + "%";
+        document.getElementById("freightCostVal").textContent       = fmtMoney(freightCost);
+        document.getElementById("withFreightVal").textContent       = fmtMoney(materialPlusFreight);
+        document.getElementById("shipSubtotal").textContent         = fmtMoney(materialPlusFreight);
+
+        document.getElementById("depoRateVal").textContent          = fmtNum(depRateLbHr,2) + " lb/hr";
+        document.getElementById("fillerWeightVal").textContent      = fmtNum(fillerWeightLb,2) + " lb";
+        document.getElementById("laborHoursVal").textContent        = fmtNum(weldHours,2) + " hr";
+        document.getElementById("welderRateVal").textContent        = fmtMoney(welderRate) + "/hr";
+        document.getElementById("laborTotalVal").textContent        = fmtMoney(laborCost);
+        document.getElementById("laborSubtotal").textContent        = fmtMoney(laborCost);
+
+        document.getElementById("matPlusFreightVal").textContent    = fmtMoney(materialPlusFreight);
+        document.getElementById("laborOnlyVal").textContent         = fmtMoney(laborCost);
+        document.getElementById("overallTotalVal").textContent      = fmtMoney(grandTotal);
+        document.getElementById("grandTotal").textContent           = fmtMoney(grandTotal);
+
+        // timestamp note (helps when you screenshot into an estimate)
+        const now = new Date();
+        document.getElementById("timestampNote").textContent =
+            now.toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
+
+        // Build assumptions text block with current numbers:
+        const assumptionsEl = document.getElementById("assumptionsText");
+        assumptionsEl.textContent =
+`Estimator Notes / Assumptions (paste into RFI / clarifications):
+
+• Welding process: ${process.toUpperCase()}.
+• Material: ${materialType}.
+• Takeoff weld length: ${fmtNum(weldFeet,2)} LF total @ ${filletSize}" fillet, ${passCount} pass(es).
+• Estimated filler metal: ${fmtNum(fillerWeightLb,2)} lb total.
+• Deposition rate used: ${fmtNum(depRateLbHr,2)} lb/hr (includes Alaska field productivity factors).
+• Total welder hours estimated (fit-up, interpass clean included): ${fmtNum(weldHours,2)} hr.
+• Welder rate used: ${fmtMoney(welderRate)}/hr.
+• Material (base metal + filler + gas/consumables): ${fmtMoney(materialSubtotal)}.
+• Freight/handling (${freightPct.toFixed(1)}% AK logistics): ${fmtMoney(freightCost)}.
+• Labor cost: ${fmtMoney(laborCost)}.
+• Budget total (Material + Freight + Labor): ${fmtMoney(grandTotal)}.
+
+Assumptions:
+- Welding productivity assumes Alaska field conditions (PPE, weather, access, staging).
+- Labor rate is burdened welder cost, including payroll, insurance, and standard Alaska labor load.
+- Freight/handling includes barge / air cargo / road haul markup for delivery to site.
+- Consumables include grinding discs, tips, nozzles, wire feed parts, etc.
+- Weld quantity is based on estimator takeoff, not final shop drawings.
+- Budgetary only; final pricing may vary with WPS, inspection/NDE, preheat, PWHT, weld position, or specialty certs.`;
+    }
+
+    // Export helpers
+    function exportJSON(){
+        const data = gatherData();
+        const blob = new Blob([JSON.stringify(data,null,2)], {type:"application/json"});
+        downloadBlob(blob, "weld_estimate.json");
+    }
+
+    function exportCSV(){
+        const d = gatherData();
+        // flat CSV of key values
+        const rows = [
+            ["timestamp", d.timestamp],
+            ["process", d.process],
+            ["materialType", d.materialType],
+            ["weldFeet", d.weldFeet],
+            ["filletSize_in", d.filletSize_in],
+            ["passes", d.passCount],
+            ["fillerWeight_lb", d.fillerWeight_lb],
+            ["depositionRate_lbPerHr", d.depositionRate_lbPerHr],
+            ["welderHours_hr", d.welderHours_hr],
+            ["welderRate_perHr", d.welderRate_perHr],
+            ["laborCost", d.laborCost],
+            ["materialSubtotal", d.materialSubtotal],
+            ["freightPct", d.freightPct],
+            ["freightCost", d.freightCost],
+            ["grandTotal", d.grandTotal]
+        ];
+
+        const csv = rows.map(r => r.map(x => `"${x}"`).join(",")).join("\n");
+        const blob = new Blob([csv], {type:"text/csv"});
+        downloadBlob(blob, "weld_estimate.csv");
+    }
+
+    function gatherData(){
+        const process          = document.getElementById("process").value;
+        const materialType     = document.getElementById("materialType").value;
+        const weldLength       = parseFloat(document.getElementById("weldLength").value || "0");
+        const lengthUnits      = document.getElementById("lengthUnits").value;
+        const filletSize       = parseFloat(document.getElementById("filletSize").value || "0");
+        const passCount        = parseFloat(document.getElementById("passCount").value || "1");
+        const welderRate       = parseFloat(document.getElementById("welderRate").value || "0");
+        const freightPct       = parseFloat(document.getElementById("freightPct").value || "0");
+        const fillerCostLb     = parseFloat(document.getElementById("fillerCostLb").value || "0");
+        const gasCostFt        = parseFloat(document.getElementById("gasCostFt").value || "0");
+        const consumablesPct   = parseFloat(document.getElementById("consumablesPct").value || "0");
+        const baseMetalCostLb  = parseFloat(document.getElementById("baseMetalCostLb").value || "0");
+        const baseMetalWeight  = parseFloat(document.getElementById("baseMetalWeightLb").value || "0");
+        const includeGas       = document.getElementById("includeGas").checked;
+
+        // replicate calc logic (short form)
+        let totalInches = (lengthUnits === "lf") ? (weldLength * 12.0) : weldLength;
+        const volPerInch = 0.707 * filletSize * filletSize;
+        const totalVolumeIn3 = volPerInch * totalInches * passCount;
+        const density = DENSITY[materialType] || DENSITY["carbon"];
+        const fillerWeightLb = totalVolumeIn3 * density;
+        const fillerCost = fillerWeightLb * fillerCostLb;
+        const weldFeet = totalInches / 12.0;
+        const gasCost = includeGas ? (weldFeet * gasCostFt) : 0;
+        const consumableCost = (fillerCost * (consumablesPct/100.0));
+        const gasConsumablesCost = gasCost + consumableCost;
+        const baseMetalCost = baseMetalWeight * baseMetalCostLb;
+        const materialSubtotal = baseMetalCost + fillerCost + gasConsumablesCost;
+        const freightCost = materialSubtotal * (freightPct/100.0);
+        const depRateLbHr = DEPOSITION[process] || 4.0;
+        const weldHours = (depRateLbHr > 0) ? (fillerWeightLb / depRateLbHr) : 0;
+        const laborCost = weldHours * welderRate;
+        const grandTotal = materialSubtotal + freightCost + laborCost;
+        const now = new Date();
+
+        return {
+            timestamp: now.toISOString(),
+            process,
+            materialType,
+            weldFeet: weldFeet,
+            filletSize_in: filletSize,
+            passCount,
+            fillerWeight_lb: fillerWeightLb,
+            depositionRate_lbPerHr: depRateLbHr,
+            welderHours_hr: weldHours,
+            welderRate_perHr: welderRate,
+            laborCost,
+            materialSubtotal,
+            freightPct,
+            freightCost,
+            grandTotal,
+            inputs: {
+                weldLength_raw: weldLength,
+                lengthUnits,
+                includeGas,
+                fillerCostLb,
+                gasCostFt,
+                consumablesPct,
+                baseMetalCostLb,
+                baseMetalWeightLb: baseMetalWeight
+            }
+        };
+    }
+
+    function downloadBlob(blob, filename){
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // Hook up buttons
+    document.getElementById("calcBtn").addEventListener("click", calcAll);
+    document.getElementById("exportJsonBtn").addEventListener("click", exportJSON);
+    document.getElementById("exportCsvBtn").addEventListener("click", exportCSV);
+
+    // Initial calc
+    calcAll();
+
+})();
+</script>
+
+</body>
+</html>
 

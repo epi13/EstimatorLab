@@ -1,1 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Painting & Coatings Estimator</title>
+<style>
+    :root {
+        --bg-dark: #0f172a;
+        --panel-dark: #1e2538;
+        --accent: #38bdf8;
+        --accent-soft: rgba(56,189,248,0.12);
+        --text-main: #f8fafc;
+        --text-dim: #94a3b8;
+        --border: #334155;
+        --radius-lg: 1rem;
+        --radius-sm: .5rem;
+        --gap: 1rem;
+        --font-stack: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Roboto","Segoe UI", sans-serif;
+    }
+
+    body {
+        background: radial-gradient(circle at 20% 20%, #1e293b 0%, #0f172a 60%);
+        color: var(--text-main);
+        font-family: var(--font-stack);
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: minmax(260px, 320px) 1fr;
+        gap: var(--gap);
+        padding: var(--gap);
+        box-sizing: border-box;
+    }
+
+    header {
+        grid-column: 1 / -1;
+    }
+
+    .app-title {
+        font-size: 1.2rem;
+        line-height: 1.2;
+        font-weight: 600;
+        color: var(--text-main);
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: .5rem;
+    }
+    .app-sub {
+        color: var(--text-dim);
+        font-size: .8rem;
+        font-weight: 400;
+    }
+
+    /* Panels */
+    .panel {
+        background: var(--panel-dark);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.6);
+        padding: 1rem 1rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .panel-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        margin-bottom: .75rem;
+    }
+
+    .panel-title {
+        font-size: .9rem;
+        font-weight: 600;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .panel-hint {
+        font-size: .7rem;
+        color: var(--text-dim);
+    }
+
+    /* Form layout */
+    .stack {
+        display: grid;
+        gap: .75rem;
+    }
+
+    .row-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .75rem;
+    }
+    .row-3 {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: .75rem;
+    }
+
+    label {
+        display: flex;
+        flex-direction: column;
+        font-size: .7rem;
+        color: var(--text-dim);
+        font-weight: 500;
+        line-height: 1.2;
+    }
+
+    input, select, textarea {
+        margin-top: .4rem;
+        background: #0f172a;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        color: var(--text-main);
+        font-size: .8rem;
+        line-height: 1.4rem;
+        padding: .6rem .6rem;
+        font-family: inherit;
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    input:focus, select:focus, textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 0;
+        background: #1e293b;
+    }
+
+    /* Little badge / pills */
+    .pill {
+        font-size: .6rem;
+        font-weight: 500;
+        line-height: 1;
+        padding: .4rem .5rem .45rem;
+        border-radius: var(--radius-sm);
+        background: var(--accent-soft);
+        color: var(--accent);
+        border: 1px solid rgba(56,189,248,.4);
+        white-space: nowrap;
+    }
+
+    /* Results tables */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .75rem;
+        color: var(--text-main);
+    }
+    th {
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-main);
+        border-bottom: 1px solid var(--border);
+        padding: .5rem .5rem .6rem;
+        font-size: .7rem;
+        white-space: nowrap;
+    }
+    td {
+        padding: .4rem .5rem;
+        border-bottom: 1px solid rgba(51,65,85,.4);
+        vertical-align: top;
+    }
+    tfoot td {
+        font-weight: 600;
+        color: var(--accent);
+        border-bottom: 0;
+    }
+
+    .num {
+        text-align: right;
+        white-space: nowrap;
+        font-feature-settings: "tnum";
+        font-variant-numeric: tabular-nums;
+    }
+
+    .totals-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+        gap: .75rem;
+        margin-top: 1rem;
+    }
+    .total-card {
+        background: #0f172a;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md,var(--radius-lg));
+        padding: .75rem .75rem .8rem;
+        box-shadow: 0 20px 40px rgba(0,0,0,.7);
+    }
+    .total-label {
+        font-size: .7rem;
+        color: var(--text-dim);
+        line-height: 1.2;
+        margin-bottom: .4rem;
+    }
+    .total-value {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-main);
+        line-height: 1.2;
+    }
+    .total-sub {
+        font-size: .6rem;
+        color: var(--accent);
+        line-height: 1.2;
+        margin-top: .25rem;
+        font-weight: 500;
+    }
+
+    .footer-note {
+        font-size: .6rem;
+        color: var(--text-dim);
+        margin-top: 1rem;
+        line-height: 1.3;
+    }
+
+    /* Buttons */
+    .btn-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+    }
+    button {
+        cursor: pointer;
+        background: var(--accent-soft);
+        color: var(--accent);
+        border: 1px solid rgba(56,189,248,.5);
+        border-radius: var(--radius-sm);
+        font-size: .75rem;
+        font-weight: 600;
+        line-height: 1.2;
+        padding: .6rem .75rem .65rem;
+        font-family: inherit;
+    }
+    button:hover {
+        background: rgba(56,189,248,.2);
+    }
+
+    /* Responsive tweaks */
+    @media(max-width:900px){
+        body {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+</head>
+<body>
+
+<header class="panel" style="grid-column:1 / -1;">
+    <div class="panel-header">
+        <div class="app-title">
+            <span>Painting & Coatings Estimator</span>
+            <span class="pill">Anchorage labor basis · Alaska logistics</span>
+        </div>
+        <div class="app-sub">
+            Material + Shipping + Labor · includes man-hours
+        </div>
+    </div>
+    <div class="btn-row">
+        <button id="addLineBtn">+ Add Line Item</button>
+        <button id="calcBtn">Recalculate</button>
+        <button id="exportBtn">Export CSV</button>
+    </div>
+</header>
+
+<!-- LEFT: INPUTS -->
+<section id="inputsPanel" class="panel">
+    <div class="panel-header">
+        <div class="panel-title">
+            <span>Line Items</span>
+            <span class="pill" title="Walls, ceilings, doors, steel, etc.">Scope</span>
+        </div>
+        <div class="panel-hint">Enter each painted system. Coats include prime + finish.</div>
+    </div>
+
+    <div class="stack" id="lineItemsContainer">
+        <!-- Line items will be injected here -->
+    </div>
+
+    <div class="footer-note">
+        Assumptions:<br/>
+        • Man-hour baseline uses standard commercial productivity with a +15% Alaska/remote factor.<br/>
+        • Labor rate uses Architectural ($87/hr).<br/>
+        • Shipping/handling defaults to 15% markup on materials to cover freight to site, staging, waste.
+    </div>
+</section>
+
+<!-- RIGHT: OUTPUTS -->
+<section id="outputsPanel" class="panel">
+    <div class="panel-header">
+        <div class="panel-title">
+            <span>Estimate Breakdown</span>
+            <span class="pill">Live calc</span>
+        </div>
+        <div class="panel-hint">Material, Labor, Man-Hours, Totals</div>
+    </div>
+
+    <div style="overflow-x:auto;">
+        <table id="resultsTable">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Desc / Notes</th>
+                    <th class="num">SF</th>
+                    <th class="num">Gal</th>
+                    <th class="num">Matl $</th>
+                    <th class="num">Ship&Hnd $</th>
+                    <th class="num">Labor hrs</th>
+                    <th class="num">Labor $</th>
+                    <th class="num">Total $</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody">
+                <!-- rows go here -->
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="8" class="num">Grand Total</td>
+                    <td class="num" id="grandTotalCell">$0.00</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="totals-grid">
+        <div class="total-card">
+            <div class="total-label">Total Material (incl. ship/handle)</div>
+            <div class="total-value" id="totalMatlWithShip">$0.00</div>
+            <div class="total-sub" id="totalMatlBaseSub">Base Matl $0.00 + Ship $0.00</div>
+        </div>
+        <div class="total-card">
+            <div class="total-label">Total Labor Cost</div>
+            <div class="total-value" id="totalLaborCost">$0.00</div>
+            <div class="total-sub"><span id="totalLaborHrs">0.00</span> hrs @ $87/hr</div>
+        </div>
+        <div class="total-card">
+            <div class="total-label">Total Man-Hours (All Items)</div>
+            <div class="total-value" id="totalMHrs">0.00 hrs</div>
+            <div class="total-sub">Incl. +15% Alaska/remote factor</div>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        Notes to carry into estimate:<br/>
+        • “(Dimension)(Capacity)(Power)(Features) ITEM (Ancillaries)” naming can be applied in final bid form.<br/>
+        • If project is truly remote (barge / air freight), increase Ship & Handling % accordingly.
+    </div>
+</section>
+
+<script>
+/*
+Core estimating logic:
+
+For each line item:
+Inputs:
+- itemName (ex: "Wall Paint, 2-coat, eggshell")
+- notes
+- sqft
+- coats (int)
+- coverageSFPerGal (sf/gal)
+- costPerGal ($/gal)
+- shipHandlingPct (% of material cost)
+- prepDifficulty ("light","normal","heavy")
+
+Calcs:
+GallonsNeeded = (sqft * coats) / coverageSFPerGal
+MaterialCostBase = GallonsNeeded * costPerGal
+ShipHandlingCost = MaterialCostBase * (shipHandlingPct/100)
+
+Labor productivity baseline (commercial interior repaint, moderate):
+    assume ~0.12 hrs / SF / coat for "normal"
+    (which is about 8.3 SF/hr/coat; reasonably conservative for occupied or detailed work)
+Adjust:
+    light prep = 0.10
+    normal prep = 0.12
+    heavy prep = 0.16
+Then add Alaska factor +15%:
+    laborHrs = sqft * coats * baseHrPerSFPerCoat * 1.15
+
+LaborCost = laborHrs * 87 $/hr (Architectural rate)
+
+Total = MaterialCostBase + ShipHandlingCost + LaborCost
+*/
+
+const LABOR_RATE = 87; // $/hr Architectural from your table
+const ALASKA_FACTOR = 1.15; // +15% productivity hit
+
+function baseHrPerSF(prep){
+    switch(prep){
+        case "light": return 0.10;
+        case "heavy": return 0.16;
+        default: return 0.12; // normal
+    }
+}
+
+// state
+let lineItems = [];
+
+function addLineItem(data){
+    const defaults = {
+        itemName: "Wall Paint, 2-coat, eggshell",
+        notes: "Gypsum board walls, light patch & prep, occupied space.",
+        sqft: 1000,
+        coats: 2,
+        coverageSFPerGal: 350,
+        costPerGal: 55,
+        shipHandlingPct: 15,
+        prepDifficulty: "normal",
+        initials: "AC"
+    };
+    const li = Object.assign({}, defaults, data || {});
+    lineItems.push(li);
+    renderInputs();
+    recalcAndRender();
+}
+
+function removeLineItem(idx){
+    lineItems.splice(idx,1);
+    renderInputs();
+    recalcAndRender();
+}
+
+function renderInputs(){
+    const container = document.getElementById("lineItemsContainer");
+    container.innerHTML = "";
+
+    lineItems.forEach((li, idx)=>{
+        const wrapper = document.createElement("div");
+        wrapper.className = "panel";
+        wrapper.style.background = "#0f172a";
+        wrapper.style.border = "1px solid var(--border)";
+        wrapper.style.boxShadow = "0 20px 60px rgba(0,0,0,.7)";
+        wrapper.style.padding = "1rem";
+        wrapper.style.borderRadius = "var(--radius-lg)";
+        wrapper.style.position = "relative";
+
+        wrapper.innerHTML = `
+            <div class="panel-header" style="margin-bottom:1rem;">
+                <div class="panel-title">
+                    <span>Item ${idx+1}</span>
+                    <span class="pill">${li.itemName || ""}</span>
+                </div>
+                <div class="btn-row">
+                    <button data-del="${idx}" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);color:#f87171;">Remove</button>
+                </div>
+            </div>
+
+            <div class="stack">
+                <label>
+                    Item Name / Spec
+                    <input type="text" data-field="itemName" data-idx="${idx}" value="${li.itemName}">
+                </label>
+
+                <label>
+                    Notes / Location / Finish sheen
+                    <textarea rows="2" data-field="notes" data-idx="${idx}">${li.notes}</textarea>
+                </label>
+
+                <div class="row-3">
+                    <label>
+                        Surface Area (SF)
+                        <input type="number" min="0" step="1" data-field="sqft" data-idx="${idx}" value="${li.sqft}">
+                    </label>
+                    <label>
+                        # Coats (incl. prime)
+                        <input type="number" min="1" step="1" data-field="coats" data-idx="${idx}" value="${li.coats}">
+                    </label>
+                    <label>
+                        Prep Difficulty
+                        <select data-field="prepDifficulty" data-idx="${idx}">
+                            <option value="light" ${li.prepDifficulty==="light"?"selected":""}>Light / new install</option>
+                            <option value="normal" ${li.prepDifficulty==="normal"?"selected":""}>Normal / repaint</option>
+                            <option value="heavy" ${li.prepDifficulty==="heavy"?"selected":""}>Heavy / patch & scrape</option>
+                        </select>
+                    </label>
+                </div>
+
+                <div class="row-3">
+                    <label>
+                        Coverage (SF/gal)
+                        <input type="number" min="1" step="1" data-field="coverageSFPerGal" data-idx="${idx}" value="${li.coverageSFPerGal}">
+                    </label>
+                    <label>
+                        Paint Cost ($/gal)
+                        <input type="number" min="0" step="0.01" data-field="costPerGal" data-idx="${idx}" value="${li.costPerGal}">
+                    </label>
+                    <label>
+                        Ship & Handling (% of matl)
+                        <input type="number" min="0" step="1" data-field="shipHandlingPct" data-idx="${idx}" value="${li.shipHandlingPct}">
+                    </label>
+                </div>
+
+                <div class="row-2">
+                    <label>
+                        Estimator Initials
+                        <input type="text" data-field="initials" data-idx="${idx}" value="${li.initials}">
+                    </label>
+                    <label>
+                        Optional: Override Labor Rate ($/hr)
+                        <input type="number" min="0" step="0.01" data-field="laborRateOverride" data-idx="${idx}" value="${li.laborRateOverride ?? ""}" placeholder="${LABOR_RATE}">
+                    </label>
+                </div>
+            </div>
+        `;
+
+        // listen for field changes
+        wrapper.querySelectorAll("input,textarea,select").forEach(el=>{
+            el.addEventListener("input", e=>{
+                const field = e.target.getAttribute("data-field");
+                const i = +e.target.getAttribute("data-idx");
+                let val = e.target.value;
+
+                if(["sqft","coats","coverageSFPerGal","costPerGal","shipHandlingPct","laborRateOverride"].includes(field)){
+                    val = val === "" ? "" : parseFloat(val);
+                }
+
+                lineItems[i][field] = val;
+                recalcAndRender();
+            });
+        });
+
+        // delete handler
+        wrapper.querySelectorAll("button[data-del]").forEach(btn=>{
+            btn.addEventListener("click", e=>{
+                const delIdx = +e.target.getAttribute("data-del");
+                removeLineItem(delIdx);
+            });
+        });
+
+        container.appendChild(wrapper);
+    });
+}
+
+function calcLineItem(li){
+    const sqft = Number(li.sqft) || 0;
+    const coats = Number(li.coats) || 0;
+    const cov = Number(li.coverageSFPerGal) || 1;
+    const costPerGal = Number(li.costPerGal) || 0;
+    const shpct = Number(li.shipHandlingPct) || 0;
+    const laborRate = li.laborRateOverride ? Number(li.laborRateOverride) : LABOR_RATE;
+
+    const gallons = (sqft * coats) / cov;
+    const matlBase = gallons * costPerGal;
+    const shipCost = matlBase * (shpct/100);
+
+    const hrsPerSFPerCoat = baseHrPerSF(li.prepDifficulty || "normal");
+    const laborHrs = sqft * coats * hrsPerSFPerCoat * ALASKA_FACTOR;
+
+    const laborCost = laborHrs * laborRate;
+    const totalCost = matlBase + shipCost + laborCost;
+
+    return {
+        gallons,
+        matlBase,
+        shipCost,
+        laborHrs,
+        laborCost,
+        totalCost
+    };
+}
+
+function recalcAndRender(){
+    const tbody = document.getElementById("resultsBody");
+    tbody.innerHTML = "";
+
+    let grandTotal = 0;
+    let sumMatlBase = 0;
+    let sumShip = 0;
+    let sumLaborHrs = 0;
+    let sumLaborCost = 0;
+
+    lineItems.forEach((li, idx)=>{
+        const c = calcLineItem(li);
+
+        grandTotal += c.totalCost;
+        sumMatlBase += c.matlBase;
+        sumShip += c.shipCost;
+        sumLaborHrs += c.laborHrs;
+        sumLaborCost += c.laborCost;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${escapeHTML(li.itemName || "")}</td>
+            <td style="max-width:220px;white-space:pre-wrap;color:var(--text-dim);font-size:.7rem;">
+                ${escapeHTML(li.notes || "")}
+            </td>
+            <td class="num">${fmtNum(li.sqft)}</td>
+            <td class="num">${fmtNum(c.gallons)}</td>
+            <td class="num">${fmtUsd(c.matlBase)}</td>
+            <td class="num">${fmtUsd(c.shipCost)}</td>
+            <td class="num">${fmtNum(c.laborHrs)}</td>
+            <td class="num">${fmtUsd(c.laborCost)}</td>
+            <td class="num">${fmtUsd(c.totalCost)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // totals
+    document.getElementById("grandTotalCell").textContent = fmtUsd(grandTotal);
+
+    const totalMatlWithShip = sumMatlBase + sumShip;
+    document.getElementById("totalMatlWithShip").textContent = fmtUsd(totalMatlWithShip);
+    document.getElementById("totalMatlBaseSub").textContent =
+        `Base Matl ${fmtUsd(sumMatlBase)} + Ship ${fmtUsd(sumShip)}`;
+
+    document.getElementById("totalLaborCost").textContent = fmtUsd(sumLaborCost);
+    document.getElementById("totalLaborHrs").textContent = fmtNum(sumLaborHrs);
+
+    document.getElementById("totalMHrs").textContent = fmtNum(sumLaborHrs);
+}
+
+// CSV export
+function exportCSV(){
+    const rows = [];
+    const now = new Date();
+    const dateStr = now.toISOString().split("T")[0];
+
+    // header
+    rows.push([
+        "date",
+        "item_name",
+        "notes",
+        "sf",
+        "coats",
+        "prep_difficulty",
+        "gallons",
+        "matl_base_$",
+        "ship_handling_$",
+        "labor_hrs",
+        "labor_$",
+        "total_$",
+        "initials"
+    ].join(","));
+
+    lineItems.forEach(li=>{
+        const c = calcLineItem(li);
+        rows.push([
+            dateStr,
+            csvEscape(li.itemName||""),
+            csvEscape(li.notes||""),
+            safeNum(li.sqft),
+            safeNum(li.coats),
+            li.prepDifficulty||"normal",
+            safeNum(c.gallons),
+            safeNum(c.matlBase),
+            safeNum(c.shipCost),
+            safeNum(c.laborHrs),
+            safeNum(c.laborCost),
+            safeNum(c.totalCost),
+            csvEscape(li.initials||"")
+        ].join(","));
+    });
+
+    const blob = new Blob([rows.join("\n")], {type:"text/csv"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `painting_estimate_${dateStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{
+        URL.revokeObjectURL(url);
+        a.remove();
+    }, 1000);
+}
+
+/* helpers */
+function fmtUsd(v){
+    const n = Number(v)||0;
+    return "$" + n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtNum(v){
+    const n = Number(v)||0;
+    return n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function safeNum(v){
+    const n = Number(v)||0;
+    return n.toString();
+}
+function csvEscape(str){
+    const s = (str||"").replace(/"/g,'""');
+    if(s.search(/("|,|\n)/g)>=0){
+        return `"${s}"`;
+    }
+    return s;
+}
+function escapeHTML(str){
+    return (str||"")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;");
+}
+
+/* init */
+document.getElementById("addLineBtn").addEventListener("click", ()=>{
+    addLineItem();
+});
+document.getElementById("calcBtn").addEventListener("click", ()=>{
+    recalcAndRender();
+});
+document.getElementById("exportBtn").addEventListener("click", ()=>{
+    exportCSV();
+});
+
+// start with one example line
+addLineItem({
+    itemName: "Wall Paint, 2-coat, eggshell",
+    notes: "Typical interior gypsum board wall, occupied office, patch & prep.",
+    sqft: 1200,
+    coats: 2,
+    coverageSFPerGal: 350,
+    costPerGal: 55,
+    shipHandlingPct: 15,
+    prepDifficulty: "normal",
+    initials: "AC"
+});
+
+</script>
+</body>
+</html>
 

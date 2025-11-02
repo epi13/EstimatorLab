@@ -1,3 +1,5 @@
+import { polygonArea, pointInPolygon } from '../../lib/geom.js';
+import { getDocument } from '../../lib/pdf/runtime.js';
 (() => {
   // --- State ---
   const workarea = document.getElementById('workarea');
@@ -85,15 +87,7 @@
     while (svgLayer.firstChild) svgLayer.removeChild(svgLayer.firstChild);
   }
 
-  function polyArea(pts) {
-    if (pts.length < 3) return 0;
-    let s = 0;
-    for (let i=0;i<pts.length;i++) {
-      const a = pts[i], b = pts[(i+1)%pts.length];
-      s += a.x*b.y - b.x*a.y;
-    }
-    return Math.abs(s)*0.5;
-  }
+  const polyArea = polygonArea;
 
   function drawPoly(view) {
     const pts = state.nodes[view];
@@ -273,7 +267,7 @@
       const x = (bgCanvas.width - iw)/2;
       const y = (bgCanvas.height - ih)/2;
       ctx.drawImage(b.img, x, y, iw, ih);
-    } else if (b.pdf && window['pdfjsLib']) {
+    } else if (b.pdf) {
       b.pdf.getPage(b.page||1).then(page=>{
         const viewport = page.getViewport({ scale: scale * (bgCanvas.width/Math.max(page.view[2], bgCanvas.width)) });
         const vScale = Math.min(bgCanvas.width/viewport.width, bgCanvas.height/viewport.height);
@@ -302,9 +296,10 @@
     if (f.type === 'application/pdf') {
       const reader = new FileReader();
       reader.onload = async () => {
-        if (!window['pdfjsLib']) { alert('PDF.js not loaded'); return; }
-        const u8 = new Uint8Array(reader.result);
-        b.pdf = await pdfjsLib.getDocument({ data: u8 }).promise;
+        try{
+          const u8 = new Uint8Array(reader.result);
+          b.pdf = await getDocument({ data: u8 }).promise;
+        }catch(err){ alert('PDF.js not loaded'); return; }
         b.page = Math.max(1, Math.min(parseInt(pageInput.value||'1',10), b.pdf.numPages));
         drawBackdrop(which); drawAll();
       };
@@ -373,15 +368,7 @@
   });
 
   // --- Voxel Volume ---
-  function pointInPoly(pt, poly) {
-    // ray casting
-    let c = false;
-    for (let i=0, j=poly.length-1; i<poly.length; j=i++) {
-      const pi=poly[i], pj=poly[j];
-      if (((pi.y>pt.y)!==(pj.y>pt.y)) && (pt.x < (pj.x-pi.x)*(pt.y-pi.y)/(pj.y-pi.y)+pi.x)) c = !c;
-    }
-    return c;
-  }
+  const pointInPoly = pointInPolygon;
 
   function computeVolume() {
     // Need closed polygons & calibrations

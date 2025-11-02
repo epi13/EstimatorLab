@@ -1,1 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>12 - General Requirements Calculator</title>
+<style>
+    :root {
+        --bg: #0f172a;
+        --card: #1e2538;
+        --card-light: #2a3350;
+        --accent: #38bdf8;
+        --text-main: #f8fafc;
+        --text-dim: #94a3b8;
+        --border: #334155;
+        --radius-lg: 1rem;
+        --radius-sm: .5rem;
+        --pad-md: 1rem;
+        --pad-lg: 1.5rem;
+        --fw-bold: 600;
+        --fw-med: 500;
+        --fw-reg: 400;
+        --font-stack: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+            Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    }
+
+    body {
+        background: var(--bg);
+        color: var(--text-main);
+        font-family: var(--font-stack);
+        line-height: 1.4;
+        margin: 0;
+        padding: var(--pad-lg);
+        display: flex;
+        flex-direction: column;
+        gap: var(--pad-lg);
+    }
+
+    header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 1rem;
+    }
+
+    header .titleblock {
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+    }
+
+    h1 {
+        font-size: 1.1rem;
+        font-weight: var(--fw-bold);
+        color: var(--text-main);
+        margin: 0;
+        display: flex;
+        align-items: baseline;
+        gap: .5rem;
+    }
+
+    h1 span.tag {
+        background: var(--accent);
+        color: #0f172a;
+        font-size: .7rem;
+        font-weight: var(--fw-bold);
+        padding: .15rem .5rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .subtitle {
+        font-size: .8rem;
+        font-weight: var(--fw-med);
+        color: var(--text-dim);
+    }
+
+    .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        font-size: .7rem;
+        color: var(--text-dim);
+    }
+
+    .meta-row label {
+        font-weight: var(--fw-med);
+        color: var(--text-main);
+        margin-right: .25rem;
+    }
+
+    .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 30px 80px rgba(0,0,0,.6);
+        overflow: hidden;
+    }
+
+    .section-header {
+        background: radial-gradient(circle at 0% 0%, rgba(56,189,248,.18) 0%, rgba(0,0,0,0) 60%), var(--card-light);
+        border-bottom: 1px solid var(--border);
+        padding: .75rem 1rem;
+        font-size: .8rem;
+        font-weight: var(--fw-bold);
+        color: var(--accent);
+        letter-spacing: .03em;
+        text-transform: uppercase;
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: .5rem;
+    }
+
+    .section-header small {
+        font-weight: var(--fw-reg);
+        color: var(--text-dim);
+        text-transform: none;
+        font-size: .7rem;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .8rem;
+        color: var(--text-main);
+    }
+
+    thead th {
+        background: var(--card-light);
+        color: var(--text-main);
+        font-weight: var(--fw-med);
+        text-align: right;
+        padding: .5rem .5rem;
+        border-bottom: 1px solid var(--border);
+        border-top: 1px solid var(--border);
+        white-space: nowrap;
+        font-size: .7rem;
+    }
+
+    thead th.left {
+        text-align: left;
+    }
+
+    tbody tr.line-item {
+        background: transparent;
+        border-bottom: 1px solid var(--border);
+    }
+
+    tbody tr.line-item td {
+        padding: .4rem .5rem;
+        vertical-align: middle;
+        text-align: right;
+    }
+
+    tbody tr.line-item td.left {
+        text-align: left;
+    }
+
+    tbody tr.line-item td.compact {
+        white-space: nowrap;
+    }
+
+    tbody tr.group-label td {
+        padding: .6rem .5rem .4rem;
+        font-size: .75rem;
+        font-weight: var(--fw-bold);
+        color: var(--accent);
+        background: rgba(56,189,248,.07);
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+
+    tbody tr.group-spacer td {
+        background: transparent;
+        padding: .3rem .5rem;
+        font-size: .6rem;
+        line-height: 1;
+        border-bottom: none;
+        color: var(--text-dim);
+    }
+
+    input[type="number"] {
+        background: #0f172a;
+        color: var(--text-main);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: .3rem .4rem;
+        font-size: .75rem;
+        width: 5rem;
+    }
+
+    input[type="checkbox"] {
+        width: 1rem;
+        height: 1rem;
+        cursor: pointer;
+        accent-color: var(--accent);
+    }
+
+    .readonly {
+        font-variant-numeric: tabular-nums;
+        min-width: 4.5rem;
+        display: inline-block;
+        text-align: right;
+        font-weight: var(--fw-med);
+        color: var(--text-main);
+    }
+
+    .money {
+        font-feature-settings: "tnum";
+    }
+
+    .totals-wrap {
+        padding: var(--pad-md);
+        background: var(--card);
+        border-top: 1px solid var(--border);
+        display: grid;
+        grid-template-columns: minmax(200px,1fr) auto;
+        gap: 1rem;
+    }
+
+    .totals-col {
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+        font-size: .8rem;
+        color: var(--text-main);
+    }
+
+    .totals-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        background: var(--card-light);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: .5rem .75rem;
+    }
+
+    .totals-row.dim {
+        background: transparent;
+        border: 1px solid var(--border);
+    }
+
+    .totals-row .label {
+        color: var(--text-dim);
+        font-weight: var(--fw-med);
+        font-size: .7rem;
+    }
+
+    .totals-row .val {
+        font-weight: var(--fw-bold);
+        color: var(--text-main);
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum";
+    }
+
+    .markup-grid {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        background: var(--card-light);
+    }
+
+    .markup-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        font-size: .8rem;
+        padding: .5rem .75rem;
+        border-bottom: 1px solid var(--border);
+        align-items: center;
+        gap: .75rem;
+    }
+    .markup-row:last-child {
+        border-bottom: none;
+    }
+
+    .markup-row .m-label {
+        color: var(--text-main);
+        font-weight: var(--fw-med);
+    }
+    .markup-row .m-sub {
+        color: var(--text-dim);
+        font-size: .7rem;
+        font-weight: var(--fw-reg);
+        line-height: 1.2;
+    }
+
+    .percent-field {
+        min-width: 4.5rem;
+        display: flex;
+        align-items: center;
+        gap: .3rem;
+        justify-content: flex-end;
+        color: var(--text-main);
+        font-weight: var(--fw-med);
+        font-size: .75rem;
+    }
+    .percent-field input[type="number"] {
+        width: 4rem;
+        text-align: right;
+        padding-right: .2rem;
+    }
+
+    .grand-total {
+        background: var(--accent);
+        color: #0f172a;
+        font-weight: var(--fw-bold);
+        font-size: 1rem;
+        line-height: 1.2;
+        padding: .75rem 1rem;
+        border-radius: var(--radius-sm);
+        box-shadow: 0 20px 50px rgba(56,189,248,.3);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: .5rem;
+    }
+
+    .grand-total .left {
+        font-size: .8rem;
+        font-weight: var(--fw-med);
+        letter-spacing: .02em;
+        text-transform: uppercase;
+    }
+
+    .grand-total .right {
+        font-size: 1.1rem;
+        font-weight: var(--fw-bold);
+        min-width: 6rem;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum";
+    }
+
+    footer {
+        font-size: .7rem;
+        color: var(--text-dim);
+        text-align: center;
+        line-height: 1.4;
+        max-width: 900px;
+        margin: 0 auto 2rem;
+    }
+
+    @media (max-width:900px){
+        table {
+            font-size: .7rem;
+        }
+        input[type="number"]{
+            width:4rem;
+        }
+        .readonly{
+            min-width:4rem;
+        }
+    }
+
+</style>
+</head>
+<body>
+<header>
+    <div class="titleblock">
+        <h1>
+            <span>12 – GENERAL REQUIREMENTS</span>
+            <span class="tag">Alaska Baseline</span>
+        </h1>
+        <div class="subtitle">Material / Labor / Markups / Total</div>
+        <div class="meta-row">
+            <div><label>Estimator:</label> <input id="estimatorName" style="background:#0f172a;border:1px solid var(--border);border-radius:.4rem;color:var(--text-main);padding:.25rem .4rem;font-size:.7rem;min-width:8rem;" placeholder="Your initials"/></div>
+            <div><label>Date:</label> <input id="estimatorDate" type="date" style="background:#0f172a;border:1px solid var(--border);border-radius:.4rem;color:var(--text-main);padding:.25rem .4rem;font-size:.7rem;"/></div>
+            <div><label>Project:</label> <input id="projectName" style="background:#0f172a;border:1px solid var(--border);border-radius:.4rem;color:var(--text-main);padding:.25rem .4rem;font-size:.7rem;min-width:12rem;" placeholder="Project name / location"/></div>
+        </div>
+    </div>
+</header>
+
+<div class="card">
+    <div class="section-header">
+        <div>MOBILIZATION / DEMOBILIZATION <small>(Freight, fencing, etc.)</small></div>
+        <div class="note"></div>
+    </div>
+    <table>
+        <thead>
+        <tr>
+            <th class="left">Include</th>
+            <th class="left">Description</th>
+            <th>Qty</th>
+            <th>Unit</th>
+            <th>Mat&nbsp;Rate&nbsp;$</th>
+            <th>Mat&nbsp;Total&nbsp;$</th>
+            <th>Lab&nbsp;Rate&nbsp;$</th>
+            <th>Lab&nbsp;Total&nbsp;$</th>
+            <th>Total&nbsp;Unit&nbsp;Rate&nbsp;$</th>
+            <th>Total&nbsp;$</th>
+        </tr>
+        </thead>
+        <tbody id="tbody-mob">
+            <!-- rows injected by JS -->
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <div class="section-header">
+        <div>PERSONNEL <small>(Mgmt, PM, superintendent, daily load/unload)</small></div>
+    </div>
+    <table>
+        <thead>
+        <tr>
+            <th class="left">Include</th>
+            <th class="left">Description</th>
+            <th>Qty</th>
+            <th>Unit</th>
+            <th>Mat&nbsp;Rate&nbsp;$</th>
+            <th>Mat&nbsp;Total&nbsp;$</th>
+            <th>Lab&nbsp;Rate&nbsp;$</th>
+            <th>Lab&nbsp;Total&nbsp;$</th>
+            <th>Total&nbsp;Unit&nbsp;Rate&nbsp;$</th>
+            <th>Total&nbsp;$</th>
+        </tr>
+        </thead>
+        <tbody id="tbody-pers">
+            <!-- rows injected by JS -->
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <div class="section-header">
+        <div>TEMPORARY FACILITIES <small>(Connex, heat, porta cans, dumpster)</small></div>
+    </div>
+    <table>
+        <thead>
+        <tr>
+            <th class="left">Include</th>
+            <th class="left">Description</th>
+            <th>Qty</th>
+            <th>Unit</th>
+            <th>Mat&nbsp;Rate&nbsp;$</th>
+            <th>Mat&nbsp;Total&nbsp;$</th>
+            <th>Lab&nbsp;Rate&nbsp;$</th>
+            <th>Lab&nbsp;Total&nbsp;$</th>
+            <th>Total&nbsp;Unit&nbsp;Rate&nbsp;$</th>
+            <th>Total&nbsp;$</th>
+        </tr>
+        </thead>
+        <tbody id="tbody-tempfac">
+            <!-- rows injected by JS -->
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <div class="section-header">
+        <div>EQUIPMENT <small>(Pick-ups, hoisting, fuel, tools)</small></div>
+    </div>
+    <table>
+        <thead>
+        <tr>
+            <th class="left">Include</th>
+            <th class="left">Description</th>
+            <th>Qty</th>
+            <th>Unit</th>
+            <th>Mat&nbsp;Rate&nbsp;$</th>
+            <th>Mat&nbsp;Total&nbsp;$</th>
+            <th>Lab&nbsp;Rate&nbsp;$</th>
+            <th>Lab&nbsp;Total&nbsp;$</th>
+            <th>Total&nbsp;Unit&nbsp;Rate&nbsp;$</th>
+            <th>Total&nbsp;$</th>
+        </tr>
+        </thead>
+        <tbody id="tbody-equip">
+            <!-- rows injected by JS -->
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <div class="section-header">
+        <div>MISCELLANEOUS <small>(Cleanup, punch list, permits, etc.)</small></div>
+    </div>
+    <table>
+        <thead>
+        <tr>
+            <th class="left">Include</th>
+            <th class="left">Description</th>
+            <th>Qty</th>
+            <th>Unit</th>
+            <th>Mat&nbsp;Rate&nbsp;$</th>
+            <th>Mat&nbsp;Total&nbsp;$</th>
+            <th>Lab&nbsp;Rate&nbsp;$</th>
+            <th>Lab&nbsp;Total&nbsp;$</th>
+            <th>Total&nbsp;Unit&nbsp;Rate&nbsp;$</th>
+            <th>Total&nbsp;$</th>
+        </tr>
+        </thead>
+        <tbody id="tbody-misc">
+            <!-- rows injected by JS -->
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <div class="section-header">
+        <div>EMPLOYMENT COSTS <small>(Background checks, per diem, airfare)</small></div>
+    </div>
+    <table>
+        <thead>
+        <tr>
+            <th class="left">Include</th>
+            <th class="left">Description</th>
+            <th>Qty</th>
+            <th>Unit</th>
+            <th>Mat&nbsp;Rate&nbsp;$</th>
+            <th>Mat&nbsp;Total&nbsp;$</th>
+            <th>Lab&nbsp;Rate&nbsp;$</th>
+            <th>Lab&nbsp;Total&nbsp;$</th>
+            <th>Total&nbsp;Unit&nbsp;Rate&nbsp;$</th>
+            <th>Total&nbsp;$</th>
+        </tr>
+        </thead>
+        <tbody id="tbody-emp">
+            <!-- rows injected by JS -->
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <div class="section-header">
+        <div>SUMMARY & MARKUPS</div>
+    </div>
+
+    <div class="totals-wrap">
+        <div class="totals-col">
+            <div class="totals-row">
+                <div class="label">Material Subtotal</div>
+                <div class="val" id="matSubtotal">$0</div>
+            </div>
+            <div class="totals-row">
+                <div class="label">Labor Subtotal</div>
+                <div class="val" id="labSubtotal">$0</div>
+            </div>
+            <div class="totals-row dim">
+                <div class="label">Combined Subtotal</div>
+                <div class="val" id="baseSubtotal">$0</div>
+            </div>
+        </div>
+
+        <div class="totals-col">
+            <div class="markup-grid">
+                <div class="markup-row">
+                    <div>
+                        <div class="m-label">Home Office</div>
+                        <div class="m-sub">Covers PM/admin overhead (baseline 3.00%)</div>
+                    </div>
+                    <div class="percent-field">
+                        <input type="number" id="pctHomeOffice" step="0.01" value="3.00" />
+                        <span>%</span>
+                    </div>
+                    <div class="val" id="valHomeOffice">$0</div>
+                </div>
+
+                <div class="markup-row">
+                    <div>
+                        <div class="m-label">Overhead &amp; Profit</div>
+                        <div class="m-sub">GC fee (baseline 10.00%)</div>
+                    </div>
+                    <div class="percent-field">
+                        <input type="number" id="pctOHP" step="0.01" value="10.00" />
+                        <span>%</span>
+                    </div>
+                    <div class="val" id="valOHP">$0</div>
+                </div>
+
+                <div class="markup-row">
+                    <div>
+                        <div class="m-label">Bonds</div>
+                        <div class="m-sub">Performance / payment bond (0.85%)</div>
+                    </div>
+                    <div class="percent-field">
+                        <input type="number" id="pctBonds" step="0.01" value="0.85" />
+                        <span>%</span>
+                    </div>
+                    <div class="val" id="valBonds">$0</div>
+                </div>
+
+                <div class="markup-row">
+                    <div>
+                        <div class="m-label">Insurances</div>
+                        <div class="m-sub">GL / Builders Risk (1.15%)</div>
+                    </div>
+                    <div class="percent-field">
+                        <input type="number" id="pctIns" step="0.01" value="1.15" />
+                        <span>%</span>
+                    </div>
+                    <div class="val" id="valIns">$0</div>
+                </div>
+            </div>
+
+            <div class="grand-total">
+                <div class="left">Total Estimated Cost</div>
+                <div class="right" id="grandTotal">$0</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    Assumptions: All costs in USD. Baselines reflect Anchorage / Southcentral AK style projects –
+    remote work (barge/air freight, imported labor per diem, connex camp, etc.) usually increases
+    freight, temporary facilities, and employment costs. Unused line items can be unchecked.
+</footer>
+
+<script>
+// ----------------------------- DATA SETUP ----------------------------------
+// Each item is an object with:
+// { id, group, desc, qty, unit, matRate, labRate, include, lockedUnitRate? }
+// We auto-calc totals = qty*matRate etc.
+// Some rows in your template had blended/unit-based totals shown instead of pure "qty*rate".
+// For simplicity: we're doing qty * rate math. You can edit qty OR rate to match project reality.
+
+const lineItems = [
+    // MOBILIZATION / DEMOBILIZATION
+    {group:"mob", desc:"Mobilization and demobilization", qty:1, unit:"LOT", matRate:0, labRate:0, include:true},
+    {group:"mob", desc:"Freight", qty:0, unit:"TONS", matRate:0, labRate:0, include:false},
+    {group:"mob", desc:"Return freight", qty:0, unit:"TONS", matRate:0, labRate:0, include:false},
+    {group:"mob", desc:"Miscellaneous air freight", qty:0, unit:"LBS", matRate:1.75, labRate:0.75, include:false},
+    {group:"mob", desc:"Temporary fencing and gates around work area", qty:0, unit:"LF", matRate:9.00, labRate:4.00, include:false},
+
+    // PERSONNEL
+    {group:"pers", desc:"Project manager", qty:0, unit:"MOS", matRate:0, labRate:17000.00, include:false},
+    {group:"pers", desc:"Superintendent", qty:0, unit:"MOS", matRate:250.00, labRate:14400.00, include:false},
+    {group:"pers", desc:"Quality control (By Superintendent)", qty:0, unit:"MOS", matRate:0, labRate:0, include:false},
+    {group:"pers", desc:"Safety officer (By Superintendent)", qty:0, unit:"MOS", matRate:0, labRate:0, include:false},
+    {group:"pers", desc:"Field engineering", qty:0, unit:"HRS", matRate:205.00, labRate:0, include:false},
+    {group:"pers", desc:"Time keeper / clerical staff", qty:0, unit:"MOS", matRate:150.00, labRate:3200.00, include:false},
+    {group:"pers", desc:"Scheduling and estimating", qty:0, unit:"MOS", matRate:150.00, labRate:3200.00, include:false},
+    {group:"pers", desc:"Expediting", qty:0, unit:"MOS", matRate:150.00, labRate:4800.00, include:false},
+    {group:"pers", desc:"Daily loading / unloading", qty:0, unit:"MOS", matRate:100.00, labRate:5440.00, include:false},
+
+    // TEMPORARY FACILITIES
+    {group:"tempfac", desc:"Site offices and equipment", qty:0, unit:"MOS", matRate:950.00, labRate:200.00, include:false},
+    {group:"tempfac", desc:"Temporary utilities and communication", qty:0, unit:"MOS", matRate:1200.00, labRate:50.00, include:false},
+    {group:"tempfac", desc:"Consumables", qty:0, unit:"MOS", matRate:500.00, labRate:0, include:false},
+    {group:"tempfac", desc:"On site storage / connex rental (2)", qty:0, unit:"MOS", matRate:1000.00, labRate:100.00, include:false},
+    {group:"tempfac", desc:"Construction temporary heating and power", qty:0, unit:"MOS", matRate:1200.00, labRate:250.00, include:false},
+    {group:"tempfac", desc:"Fuel for temporary heating", qty:0, unit:"MOS", matRate:0, labRate:100.00, include:false},
+    {group:"tempfac", desc:"Temporary barriers, protection, signage, etc.", qty:0, unit:"MOS", matRate:500.00, labRate:150.00, include:false},
+    {group:"tempfac", desc:"Porta cans and maintenance", qty:0, unit:"MOS", matRate:250.00, labRate:150.00, include:false},
+    {group:"tempfac", desc:"Dumpster", qty:0, unit:"MOS", matRate:500.00, labRate:0, include:false},
+    {group:"tempfac", desc:"Construction debris disposal", qty:1, unit:"LOT", matRate:500.00, labRate:1500.00, include:true},
+
+    // EQUIPMENT
+    {group:"equip", desc:"Construction equipment, pick-ups, hoisting, etc.", qty:0, unit:"MOS", matRate:5000.00, labRate:500.00, include:false},
+    {group:"equip", desc:"Labor for equipment maintenance", qty:0, unit:"HRS", matRate:0, labRate:120.00, include:false},
+    {group:"equip", desc:"Fuel, oil, grease, for equipment", qty:0, unit:"MOS", matRate:0, labRate:0, include:false},
+    {group:"equip", desc:"Small tools, compressors, etc.", qty:0, unit:"MOS", matRate:1000.00, labRate:200.00, include:false},
+    {group:"equip", desc:"First aid / safety supplies", qty:0, unit:"MOS", matRate:100.00, labRate:0, include:false},
+
+    // MISC
+    {group:"misc", desc:"Regular clean up, snow removal, etc.", qty:0, unit:"MOS", matRate:250.00, labRate:2000.00, include:false},
+    {group:"misc", desc:"Final clean up, punch list, etc.", qty:0, unit:"SF", matRate:0.12, labRate:0.22, include:false},
+    {group:"misc", desc:"Misc. materials testing & special inspections", qty:1, unit:"LOT", matRate:0, labRate:0, include:false},
+    {group:"misc", desc:"As-builts, schedules, submittals, etc.", qty:1, unit:"LOT", matRate:300.00, labRate:3000.00, include:true},
+    {group:"misc", desc:"Fire Marshal / AHJ plan review fee", qty:1, unit:"LOT", matRate:0, labRate:0, include:false},
+    {group:"misc", desc:"Building permits (By Owner)", qty:0, unit:"LOT", matRate:0, labRate:0, include:false},
+    {group:"misc", desc:"AK Dept. of Labor contract filing fee", qty:1, unit:"LOT", matRate:5000.00, labRate:0, include:false},
+    {group:"misc", desc:"Apprenticeship policy costs", qty:1, unit:"LOT", matRate:0, labRate:0, include:false},
+
+    // EMPLOYMENT COSTS
+    {group:"emp", desc:"Background checks and drug testing", qty:1, unit:"LOT", matRate:1500.00, labRate:0, include:true},
+    {group:"emp", desc:"Per diem for imported labor", qty:0, unit:"MD", matRate:0, labRate:0, include:false},
+    {group:"emp", desc:"Air fare / road trip costs", qty:0, unit:"RT", matRate:0, labRate:0, include:false},
+];
+
+// ----------------------------- RENDER TABLES --------------------------------
+
+function createRow(item, idx){
+    const tr = document.createElement("tr");
+    tr.className = "line-item";
+    tr.dataset.index = idx;
+
+    tr.innerHTML = `
+        <td class="left">
+            <input type="checkbox" class="inc" ${item.include?"checked":""}/>
+        </td>
+        <td class="left">${item.desc}</td>
+        <td><input type="number" class="qty" min="0" step="0.01" value="${item.qty}"></td>
+        <td class="compact">${item.unit}</td>
+        <td><input type="number" class="matRate" min="0" step="0.01" value="${item.matRate.toFixed(2)}"></td>
+        <td><span class="readonly matTotal money">$0</span></td>
+        <td><input type="number" class="labRate" min="0" step="0.01" value="${item.labRate.toFixed(2)}"></td>
+        <td><span class="readonly labTotal money">$0</span></td>
+        <td><span class="readonly unitRate money">$0</span></td>
+        <td><span class="readonly rowTotal money">$0</span></td>
+    `;
+    return tr;
+}
+
+function renderTables(){
+    const groups = {
+        mob: document.getElementById("tbody-mob"),
+        pers: document.getElementById("tbody-pers"),
+        tempfac: document.getElementById("tbody-tempfac"),
+        equip: document.getElementById("tbody-equip"),
+        misc: document.getElementById("tbody-misc"),
+        emp: document.getElementById("tbody-emp"),
+    };
+    // clear
+    Object.values(groups).forEach(tb => tb.innerHTML="");
+
+    lineItems.forEach((item, idx)=>{
+        const rowEl = createRow(item, idx);
+        groups[item.group].appendChild(rowEl);
+    });
+}
+renderTables();
+
+// ----------------------------- CALC LOGIC -----------------------------------
+
+function currency(v){
+    return "$" + Number(v||0).toLocaleString(undefined, {
+        minimumFractionDigits:2,
+        maximumFractionDigits:2
+    });
+}
+
+function recalc(){
+    let matSubtotal = 0;
+    let labSubtotal = 0;
+
+    // update data from DOM + compute per row
+    document.querySelectorAll("tbody tr.line-item").forEach(tr=>{
+        const idx = Number(tr.dataset.index);
+        const incEl = tr.querySelector(".inc");
+        const qtyEl = tr.querySelector(".qty");
+        const matRateEl = tr.querySelector(".matRate");
+        const labRateEl = tr.querySelector(".labRate");
+
+        const matTotalEl = tr.querySelector(".matTotal");
+        const labTotalEl = tr.querySelector(".labTotal");
+        const unitRateEl = tr.querySelector(".unitRate");
+        const rowTotalEl = tr.querySelector(".rowTotal");
+
+        const include = incEl.checked;
+        const qty = parseFloat(qtyEl.value)||0;
+        const matRate = parseFloat(matRateEl.value)||0;
+        const labRate = parseFloat(labRateEl.value)||0;
+
+        // sync back to data model so edits persist
+        lineItems[idx].include = include;
+        lineItems[idx].qty = qty;
+        lineItems[idx].matRate = matRate;
+        lineItems[idx].labRate = labRate;
+
+        const matTotal = qty * matRate;
+        const labTotal = qty * labRate;
+        const unitRate = matRate + labRate;
+        const rowTotal = matTotal + labTotal;
+
+        matTotalEl.textContent = currency(matTotal);
+        labTotalEl.textContent = currency(labTotal);
+        unitRateEl.textContent = currency(unitRate);
+        rowTotalEl.textContent = currency(rowTotal);
+
+        if(include){
+            matSubtotal += matTotal;
+            labSubtotal += labTotal;
+        }
+    });
+
+    const baseSubtotal = matSubtotal + labSubtotal;
+
+    // Markups
+    const pctHomeOffice = parseFloat(document.getElementById("pctHomeOffice").value)||0;
+    const pctOHP        = parseFloat(document.getElementById("pctOHP").value)||0;
+    const pctBonds      = parseFloat(document.getElementById("pctBonds").value)||0;
+    const pctIns        = parseFloat(document.getElementById("pctIns").value)||0;
+
+    const valHomeOffice = baseSubtotal * (pctHomeOffice/100);
+    const valOHP        = baseSubtotal * (pctOHP/100);
+    const valBonds      = baseSubtotal * (pctBonds/100);
+    const valIns        = baseSubtotal * (pctIns/100);
+
+    const grandTotal = baseSubtotal + valHomeOffice + valOHP + valBonds + valIns;
+
+    // push to DOM
+    document.getElementById("matSubtotal").textContent = currency(matSubtotal);
+    document.getElementById("labSubtotal").textContent = currency(labSubtotal);
+    document.getElementById("baseSubtotal").textContent = currency(baseSubtotal);
+
+    document.getElementById("valHomeOffice").textContent = currency(valHomeOffice);
+    document.getElementById("valOHP").textContent = currency(valOHP);
+    document.getElementById("valBonds").textContent = currency(valBonds);
+    document.getElementById("valIns").textContent = currency(valIns);
+
+    document.getElementById("grandTotal").textContent = currency(grandTotal);
+}
+
+// hook up events
+function attachEvents(){
+    document.body.addEventListener("input", e=>{
+        if(
+            e.target.classList.contains("inc") ||
+            e.target.classList.contains("qty") ||
+            e.target.classList.contains("matRate") ||
+            e.target.classList.contains("labRate") ||
+            e.target.id==="pctHomeOffice" ||
+            e.target.id==="pctOHP" ||
+            e.target.id==="pctBonds" ||
+            e.target.id==="pctIns"
+        ){
+            recalc();
+        }
+    });
+}
+attachEvents();
+
+// initial calc
+recalc();
+</script>
+</body>
+</html>
 

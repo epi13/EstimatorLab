@@ -13,12 +13,9 @@
  * and stubs where deeply specialized logic would extend from.
  */
 
-import { Util, apply, inv, toLocal, blobToImage, dataURLtoBlob, downloadBlob, downloadText, downloadDataURL, makeZipData } from '../../lib/graphics.js';
-import { PdfPageView } from '../../lib/pdf_page_view.js';
-import { createCommandStack } from '../../lib/commands.js';
-import { pickTopObjectAt, objectsIntersectingRect } from '../../lib/selection.js';
-import { createPdfThumb } from '../../lib/pdf_thumbs.js';
-import { calcFitWidthScale, calcFitPageScale } from '../../lib/zoom.js';
+import { Util, apply, inv, toLocal, blobToImage, dataURLtoBlob, downloadBlob, downloadText, downloadDataURL, makeZipData, createCommandStack, pickTopObjectAt, objectsIntersectingRect, calcFitWidthScale, calcFitPageScale } from '../../lib/core/index.js';
+import { PdfPageView, createPdfThumb } from '../../lib/pdf/index.js';
+import { getDocument } from '../../lib/pdf/runtime.js';
 
  // -----------------------------
  // Types via JSDoc for intellisense
@@ -237,7 +234,7 @@ const Commands = createCommandStack({ onChange(){ updateUndoRedo(); autosave(); 
    async openPDF(arrayBuf){
      Store.reset();
      Store.state.pdfData = arrayBuf;
-     const pdf = await pdfjsLib.getDocument({ data: arrayBuf }).promise; Store.set({ pdf });
+     const pdf = await getDocument({ data: arrayBuf }).promise; Store.set({ pdf });
      // Create pages lazily
      const viewport=document.getElementById('viewport'); viewport.innerHTML=''; this.pages=[];
      const thumbs=document.getElementById('thumbs'); thumbs.innerHTML='';

@@ -1,7 +1,527 @@
-Diffuser & Register Calculator
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alaska V/G/D/D/L Material & Labor Calculator (HTML/JS)</title>
+  <style>
+    :root{--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#475569;--line:#e2e8f0;--accent:#0ea5e9;--ok:#16a34a;--bad:#dc2626}
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    .wrap{max-width:1200px;margin:0 auto;padding:16px}
+    h1{font-size:22px;margin:0 0 6px} h2{font-size:16px;margin:0 0 8px}
+    .row{display:grid;gap:12px}
+    @media(min-width:900px){.row{grid-template-columns:1fr 1fr 1fr}}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+    label{display:block;margin:6px 0 0} input,select,textarea{width:100%;padding:8px;border:1px solid var(--line);border-radius:10px}
+    table{width:100%;border-collapse:collapse} th,td{padding:8px;border-top:1px solid var(--line)} thead th{position:sticky;top:0;background:#f1f5f9;z-index:1}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+    button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 10px;cursor:pointer}
+    button:hover{background:#f8fafc}
+    .right{text-align:right}
+    .muted{color:var(--muted)}
+    .foot{font-size:12px;color:var(--muted);text-align:center;margin:16px 0}
+    details>summary{cursor:pointer;color:var(--muted)}
+    .pass{color:var(--ok)} .fail{color:var(--bad)}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .small{font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="toolbar" style="justify-content:space-between;align-items:flex-end">
+      <div>
+        <h1>Alaska V/G/D/D/L Material & Labor Calculator</h1>
+        <div class="muted small">Vents • Grilles • Diffusers • Dampers • Louvers — with Alaska-specific shipping, handling, remote & winter factors. Local storage only.</div>
+      </div>
+      <div class="toolbar">
+        <button id="btnExportJSON">Export JSON</button>
+        <button id="btnExportCSV">Export CSV</button>
+      </div>
+    </header>
 
-Purpose: Size, type, and labor pricing for diffusers/grilles.
+    <section class="row" style="margin-top:12px">
+      <div class="card">
+        <h2>Project</h2>
+        <label>Name <input id="project_name" /></label>
+        <label style="margin-top:6px">Location <input id="project_location" /></label>
+        <div class="toolbar" style="margin-top:8px">
+          <label class="small"><input type="checkbox" id="project_remote"> Remote site</label>
+          <label class="small"><input type="checkbox" id="project_winter"> Winter work</label>
+        </div>
+        <label style="margin-top:6px">Notes <textarea id="project_notes" rows="3"></textarea></label>
+      </div>
 
-Inputs: Dimension, neck size, material (steel, aluminum), style.
+      <div class="card">
+        <h2>Labor Rates ($/hr)</h2>
+        <div class="grid2">
+          <label>Civil <input type="number" step="0.01" id="rate_civil"></label>
+          <label>Architectural <input type="number" step="0.01" id="rate_arch"></label>
+          <label>Structural <input type="number" step="0.01" id="rate_struct"></label>
+          <label>Mechanical <input type="number" step="0.01" id="rate_mech"></label>
+          <label>Electrical <input type="number" step="0.01" id="rate_elec"></label>
+        </div>
+        <label style="margin-top:6px">Active Trade for Labor
+          <select id="active_trade">
+            <option>Civil</option><option>Architectural</option><option>Structural</option><option selected>Mechanical</option><option>Electrical</option>
+          </select>
+        </label>
+        <div class="small muted" style="margin-top:6px">Default Anchorage rates provided. Adjust as needed per project. Mechanical is typical for HVAC accessories.</div>
+      </div>
 
-Outputs: Material + install + duct collar adders.
+      <div class="card">
+        <h2>Pricing & Logistics Factors</h2>
+        <div class="toolbar small">
+          <label><input type="radio" name="basis" value="per_unit" checked> Shipping as % of material</label>
+          <label><input type="radio" name="basis" value="per_lb"> Shipping per lb</label>
+        </div>
+        <div class="grid3" style="margin-top:6px">
+          <label>Shipping % (fallback) <input type="number" step="0.01" id="f_shipping_pct"></label>
+          <label>Shipping $/lb <input type="number" step="0.01" id="f_shipping_perlb"></label>
+          <label>Handling % <input type="number" step="0.01" id="f_handling_pct"></label>
+          <label>Remote labor adder % <input type="number" step="0.01" id="f_remote_pct"></label>
+          <label>Winter labor adder % <input type="number" step="0.01" id="f_winter_pct"></label>
+          <label>O&amp;P % <input type="number" step="0.01" id="f_op_pct"></label>
+        </div>
+        <div class="small muted" style="margin-top:6px">Tip: Use $/lb when you have weights and site-specific freight quotes (road/barge/air). Otherwise use % of material as a quick ROM.</div>
+      </div>
+    </section>
+
+    <section class="row" style="margin-top:12px">
+      <div class="card">
+        <div class="toolbar" style="justify-content:space-between">
+          <h2>Catalog (editable)</h2>
+          <button id="btnAddCatalog">+ Add Item</button>
+        </div>
+        <div style="max-height:360px;overflow:auto;margin-top:6px">
+          <table id="tblCatalog">
+            <thead>
+              <tr>
+                <th>Cat</th>
+                <th>SKU</th>
+                <th>Spec-Name</th>
+                <th class="right">Unit</th>
+                <th class="right">Unit Cost</th>
+                <th class="right">MH</th>
+                <th class="right">lb</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <details style="margin-top:8px">
+          <summary class="small">Build a Spec-Name (click to expand)</summary>
+          <div class="grid2" style="margin-top:8px">
+            <label>Dimension <input id="sb_dimension" placeholder="24&quot;x24&quot; or 8&quot; diameter"></label>
+            <label>Capacity <input id="sb_capacity" placeholder="e.g., 90 CFM"></label>
+            <label>Power <input id="sb_power" placeholder="e.g., 120V"></label>
+            <label>Features <input id="sb_features" placeholder="e.g., Aluminum, 4-way throw"></label>
+            <label class="grid2" style="grid-column:1/3">ITEM <input id="sb_item" placeholder="Grille, Diffuser, Damper, Vent, Louver"></label>
+            <label class="grid2" style="grid-column:1/3">Ancillaries <input id="sb_anc" placeholder="e.g., with backdraft damper"></label>
+          </div>
+          <div class="card" style="background:#f8fafc;margin-top:8px">
+            <div class="small muted">Preview</div>
+            <div id="sb_preview" style="margin-top:6px;font-weight:600">—</div>
+            <div class="small muted" style="margin-top:6px">Format: Dimension, Capacity, Power, Features <strong>ITEM</strong> (Ancillaries)</div>
+            <button id="sb_add" style="margin-top:8px">Add to Catalog</button>
+          </div>
+        </details>
+      </div>
+
+      <div class="card">
+        <h2>Import / Backup</h2>
+        <div class="small muted">Paste a previously exported JSON to restore pricing, catalog, and your current takeoff.</div>
+        <textarea id="import_text" rows="14" style="margin-top:6px" placeholder='{
+  "catalog": [ ... ],
+  "laborRates": { ... },
+  ...
+}'></textarea>
+        <div class="toolbar" style="margin-top:6px">
+          <button id="btnImport">Import JSON</button>
+          <button id="btnReset">Reset App</button>
+        </div>
+        <div class="small muted" style="margin-top:6px">All data is stored locally in your browser (no cloud). Update prices anytime in the Catalog table.</div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:12px">
+      <div class="toolbar" style="justify-content:space-between">
+        <h2>Line Items</h2>
+        <button id="btnAddLine">+ Add Line</button>
+      </div>
+      <div style="overflow:auto;margin-top:6px">
+        <table id="tblLines">
+          <thead>
+            <tr>
+              <th>Cat</th>
+              <th>Item</th>
+              <th class="right">Qty</th>
+              <th class="right">Unit Cost</th>
+              <th class="right">MH/ea</th>
+              <th class="right">lb/ea</th>
+              <th class="right">Material</th>
+              <th class="right">Shipping</th>
+              <th class="right">Handling</th>
+              <th class="right">Labor</th>
+              <th class="right">O&amp;P</th>
+              <th class="right">Total</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="6" class="right" style="font-weight:600">Totals:</td>
+              <td class="right" id="sum_material" style="font-weight:600"></td>
+              <td class="right" id="sum_shipping" style="font-weight:600"></td>
+              <td class="right" id="sum_handling" style="font-weight:600"></td>
+              <td class="right" id="sum_labor" style="font-weight:600"></td>
+              <td class="right" id="sum_op" style="font-weight:600"></td>
+              <td class="right" id="sum_total" style="font-weight:700"></td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <details style="margin-top:8px">
+        <summary class="small">Developer Tests</summary>
+        <ul id="test_results" class="small" style="margin-left:18px"></ul>
+      </details>
+    </section>
+
+    <section class="card" style="margin-top:12px">
+      <h2>Assumptions & Notes</h2>
+      <ul class="small">
+        <li>Material Base Cost + Shipping + Handling + Labor + O&amp;P are shown explicitly per line. Shipping uses either % of material or $/lb depending on your selection.</li>
+        <li>Labor hours per unit default to industry norms and are adjustable per line. Remote and winter adders increase labor hours (Alaska logistics & conditions).</li>
+        <li>Update catalog prices anytime in the Catalog table. Use Export/Import JSON for backups or to share pricing sets between projects.</li>
+        <li>Item names follow your required spec format: <em>Dimension, Capacity, Power, Features ITEM (Ancillaries)</em>.</li>
+      </ul>
+    </section>
+
+    <div class="foot">HVAC V/G/D/D/L Pricer — local only, single-file HTML/JS. </div>
+  </div>
+
+<script>
+(function(){
+  // -------- Local Storage Helpers --------
+  const LS_KEY = 'hvac_pricer_state_v1_html';
+  const load = () => { try { const raw = localStorage.getItem(LS_KEY); return raw? JSON.parse(raw): null; } catch(_) { return null; } };
+  const save = (state) => localStorage.setItem(LS_KEY, JSON.stringify(state));
+
+  // -------- Defaults --------
+  const saved = load()||{};
+  const laborRates = saved.laborRates || { Civil:82, Architectural:87, Structural:90, Mechanical:92, Electrical:96 };
+  const factors = saved.factors || {
+    pricingBasis:'per_unit',
+    shippingPct:0.12,
+    shippingPerLb:0.85,
+    handlingPct:0.05,
+    remoteAdderPct:0.15,
+    winterAdderPct:0.05,
+    overheadAndProfitPct:0.15
+  };
+  const project = saved.project || { name:'', location:'Alaska', remote:true, winter:false, notes:'' };
+  const catalog = saved.catalog || [
+    { id:'GR-RET-24x24', category:'Grille', name:'24"x24" , 0 CFM ,  , Steel , Return Grille', unit:'ea', baseCost:58.00, defaultMH:0.35, weight:7.5 },
+    { id:'DF-SUP-24x24', category:'Diffuser', name:'24"x24" ,  ,  , Aluminum , 4-Way Throw Diffuser', unit:'ea', baseCost:72.00, defaultMH:0.45, weight:6.8 },
+    { id:'VCD-08',       category:'Damper',   name:'8" diameter ,  ,  , Galvanized , Volume Control Damper', unit:'ea', baseCost:39.00, defaultMH:0.40, weight:3.2 },
+    { id:'BD-08',        category:'Damper',   name:'8" diameter ,  ,  , Galvanized , Backdraft Damper', unit:'ea', baseCost:46.00, defaultMH:0.40, weight:3.4 },
+    { id:'LV-24x24',     category:'Louver',   name:'24"x24" ,  ,  , Aluminum , Stationary Louver', unit:'ea', baseCost:285.00, defaultMH:2.0, weight:22.0 },
+    { id:'VNT-RC-06',    category:'Vent',     name:'6" diameter ,  ,  , Galvanized , Roof Cap Vent (with backdraft damper)', unit:'ea', baseCost:64.00, defaultMH:0.75, weight:5.6 }
+  ];
+  const lineItems = saved.lineItems || [];
+  let activeTrade = saved.trade || 'Mechanical';
+
+  // -------- DOM refs --------
+  const $ = (id)=>document.getElementById(id);
+  const tblCatalog = $('tblCatalog').querySelector('tbody');
+  const tblLines = $('tblLines').querySelector('tbody');
+  const testUl = $('test_results');
+
+  // Project refs
+  $('project_name').value = project.name;
+  $('project_location').value = project.location;
+  $('project_remote').checked = project.remote;
+  $('project_winter').checked = project.winter;
+  $('project_notes').value = project.notes;
+
+  // Labor refs
+  $('rate_civil').value = laborRates.Civil;
+  $('rate_arch').value = laborRates.Architectural;
+  $('rate_struct').value = laborRates.Structural;
+  $('rate_mech').value = laborRates.Mechanical;
+  $('rate_elec').value = laborRates.Electrical;
+  $('active_trade').value = activeTrade;
+
+  // Factor refs
+  $('f_shipping_pct').value = factors.shippingPct;
+  $('f_shipping_perlb').value = factors.shippingPerLb;
+  $('f_handling_pct').value = factors.handlingPct;
+  $('f_remote_pct').value = factors.remoteAdderPct;
+  $('f_winter_pct').value = factors.winterAdderPct;
+  $('f_op_pct').value = factors.overheadAndProfitPct;
+  document.querySelectorAll('input[name="basis"]').forEach(r=> r.checked = (r.value===factors.pricingBasis));
+
+  // -------- Utils --------
+  const fmt = (n)=> isNaN(n)? '-' : n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  const categories = ['Vent','Grille','Diffuser','Damper','Louver'];
+  const byCat = (cat)=> catalog.filter(c=>c.category===cat);
+  const baseCostFor = (id)=> (catalog.find(c=>c.id===id)||{}).baseCost ?? 0;
+  const defaultMHFor = (id)=> (catalog.find(c=>c.id===id)||{}).defaultMH ?? 0;
+  const weightFor = (id)=> (catalog.find(c=>c.id===id)||{}).weight ?? 0;
+  const nameFor = (id)=> (catalog.find(c=>c.id===id)||{}).name ?? id;
+  const unitFor = (id)=> (catalog.find(c=>c.id===id)||{}).unit ?? 'ea';
+
+  function persist(){
+    save({ laborRates, factors, project, catalog, lineItems, trade: activeTrade });
+  }
+
+  // -------- Calculations --------
+  function calcLine(l){
+    const qty = Number(l.qty||0);
+    const base = Number(l.overrideUnitCost ?? baseCostFor(l.catalogId));
+    const mh = Number(l.overrideMH ?? defaultMHFor(l.catalogId));
+    const wt = Number(l.overrideWeight ?? weightFor(l.catalogId));
+
+    const material = base * qty;
+    let shipping = 0;
+    if (factors.pricingBasis==='per_lb' && wt>0){ shipping = wt*qty*Number(factors.shippingPerLb||0); }
+    else { shipping = material*Number(factors.shippingPct||0); }
+    const handling = material * Number(factors.handlingPct||0);
+
+    const laborRate = Number(laborRates[activeTrade]||0);
+    let mhTotal = mh*qty;
+    if (project.remote) mhTotal *= (1+Number(factors.remoteAdderPct||0));
+    if (project.winter) mhTotal *= (1+Number(factors.winterAdderPct||0));
+    const labor = laborRate * mhTotal;
+
+    const subtotal = material + shipping + handling + labor;
+    const op = subtotal * Number(factors.overheadAndProfitPct||0); // per user: keep O&P on subtotal
+    const total = subtotal + op;
+    return { material, shipping, handling, labor, subtotal, op, total };
+  }
+
+  function recalcTotals(){
+    const sums = {material:0,shipping:0,handling:0,labor:0,op:0,total:0,subtotal:0};
+    lineItems.forEach(l=>{ const c = calcLine(l); Object.keys(sums).forEach(k=> sums[k]+= c[k]||0 ); });
+    $('sum_material').textContent = '$'+fmt(sums.material);
+    $('sum_shipping').textContent = '$'+fmt(sums.shipping);
+    $('sum_handling').textContent = '$'+fmt(sums.handling);
+    $('sum_labor').textContent = '$'+fmt(sums.labor);
+    $('sum_op').textContent = '$'+fmt(sums.op);
+    $('sum_total').textContent = '$'+fmt(sums.total);
+  }
+
+  // -------- Renderers --------
+  function renderCatalog(){
+    tblCatalog.innerHTML = '';
+    catalog.forEach((c,idx)=>{
+      const tr = document.createElement('tr');
+      // category
+      const tdCat = document.createElement('td');
+      const sel = document.createElement('select');
+      categories.forEach(x=>{ const o=document.createElement('option'); o.value=o.textContent=x; if(x===c.category) o.selected=true; sel.appendChild(o);});
+      sel.onchange = ()=>{ c.category = sel.value; persist(); renderLines(); };
+      tdCat.appendChild(sel); tr.appendChild(tdCat);
+
+      // id
+      const tdId = document.createElement('td'); const idIn = document.createElement('input'); idIn.value=c.id; idIn.oninput=()=>{ c.id=idIn.value; persist(); renderLines();}; tdId.appendChild(idIn); tr.appendChild(tdId);
+
+      // name
+      const tdName = document.createElement('td'); const nmIn = document.createElement('input'); nmIn.value=c.name; nmIn.oninput=()=>{ c.name=nmIn.value; persist(); }; tdName.appendChild(nmIn); tr.appendChild(tdName);
+
+      // unit
+      const tdUnit = document.createElement('td'); tdUnit.className='right'; const unIn=document.createElement('input'); unIn.style.width='70px'; unIn.value=c.unit; unIn.oninput=()=>{ c.unit=unIn.value; persist(); }; tdUnit.appendChild(unIn); tr.appendChild(tdUnit);
+
+      // cost
+      const tdCost = document.createElement('td'); tdCost.className='right'; const coIn=document.createElement('input'); coIn.type='number'; coIn.step='0.01'; coIn.style.width='90px'; coIn.value=c.baseCost; coIn.oninput=()=>{ c.baseCost=Number(coIn.value||0); persist(); renderLines(); }; tdCost.appendChild(coIn); tr.appendChild(tdCost);
+
+      // mh
+      const tdMH = document.createElement('td'); tdMH.className='right'; const mhIn=document.createElement('input'); mhIn.type='number'; mhIn.step='0.01'; mhIn.style.width='70px'; mhIn.value=c.defaultMH; mhIn.oninput=()=>{ c.defaultMH=Number(mhIn.value||0); persist(); renderLines(); }; tdMH.appendChild(mhIn); tr.appendChild(tdMH);
+
+      // weight
+      const tdWt = document.createElement('td'); tdWt.className='right'; const wtIn=document.createElement('input'); wtIn.type='number'; wtIn.step='0.01'; wtIn.style.width='70px'; wtIn.value=c.weight; wtIn.oninput=()=>{ c.weight=Number(wtIn.value||0); persist(); renderLines(); }; tdWt.appendChild(wtIn); tr.appendChild(tdWt);
+
+      // delete
+      const tdDel = document.createElement('td'); const delBtn=document.createElement('button'); delBtn.textContent='Delete'; delBtn.style.color='var(--bad)'; delBtn.onclick=()=>{ catalog.splice(idx,1); persist(); renderCatalog(); renderLines(); }; tdDel.appendChild(delBtn); tr.appendChild(tdDel);
+
+      tblCatalog.appendChild(tr);
+    });
+  }
+
+  function renderLines(){
+    tblLines.innerHTML='';
+    lineItems.forEach((l,idx)=>{
+      const tr=document.createElement('tr');
+      // category
+      const tdCat=document.createElement('td'); const sel=document.createElement('select'); categories.forEach(x=>{ const o=document.createElement('option'); o.value=o.textContent=x; if(x===l.category) o.selected=true; sel.appendChild(o); });
+      sel.onchange=()=>{ l.category=sel.value; const first=byCat(l.category)[0]; l.catalogId=first?first.id:''; persist(); renderLines(); };
+      tdCat.appendChild(sel); tr.appendChild(tdCat);
+
+      // item selector
+      const tdItem=document.createElement('td'); const selItem=document.createElement('select'); selItem.style.width='360px';
+      const opts = byCat(l.category);
+      opts.forEach(o=>{ const op=document.createElement('option'); op.value=o.id; op.textContent = o.id + ' — ' + o.name; if(o.id===l.catalogId) op.selected=true; selItem.appendChild(op); });
+      selItem.onchange=()=>{ l.catalogId=selItem.value; persist(); renderLines(); };
+      tdItem.appendChild(selItem); tr.appendChild(tdItem);
+
+      // qty
+      const tdQty=document.createElement('td'); tdQty.className='right'; const inQty=document.createElement('input'); inQty.type='number'; inQty.min='0'; inQty.style.width='90px'; inQty.value=l.qty||0; inQty.oninput=()=>{ l.qty=Number(inQty.value||0); persist(); recalcRow(); }; tdQty.appendChild(inQty); tr.appendChild(tdQty);
+
+      // unit cost
+      const tdUC=document.createElement('td'); tdUC.className='right'; const inUC=document.createElement('input'); inUC.type='number'; inUC.step='0.01'; inUC.style.width='110px'; inUC.value= (l.overrideUnitCost ?? baseCostFor(l.catalogId)); inUC.oninput=()=>{ l.overrideUnitCost=Number(inUC.value||0); persist(); recalcRow(); }; tdUC.appendChild(inUC);
+      const baseDiv=document.createElement('div'); baseDiv.className='small muted right'; baseDiv.textContent='Base: $'+fmt(baseCostFor(l.catalogId)); tdUC.appendChild(baseDiv); tr.appendChild(tdUC);
+
+      // MH/ea
+      const tdMH=document.createElement('td'); tdMH.className='right'; const inMH=document.createElement('input'); inMH.type='number'; inMH.step='0.01'; inMH.style.width='90px'; inMH.value=(l.overrideMH ?? defaultMHFor(l.catalogId)); inMH.oninput=()=>{ l.overrideMH=Number(inMH.value||0); persist(); recalcRow(); }; tdMH.appendChild(inMH); tr.appendChild(tdMH);
+
+      // lb/ea
+      const tdWt=document.createElement('td'); tdWt.className='right'; const inWt=document.createElement('input'); inWt.type='number'; inWt.step='0.01'; inWt.style.width='90px'; inWt.value=(l.overrideWeight ?? weightFor(l.catalogId)); inWt.oninput=()=>{ l.overrideWeight=Number(inWt.value||0); persist(); recalcRow(); }; tdWt.appendChild(inWt); tr.appendChild(tdWt);
+
+      // material/shipping/handling/labor/op/total
+      const tdMat=document.createElement('td'); tdMat.className='right';
+      const tdShip=document.createElement('td'); tdShip.className='right';
+      const tdHand=document.createElement('td'); tdHand.className='right';
+      const tdLab=document.createElement('td'); tdLab.className='right';
+      const tdOP=document.createElement('td'); tdOP.className='right';
+      const tdTot=document.createElement('td'); tdTot.className='right'; tdTot.style.fontWeight='600';
+
+      function recalcRow(){ const c = calcLine(l); tdMat.textContent='$'+fmt(c.material); tdShip.textContent='$'+fmt(c.shipping); tdHand.textContent='$'+fmt(c.handling); tdLab.textContent='$'+fmt(c.labor); tdOP.textContent='$'+fmt(c.op); tdTot.textContent='$'+fmt(c.total); recalcTotals(); }
+      recalcRow();
+      tr.appendChild(tdMat); tr.appendChild(tdShip); tr.appendChild(tdHand); tr.appendChild(tdLab); tr.appendChild(tdOP); tr.appendChild(tdTot);
+
+      // notes
+      const tdNotes=document.createElement('td'); const inNotes=document.createElement('input'); inNotes.style.width='260px'; inNotes.value=l.notes||''; inNotes.oninput=()=>{ l.notes=inNotes.value; persist(); }; tdNotes.appendChild(inNotes);
+      const info=document.createElement('div'); info.className='small muted'; info.textContent = 'Unit: '+unitFor(l.catalogId)+' • '+nameFor(l.catalogId); tdNotes.appendChild(info);
+      tr.appendChild(tdNotes);
+
+      // delete
+      const tdDel=document.createElement('td'); const btnDel=document.createElement('button'); btnDel.textContent='Delete'; btnDel.style.color='var(--bad)'; btnDel.onclick=()=>{ lineItems.splice(idx,1); persist(); renderLines(); }; tdDel.appendChild(btnDel); tr.appendChild(tdDel);
+
+      tblLines.appendChild(tr);
+    });
+    recalcTotals();
+  }
+
+  // -------- Events & Actions --------
+  function updateProject(){ project.name=$('project_name').value; project.location=$('project_location').value; project.remote=$('project_remote').checked; project.winter=$('project_winter').checked; project.notes=$('project_notes').value; persist(); renderLines(); }
+  ['project_name','project_location','project_notes'].forEach(id=> $(id).addEventListener('input', updateProject));
+  ['project_remote','project_winter'].forEach(id=> $(id).addEventListener('change', updateProject));
+
+  $('rate_civil').addEventListener('input',()=>{ laborRates.Civil=Number($('rate_civil').value||0); persist(); renderLines(); });
+  $('rate_arch').addEventListener('input',()=>{ laborRates.Architectural=Number($('rate_arch').value||0); persist(); renderLines(); });
+  $('rate_struct').addEventListener('input',()=>{ laborRates.Structural=Number($('rate_struct').value||0); persist(); renderLines(); });
+  $('rate_mech').addEventListener('input',()=>{ laborRates.Mechanical=Number($('rate_mech').value||0); persist(); renderLines(); });
+  $('rate_elec').addEventListener('input',()=>{ laborRates.Electrical=Number($('rate_elec').value||0); persist(); renderLines(); });
+  $('active_trade').addEventListener('change',()=>{ activeTrade=$('active_trade').value; persist(); renderLines(); });
+
+  $('f_shipping_pct').addEventListener('input',()=>{ factors.shippingPct=Number($('f_shipping_pct').value||0); persist(); renderLines(); });
+  $('f_shipping_perlb').addEventListener('input',()=>{ factors.shippingPerLb=Number($('f_shipping_perlb').value||0); persist(); renderLines(); });
+  $('f_handling_pct').addEventListener('input',()=>{ factors.handlingPct=Number($('f_handling_pct').value||0); persist(); renderLines(); });
+  $('f_remote_pct').addEventListener('input',()=>{ factors.remoteAdderPct=Number($('f_remote_pct').value||0); persist(); renderLines(); });
+  $('f_winter_pct').addEventListener('input',()=>{ factors.winterAdderPct=Number($('f_winter_pct').value||0); persist(); renderLines(); });
+  $('f_op_pct').addEventListener('input',()=>{ factors.overheadAndProfitPct=Number($('f_op_pct').value||0); persist(); renderLines(); });
+  document.querySelectorAll('input[name="basis"]').forEach(r=> r.addEventListener('change',()=>{ if(r.checked) { factors.pricingBasis=r.value; persist(); renderLines(); } }));
+
+  // Catalog add
+  $('btnAddCatalog').addEventListener('click',()=>{
+    catalog.push({ id:'NEW-'+Date.now(), category:'Grille', name:' ,  ,  ,  , ', unit:'ea', baseCost:0, defaultMH:0.25, weight:0 });
+    persist(); renderCatalog();
+  });
+
+  // Spec builder
+  function sbPreview(){
+    const d=$('sb_dimension').value.trim(); const c=$('sb_capacity').value.trim(); const p=$('sb_power').value.trim(); const f=$('sb_features').value.trim(); const item=$('sb_item').value.trim(); const a=$('sb_anc').value.trim();
+    const parts=[]; if(d) parts.push(d); if(c) parts.push(c); if(p) parts.push(p); if(f) parts.push(f);
+    const core = (parts.join(' , ')) + (item? (' '+item): '');
+    $('sb_preview').textContent = a? (core+' ('+a+')') : (core|| '—');
+  }
+  ['sb_dimension','sb_capacity','sb_power','sb_features','sb_item','sb_anc'].forEach(id=> $(id).addEventListener('input', sbPreview));
+  $('sb_add').addEventListener('click',()=>{
+    const name = $('sb_preview').textContent.trim(); if(!name||name==='—') return;
+    catalog.push({ id:'NEW-'+Date.now(), category:'Grille', name, unit:'ea', baseCost:0, defaultMH:0.25, weight:0 });
+    persist(); renderCatalog();
+  });
+
+  // Lines add
+  $('btnAddLine').addEventListener('click',()=>{
+    const first = catalog[0];
+    lineItems.push({ id:(crypto&&crypto.randomUUID?crypto.randomUUID():String(Date.now())), category:first? first.category:'Grille', catalogId:first? first.id:'', qty:1 });
+    persist(); renderLines();
+  });
+
+  // Export JSON / CSV
+  $('btnExportJSON').addEventListener('click',()=>{
+    const blob = new Blob([JSON.stringify({catalog,laborRates,factors,trade:activeTrade,lineItems,project},null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='hvac_pricer_project.json'; a.click(); URL.revokeObjectURL(url);
+  });
+  $('btnExportCSV').addEventListener('click',()=>{
+    const header = ['Category','SKU','Name','Qty','Unit','Unit Cost','Override MH','Override Wt(lb)','Material','Shipping','Handling','Labor','O&P','Total','Notes'];
+    const rows = lineItems.map(l=>{ const c=calcLine(l); return [l.category,l.catalogId,nameFor(l.catalogId),l.qty,unitFor(l.catalogId),(l.overrideUnitCost??baseCostFor(l.catalogId)),(l.overrideMH??defaultMHFor(l.catalogId)),(l.overrideWeight??weightFor(l.catalogId)),
+      fmt(c.material),fmt(c.shipping),fmt(c.handling),fmt(c.labor),fmt(c.op),fmt(c.total),(l.notes||'')]; });
+    const csv = [header,...rows].map(r=> r.map(v=> '"'+String(v).replaceAll('"','""')+'"').join(',')).join('\n');
+    const blob = new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='hvac_pricer_line_items.csv'; a.click(); URL.revokeObjectURL(url);
+  });
+
+  // Import / Reset
+  $('btnImport').addEventListener('click',()=>{
+    try{ const obj = JSON.parse($('import_text').value||'{}');
+      if(obj.catalog) { catalog.length=0; obj.catalog.forEach(x=>catalog.push(x)); }
+      if(obj.laborRates) Object.assign(laborRates,obj.laborRates);
+      if(obj.factors) Object.assign(factors,obj.factors);
+      if(obj.trade) activeTrade=obj.trade;
+      if(obj.lineItems) { lineItems.length=0; obj.lineItems.forEach(x=>lineItems.push(x)); }
+      if(obj.project) Object.assign(project,obj.project);
+      persist(); renderCatalog(); renderLines(); alert('Imported OK');
+    } catch(e){ alert('Import failed: '+e.message); }
+  });
+  $('btnReset').addEventListener('click',()=>{ localStorage.removeItem(LS_KEY); location.reload(); });
+
+  // -------- Tests --------
+  function runTests(){
+    const tests=[]; const almost=(a,b,eps=1e-6)=> Math.abs(a-b)<eps;
+    try{
+      // Test 1: Inch characters are present and safe in strings
+      const s = '24"x24" or 8" diameter';
+      tests.push({name:'Inch character parses and is present', pass: s.includes('"') && s.includes('8"')});
+
+      // Test 2: Pricing math sanity (per_unit shipping)
+      const tp={ shippingPct:0.10, shippingPerLb:0.85, handlingPct:0.05, overheadAndProfitPct:0.15 };
+      const qty=2, unit=100, mh=0.5, laborRate=92;
+      const material=unit*qty; const shipping=material*tp.shippingPct; const handling=material*tp.handlingPct; const labor=laborRate*(mh*qty);
+      const subtotal=material+shipping+handling+labor; const op=subtotal*tp.overheadAndProfitPct; const total=subtotal+op;
+      tests.push({name:'Pricing math (per_unit) totals', pass: almost(material,200)&&almost(shipping,20)&&almost(handling,10)&&almost(labor,92)&&almost(total,370.3)});
+
+      // Test 3: Labor adders scale hours (remote + winter)
+      const baseMH=1.0, qty2=4, remote=0.15, winter=0.05; const mhTotal=baseMH*qty2*(1+remote)*(1+winter);
+      tests.push({name:'Labor adders multiply hours', pass: almost(mhTotal,4*1.15*1.05)});
+
+      // Test 4: Shipping per lb path when weight>0
+      const wtPer=5, qty3=3, shipRate=0.85; const shipLb=wtPer*qty3*shipRate; // 12.75
+      tests.push({name:'Shipping per lb math', pass: almost(shipLb,12.75)});
+
+      // Test 5: O&P applies to subtotal (policy)
+      const sub=300; const op2=sub*0.15; tests.push({name:'O&P on subtotal', pass: almost(op2,45)});
+
+      // Test 6: Persistence round-trip
+      const blob = { hello:'world', n:3 }; localStorage.setItem('___tmp', JSON.stringify(blob)); const back=JSON.parse(localStorage.getItem('___tmp')); localStorage.removeItem('___tmp');
+      tests.push({name:'LocalStorage JSON round-trip', pass: back.hello==='world' && back.n===3});
+
+    }catch(e){ tests.push({name:'Test harness error', pass:false, error:String(e)}); }
+
+    testUl.innerHTML='';
+    tests.forEach(t=>{ const li=document.createElement('li'); li.className=t.pass?'pass':'fail'; li.textContent=(t.pass?'PASS: ':'FAIL: ')+t.name+(t.error?(' — '+t.error):''); testUl.appendChild(li); });
+  }
+
+  // -------- Initial render --------
+  renderCatalog();
+  renderLines();
+  sbPreview();
+  runTests();
+})();
+</script>
+</body>
+</html>

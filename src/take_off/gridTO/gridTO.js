@@ -1,3 +1,5 @@
+import { createWorker } from '../../lib/ocr/tesseract.js';
+import { htmlEscape } from '../../lib/utils.js';
 const prev = document.getElementById('preview');
 const overlay = document.getElementById('overlay');
 const canvasWrap = document.getElementById('canvasWrap');
@@ -46,7 +48,7 @@ async function getOcrWorker(){
   if(ocrWorker) return ocrWorker;
   if(!ocrWorkerInit){
     ocrWorkerInit = (async()=>{
-      const w = await Tesseract.createWorker('eng');
+      const w = await createWorker('eng');
       await w.setParameters({ tessedit_pageseg_mode: 6, user_defined_dpi: '220' });
       ocrWorker = w; return w;
     })();
@@ -280,4 +282,4 @@ function rotSize(w,h,a){ const r=Math.abs(a)*Math.PI/180, c=Math.cos(r), s=Math.
 function project(mat,axis){ let reduced=new cv.Mat(); const dim=(axis==='x')?1:0; cv.reduce(mat,reduced,dim,cv.REDUCE_SUM,cv.CV_32F); const len=(axis==='x')?mat.rows:mat.cols; const arr=[]; for(let i=0;i<len;i++) arr.push(reduced.floatAt(i,0)); reduced.delete(); return arr; }
 function mergeClose(a,d){ if(!a.length) return []; a.sort((x,y)=>x-y); const out=[a[0]]; for(let i=1;i<a.length;i++){ if(a[i]-out[out.length-1]<=d) out[out.length-1]=Math.round((out[out.length-1]+a[i])/2); else out.push(a[i]); } return out; }
 function htmlEsc(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-function renderTable(aoa){ if(!tbl) return; tbl.innerHTML = (aoa&&aoa.length)? '<tbody>'+aoa.map(r=>'<tr>'+r.map(s=>'<td>'+htmlEsc(s)+'</td>').join('')+'</tr>').join('')+'</tbody>' : ''; }
+function renderTable(aoa){ if(!tbl) return; tbl.innerHTML = (aoa&&aoa.length)? '<tbody>'+aoa.map(r=>'<tr>'+r.map(s=>'<td>'+htmlEscape(s)+'</td>').join('')+'</tr>').join('')+'</tbody>' : ''; }

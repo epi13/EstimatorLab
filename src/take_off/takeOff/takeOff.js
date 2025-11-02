@@ -1,3 +1,6 @@
+import { dist, centroid, polygonArea, polygonPerimeter } from '../../lib/geom.js';
+import { getDocument } from '../../lib/pdf/runtime.js';
+
 // ====== State ======
 const state = {
   pdf: null,
@@ -158,20 +161,6 @@ function areaPxToWorld(px2){
   if(u==='m') return ft2 * 0.09290304; // ft2->m2
   return ft2;
 }
-function dist(a,b){
-  const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy);
-}
-function centroid(points){
-  let x=0,y=0; for(const p of points){x+=p.x;y+=p.y} return {x:x/points.length,y:y/points.length};
-}
-function polygonAreaPx(points){
-  let a=0; for(let i=0,j=points.length-1;i<points.length;j=i++){
-    const p=points[i], q=points[j]; a += (q.x+p.x)*(q.y-p.y);
-  } return Math.abs(a/2);
-}
-function polygonPerimeterPx(points){
-  let s=0; for(let i=0;i<points.length;i++){ s+=dist(points[i], points[(i+1)%points.length]); } return s;
-}
 function refreshSnapPoints(){
   const pts = [];
   for(const m of state.measures){
@@ -204,7 +193,7 @@ function updateScaleLabel(){
 let renderTask = null;
 async function loadPDF(data){
   try{
-    state.pdf = await pdfjsLib.getDocument(data).promise;
+    state.pdf = await getDocument(data).promise;
     state.pageCount = state.pdf.numPages; els.pageCount.textContent = state.pageCount;
     state.pageNum = 1; els.pageNum.textContent = 1;
     setStatus('PDF loaded');
@@ -366,7 +355,7 @@ function drawOverlay(){
       o.stroke(); o.restore();
       if(state.showLabels && d.points.length>=2 && d.temp){
         const pts = d.points.concat([d.temp]);
-        const aPx = polygonAreaPx(pts); const aW = areaPxToWorld(aPx);
+        const aPx = polygonArea(pts); const aW = areaPxToWorld(aPx);
         const c = centroid(pts);
         drawLabel(c.x,c.y, fmtArea(aW));
       }
@@ -507,8 +496,8 @@ els.undo.addEventListener('click', ()=>{
 function finishPolygon(){
   if(state.drawing && state.drawing.type==='area' && state.drawing.points.length>=3){
     const pts = state.drawing.points.slice();
-    const areaPx2 = polygonAreaPx(pts);
-    const perPx = polygonPerimeterPx(pts);
+    const areaPx2 = polygonArea(pts);
+    const perPx = polygonPerimeter(pts);
     state.lastArea = areaPxToWorld(areaPx2); els.session.area.textContent = fmtArea(state.lastArea);
     state.drawing = null;
     addMeasure({type:'area', points:pts, areaPx2, perimeterPx: perPx});

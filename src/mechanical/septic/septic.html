@@ -1,1 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Septic System Estimator — Alaska</title>
+<style>
+    :root {
+        --bg: #0f172a;
+        --panel: #1e253a;
+        --accent: #38bdf8;
+        --text-main: #f8fafc;
+        --text-dim: #94a3b8;
+        --border: #2d354f;
+        --radius-xl: 1.25rem;
+        --radius-lg: .75rem;
+        --shadow-card: 0 30px 80px rgba(0,0,0,.6);
+        --shadow-btn: 0 18px 40px rgba(56,189,248,.35);
+        --font-stack: system-ui, -apple-system, BlinkMacSystemFont, "Inter", Roboto, "Helvetica Neue", sans-serif;
+    }
+    *{
+        box-sizing:border-box;
+    }
+    body{
+        background:radial-gradient(circle at 20% 20%,rgba(56,189,248,.08) 0%,rgba(15,23,42,0) 60%),var(--bg);
+        color:var(--text-main);
+        font-family:var(--font-stack);
+        padding:2rem clamp(1rem,2vw,2rem) 6rem;
+        min-height:100vh;
+        display:flex;
+        flex-direction:column;
+        gap:2rem;
+    }
+    header{
+        display:flex;
+        flex-wrap:wrap;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:1rem;
+    }
+    .title-block h1{
+        margin:0;
+        font-size:clamp(1.1rem,1vw,1.3rem);
+        font-weight:600;
+        color:var(--text-main);
+        display:flex;
+        align-items:center;
+        gap:.5rem;
+    }
+    .badge{
+        background:rgba(56,189,248,.15);
+        border:1px solid var(--accent);
+        color:var(--accent);
+        font-size:.7rem;
+        padding:.25rem .5rem;
+        border-radius:var(--radius-lg);
+        line-height:1.2;
+        font-weight:500;
+        box-shadow:var(--shadow-btn);
+        white-space:nowrap;
+    }
+    .subtitle{
+        color:var(--text-dim);
+        font-size:.8rem;
+        line-height:1.4;
+        max-width:60ch;
+    }
+
+    main{
+        display:grid;
+        grid-template-columns:minmax(320px,400px) 1fr;
+        gap:2rem;
+        width:100%;
+        max-width:1400px;
+        margin-inline:auto;
+    }
+
+    /* Left form panel */
+    .panel{
+        background:linear-gradient(to bottom right,rgba(30,37,58,.8),rgba(15,23,42,.6));
+        border:1px solid var(--border);
+        border-radius:var(--radius-xl);
+        padding:1.25rem 1.25rem 1rem;
+        box-shadow:var(--shadow-card);
+        position:relative;
+        overflow:hidden;
+    }
+    .panel:before{
+        content:"";
+        position:absolute;
+        inset:0;
+        background:radial-gradient(circle at 80% -10%,rgba(56,189,248,.18) 0%,rgba(0,0,0,0) 60%);
+        pointer-events:none;
+    }
+    .panel h2{
+        margin:0 0 .75rem;
+        font-size:.9rem;
+        font-weight:600;
+        color:var(--text-main);
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:.5rem;
+        flex-wrap:wrap;
+    }
+    .tiny-note{
+        color:var(--text-dim);
+        font-size:.7rem;
+        font-weight:400;
+        line-height:1.4;
+        max-width:40ch;
+    }
+
+    form{
+        display:flex;
+        flex-direction:column;
+        gap:1rem;
+        position:relative;
+        z-index:2;
+    }
+
+    .field-group{
+        display:flex;
+        flex-direction:column;
+        background:rgba(15,23,42,.6);
+        border:1px solid var(--border);
+        border-radius:var(--radius-lg);
+        padding:.75rem .75rem .6rem;
+    }
+    .field-row-inline{
+        display:flex;
+        flex-wrap:wrap;
+        gap:.75rem;
+    }
+    .field{
+        flex:1;
+        min-width:0;
+        display:flex;
+        flex-direction:column;
+        gap:.4rem;
+    }
+    label{
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-end;
+        color:var(--text-main);
+        font-size:.7rem;
+        font-weight:500;
+        line-height:1.2;
+    }
+    label span.sub{
+        color:var(--text-dim);
+        font-weight:400;
+        font-size:.65rem;
+        line-height:1.2;
+        margin-left:.5rem;
+    }
+    input[type="number"], select{
+        appearance:none;
+        width:100%;
+        background:#0f172a;
+        border:1px solid var(--border);
+        border-radius:.5rem;
+        padding:.6rem .6rem;
+        color:var(--text-main);
+        font-size:.8rem;
+        line-height:1.2;
+        font-family:inherit;
+        font-weight:500;
+        outline:none;
+    }
+    input[type="number"]:focus,
+    select:focus{
+        border-color:var(--accent);
+        box-shadow:0 0 0 3px rgba(56,189,248,.25);
+    }
+
+    .toggle-row{
+        display:flex;
+        flex-wrap:wrap;
+        align-items:center;
+        justify-content:space-between;
+        gap:.5rem;
+        font-size:.7rem;
+        line-height:1.2;
+        color:var(--text-main);
+    }
+    .toggle-row span{
+        color:var(--text-main);
+        font-weight:500;
+    }
+    .toggle-row small{
+        color:var(--text-dim);
+        display:block;
+        font-weight:400;
+        line-height:1.3;
+    }
+    .toggle-wrap{
+        display:flex;
+        align-items:center;
+        gap:.5rem;
+    }
+    .toggle-wrap input{
+        width:1.1rem;
+        height:1.1rem;
+    }
+
+    button#calcBtn{
+        background:var(--accent);
+        border:0;
+        color:#000;
+        font-size:.8rem;
+        font-weight:600;
+        padding:.8rem 1rem;
+        border-radius:var(--radius-lg);
+        cursor:pointer;
+        line-height:1.2;
+        box-shadow:var(--shadow-btn);
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        gap:.5rem;
+        text-align:center;
+    }
+    button#calcBtn:active{
+        transform:scale(.99);
+    }
+
+    /* Results area */
+    .results-wrapper{
+        position:relative;
+        display:grid;
+        grid-template-rows:auto 1fr;
+        gap:1rem;
+        min-height:400px;
+    }
+    .results-header{
+        display:flex;
+        flex-wrap:wrap;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:1rem;
+    }
+    .results-header h2{
+        margin:0;
+        font-size:.9rem;
+        font-weight:600;
+        color:var(--text-main);
+        display:flex;
+        align-items:center;
+        gap:.5rem;
+    }
+    .results-header .sys-label{
+        background:rgba(56,189,248,.15);
+        border:1px solid var(--accent);
+        color:var(--accent);
+        font-size:.7rem;
+        padding:.25rem .5rem;
+        border-radius:var(--radius-lg);
+        line-height:1.2;
+        font-weight:500;
+        box-shadow:var(--shadow-btn);
+        white-space:nowrap;
+    }
+    .results-header .assumption{
+        color:var(--text-dim);
+        font-size:.7rem;
+        line-height:1.4;
+        max-width:60ch;
+    }
+
+    .cards{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));
+        gap:1rem;
+    }
+    .card{
+        background:linear-gradient(to bottom right,rgba(30,37,58,.7),rgba(13,18,32,.5));
+        border:1px solid var(--border);
+        border-radius:var(--radius-xl);
+        padding:1rem 1rem .9rem;
+        box-shadow:var(--shadow-card);
+        min-height:150px;
+        display:flex;
+        flex-direction:column;
+        justify-content:space-between;
+        position:relative;
+        overflow:hidden;
+    }
+    .card h3{
+        margin:0;
+        font-size:.8rem;
+        font-weight:600;
+        color:var(--text-main);
+        line-height:1.2;
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:.5rem;
+    }
+    .card h3 span.tag{
+        color:var(--accent);
+        background:rgba(56,189,248,.1);
+        border:1px solid rgba(56,189,248,.4);
+        border-radius:.5rem;
+        font-size:.6rem;
+        font-weight:500;
+        line-height:1.2;
+        padding:.2rem .4rem;
+        white-space:nowrap;
+    }
+    .metric{
+        font-size:1.3rem;
+        font-weight:600;
+        color:var(--text-main);
+        line-height:1.2;
+        margin-top:.75rem;
+        display:flex;
+        flex-wrap:wrap;
+        align-items:flex-end;
+        gap:.5rem;
+    }
+    .metric small{
+        font-size:.7rem;
+        font-weight:400;
+        line-height:1.2;
+        color:var(--text-dim);
+    }
+    .subline{
+        font-size:.7rem;
+        line-height:1.4;
+        color:var(--text-dim);
+        margin-top:.5rem;
+    }
+    .total-card{
+        border:1px solid var(--accent);
+        box-shadow:0 40px 140px rgba(56,189,248,.3);
+    }
+    .total-card .metric{
+        font-size:1.5rem;
+        color:var(--accent);
+        text-shadow:0 0 20px rgba(56,189,248,.6);
+    }
+
+    /* table breakdown */
+    .breakdown-block{
+        background:rgba(15,23,42,.4);
+        border:1px solid var(--border);
+        border-radius:var(--radius-lg);
+        box-shadow:var(--shadow-card);
+        padding:1rem;
+        overflow-x:auto;
+    }
+    .breakdown-block h4{
+        margin:0 0 .5rem;
+        font-size:.8rem;
+        font-weight:600;
+        color:var(--text-main);
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        flex-wrap:wrap;
+        gap:.5rem;
+    }
+    .breakdown-block h4 small{
+        font-weight:400;
+        color:var(--text-dim);
+        font-size:.7rem;
+        line-height:1.3;
+        max-width:60ch;
+    }
+    table{
+        border-collapse:collapse;
+        width:100%;
+        min-width:500px;
+        font-size:.7rem;
+        line-height:1.4;
+        color:var(--text-main);
+    }
+    thead{
+        background:rgba(56,189,248,.08);
+    }
+    th,td{
+        text-align:left;
+        padding:.5rem .5rem;
+        border-bottom:1px solid var(--border);
+        vertical-align:top;
+        white-space:nowrap;
+    }
+    th:nth-child(1),
+    td:nth-child(1){
+        white-space:normal;
+        max-width:220px;
+    }
+    tfoot td{
+        font-weight:600;
+        border-top:1px solid var(--accent);
+        border-bottom:0;
+    }
+
+    @media(max-width:900px){
+        body{padding:1.5rem 1rem 5rem;}
+        main{grid-template-columns:1fr;}
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="title-block">
+        <h1>
+            Septic System Estimator
+            <span class="badge">Alaska / Budgetary</span>
+        </h1>
+        <div class="subtitle">
+            Calculates materials, logistics (shipping / remote), and labor for common system types in Alaska:
+            Passive (gravity), Above-Ground / Mound, and Pressurized / Pumped.
+            Labor uses Anchorage Civil rate of $82/hr. Remote % covers barging / mobilization.
+        </div>
+    </div>
+</header>
+
+<main>
+    <!-- LEFT INPUT PANEL -->
+    <section class="panel">
+        <h2>
+            Project Inputs
+            <span class="tiny-note">
+                Assumptions: single-family scale, normal soils unless noted.
+            </span>
+        </h2>
+
+        <form id="estForm">
+
+            <!-- System Type -->
+            <div class="field-group">
+                <div class="field">
+                    <label for="systemType">
+                        System Type
+                        <span class="sub">Select design basis</span>
+                    </label>
+                    <select id="systemType">
+                        <option value="passive">Passive (Gravity / Conventional)</option>
+                        <option value="mound">Above-Ground / Mound</option>
+                        <option value="pressurized">Pressurized / Pumped</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Basic sizing -->
+            <div class="field-group">
+                <div class="field-row-inline">
+                    <div class="field">
+                        <label for="tankSize">
+                            Tank Size (gal)
+                            <span class="sub">Typical 1000–1500 gal</span>
+                        </label>
+                        <input type="number" id="tankSize" min="500" step="50" value="1000" />
+                    </div>
+
+                    <div class="field">
+                        <label for="leachLF">
+                            Leach / Dispersal Length (LF)
+                            <span class="sub">Trench or lateral pipe</span>
+                        </label>
+                        <input type="number" id="leachLF" min="10" step="5" value="120" />
+                    </div>
+                </div>
+
+                <div class="field-row-inline">
+                    <div class="field">
+                        <label for="bedArea">
+                            Mound / Bed Area (SF)
+                            <span class="sub">For above-grade systems</span>
+                        </label>
+                        <input type="number" id="bedArea" min="0" step="10" value="400" />
+                    </div>
+
+                    <div class="field">
+                        <label for="excavationCY">
+                            Excavation / Backfill (CY)
+                            <span class="sub">Tank hole + trench spoil mgmt</span>
+                        </label>
+                        <input type="number" id="excavationCY" min="1" step="1" value="35" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pressurized / Electrical -->
+            <div class="field-group">
+                <div class="field-row-inline">
+                    <div class="field">
+                        <label for="pumpCount">
+                            Pump / Dose Package (EA)
+                            <span class="sub">Pressurized only</span>
+                        </label>
+                        <input type="number" id="pumpCount" min="0" step="1" value="1" />
+                    </div>
+                    <div class="field">
+                        <label for="powerRunLF">
+                            Power Run (LF)
+                            <span class="sub">Pump circuit / heat trace</span>
+                        </label>
+                        <input type="number" id="powerRunLF" min="0" step="5" value="60" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cold weather / Remote -->
+            <div class="field-group">
+                <div class="toggle-row">
+                    <div>
+                        <span>Frozen / Rocky Conditions</span>
+                        <small>Hard dig, winter work, bed insulation needed</small>
+                    </div>
+                    <div class="toggle-wrap">
+                        <input type="checkbox" id="frozenToggle" />
+                        <label for="frozenToggle" style="margin:0;color:var(--text-dim);font-size:.7rem;font-weight:500;">Add 25% labor</label>
+                    </div>
+                </div>
+
+                <div class="toggle-row">
+                    <div>
+                        <span>Remote / Barge / Fly-in Logistics %</span>
+                        <small>Markup applied to materials and shipping</small>
+                    </div>
+                </div>
+                <div class="field-row-inline">
+                    <div class="field">
+                        <label for="remotePct">
+                            Remote Adder (%)
+                            <span class="sub">0 = Anchorage road access</span>
+                        </label>
+                        <input type="number" id="remotePct" min="0" step="5" value="15" />
+                    </div>
+
+                    <div class="field">
+                        <label for="shippingBase">
+                            Base Freight / Handling ($)
+                            <span class="sub">Tank delivery, gravel haul</span>
+                        </label>
+                        <input type="number" id="shippingBase" min="0" step="50" value="1200" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACTION -->
+            <button id="calcBtn" type="button">
+                <span>Calculate Estimate</span>
+                <span aria-hidden="true">⟲</span>
+            </button>
+
+        </form>
+    </section>
+
+    <!-- RIGHT RESULTS PANEL -->
+    <section class="results-wrapper">
+        <div class="results-header">
+            <div>
+                <h2>
+                    Estimate Results
+                    <span class="sys-label" id="resultSystemLabel">Passive</span>
+                </h2>
+                <div class="assumption" id="assumptionText">
+                    Assumes 1000 gal tank, 120 LF of gravity-fed trench, moderate excavation,
+                    normal soils. Labor crew is 2 civil workers @$82/hr each (blended to $82/hr
+                    for simplicity). Remote markup covers barging / mobilization.
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="cards">
+                <div class="card">
+                    <h3>
+                        Materials + Freight
+                        <span class="tag">Delivered</span>
+                    </h3>
+                    <div class="metric" id="matCostDisplay">
+                        $0
+                        <small>includes tank, pipe, sand, insulation</small>
+                    </div>
+                    <div class="subline" id="matSubline">
+                        Shipping base and remote % applied.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>
+                        Labor Hours
+                        <span class="tag">Field</span>
+                    </h3>
+                    <div class="metric" id="laborHrDisplay">
+                        0 hrs
+                        <small>excavation, set tank, piping, bed build</small>
+                    </div>
+                    <div class="subline" id="laborSubline">
+                        Frozen/rocky and winter work increase hours by 25%.
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>
+                        Labor Cost
+                        <span class="tag">$82/hr Civil</span>
+                    </h3>
+                    <div class="metric" id="laborCostDisplay">
+                        $0
+                        <small>Anchorage rate baseline</small>
+                    </div>
+                    <div class="subline">
+                        Crew travel, small tools, trench safety assumed included.
+                    </div>
+                </div>
+
+                <div class="card total-card">
+                    <h3>
+                        Total Budget
+                        <span class="tag">Rough Order</span>
+                    </h3>
+                    <div class="metric" id="totalDisplay">
+                        $0
+                        <small>materials + freight + labor</small>
+                    </div>
+                    <div class="subline" id="totalSubline">
+                        Does not include design/engineering, testing, permitting, or septic report.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed breakdown table -->
+            <div class="breakdown-block" style="margin-top:1rem;">
+                <h4>
+                    Cost Breakdown
+                    <small>
+                        Line items follow Alaska budgeting rules: material base + shipping/handling + labor.
+                        Remote markup and winter digging are explicitly shown.
+                    </small>
+                </h4>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th scope="col">Item / Description</th>
+                            <th scope="col">Qty</th>
+                            <th scope="col">Unit Cost</th>
+                            <th scope="col">Mat $</th>
+                            <th scope="col">Labor Hr</th>
+                            <th scope="col">Labor $</th>
+                        </tr>
+                    </thead>
+                    <tbody id="breakdownBody">
+                        <!-- rows filled by JS -->
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td>Totals</td>
+                            <td id="totQtyCell">—</td>
+                            <td>—</td>
+                            <td id="totMatCell">$0</td>
+                            <td id="totHrCell">0 hrs</td>
+                            <td id="totLabCell">$0</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script>
+/*
+    Septic Estimator Logic (Alaska-focused)
+    ---------------------------------------
+    We model 3 system types:
+    1. Passive (gravity / conventional trench)
+    2. Mound (above ground / raised bed)
+    3. Pressurized (pump dosing / lift station)
+
+    Cost model (budgetary, $2025 Alaska-style assumption):
+    - Septic tank (1000 gal delivered Anchorage): ~$2,800 material base
+    - Perforated 4" pipe & fabric trench lateral: ~$3.50 / LF
+    - Solid 4" SDR-35 / Sch40 to tank, misc fittings: ~$3.00 / LF
+    - Imported sand/gravels / mound media: ~$65 / CY in-place cost basis
+    - Pump package (pump basin, effluent pump, controls): ~$3,200 ea
+    - Insulation (2" rigid EPS R-10 over bed / lines): ~$1.80 / SF coverage
+    - Excavation & backfill trucking / spoils mgmt: ~$25 / CY material allowance
+    - Base freight & handling: user-provided (barging / barge crane / lowboy / etc)
+      remotePct markup applies to (tank + major materials + freight)
+    - Labor rate: $82/hr (Civil). We apply that to total hours.
+
+    Labor productivity assumptions (crew cost already rolled into $82/hr):
+    - Excavation & tank set: 4.0 hr per tank + 0.1 hr / CY excavation
+    - Trench pipe install: 0.05 hr / LF (20 LF/hr)
+    - Mound build / bed formation: 0.12 hr / SF bed
+    - Pump package install (pump, controls, power hook-up trenching): 6 hr each
+    - Electrical/heat trace trench for pressurized run: 0.03 hr / LF
+    Frozen/Rock toggle: +25% labor hours overall.
+
+    Output:
+    - Material + Freight (with remote markup)
+    - Labor hours
+    - Labor cost ($82/hr)
+    - Total
+
+    We also write a breakdown table.
+*/
+
+const LABOR_RATE_CIVIL = 82; // $/hr default Anchorage Civil
+
+function formatMoney(val){
+    return "$" + Number(val).toLocaleString("en-US", {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+function formatHr(val){
+    return Number(val).toLocaleString("en-US", {minimumFractionDigits:1, maximumFractionDigits:1}) + " hrs";
+}
+
+// Core calc per system
+function calcEstimate(){
+    // Grab inputs
+    const systemType   = document.getElementById("systemType").value;
+    const tankSize     = parseFloat(document.getElementById("tankSize").value || "0");   // gallons
+    const leachLF      = parseFloat(document.getElementById("leachLF").value || "0");    // LF trench laterals
+    const bedArea      = parseFloat(document.getElementById("bedArea").value || "0");    // SF mound/bed
+    const excavationCY = parseFloat(document.getElementById("excavationCY").value || "0"); // CY dig/backfill
+
+    const pumpCount    = parseFloat(document.getElementById("pumpCount").value || "0");  // EA pump pkg
+    const powerRunLF   = parseFloat(document.getElementById("powerRunLF").value || "0"); // LF power trench
+
+    const frozenToggle = document.getElementById("frozenToggle").checked;
+    const remotePct    = parseFloat(document.getElementById("remotePct").value || "0");  // %
+    const shippingBase = parseFloat(document.getElementById("shippingBase").value || "0");
+
+    // --- MATERIAL COST ASSUMPTIONS ---
+    // tank cost scales a little with size (simple linear bump above 1000 gal)
+    const baseTankCost1000 = 2800; // $
+    const tankCost = baseTankCost1000 * (tankSize/1000); // crude scaling
+
+    // pipe cost: assume half solid, half perf for leachLF.
+    // For simplicity we treat them all same blended = $3.25/LF
+    const pipeUnitCost = 3.25;
+    const pipeCost = pipeUnitCost * leachLF;
+
+    // mound / bed media: convert bedArea SF to CY guess:
+    // assume ~1.25 ft avg thickness mound media -> bedArea * (1.25 ft)/27 cf per CY
+    // 1 CY = 27 ft^3. SF * ft = ft^3.
+    const moundThicknessFt = 1.25;
+    const moundCY = (bedArea * moundThicknessFt)/27;
+    const gravelUnitCost = 65; // $/CY imported select fill / sand / gravel in AK
+    const moundMatCost = moundCY * gravelUnitCost;
+
+    // insulation for cold regions (mound & frozen conditions more common)
+    // assume bedArea + (leachLF * 1ft wide cover) insulated if frozen OR mound.
+    const insulSF = ( (systemType === "mound" ? bedArea : 0) +
+                      (frozenToggle ? leachLF*1.0 : 0) );
+    const insulUnitCost = 1.8; // $/SF rigid EPS
+    const insulCost = insulSF * insulUnitCost;
+
+    // excavation spoils handling / gravel import backfill:
+    const excavationUnitMat = 25; // $/CY hauling / disposal / backfill select
+    const excavationMatCost = excavationCY * excavationUnitMat;
+
+    // pump package (pressurized only, but we allow user to set any qty):
+    const pumpPkgUnitCost = 3200;
+    const pumpPkgCost = pumpCount * pumpPkgUnitCost;
+
+    // electrical / heat trace materials:
+    // Rough material allowance $6/lf for wire, conduit, heat trace if needed
+    const elecUnitCost = 6;
+    const elecMatCost = powerRunLF * elecUnitCost;
+
+    // Raw material subtotal (no shipping yet)
+    let rawMatSubtotal = tankCost + pipeCost + moundMatCost + insulCost + excavationMatCost + pumpPkgCost + elecMatCost;
+
+    // Shipping & handling base:
+    // We'll add it, then apply remote % to (rawMatSubtotal + shippingBase)
+    let shippingAndHandling = shippingBase;
+
+    // Remote markup:
+    const remoteFactor = 1 + (remotePct/100);
+    const matWithRemote = (rawMatSubtotal + shippingAndHandling) * remoteFactor;
+
+    // --- LABOR HOURS ---
+    // Excavation & tank set:
+    // 4 hr per tank + 0.1 hr/CY excavation
+    const tankLaborHr = 4.0;
+    const excavationHr = 0.1 * excavationCY;
+    let laborExcavateTank = tankLaborHr + excavationHr;
+
+    // Trench pipe install:
+    // 0.05 hr / LF leach line
+    const trenchPipeHr = 0.05 * leachLF;
+
+    // Mound / bed build:
+    // 0.12 hr / SF bedArea
+    const moundHr = 0.12 * bedArea;
+
+    // Pump package install + controls:
+    // 6 hr each pump set
+    const pumpHr = 6.0 * pumpCount;
+
+    // Electrical/power trench and heat trace:
+    // 0.03 hr / LF
+    const elecHr = 0.03 * powerRunLF;
+
+    // Sum base labor hrs by system type logic
+    // Passive: assume tank + trench, minimal bed work, no pump
+    // Mound: assume tank + trench + mound build (+ insulation)
+    // Pressurized: assume tank + trench + pump + elec
+    let laborHrs = 0;
+    if(systemType === "passive"){
+        laborHrs = laborExcavateTank + trenchPipeHr;
+    } else if(systemType === "mound"){
+        laborHrs = laborExcavateTank + trenchPipeHr + moundHr;
+    } else if(systemType === "pressurized"){
+        laborHrs = laborExcavateTank + trenchPipeHr + pumpHr + elecHr;
+    }
+
+    // Frozen/rocky adds 25%
+    if(frozenToggle){
+        laborHrs *= 1.25;
+    }
+
+    const laborCost = laborHrs * LABOR_RATE_CIVIL;
+
+    // --- TOTAL ---
+    const totalCost = matWithRemote + laborCost;
+
+    // Update summary cards
+    document.getElementById("matCostDisplay").innerHTML = formatMoney(matWithRemote) +
+        ' <small>remote + freight</small>';
+    document.getElementById("laborHrDisplay").innerHTML = formatHr(laborHrs) +
+        ' <small>total crew time</small>';
+    document.getElementById("laborCostDisplay").innerHTML = formatMoney(laborCost) +
+        ' <small>@ $'+LABOR_RATE_CIVIL+'/hr</small>';
+    document.getElementById("totalDisplay").innerHTML = formatMoney(totalCost) +
+        ' <small>full install (budget)</small>';
+
+    // Assumptions text
+    const assumptionEl = document.getElementById("assumptionText");
+    const sysLabelEl = document.getElementById("resultSystemLabel");
+    if(systemType === "passive"){
+        sysLabelEl.textContent = "Passive / Gravity";
+        assumptionEl.textContent =
+            "Gravity-fed tank and trench laterals set below frost where possible. " +
+            "No pump package. Assumes soils can infiltrate and burial depth is achievable.";
+    } else if(systemType === "mound"){
+        sysLabelEl.textContent = "Above-Ground / Mound";
+        assumptionEl.textContent =
+            "Raised bed / mound system built above grade using imported sand/gravel and insulation. " +
+            "Used when groundwater / permafrost / shallow bedrock prevents deep trench.";
+    } else {
+        sysLabelEl.textContent = "Pressurized / Pumped";
+        assumptionEl.textContent =
+            "Pressurized or lift system using a pump chamber to dose the field. " +
+            "Includes basic electrical/power trench allowance and pump controls.";
+    }
+
+    // Subline hints
+    document.getElementById("matSubline").textContent =
+        "Tank, pipe, sand/gravel, insulation, pump package (if any), excavation materials, plus freight and remote logistics.";
+    document.getElementById("laborSubline").textContent =
+        "Excavation, tank set, trench piping, mound build, pump/electrical work. 25% adder for frozen/rocky.";
+    document.getElementById("totalSubline").textContent =
+        "Does not include septic design stamp, test pits / percolation tests, permits, utility locates, or final inspection fees.";
+
+    // Build breakdown table rows
+    const breakdownBody = document.getElementById("breakdownBody");
+    breakdownBody.innerHTML = "";
+
+    // We'll push line items into an array, then render
+    // We follow naming syntax:
+    // (Dimension)(Capacity)(Power)(Features) ITEM (Ancillaries)
+    // We'll adapt that to septic components where it makes sense.
+    const rows = [];
+
+    // Tank line
+    rows.push({
+        item: `${tankSize} Gal, Gravity, N/A Power, Precast Concrete ITEM Septic Tank (Including Access Risers)`,
+        qty: "1 EA",
+        unitCost: formatMoney(tankCost.toFixed(0)),
+        mat: tankCost,
+        hr: (tankLaborHr).toFixed(2),
+        lab: tankLaborHr * LABOR_RATE_CIVIL
+    });
+
+    // Trench piping
+    if(leachLF>0){
+        rows.push({
+            item: `4" Diameter, ~0.5 GPM/LF Capacity, Gravity, Perforated PVC ITEM Leach/Dispersal Lateral (Including Filter Fabric Wrap)`,
+            qty: leachLF.toFixed(0)+" LF",
+            unitCost: formatMoney(pipeUnitCost.toFixed(2)),
+            mat: pipeCost,
+            hr: (trenchPipeHr).toFixed(2),
+            lab: trenchPipeHr * LABOR_RATE_CIVIL
+        });
+    }
+
+    // Excavation/backfill materials
+    if(excavationCY>0){
+        rows.push({
+            item: `Varied Dimension, N/A Capacity, Diesel Excavator Power, Select Fill/Haul ITEM Excavation and Backfill (Spoils Handling & Bedding)`,
+            qty: excavationCY.toFixed(0)+" CY",
+            unitCost: formatMoney(excavationUnitMat.toFixed(2)),
+            mat: excavationMatCost,
+            hr: excavationHr.toFixed(2),
+            lab: excavationHr * LABOR_RATE_CIVIL
+        });
+    }
+
+    // Mound media
+    if(systemType === "mound" && bedArea>0){
+        rows.push({
+            item: `${bedArea.toFixed(0)} SF, Infiltration Capacity, N/A Power, Imported Sand/Gravel ITEM Raised Mound Bed (Including Placement and Grading)`,
+            qty: moundCY.toFixed(1)+" CY est",
+            unitCost: formatMoney(gravelUnitCost.toFixed(2)),
+            mat: moundMatCost,
+            hr: moundHr.toFixed(2),
+            lab: moundHr * LABOR_RATE_CIVIL
+        });
+    }
+
+    // Insulation
+    if(insulSF>0){
+        rows.push({
+            item: `2" Thickness, R-10 Capacity, N/A Power, EPS Rigid Foam ITEM Insulation (Over Bed / Line Frost Protection)`,
+            qty: insulSF.toFixed(0)+" SF",
+            unitCost: formatMoney(insulUnitCost.toFixed(2)),
+            mat: insulCost,
+            hr: "0.50", // small handling allowance
+            lab: 0.50 * LABOR_RATE_CIVIL
+        });
+    }
+
+    // Pump package
+    if(pumpCount>0){
+        rows.push({
+            item: `24"x48" Basin, 30 GPM Capacity, 120V Pump Power, Submersible Effluent Pump ITEM Pump Package (With Controls and Alarm)`,
+            qty: pumpCount.toFixed(0)+" EA",
+            unitCost: formatMoney(pumpPkgUnitCost.toFixed(0)),
+            mat: pumpPkgCost,
+            hr: (pumpHr).toFixed(2),
+            lab: pumpHr * LABOR_RATE_CIVIL
+        });
+    }
+
+    // Electrical run
+    if(powerRunLF>0){
+        rows.push({
+            item: `${powerRunLF.toFixed(0)} LF, 120V Capacity, Heat Trace Power, Direct Burial Conduit ITEM Pump Power / Heat Trace Run (Including Wire)`,
+            qty: powerRunLF.toFixed(0)+" LF",
+            unitCost: formatMoney(elecUnitCost.toFixed(2)),
+            mat: elecMatCost,
+            hr: (elecHr).toFixed(2),
+            lab: elecHr * LABOR_RATE_CIVIL
+        });
+    }
+
+    // Shipping / freight
+    rows.push({
+        item: `N/A Dimension, N/A Capacity, N/A Power, Freight/Handling ITEM Logistics and Delivery (Tank, Aggregate, Materials)`,
+        qty: "1 LOT",
+        unitCost: formatMoney(shippingBase.toFixed(0)),
+        mat: shippingBase,
+        hr: "0.00",
+        lab: 0
+    });
+
+    // Remote markup as its own line (applied %)
+    const remoteAdderValue = (matWithRemote - (rawMatSubtotal + shippingAndHandling));
+    if(remoteAdderValue > 1){
+        rows.push({
+            item: `${remotePct.toFixed(0)}% Capacity, Remote Logistics Adder, N/A Power, Barge / Fly-in ITEM Remote Delivery Uplift (Materials+Freight)`,
+            qty: "1 LOT",
+            unitCost: formatMoney(remoteAdderValue.toFixed(0)),
+            mat: remoteAdderValue,
+            hr: "0.00",
+            lab: 0
+        });
+    }
+
+    // Frozen / rocky markup note
+    if(frozenToggle){
+        const frozenHrIncrease = laborHrs - (
+            (systemType === "passive") ? (laborExcavateTank+trenchPipeHr)
+            : (systemType === "mound") ? (laborExcavateTank+trenchPipeHr+moundHr)
+            : (laborExcavateTank+trenchPipeHr+pumpHr+elecHr)
+        );
+        if(frozenHrIncrease > 0){
+            rows.push({
+                item: `25% Capacity, Winter / Frozen / Rocky Dig Adder, N/A Power, Heated Trench / Extra Shoring ITEM Cold-Region Labor Uplift`,
+                qty: "1 LOT",
+                unitCost: formatMoney((frozenHrIncrease*LABOR_RATE_CIVIL).toFixed(0)),
+                mat: 0,
+                hr: frozenHrIncrease.toFixed(2),
+                lab: frozenHrIncrease * LABOR_RATE_CIVIL
+            });
+        }
+    }
+
+    // Render table
+    let totMat = 0;
+    let totHr = 0;
+    let totLab = 0;
+    rows.forEach(r => {
+        totMat += r.mat;
+        totHr  += parseFloat(r.hr);
+        totLab += r.lab;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${r.item}</td>
+            <td>${r.qty}</td>
+            <td>${r.unitCost}</td>
+            <td>${formatMoney(r.mat.toFixed(0))}</td>
+            <td>${parseFloat(r.hr).toFixed(2)} hrs</td>
+            <td>${formatMoney(r.lab.toFixed(0))}</td>
+        `;
+        breakdownBody.appendChild(tr);
+    });
+
+    // Update table footer totals
+    document.getElementById("totQtyCell").textContent = rows.length+" lines";
+    document.getElementById("totMatCell").textContent = formatMoney(totMat.toFixed(0));
+    document.getElementById("totHrCell").textContent  = formatHr(totHr);
+    document.getElementById("totLabCell").textContent = formatMoney(totLab.toFixed(0));
+}
+
+// Wire button
+document.getElementById("calcBtn").addEventListener("click", calcEstimate);
+
+// Run once on load
+calcEstimate();
+</script>
+</body>
+</html>
 

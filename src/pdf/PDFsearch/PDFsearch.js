@@ -1,6 +1,8 @@
+import { $, $$ } from '../../lib/dom.js';
+import { createFuse } from '../../lib/search/fuse.js';
+import { getDocument } from '../../lib/pdf/runtime.js';
+import { recognize } from '../../lib/ocr/tesseract.js';
 /* ===== Utilities ===== */
-const $ = sel => document.querySelector(sel);
-const $$ = sel => Array.from(document.querySelectorAll(sel));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // Minimal Double Metaphone implementation (lightweight, not fully spec‑complete but good enough for rough phonetics)
@@ -60,7 +62,7 @@ function resetDoc(){
 async function loadPDFFromArrayBuffer(buf){
   resetDoc();
   setStatus('Loading PDF…');
-  const loadingTask = pdfjsLib.getDocument({data: buf});
+  const loadingTask = getDocument({data: buf});
   pdfDoc = await loadingTask.promise;
   kvPages.textContent = pdfDoc.numPages;
   setStatus(`Loaded ${pdfDoc.numPages} pages. Rendering…`);
@@ -119,9 +121,8 @@ async function renderAllPages(){
 
 async function ocrPage(canvas){
   try{
-    const { createWorker } = Tesseract;
-    // Use the high-level recognize directly (CDN build exposes Tesseract.recognize too)
-    const res = await Tesseract.recognize(canvas, 'eng', { logger: m=>{} });
+    // Use the high-level recognize via wrapper
+    const res = await recognize(canvas, 'eng', { logger: m=>{} });
     return res.data.text || '';
   }catch(err){ console.warn('OCR failed', err); return ''; }
 }
@@ -178,7 +179,7 @@ function phoneticSearch(query){
 
 function fuseSearch(query, threshold){
   const dataset = buildFuseDataset();
-  const fuse = new Fuse(dataset, { includeScore:true, includeMatches:true, threshold, keys:['text'], minMatchCharLength:2, ignoreLocation:true });
+  const fuse = createFuse(dataset, { includeScore:true, includeMatches:true, threshold, keys:['text'], minMatchCharLength:2, ignoreLocation:true });
   const res = fuse.search(query);
   const hits=[];
   for(const r of res){

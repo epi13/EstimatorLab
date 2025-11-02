@@ -1,1 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Flooring Demo & Install Estimator</title>
+<style>
+    :root {
+        --bg: #0f172a;
+        --panel: #1e253a;
+        --accent: #38bdf8;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --border: #334155;
+        --radius-lg: 1rem;
+        --radius-sm: .5rem;
+    }
+
+    body {
+        background: radial-gradient(circle at 20% 20%, #1e253a 0%, #0f172a 70%);
+        color: var(--text);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", Roboto, "Helvetica Neue", sans-serif;
+        line-height: 1.4;
+        padding: 2rem;
+        display: grid;
+        gap: 2rem;
+        grid-template-columns: 1fr minmax(320px,400px);
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    header {
+        grid-column: 1 / -1;
+    }
+
+    h1 {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: var(--text);
+        display: flex;
+        align-items: baseline;
+        gap: .5rem;
+    }
+    h1 span {
+        font-size: .8rem;
+        font-weight: 400;
+        color: var(--muted);
+    }
+
+    .layout {
+        display: contents;
+    }
+
+    .card {
+        background-color: rgba(30,37,58,0.7);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 1rem 1.25rem 1.25rem;
+        box-shadow: 0 30px 80px -10px rgba(0,0,0,.8);
+    }
+
+    .card h2 {
+        font-size: .9rem;
+        font-weight: 600;
+        color: var(--text);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin: 0 0 .75rem;
+        flex-wrap: wrap;
+        gap:.5rem;
+    }
+    .card h2 small{
+        color: var(--muted);
+        font-weight:400;
+        font-size:.7rem;
+    }
+
+    .two-col {
+        display: grid;
+        grid-template-columns: repeat(auto-fit,minmax(min(200px,100%),1fr));
+        gap: .75rem 1rem;
+    }
+
+    label {
+        font-size: .7rem;
+        font-weight: 500;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: .4rem;
+        flex-wrap:wrap;
+        gap:.4rem;
+    }
+    label span.hint {
+        font-weight:400;
+        font-size:.65rem;
+        color: var(--accent);
+    }
+
+    input, select, textarea {
+        width: 100%;
+        background-color: rgba(15,23,42,.6);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: var(--radius-sm);
+        font-size: .8rem;
+        padding: .6rem .6rem;
+        outline: none;
+    }
+    input:focus, select:focus, textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgb(56 189 248 / .2);
+    }
+
+    .checkbox-row {
+        display:flex;
+        align-items:center;
+        gap:.5rem;
+        font-size:.7rem;
+        font-weight:500;
+        color:var(--muted);
+        line-height:1.2;
+        user-select:none;
+    }
+    .checkbox-row input[type="checkbox"]{
+        width:auto;
+        accent-color:#38bdf8;
+        cursor:pointer;
+    }
+    .section-sep {
+        height: 1px;
+        border: 0;
+        background-color: var(--border);
+        margin: 1rem 0 .75rem;
+    }
+
+    .row-flex {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .75rem;
+        align-items: flex-end;
+    }
+
+    button.calc-btn {
+        appearance: none;
+        background: radial-gradient(circle at 20% 20%, #38bdf8 0%, #0ea5e9 40%, #075985 100%);
+        border: 0;
+        color: #0f172a;
+        border-radius: var(--radius-sm);
+        font-size: .8rem;
+        font-weight: 600;
+        padding: .7rem 1rem;
+        line-height:1.2;
+        cursor:pointer;
+        box-shadow: 0 20px 40px -8px rgba(56,189,248,.6);
+        min-width: 6rem;
+    }
+    button.calc-btn:active {
+        transform: scale(.98);
+    }
+
+    .results-card {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .results-block {
+        background-color: rgba(15,23,42,.5);
+        border:1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding:.75rem 1rem;
+    }
+
+    .results-block h3 {
+        margin:0 0 .5rem;
+        font-size:.8rem;
+        font-weight:600;
+        color:var(--accent);
+        display:flex;
+        align-items:baseline;
+        justify-content:space-between;
+        flex-wrap:wrap;
+        gap:.5rem;
+    }
+    .results-block h3 span {
+        color:var(--muted);
+        font-weight:400;
+        font-size:.7rem;
+    }
+
+    .kv {
+        display:flex;
+        justify-content:space-between;
+        font-size:.75rem;
+        line-height:1.4;
+        margin-bottom:.3rem;
+        color:var(--text);
+        flex-wrap:wrap;
+        gap:.5rem;
+    }
+    .kv span.key {
+        color:var(--muted);
+        font-weight:400;
+        padding-right:.5rem;
+    }
+    .kv span.val {
+        font-weight:500;
+        color:var(--text);
+    }
+
+    .export-area label {
+        margin-top:1rem;
+    }
+    textarea#exportText {
+        min-height:8rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        resize: vertical;
+    }
+
+    .footer-note {
+        font-size:.65rem;
+        line-height:1.4;
+        color:var(--muted);
+    }
+
+    @media(max-width:900px){
+        body{
+            grid-template-columns:1fr;
+        }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>
+        Flooring Demo & Install Estimator
+        <span>Alaska-adjusted rates, material + shipping, labor + man-hours</span>
+    </h1>
+</header>
+
+<div class="layout">
+
+    <!-- INPUTS -->
+    <section class="card">
+        <h2>
+            Scope Inputs
+            <small>Enter one flooring area/scope at a time</small>
+        </h2>
+
+        <div class="two-col">
+            <div>
+                <label>Flooring Area (SF)
+                    <span class="hint">demo + install area</span>
+                </label>
+                <input type="number" id="areaSF" value="1000" min="0" />
+            </div>
+
+            <div>
+                <label>Flooring Type
+                    <span class="hint">affects prod rates</span>
+                </label>
+                <select id="floorType">
+                    <option value="carpet_vct">Carpet / VCT / Sheet goods</option>
+                    <option value="lvt_lvp">LVT / LVP plank</option>
+                    <option value="tile">Ceramic / Porcelain Tile</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Material Cost ($/SF)
+                    <span class="hint">base cost only</span>
+                </label>
+                <input type="number" id="matCost" value="4.50" step="0.01" min="0" />
+            </div>
+
+            <div>
+                <label>Shipping & Handling (%)
+                    <span class="hint">remote freight, etc</span>
+                </label>
+                <input type="number" id="shipPct" value="18" step="1" min="0" />
+            </div>
+        </div>
+
+        <hr class="section-sep" />
+
+        <!-- ASBESTOS TOGGLE + DISPOSAL -->
+        <div class="two-col">
+            <div>
+                <label>Disposal Cost ($/SF)
+                    <span class="hint">haul-off & dump (non-ACM)</span>
+                </label>
+                <input type="number" id="disposeCost" value="0.20" step="0.01" min="0" />
+            </div>
+
+            <div>
+                <label>Remote / Difficulty Factor
+                    <span class="hint">1.0 = Anchorage</span>
+                </label>
+                <input type="number" id="remoteFactor" value="1.25" step="0.05" min="0.5" />
+            </div>
+
+            <div>
+                <label>Anchorage Labor Rate ($/hr)
+                    <span class="hint">Architectural=$87/hr</span>
+                </label>
+                <input type="number" id="laborRate" value="87" step="1" min="0" />
+            </div>
+
+            <div class="checkbox-row">
+                <input type="checkbox" id="asbestosToggle" />
+                <label for="asbestosToggle" style="margin:0;">
+                    Asbestos Abatement Demo
+                    <span class="hint" style="color:var(--accent);font-weight:400;">reduced prod, higher disposal</span>
+                </label>
+            </div>
+        </div>
+
+        <hr class="section-sep" />
+
+        <!-- FLOOR PREP -->
+        <h2>
+            Floor Prep
+            <small>Optional skim coat / leveler</small>
+        </h2>
+
+        <div class="two-col">
+            <div>
+                <label>Skim Coat Area (SF)
+                    <span class="hint">0 if none</span>
+                </label>
+                <input type="number" id="skimSF" value="0" min="0" />
+            </div>
+
+            <div>
+                <label>Skim Coat Mat $/SF
+                    <span class="hint">bags / featherfinish</span>
+                </label>
+                <input type="number" id="skimMatCost" value="0.35" step="0.01" min="0" />
+            </div>
+
+            <div>
+                <label>Skim Coat Prod (SF/hr)
+                    <span class="hint">install rate</span>
+                </label>
+                <input type="number" id="skimProd" value="300" step="1" min="1" />
+            </div>
+
+            <div>
+                <label>Self-Leveler Area (SF)
+                    <span class="hint">0 if bag-counting instead</span>
+                </label>
+                <input type="number" id="levelSF" value="0" min="0" />
+            </div>
+
+            <div>
+                <label>Self-Leveler Bags (EA)
+                    <span class="hint">0 = calc from SF</span>
+                </label>
+                <input type="number" id="levelBags" value="0" min="0" />
+            </div>
+
+            <div>
+                <label>Self-Leveler Mat $/bag
+                    <span class="hint">editable</span>
+                </label>
+                <input type="number" id="levelBagCost" value="40" step="1" min="0" />
+            </div>
+
+            <div>
+                <label>Self-Leveler Coverage (SF/bag)
+                    <span class="hint">@ target depth</span>
+                </label>
+                <input type="number" id="levelCoverage" value="50" step="1" min="1" />
+            </div>
+
+            <div>
+                <label>Self-Leveler Prod (SF/hr)
+                    <span class="hint">placement & screed</span>
+                </label>
+                <input type="number" id="levelProd" value="200" step="1" min="1" />
+            </div>
+        </div>
+
+        <hr class="section-sep" />
+
+        <!-- META -->
+        <div class="two-col">
+            <div>
+                <label>Estimator Initials
+                    <span class="hint">for export log</span>
+                </label>
+                <input type="text" id="initials" value="AC" />
+            </div>
+
+            <div>
+                <label>Notes / Assumptions
+                    <span class="hint">appears in export</span>
+                </label>
+                <input type="text" id="notes" value="Assumes standard floor prep, no hazardous mastic" />
+            </div>
+        </div>
+
+        <hr class="section-sep" />
+
+        <div class="row-flex">
+            <button class="calc-btn" id="calcBtn">Calculate</button>
+        </div>
+
+    </section>
+
+    <!-- RESULTS -->
+    <aside class="card results-card">
+        <h2>
+            Results
+            <small>All values are for this scope only</small>
+        </h2>
+
+        <div class="results-block">
+            <h3>
+                <span id="demoHeader">1. DEMOLITION</span>
+                <span id="demoSummary">$0</span>
+            </h3>
+            <div class="kv"><span class="key">Demo Hours:</span><span class="val" id="demoHours">-</span></div>
+            <div class="kv"><span class="key">Demo Labor Cost:</span><span class="val" id="demoLaborCost">$0</span></div>
+            <div class="kv"><span class="key">Disposal Cost:</span><span class="val" id="demoDisposeCost">$0</span></div>
+            <div class="kv"><span class="key">Demo Total (Labor + Disposal):</span><span class="val" id="demoTotal">$0</span></div>
+        </div>
+
+        <div class="results-block">
+            <h3>
+                2. FLOOR PREP
+                <span id="prepSummary">$0</span>
+            </h3>
+
+            <div class="kv"><span class="key">Skim Coat Mat:</span><span class="val" id="skimMatTotal">$0</span></div>
+            <div class="kv"><span class="key">Skim Coat Labor:</span><span class="val" id="skimLaborCost">$0</span></div>
+
+            <div class="kv"><span class="key">Self-Leveler Mat:</span><span class="val" id="levelMatTotal">$0</span></div>
+            <div class="kv"><span class="key">Self-Leveler Labor:</span><span class="val" id="levelLaborCost">$0</span></div>
+
+            <div class="kv"><span class="key">Prep Total (Mat + Labor):</span><span class="val" id="prepTotal">$0</span></div>
+        </div>
+
+        <div class="results-block">
+            <h3>
+                3. INSTALLATION
+                <span id="installSummary">$0</span>
+            </h3>
+            <div class="kv"><span class="key">Material Base:</span><span class="val" id="matBase">$0</span></div>
+            <div class="kv"><span class="key">Shipping & Handling:</span><span class="val" id="matShip">$0</span></div>
+            <div class="kv"><span class="key">Material Total:</span><span class="val" id="matTotal">$0</span></div>
+
+            <div class="kv"><span class="key">Install Hours:</span><span class="val" id="instHours">-</span></div>
+            <div class="kv"><span class="key">Install Labor Cost:</span><span class="val" id="instLaborCost">$0</span></div>
+
+            <div class="kv"><span class="key">Install Total (Mat + Labor):</span><span class="val" id="installTotal">$0</span></div>
+        </div>
+
+        <div class="results-block">
+            <h3>
+                4. TOTAL PACKAGE
+                <span id="grandTotal">$0</span>
+            </h3>
+            <div class="kv"><span class="key">Total Labor Hours (All):</span><span class="val" id="totalHours">-</span></div>
+            <div class="kv"><span class="key">Total Cost (Demo + Prep + Install):</span><span class="val" id="totalCost">$0</span></div>
+        </div>
+
+        <div class="results-block export-area">
+            <h3>Line Item Export <span>copy this</span></h3>
+            <label for="exportText">Export Log</label>
+            <textarea id="exportText" readonly></textarea>
+        </div>
+
+        <div class="footer-note">
+            Assumptions: labor uses Anchorage architectural rate ($/hr) with remote factor.
+            Material total includes % shipping/handling for Alaska freight & logistics.
+            Asbestos toggle applies abatement demo productivity and hazardous disposal.
+        </div>
+    </aside>
+
+</div>
+
+<script>
+(function(){
+    // BASE productivity (SF/hr) under normal (non-asbestos) demo conditions
+    const demoProdNormal = {
+        carpet_vct: 150,   // tear out carpet/VCT, scrape, haul
+        lvt_lvp:    120,   // glue-down plank can be stubborn
+        tile:        40    // tile+thinset demo is slow
+    };
+
+    // ASBESTOS ABATEMENT productivity (SF/hr) = much slower
+    const demoProdAbatement = {
+        carpet_vct: 60,
+        lvt_lvp:    50,
+        tile:       25
+    };
+
+    // INSTALL productivity (SF/hr)
+    const installProd = {
+        carpet_vct: 200,   // roll goods / glue down
+        lvt_lvp:    120,   // plank layout, cutting
+        tile:        40    // layout, mortar, grout
+    };
+
+    // Helper to format currency
+    function fmtMoney(v){
+        return "$" + v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+
+    function calc(){
+        // CORE INPUTS
+        const areaSF       = parseFloat(document.getElementById("areaSF").value)       || 0;
+        const floorType    = document.getElementById("floorType").value;
+        const matCostSF    = parseFloat(document.getElementById("matCost").value)      || 0;
+        const shipPct      = parseFloat(document.getElementById("shipPct").value)      || 0;
+        const disposeCostSFin = parseFloat(document.getElementById("disposeCost").value)  || 0;
+        const remoteFactor = parseFloat(document.getElementById("remoteFactor").value) || 1;
+        const laborRate    = parseFloat(document.getElementById("laborRate").value)    || 0;
+        const asbestos     = document.getElementById("asbestosToggle").checked;
+        const initials     = (document.getElementById("initials").value || "").trim();
+        const notes        = (document.getElementById("notes").value || "").trim();
+
+        // FLOOR PREP INPUTS
+        const skimSF       = parseFloat(document.getElementById("skimSF").value)       || 0;
+        const skimMatCost  = parseFloat(document.getElementById("skimMatCost").value)  || 0;
+        const skimProd     = parseFloat(document.getElementById("skimProd").value)     || 1;
+
+        const levelSF      = parseFloat(document.getElementById("levelSF").value)      || 0;
+        const levelBagsIn  = parseFloat(document.getElementById("levelBags").value)    || 0;
+        const levelBagCost = parseFloat(document.getElementById("levelBagCost").value) || 0;
+        const levelCoverage= parseFloat(document.getElementById("levelCoverage").value)|| 1;
+        const levelProd    = parseFloat(document.getElementById("levelProd").value)    || 1;
+
+        // --- ASBESTOS EFFECTS ---
+        // If asbestos is true:
+        //  - demo productivity is slower (use demoProdAbatement)
+        //  - disposal $/SF jumps significantly
+        // We'll assume asbestos disposal cost if toggle is on
+        const disposeCostSF = asbestos ? Math.max(disposeCostSFin, 1.25) : disposeCostSFin;
+
+        const demoRateMap = asbestos ? demoProdAbatement : demoProdNormal;
+
+        // --- DEMO CALC ---
+        const demoHoursBase  = areaSF / (demoRateMap[floorType] || 1);
+        const demoHoursFinal = demoHoursBase * remoteFactor;
+        const demoLaborCost  = demoHoursFinal * laborRate;
+
+        const demoDispose    = areaSF * disposeCostSF;
+        const demoTotal      = demoLaborCost + demoDispose;
+
+        // --- FLOOR PREP: SKIM COAT ---
+        // material = skimSF * skimMatCost ($/SF)
+        // labor hours = skimSF / skimProd
+        // apply remoteFactor
+        const skimMatTotal   = skimSF * skimMatCost;
+        const skimHoursBase  = skimSF / (skimProd || 1);
+        const skimHoursFinal = skimHoursBase * remoteFactor;
+        const skimLaborCost  = skimHoursFinal * laborRate;
+
+        // --- FLOOR PREP: SELF LEVELER ---
+        // bagsEither = user-specified OR (calc from SF/coverage)
+        const calcBags = levelSF > 0 ? (levelSF / levelCoverage) : 0;
+        const bagsUsed = levelBagsIn > 0 ? levelBagsIn : calcBags;
+
+        // material total for leveler
+        const levelMatTotal  = bagsUsed * levelBagCost;
+
+        // labor hours from SF area for leveler (if zero SF but user gave bags we estimate SF=bags*coverage)
+        const effectiveLevelSF = levelSF > 0 ? levelSF : (bagsUsed * levelCoverage);
+        const levelHoursBase   = effectiveLevelSF / (levelProd || 1);
+        const levelHoursFinal  = levelHoursBase * remoteFactor;
+        const levelLaborCost   = levelHoursFinal * laborRate;
+
+        // PREP TOTAL
+        const prepTotal       = skimMatTotal + skimLaborCost + levelMatTotal + levelLaborCost;
+
+        // --- INSTALL MATERIAL ---
+        const matBaseTotal   = areaSF * matCostSF;
+        const matShipFee     = matBaseTotal * (shipPct/100.0);
+        const matGrand       = matBaseTotal + matShipFee;
+
+        // --- INSTALL LABOR ---
+        const instHoursBase  = areaSF / (installProd[floorType] || 1);
+        const instHoursFinal = instHoursBase * remoteFactor;
+        const instLaborCost  = instHoursFinal * laborRate;
+
+        const installTotal   = matGrand + instLaborCost;
+
+        // --- GRAND TOTAL ---
+        const totalHours     = demoHoursFinal + skimHoursFinal + levelHoursFinal + instHoursFinal;
+        const totalCost      = demoTotal + prepTotal + installTotal;
+
+        // Update UI
+        document.getElementById("demoHeader").textContent =
+            asbestos ? "1. ABATEMENT DEMOLITION" : "1. DEMOLITION";
+
+        document.getElementById("demoHours").textContent         = demoHoursFinal.toFixed(2) + " hrs";
+        document.getElementById("demoLaborCost").textContent     = fmtMoney(demoLaborCost);
+        document.getElementById("demoDisposeCost").textContent   = fmtMoney(demoDispose);
+        document.getElementById("demoTotal").textContent         = fmtMoney(demoTotal);
+        document.getElementById("demoSummary").textContent       = fmtMoney(demoTotal);
+
+        document.getElementById("skimMatTotal").textContent      = fmtMoney(skimMatTotal);
+        document.getElementById("skimLaborCost").textContent     = fmtMoney(skimLaborCost);
+        document.getElementById("levelMatTotal").textContent     = fmtMoney(levelMatTotal);
+        document.getElementById("levelLaborCost").textContent    = fmtMoney(levelLaborCost);
+        document.getElementById("prepTotal").textContent         = fmtMoney(prepTotal);
+        document.getElementById("prepSummary").textContent       = fmtMoney(prepTotal);
+
+        document.getElementById("matBase").textContent           = fmtMoney(matBaseTotal);
+        document.getElementById("matShip").textContent           = fmtMoney(matShipFee);
+        document.getElementById("matTotal").textContent          = fmtMoney(matGrand);
+
+        document.getElementById("instHours").textContent         = instHoursFinal.toFixed(2) + " hrs";
+        document.getElementById("instLaborCost").textContent     = fmtMoney(instLaborCost);
+        document.getElementById("installTotal").textContent      = fmtMoney(installTotal);
+        document.getElementById("installSummary").textContent    = fmtMoney(installTotal);
+
+        document.getElementById("totalHours").textContent        = totalHours.toFixed(2) + " hrs";
+        document.getElementById("totalCost").textContent         = fmtMoney(totalCost);
+        document.getElementById("grandTotal").textContent        = fmtMoney(totalCost);
+
+        // DESCRIPTION STRING BUILDER (line item style, following your syntax where applicable)
+        // We'll name 3 main line items in export:
+        // - (Thickness, Material) FLOORING DEMOLITION (With hauling and disposal)
+        // - (Thickness, Material) FLOOR PREPARATION (Skim coat, Self-leveler)
+        // - (Thickness, Material) FLOORING INSTALLATION (Including shipping)
+        //
+        // Note on asbestos: if asbestos == true, the first line becomes "ASBESTOS ABATEMENT FLOORING DEMOLITION"
+
+        let flooringDesc;
+        if(floorType === "carpet_vct"){
+            flooringDesc = '1/8" Thick, Resilient sheet/carpet, Flooring';
+        } else if(floorType === "lvt_lvp"){
+            flooringDesc = '1/8" Thick, LVT plank, Flooring';
+        } else if(floorType === "tile"){
+            flooringDesc = '3/8" Thick, Porcelain tile, Flooring';
+        } else {
+            flooringDesc = 'Flooring';
+        }
+
+        const demoTitle = asbestos
+            ? (flooringDesc + " DEMOLITION, Asbestos Abatement, Including handling and disposal")
+            : (flooringDesc + " DEMOLITION, Including hauling and disposal");
+
+        const prepTitle = flooringDesc + " FLOOR PREPARATION, Skim coat and self-leveling compound";
+
+        const installTitle = flooringDesc + " INSTALLATION, Including material, shipping, and labor";
+
+        const dateStr = new Date().toISOString().split("T")[0];
+
+        const exportText = [
+            "LINE ITEMS:",
+            "",
+            demoTitle,
+            "  Area: " + areaSF.toFixed(0) + " SF",
+            "  Demo Hours: " + demoHoursFinal.toFixed(2) + " hrs",
+            "  Demo Labor Cost: " + fmtMoney(demoLaborCost),
+            "  Disposal Cost: " + fmtMoney(demoDispose),
+            "  Demo Total: " + fmtMoney(demoTotal),
+            "",
+            prepTitle,
+            "  Skim Coat SF: " + skimSF.toFixed(0) + " SF",
+            "    Skim Mat: " + fmtMoney(skimMatTotal) + " | Skim Labor: " + fmtMoney(skimLaborCost),
+            "  Self-Leveler SF: " + effectiveLevelSF.toFixed(0) + " SF (" + bagsUsed.toFixed(2) + " bags)",
+            "    Leveler Mat: " + fmtMoney(levelMatTotal) + " | Leveler Labor: " + fmtMoney(levelLaborCost),
+            "  Prep Total: " + fmtMoney(prepTotal),
+            "",
+            installTitle,
+            "  Material Base: " + fmtMoney(matBaseTotal),
+            "  Shipping/Handling ("+shipPct.toFixed(1)+"%): " + fmtMoney(matShipFee),
+            "  Material Total: " + fmtMoney(matGrand),
+            "  Install Hours: " + instHoursFinal.toFixed(2) + " hrs",
+            "  Install Labor Cost: " + fmtMoney(instLaborCost),
+            "  Install Total: " + fmtMoney(installTotal),
+            "",
+            "SCOPE TOTAL:",
+            "  Combined Hours (Demo+Prep+Install): " + totalHours.toFixed(2) + " hrs",
+            "  Combined Cost: " + fmtMoney(totalCost),
+            "",
+            "ASSUMPTIONS / NOTES:",
+            notes,
+            "",
+            "META:",
+            "  Remote Factor: " + remoteFactor.toFixed(2),
+            "  Labor Rate Used: $" + laborRate.toFixed(2) + "/hr",
+            "  Disposal Rate Used: $" + disposeCostSF.toFixed(2) + "/SF" + (asbestos ? " (abatement)" : ""),
+            "  Estimator: " + initials,
+            "  Date: " + dateStr
+        ].join("\n");
+
+        document.getElementById("exportText").value = exportText;
+    }
+
+    document.getElementById("calcBtn").addEventListener("click", calc);
+
+    // run once with defaults so you see numbers immediately
+    calc();
+})();
+</script>
+
+</body>
+</html>
 
