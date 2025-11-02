@@ -17,107 +17,21 @@
 <div class="app" aria-label="PDF Redline Editor">
   <div class="wrap--compact">
     <section class="card" id="leftCol">
-      <div class="stack" role="toolbar" aria-label="Main toolbar">
-        <div class="stack" role="group" aria-label="File">
+      <div class="stack" role="toolbar" aria-label="Left sidebar controls">
+        <div class="row">
           <input aria-label="Open PDF" type="file" id="openPDF" accept="application/pdf" />
-          <div class="row">
-            <button id="saveJSON" class="btn-sm" title="Save Project (JSON)">Save</button>
-            <button id="loadJSON" class="btn-sm" title="Load Project (JSON)">Load</button>
-          </div>
-          <div class="row">
-            <button id="exportPNG" class="btn-sm" title="Export PNG/JPEG">Export PNG/JPEG</button>
-            <button id="exportPDF" class="btn-sm" title="Export Flattened PDF">Export PDF</button>
-            <button id="exportAnn" class="btn-sm" title="Export Annotation-only PDF">Export Ann.</button>
-          </div>
         </div>
-        <div class="row" role="group" aria-label="Navigation">
-          <button id="prevPage" class="btn-sm" title="Previous Page (PgUp)">◀</button>
-          <div id="pageInfo" aria-live="polite">– / –</div>
-          <button id="nextPage" class="btn-sm" title="Next Page (PgDn)">▶</button>
-          <span class="sep"></span>
-          <button id="zoomOut" class="btn-sm" title="Zoom Out (Ctrl/Cmd -)">-</button>
-          <span id="zoomPct" class="badge" aria-live="polite">100%</span>
-          <button id="zoomIn" class="btn-sm" title="Zoom In (Ctrl/Cmd +)">+</button>
-          <button id="fitW" class="btn-sm" title="Fit Width">Fit W</button>
-          <button id="fitP" class="btn-sm" title="Fit Page">Fit P</button>
-        </div>
-        <details class="group">
-          <summary>Tools</summary>
-          <div class="row" role="group" aria-label="Tools">
-            <button data-tool="select" class="btn-sm" title="V — Select">🖱️</button>
-            <button data-tool="text" class="btn-sm" title="T — Text">T</button>
-            <button data-tool="highlighter" class="btn-sm" title="H — Highlighter">🖍️</button>
-            <button data-tool="pen" class="btn-sm" title="P — Pen">✒️</button>
-            <button data-tool="line" class="btn-sm" title="L — Line">／</button>
-            <button data-tool="arrow" class="btn-sm" title="A — Arrow">➤</button>
-            <button data-tool="rect" class="btn-sm" title="R — Rectangle">▭</button>
-            <button data-tool="ellipse" class="btn-sm" title="O — Ellipse">◯</button>
-            <button data-tool="callout" class="btn-sm" title="C — Callout">💬</button>
-            <button data-tool="image" class="btn-sm" title="G — Image">🖼️</button>
-            <button data-tool="table" class="btn-sm" title="Table">#️⃣</button>
-            <button data-tool="eraser" class="btn-sm" title="Eraser">🩹</button>
-            <button data-tool="note" class="btn-sm" title="Sticky Note">🗒️</button>
-            <button id="stampBtn" class="btn-sm" title="Stamps">Stamp</button>
+        <aside class="side" aria-label="Sidebar">
+          <div class="tabs" role="tablist">
+            <div class="tab active" role="tab" aria-selected="true" data-tab="thumbs">Thumbnails</div>
+            <div class="tab" role="tab" aria-selected="false" data-tab="layers">Layers</div>
+            <div class="tab" role="tab" aria-selected="false" data-tab="comments">Comments</div>
+            <div class="tab" role="tab" aria-selected="false" data-tab="props">Properties</div>
           </div>
-        </details>
-        <details class="group">
-          <summary>Text & Number</summary>
-          <div class="stack" role="group" aria-label="Text & Number formatting">
-            <label>Font
-              <select id="fontFamily" aria-label="Font family">
-                <option>Inter</option>
-                <option>Arial</option>
-                <option>Times New Roman</option>
-                <option>Courier New</option>
-              </select>
-            </label>
-            <div class="row">
-              <label>Size <input id="fontSize" type="number" value="14" min="6" max="96" style="width:72px"/></label>
-              <button id="bold" class="btn-sm" title="Ctrl/Cmd+B">B</button>
-              <button id="italic" class="btn-sm" title="Ctrl/Cmd+I"><i>I</i></button>
-              <button id="underline" class="btn-sm" title="Ctrl/Cmd+U"><u>U</u></button>
-              <button id="strike" class="btn-sm" title="Strikethrough"><s>S</s></button>
-            </div>
-            <div class="row">
-              <label>Color <input id="textColor" type="color" value="#e11d48"/></label>
-              <label>Fill <input id="textBg" type="color" value="#000000"/></label>
-              <button id="numPalette" class="btn-sm" title="Number redline palette">123⇄</button>
-            </div>
-          </div>
-        </details>
-        <details class="group">
-          <summary>Edit</summary>
-          <div class="row" role="group" aria-label="Edit">
-            <button id="undo" class="btn-sm" title="Undo (Ctrl/Cmd+Z)">↶</button>
-            <button id="redo" class="btn-sm" title="Redo (Ctrl/Cmd+Y)">↷</button>
-            <button id="del" class="btn-sm" title="Delete (Del)">Del</button>
-            <button id="dup" class="btn-sm" title="Alt-drag or Duplicate">⎘</button>
-            <button id="group" class="btn-sm" title="Group">Group</button>
-            <button id="ungroup" class="btn-sm" title="Ungroup">Ungroup</button>
-          </div>
-        </details>
-
-        <div class="hr"></div>
-        <!-- Pages sidebar collapsed -->
-        <details class="group">
-          <summary>Pages</summary>
-          <aside class="side" aria-label="Sidebar">
-            <div class="tabs" role="tablist">
-              <div class="tab active" role="tab" aria-selected="true" data-tab="thumbs">Thumbnails</div>
-              <div class="tab" role="tab" aria-selected="false" data-tab="layers">Layers</div>
-              <div class="tab" role="tab" aria-selected="false" data-tab="comments">Comments</div>
-            </div>
-            <div class="thumbs" id="thumbs" role="tabpanel" aria-label="Page Thumbnails"></div>
-            <div class="layers" id="layers" role="tabpanel" aria-label="Layers" hidden></div>
-            <div class="comments" id="comments" role="tabpanel" aria-label="Comments" hidden></div>
-          </aside>
-        </details>
-
-        <div class="hr"></div>
-        <!-- Properties panel collapsed -->
-        <details class="group">
-          <summary>Properties</summary>
-          <aside class="props" aria-label="Style & Properties Panel">
+          <div class="thumbs" id="thumbs" role="tabpanel" aria-label="Page Thumbnails"></div>
+          <div class="layers" id="layers" role="tabpanel" aria-label="Layers" hidden></div>
+          <div class="comments" id="comments" role="tabpanel" aria-label="Comments" hidden></div>
+          <div class="props" id="props" role="tabpanel" aria-label="Properties" hidden>
             <div class="section">
               <h3>Styles</h3>
               <div class="row">
@@ -170,13 +84,62 @@
                 </select>
               </div>
             </div>
-          </aside>
-        </details>
+          </div>
+        </aside>
       </div>
     </section>
 
     <section class="card" id="rightCol">
       <div class="main" role="main">
+        <div class="topbar topbar--compact" aria-label="Toolbar">
+          <div class="row row-between">
+            <div class="row" role="group" aria-label="File">
+              <button id="saveJSON" class="btn-sm" title="Save Project (JSON)">Save</button>
+              <button id="loadJSON" class="btn-sm" title="Load Project (JSON)">Load</button>
+              <span class="sep"></span>
+              <button id="exportPNG" class="btn-sm" title="Export PNG/JPEG">Export PNG/JPEG</button>
+              <button id="exportPDF" class="btn-sm" title="Export Flattened PDF">Export PDF</button>
+              <button id="exportAnn" class="btn-sm" title="Export Annotation-only PDF">Export Ann.</button>
+            </div>
+            <div class="row" role="group" aria-label="Navigation and Zoom">
+              <button id="prevPage" class="btn-sm" title="Previous Page (PgUp)">◀</button>
+              <div id="pageInfo" aria-live="polite">– / –</div>
+              <button id="nextPage" class="btn-sm" title="Next Page (PgDn)">▶</button>
+              <span class="sep"></span>
+              <button id="zoomOut" class="btn-sm" title="Zoom Out (Ctrl/Cmd -)">-</button>
+              <span id="zoomPct" class="badge" aria-live="polite">100%</span>
+              <button id="zoomIn" class="btn-sm" title="Zoom In (Ctrl/Cmd +)">+</button>
+              <button id="fitW" class="btn-sm" title="Fit Width">Fit W</button>
+              <button id="fitP" class="btn-sm" title="Fit Page">Fit P</button>
+              <span class="badge" id="statusZoom">zoom: 100%</span>
+              <span class="badge" id="statusCoord">x:0 y:0</span>
+            </div>
+          </div>
+          <div class="row" role="group" aria-label="Tools and Edit">
+            <button data-tool="select" class="btn-sm" title="V — Select">🖱️</button>
+            <button data-tool="text" class="btn-sm" title="T — Text">T</button>
+            <button data-tool="highlighter" class="btn-sm" title="H — Highlighter">🖍️</button>
+            <button data-tool="pen" class="btn-sm" title="P — Pen">✒️</button>
+            <button data-tool="line" class="btn-sm" title="L — Line">／</button>
+            <button data-tool="arrow" class="btn-sm" title="A — Arrow">➤</button>
+            <button data-tool="rect" class="btn-sm" title="R — Rectangle">▭</button>
+            <button data-tool="ellipse" class="btn-sm" title="O — Ellipse">◯</button>
+            <button data-tool="callout" class="btn-sm" title="C — Callout">💬</button>
+            <button data-tool="image" class="btn-sm" title="G — Image">🖼️</button>
+            <button data-tool="table" class="btn-sm" title="Table">#️⃣</button>
+            <button data-tool="eraser" class="btn-sm" title="Eraser">🩹</button>
+            <button data-tool="note" class="btn-sm" title="Sticky Note">🗒️</button>
+            <button id="stampBtn" class="btn-sm" title="Stamps">Stamp</button>
+            <span class="badge" id="statusTool">Select</span>
+            <span class="sep"></span>
+            <button id="undo" class="btn-sm" title="Undo (Ctrl/Cmd+Z)">↶</button>
+            <button id="redo" class="btn-sm" title="Redo (Ctrl/Cmd+Y)">↷</button>
+            <button id="del" class="btn-sm" title="Delete (Del)">Del</button>
+            <button id="dup" class="btn-sm" title="Alt-drag or Duplicate">⎘</button>
+            <button id="group" class="btn-sm" title="Group">Group</button>
+            <button id="ungroup" class="btn-sm" title="Ungroup">Ungroup</button>
+          </div>
+        </div>
         <section class="viewport-wrap" aria-label="Document viewport">
           <div class="rulers" aria-hidden="true">
             <div class="ruler-h" id="rulerH"></div>
@@ -192,13 +155,14 @@
 <div id="context" class="context" role="menu" aria-label="Context menu"></div>
 <div id="tooltip" class="tooltip" hidden></div>
 
-<!-- PDF.js & pdf-lib via CDN (no UI frameworks) -->
-<script src="https://unpkg.com/pdfjs-dist@4.7.76/build/pdf.min.js"></script>
+<!-- PDF.js vendored locally to avoid CDN issues -->
+<script src="../../lib/vendor/pdfjs/pdf.min.js"></script>
 <script>
-  // Point the worker to the same CDN version
   if (window['pdfjsLib']) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@4.7.76/build/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '../../lib/vendor/pdfjs/pdf.worker.min.js';
   }
+  window.pdfjsLib = window.pdfjsLib || undefined;
+  // markUp.js expects window.pdfjsLib
 </script>
 <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 

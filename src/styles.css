@@ -705,10 +705,22 @@ body[data-page="structural-pan-concrete"] #leftCol .check-row label {
 
 /* PDF Markup page layout overrides */
 body[data-page="pdf-markup"] .wrap--compact {
-  grid-template-columns: minmax(420px, 560px) minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
 }
 body[data-page="pdf-markup"] #leftCol .stack { gap: 0.6rem; max-height: calc(100vh - 140px); overflow: auto; }
 body[data-page="pdf-markup"] #leftCol .row { gap: 0.4rem; align-items: center; }
 body[data-page="pdf-markup"] #rightCol .main { min-height: calc(100vh - 160px); }
 body[data-page="pdf-markup"] #rightCol .viewport-wrap { min-height: calc(100vh - 220px); }
 body[data-page="pdf-markup"] #rightCol .viewport { min-height: calc(100vh - 240px); background: #fff; border: 1px solid var(--border); border-radius: 12px; }
+body[data-page="pdf-markup"] #leftCol input[type="file"] { width: 100%; }
+body[data-page="pdf-markup"] #leftCol .side { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 0.5rem; }
+body[data-page="pdf-markup"] #leftCol .tabs { display: flex; gap: 0.35rem; align-items: center; }
+body[data-page="pdf-markup"] #leftCol .tab { padding: 0.35rem 0.6rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-muted); color: var(--text); font-weight: 600; font-size: 0.85rem; cursor: pointer; user-select: none; }
+body[data-page="pdf-markup"] #leftCol .tab.active { border-color: var(--accent); color: var(--accent); background: transparent; }
+body[data-page="pdf-markup"] #leftCol #thumbs,
+body[data-page="pdf-markup"] #leftCol #layers,
+body[data-page="pdf-markup"] #leftCol #comments,
+body[data-page="pdf-markup"] #leftCol #props { max-height: calc(100vh - 220px); overflow: auto; }
+body[data-page="pdf-markup"] #leftCol .thumb { border: 1px solid var(--border); border-radius: 8px; background: var(--surface); padding: 4px; cursor: pointer; }
+body[data-page="pdf-markup"] #leftCol .thumb:hover,
+body[data-page="pdf-markup"] #leftCol .thumb:focus { border-color: var(--accent); outline: none; }

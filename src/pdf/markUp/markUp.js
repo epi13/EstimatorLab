@@ -13,6 +13,13 @@
  * and stubs where deeply specialized logic would extend from.
  */
 
+import { Util, apply, inv, toLocal, blobToImage, dataURLtoBlob, downloadBlob, downloadText, downloadDataURL, makeZipData } from '../../lib/graphics.js';
+import { PdfPageView } from '../../lib/pdf_page_view.js';
+import { createCommandStack } from '../../lib/commands.js';
+import { pickTopObjectAt, objectsIntersectingRect } from '../../lib/selection.js';
+import { createPdfThumb } from '../../lib/pdf_thumbs.js';
+import { calcFitWidthScale, calcFitPageScale } from '../../lib/zoom.js';
+
  // -----------------------------
  // Types via JSDoc for intellisense
  // -----------------------------
@@ -22,43 +29,6 @@
  /** @typedef {"select"|"text"|"highlighter"|"pen"|"line"|"arrow"|"rect"|"ellipse"|"callout"|"image"|"table"|"eraser"|"note"} ToolId */
  /** @typedef {"stroke"|"fill"|"opacity"|"dash"|"arrow"|"shadow"} StyleKey */
  /** @typedef {"text"|"rect"|"ellipse"|"line"|"arrow"|"polyline"|"pen"|"highlight"|"image"|"callout"|"table"|"note"|"group"} ObjType */
-
- // -----------------------------
- // Utilities
- // -----------------------------
- const Util = {
-   uid(){ return 'id-' + Math.random().toString(36).slice(2, 9) },
-   clamp(n,min,max){ return Math.max(min, Math.min(max, n)) },
-   snap(n, step=1){ return Math.round(n/step)*step },
-   lerp(a,b,t){ return a + (b-a)*t },
-   // Matrix helpers (a c e; b d f; 0 0 1)
-   mIdent(){ return [1,0,0,1,0,0] },
-   mTranslate(m,tx,ty){ const [a,b,c,d,e,f]=m; return [a,b,c,d,e+tx,f+ty] },
-   mScale(m,sx,sy,ox=0,oy=0){ const [a,b,c,d,e,f]=m; return [a*sx,b*sx,c*sy,d*sy, e-ox*(sx-1), f-oy*(sy-1)] },
-   mRotate(m,rad,ox=0,oy=0){ const [a,b,c,d,e,f]=m; const cos=Math.cos(rad), sin=Math.sin(rad);
-     // translate to origin
-     const tx=e-ox, ty=f-oy;
-     return [a*cos + c*sin, b*cos + d*sin, c*cos - a*sin, d*cos - b*sin, ox + tx*cos - ty*sin, oy + tx*sin + ty*cos]
-   },
-   rectFromPts(a,b){ const x=Math.min(a.x,b.x), y=Math.min(a.y,b.y), w=Math.abs(a.x-b.x), h=Math.abs(a.y-b.y); return {x,y,w,h} },
-   ptInRect(p,r){ return p.x>=r.x && p.x<=r.x+r.w && p.y>=r.y && p.y<=r.y+r.h },
-   rectInter(a,b){ return !(a.x+a.w<b.x || b.x+b.w<a.x || a.y+a.h<b.y || b.y+b.h<a.y) },
-   // Arrowhead path for SVG
-   arrowPath(len=12, w=6){ return `M0,0 L${-len},${w} L${-len},${-w} Z` },
-   // Color utilities
-   parseColor(c){ return c },
-   mulAlpha(css, a){
-     // naive: if hex 8 digits, replace alpha; if 6 digits and a<1 -> convert to rgba
-     if(css.startsWith('#')){
-       const hex=css.replace('#','');
-       if(hex.length===8){ return `#${hex.slice(0,6)}${Math.round(a*255).toString(16).padStart(2,'0')}` }
-       if(a<1){ const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16); return `rgba(${r},${g},${b},${a})` }
-       return css;
-     }
-     if(css.startsWith('rgba')){ return css.replace(/rgba\(([^)]+)\)/, (_,vals)=>{ const [r,g,b,_a]=vals.split(',').map(s=>+s); return `rgba(${r},${g},${b},${a})` }) }
-     return css;
-   },
- };
 
  // -----------------------------
  // State Store
@@ -77,15 +47,7 @@
  // -----------------------------
  // Command Stack (Undo/Redo)
  // -----------------------------
- const Commands = (()=>{
-   const stack=[], redo=[];
-   return {
-     exec(cmd){ cmd.do(); stack.push(cmd); redo.length=0; updateUndoRedo(); autosave() },
-     undo(){ const c=stack.pop(); if(c){ c.undo(); redo.push(c); updateUndoRedo(); autosave() }},
-     redo(){ const c=redo.pop(); if(c){ c.do(); stack.push(c); updateUndoRedo(); autosave() }},
-     clear(){ stack.length=0; redo.length=0; updateUndoRedo() },
-   };
- })();
+const Commands = createCommandStack({ onChange(){ updateUndoRedo(); autosave(); } });
 
  function updateUndoRedo(){
    document.getElementById('undo').disabled=false; document.getElementById('redo').disabled=false;
@@ -101,30 +63,20 @@
  // -----------------------------
  // PDF Page View with Canvas + SVG overlay
  // -----------------------------
- class PageView {
+ class PageView extends PdfPageView {
    /**
     * @param {number} index
     * @param {any} pdfPage
     */
    constructor(index, pdfPage){
+     super(index, pdfPage, document.getElementById('viewport'));
      this.index=index; this.pdfPage=pdfPage; this.scale=1; this.viewportElm=document.getElementById('viewport');
-     this.el=document.createElement('div'); this.el.className='page'; this.el.setAttribute('role','group'); this.el.setAttribute('aria-label',`Page ${index+1}`);
-     this.canvas=document.createElement('canvas'); this.ctx=this.canvas.getContext('2d', { alpha:false });
-     this.overlay=document.createElement('div'); this.overlay.className='overlay';
-     this.svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-     this.overlay.appendChild(this.svg);
-     this.el.appendChild(this.canvas); this.el.appendChild(this.overlay);
+     this.el.setAttribute('aria-label',`Page ${index+1}`);
      this.rendering=false; this.renderTask=null;
    }
    async render(zoom){
-     this.scale=zoom; const vp=this.pdfPage.getViewport({ scale: zoom * (window.devicePixelRatio||1) });
-     this.canvas.width=vp.width; this.canvas.height=vp.height; this.canvas.style.width=vp.width/(window.devicePixelRatio||1)+'px'; this.canvas.style.height=vp.height/(window.devicePixelRatio||1)+'px';
-     this.el.style.width=this.canvas.style.width; this.el.style.height=this.canvas.style.height;
-     const ctx=this.ctx; ctx.save(); ctx.fillStyle='#fff'; ctx.fillRect(0,0,this.canvas.width,this.canvas.height); ctx.restore();
-     const task=this.pdfPage.render({ canvasContext: ctx, viewport: vp });
-     await task.promise.catch(()=>{});
-     this.svg.setAttribute('viewBox',`0 0 ${vp.width} ${vp.height}`); this.svg.setAttribute('width', String(vp.width)); this.svg.setAttribute('height', String(vp.height));
-     this.svg.style.width=this.canvas.style.width; this.svg.style.height=this.canvas.style.height;
+     this.scale=zoom;
+     await super.render(zoom);
      this.refreshAnnotations();
    }
    refreshAnnotations(){
@@ -295,10 +247,8 @@
        const pv = new PageView(i-1, pdfPage); this.pages.push(pv);
        const wrap=document.createElement('div'); wrap.appendChild(pv.el); viewport.appendChild(wrap);
        // thumbnail
-       const t=document.createElement('div'); t.className='thumb'; t.setAttribute('tabindex','0');
-       const tc=document.createElement('canvas'); const tctx=tc.getContext('2d');
-       const tvp=pdfPage.getViewport({ scale: 0.2 }); tc.width=tvp.width; tc.height=tvp.height; const task=pdfPage.render({ canvasContext:tctx, viewport:tvp }); await task.promise; t.appendChild(tc);
-       t.addEventListener('click', ()=>goToPage(i-1)); thumbs.appendChild(t);
+      const t = await createPdfThumb(pdfPage, { scale: 0.2, className: 'thumb', onClick: ()=>goToPage(i-1) });
+      thumbs.appendChild(t);
 
        Store.state.layersByPage[i-1] = [];
      }
@@ -332,29 +282,25 @@
  // Selection & Tools (simplified core interactions)
  // -----------------------------
  /** @param {PageView} pv @param {Pt} p @param {MouseEvent} e */
- function selectionDown(pv,p,e){
-   // naive hit test: pick top-most object whose bbox contains p (ignores rotation)
-   const st=Store.state; const ids=[...st.order].reverse().filter(id=>st.objects[id].page===pv.index && !st.objects[id].hidden);
-   let picked=null;
-   for(const id of ids){ const obj=st.objects[id]; const bb=pv.bboxOf(obj); const local = toLocal(p, obj.transform);
-     if(Util.ptInRect(local, {x:bb.x,y:bb.y,w:bb.w,h:bb.h})){ picked=obj; break }
-   }
-   if(picked){
-     st.selection = new Set([picked.id]); Store.emit(); pv.refreshAnnotations();
-     const start=p; const startTr=[...picked.transform];
-     const move=(ev)=>{ const d = deltaFrom(ev, pv); const m=Util.mTranslate(startTr, d.x, d.y); picked.transform=m; pv.refreshAnnotations() };
-     const up=()=>{ window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); Commands.exec({do(){}, undo(){}}) };
-     window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
-   } else {
-     // marquee
-     const box={x:p.x,y:p.y,w:0,h:0}; const ghost=document.createElement('div'); ghost.style.cssText='position:absolute;border:1px dashed #60a5fa;background:transparent;pointer-events:none;'; pv.overlay.appendChild(ghost);
-     const move=(ev)=>{ const d=deltaFrom(ev,pv); const r=Util.rectFromPts(p,{x:p.x+d.x,y:p.y+d.y}); box.x=r.x; box.y=r.y; box.w=r.w; box.h=r.h; ghost.style.left=(r.x/pv.scale)+'px'; ghost.style.top=(r.y/pv.scale)+'px'; ghost.style.width=(r.w/pv.scale)+'px'; ghost.style.height=(r.h/pv.scale)+'px' };
-     const up=()=>{ window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); ghost.remove();
-       const picked = st.order.filter(id=>st.objects[id].page===pv.index).filter(id=>{ const obj=st.objects[id]; const bb=pv.bboxOf(obj); const tl=apply(obj.transform,{x:bb.x,y:bb.y}), br=apply(obj.transform,{x:bb.x+bb.w,y:bb.y+bb.h}); const r={x:Math.min(tl.x,br.x),y:Math.min(tl.y,br.y),w:Math.abs(tl.x-br.x),h:Math.abs(tl.y-br.y)}; return Util.rectInter(box,r) });
-       st.selection = new Set(picked); Store.emit(); pv.refreshAnnotations(); };
-     window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
-   }
- }
+function selectionDown(pv,p,e){
+  const st=Store.state;
+  const picked = pickTopObjectAt(pv, p, st);
+  if(picked){
+    st.selection = new Set([picked.id]); Store.emit(); pv.refreshAnnotations();
+    const start=p; const startTr=[...picked.transform];
+    const move=(ev)=>{ const d = deltaFrom(ev, pv); const m=Util.mTranslate(startTr, d.x, d.y); picked.transform=m; pv.refreshAnnotations() };
+    const up=()=>{ window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); Commands.exec({do:()=>{}, undo:()=>{}}) };
+    window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+  } else {
+    // marquee
+    const box={x:p.x,y:p.y,w:0,h:0}; const ghost=document.createElement('div'); ghost.style.cssText='position:absolute;border:1px dashed #60a5fa;background:transparent;pointer-events:none;'; pv.overlay.appendChild(ghost);
+    const move=(ev)=>{ const d=deltaFrom(ev,pv); const r=Util.rectFromPts(p,{x:p.x+d.x,y:p.y+d.y}); box.x=r.x; box.y=r.y; box.w=r.w; box.h=r.h; ghost.style.left=(r.x/pv.scale)+'px'; ghost.style.top=(r.y/pv.scale)+'px'; ghost.style.width=(r.w/pv.scale)+'px'; ghost.style.height=(r.h/pv.scale)+'px' };
+    const up=()=>{ window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); ghost.remove();
+      const ids = objectsIntersectingRect(pv, box, st);
+      st.selection = new Set(ids); Store.emit(); pv.refreshAnnotations(); };
+    window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+  }
+}
 
  /** @param {ToolId} tool @param {PageView} pv @param {Pt} p @param {MouseEvent} e */
  function startTool(tool, pv, p, e){
@@ -399,7 +345,7 @@
    const up=()=>{ 
      window.removeEventListener('mousemove', move); 
      window.removeEventListener('mouseup', up); 
-     Commands.exec({do(){}, undo(){}}); 
+     Commands.exec({do:()=>{}, undo:()=>{}}); 
    };
    window.addEventListener('mousemove', move); 
    window.addEventListener('mouseup', up);
@@ -475,34 +421,8 @@
  function restoreAutosave(){ /* Intentionally deferred until a PDF is opened */ }
 
  // -----------------------------
- // Export helpers already referenced earlier
+ // Export helpers are imported from ../../lib/graphics.js
  // -----------------------------
- async function blobToImage(url){ 
-   return new Promise((res,rej)=>{ 
-     const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=url; 
-   }); 
- }
- function dataURLtoBlob(dataurl){ 
-   const [meta, b64] = dataurl.split(',');
-   const mime = /data:(.*?);/.exec(meta)?.[1] || 'application/octet-stream';
-   const bin = atob(b64); const arr=new Uint8Array(bin.length);
-   for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
-   return new Blob([arr], {type:mime});
- }
- function downloadBlob(blob, name){ 
-   const url=URL.createObjectURL(blob); 
-   const a=document.createElement('a'); a.href=url; a.download=name; a.click(); 
-   setTimeout(()=>URL.revokeObjectURL(url), 500);
- }
- function downloadText(text, name){ downloadBlob(new Blob([text], {type:'text/plain'}), name) }
- function downloadDataURL(dataURL, name){ 
-   const a=document.createElement('a'); a.href=dataURL; a.download=name; a.click(); 
- }
- function makeZipData(items){
-   // Minimal fallback: bundle as JSON (page->dataURL). Many viewers will still save as .zip but it's JSON content.
-   const json = JSON.stringify(items, null, 2);
-   return 'data:application/octet-stream;base64,' + btoa(unescape(encodeURIComponent(json)));
- }
 
  // -----------------------------
  // UI Bindings (continued)
@@ -543,14 +463,20 @@
  }
 
  function bindTabs(){
-   const tabs=document.querySelectorAll('.tab');
-   tabs.forEach(t=>t.addEventListener('click', ()=>{
-     tabs.forEach(x=>x.classList.remove('active')); t.classList.add('active');
-     document.getElementById('thumbs').hidden = t.dataset.tab!=='thumbs';
-     document.getElementById('layers').hidden = t.dataset.tab!=='layers';
-     document.getElementById('comments').hidden = t.dataset.tab!=='comments';
-   }));
- }
+  const tabs=document.querySelectorAll('.tab');
+  const panels = {
+    thumbs: document.getElementById('thumbs'),
+    layers: document.getElementById('layers'),
+    comments: document.getElementById('comments'),
+    props: document.getElementById('props')
+  };
+  tabs.forEach(t=>t.addEventListener('click', ()=>{
+    tabs.forEach(x=>{ x.classList.remove('active'); x.setAttribute('aria-selected','false'); });
+    t.classList.add('active'); t.setAttribute('aria-selected','true');
+    const target = t.dataset.tab;
+    Object.entries(panels).forEach(([k, el])=>{ if(el) el.hidden = (k!==target); });
+  }));
+}
 
  function bindContextMenu(){
    const menu=document.getElementById('context');
@@ -590,15 +516,9 @@
  }
 
  // -----------------------------
- // Geometry helpers
- // -----------------------------
- function apply(m, p){ return { x: m[0]*p.x + m[2]*p.y + m[4], y: m[1]*p.x + m[3]*p.y + m[5] } }
- function inv(m){ 
-   const [a,b,c,d,e,f]=m; const det=a*d-b*c || 1e-8;
-   const ia=d/det, ib=-b/det, ic=-c/det, id=a/det, ie=-(ia*e+ic*f), ifv=-(ib*e+id*f);
-   return [ia,ib,ic,id,ie,ifv];
- }
- function toLocal(p, m){ const im=inv(m); return apply(im,p) }
+// Geometry helpers are imported from ../../lib/graphics.js
+// -----------------------------
+
  function deltaFrom(ev, pv){
    const rect=pv.canvas.getBoundingClientRect();
    const x=(ev.clientX-rect.left)*(pv.canvas.width/rect.width);
@@ -623,15 +543,15 @@
  function fitWidth(){ 
    const pv=getPage(Store.state.pageIndex); if(!pv) return; 
    const wrap=document.querySelector('.viewport'); const pad=64; 
-   const scale=(wrap.clientWidth-pad) / pv.canvas.width * (window.devicePixelRatio||1); 
+   const scale=calcFitWidthScale(pv, wrap, pad); 
    setZoom(scale); 
- }
- function fitPage(){ 
-   const pv=getPage(Store.state.pageIndex); if(!pv) return; 
-   const wrap=document.querySelector('.viewport'); const pad=64; 
-   const scale=Math.min((wrap.clientWidth-pad)/pv.canvas.width,(wrap.clientHeight-pad)/pv.canvas.height) * (window.devicePixelRatio||1); 
-   setZoom(scale); 
- }
+}
+function fitPage(){ 
+  const pv=getPage(Store.state.pageIndex); if(!pv) return; 
+  const wrap=document.querySelector('.viewport'); const pad=64; 
+  const scale=calcFitPageScale(pv, wrap, pad); 
+  setZoom(scale); 
+}
 
  // -----------------------------
  // Selection operations
