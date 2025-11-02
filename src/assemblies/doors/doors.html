@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../styles.css">
   <style>
     /* Additional styles can be added here if needed */
   </style>
@@ -11,14 +11,14 @@
 <title>Door Pricing Calculator (AK, March 2025 Basis)</title>
 </head>
 <body data-page="assemblies-doors">
-<div class="wrap-1200">
+<main class="wrap">
   <div class="grid">
-    <div class="col-8 card shadow">
+    <div class="col-8 card">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
           <div class="pill">Alaska Budgetary Estimator</div>
           <h1>Door Pricing Calculator</h1>
-          <div class="help">Material + Shipping/Handling + Labor (Anchorage). Man doors use March 2025 reference pricing with size banding; sectionals & roll-ups use per-SF. Everything is editable.</div>
+          <div class="small muted">Material + Shipping/Handling + Labor (Anchorage). Man doors use March 2025 reference pricing with size banding; sectionals & roll-ups use per-SF. Everything is editable.</div>
         </div>
         <div><span class="pill">Editable Pricing Config ↓</span></div>
       </div>
@@ -105,7 +105,7 @@
         <div class="half">
           <label>Custom Glazing Area (sf, optional)</label>
           <input id="customGlassSf" type="number" min="0" step="0.25" value="0" />
-          <div class="help">Priced at $55 / $20 (Mat/Labor) per sf; transoms/sidelites at $115 / $25 per sf (set in config).</div>
+          <div class="small muted">Priced at $55 / $20 (Mat/Labor) per sf; transoms/sidelites at $115 / $25 per sf (set in config).</div>
         </div>
         <div class="half">
           <label>Transom + Sidelites Area (sf, optional)</label>
@@ -132,8 +132,8 @@
         </div>
 
         <div class="half">
-          <button class="btn" id="calcBtn">Calculate</button>
-          <button class="btn secondary" id="resetBtn">Reset</button>
+          <button id="calcBtn">Calculate</button>
+          <button class="secondary" id="resetBtn">Reset</button>
         </div>
       </div>
 
@@ -166,17 +166,17 @@
       </div>
     </div>
 
-    <div class="col-4 card shadow">
+    <div class="col-4 card">
       <h2>Pricing Config (editable)</h2>
-      <div class="help" style="margin-bottom:8px">Numbers reflect your <b>March 2025</b> sheet and AK shipping/labor defaults. Edit and click <b>Apply Config</b>.</div>
+      <div class="small muted" style="margin-bottom:8px">Numbers reflect your <b>March 2025</b> sheet and AK shipping/labor defaults. Edit and click <b>Apply Config</b>.</div>
       <textarea id="configBox"></textarea>
       <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="btn" id="applyCfg">Apply Config</button>
-        <button class="btn secondary" id="restoreCfg">Restore Defaults</button>
+        <button id="applyCfg">Apply Config</button>
+        <button class="secondary" id="restoreCfg">Restore Defaults</button>
       </div>
     </div>
   </div>
-</div>
+</main>
 
 <script src="doors.js"></script>
 </body>

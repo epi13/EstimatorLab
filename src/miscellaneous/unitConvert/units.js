@@ -309,7 +309,7 @@
       <td>${from} <span class="small muted">(${f?.name||''})</span></td>
       <td>${to} <span class="small muted">(${t?.name||''})</span></td>
       <td class="mono">${isFinite(res)?fmt(res):'—'}</td>
-      <td class="right"><button class="btn btn-ghost" title="Remove">✕</button></td>
+      <td class="right"><button class="ghost" title="Remove">✕</button></td>
     `;
     tr.querySelector('button').onclick=()=>tr.remove();
     $('#tbody').prepend(tr);

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="../../styles.css">
+  <style>
+    body[data-page="volume-wireframe-box"] > *:not(script):not(style) { max-width: none; }
+    body[data-page="volume-wireframe-box"] { padding: 0; }
+    body[data-page="volume-wireframe-box"] .wrap--compact {
+      min-height: 100dvh;
+      min-height: 100svh;
+      grid-template-rows: 1fr auto;
+      grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+      overflow: auto;
+      gap: clamp(0.35rem, 0.8vw, 0.65rem);
+      padding: clamp(0.4rem, 0.8vw, 0.65rem);
+      padding-bottom: calc(env(safe-area-inset-bottom) + clamp(0.35rem, 0.6vw, 0.6rem));
+      scrollbar-gutter: stable both-edges;
+    }
+    body[data-page="volume-wireframe-box"] aside {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      min-height: 0;
+      overflow: auto;
+    }
+    body[data-page="volume-wireframe-box"] main {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: 1fr;
+    }
+    body[data-page="volume-wireframe-box"] .viewer {
+      height: 100%;
+      min-height: clamp(160px, 32vh, 480px);
+      padding: clamp(0.25rem, 0.5vw, 0.45rem);
+    }
+    body[data-page="volume-wireframe-box"] #cv {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+    body[data-page="volume-wireframe-box"] .outputs {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: clamp(0.45rem, 0.9vw, 0.8rem);
+      margin-bottom: env(safe-area-inset-bottom);
+      grid-column: 1 / -1;
+    }
+    body[data-page="volume-wireframe-box"] .outputs h3 { margin: 0 0 0.35rem; }
+    body[data-page="volume-wireframe-box"] .outputs .flex { line-height: 1.35; }
+    /* Compact sidebar controls */
+    body[data-page="volume-wireframe-box"] aside label {
+      margin-top: 0.25rem;
+      display: grid;
+      grid-template-columns: auto minmax(120px, 1fr);
+      align-items: center;
+      gap: 0.35rem;
+    }
+    body[data-page="volume-wireframe-box"] aside input,
+    body[data-page="volume-wireframe-box"] aside select,
+    body[data-page="volume-wireframe-box"] aside textarea {
+      padding: 0.4rem 0.55rem;
+      font-size: 0.9rem;
+      border-radius: 8px;
+    }
+    body[data-page="volume-wireframe-box"] aside fieldset { margin: 0; }
+    body[data-page="volume-wireframe-box"] aside fieldset legend { margin-bottom: 0.35rem; }
+    /* Tighter cards and panels just for this page */
+    body[data-page="volume-wireframe-box"] .panel { padding: clamp(0.45rem, 0.8vw, 0.68rem); }
+    body[data-page="volume-wireframe-box"] .outputs .card { padding: clamp(0.45rem, 0.8vw, 0.72rem); }
+    @media (orientation: portrait) {
+      body[data-page="volume-wireframe-box"] .viewer { min-height: clamp(180px, 32vh, 460px); }
+    }
+    @media (max-width: 1024px) {
+      body[data-page="volume-wireframe-box"] .wrap--compact {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto 1fr auto;
+        min-height: 100svh;
+      }
+    }
+  </style>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Draggable Wireframe Box – Lengths & Volume</title>
+</head>
+<body data-page="volume-wireframe-box">
+  <div class="wrap wrap--compact">
+    <aside>
+      <div class="panel">
+        <h3>Wireframe Box Calculator</h3>
+        <div class="row">
+          <button id="btnPreset">Preset 3×4×5</button>
+          <button id="btnReset" class="secondary">Reset</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <fieldset>
+          <legend>Units</legend>
+          <label>
+            <span>Length unit</span>
+            <select id="lengthUnit">
+              <option value="ft" selected>feet (ft)</option>
+              <option value="in">inches (in)</option>
+              <option value="m">meters (m)</option>
+              <option value="cm">centimeters (cm)</option>
+            </select>
+          </label>
+          <label>
+            <span>Volume unit</span>
+            <select id="volumeUnit">
+              <option value="ft3" selected>cubic feet (ft³)</option>
+              <option value="in3">cubic inches (in³)</option>
+              <option value="yd3">cubic yards (yd³)</option>
+              <option value="m3">cubic meters (m³)</option>
+              <option value="L">liters (L)</option>
+              <option value="gal">gallons (gal)</option>
+            </select>
+          </label>
+          <div class="hint small">Drag a corner node of the box to reshape (axis‑aligned). Use the preset to jump to 3×4×5.</div>
+        </fieldset>
+      </div>
+
+      <div class="panel">
+        <fieldset>
+          <legend>Dimensions</legend>
+          <label><span>Width (X)</span><input id="inW" type="number" step="0.1" /></label>
+          <label><span>Height (Y)</span><input id="inH" type="number" step="0.1" /></label>
+          <label><span>Depth (Z)</span><input id="inD" type="number" step="0.1" /></label>
+          <div class="hint small">Edit numbers or drag a node; values are in the selected length unit.</div>
+        </fieldset>
+      </div>
+
+      <div class="footer-note">Drag a node (small circles). Hold <kbd class="kbd">Shift</kbd> for coarse movement.</div>
+    </aside>
+    <main>
+      <div class="viewer">
+        <canvas id="cv"></canvas>
+      </div>
+    </main>
+    <div class="outputs grid-2">
+        <div class="card">
+          <h3>Volume</h3>
+          <div class="val num" id="kpiVol">—</div>
+        </div>
+        <div class="card">
+          <h3>Edge Lengths</h3>
+          <div class="flex"><span class="badge">X</span> <span id="kpiW" class="num">—</span></div>
+          <div class="flex"><span class="badge">Y</span> <span id="kpiH" class="num">—</span></div>
+          <div class="flex"><span class="badge">Z</span> <span id="kpiD" class="num">—</span></div>
+        </div>
+        <div class="card">
+          <h3>Surface Area</h3>
+          <div class="val num" id="kpiArea">—</div>
+        </div>
+        <div class="card">
+          <h3>Face Areas</h3>
+          <div class="flex"><span class="badge">XY</span> <span id="kpiAxy" class="num">—</span></div>
+          <div class="flex"><span class="badge">XZ</span> <span id="kpiAxz" class="num">—</span></div>
+          <div class="flex"><span class="badge">YZ</span> <span id="kpiAyz" class="num">—</span></div>
+        </div>
+        <div class="card">
+          <h3>Diagonal & Center</h3>
+          <div class="flex"><span class="badge">Diag</span> <span id="kpiDiag" class="num">—</span></div>
+          <div class="flex"><span class="badge">Center</span> <span id="kpiCenter" class="num">—</span></div>
+        </div>
+    </div>
+  </div>
+
+  <script src="wireframe-box.js"></script>
+</body>
+</html>

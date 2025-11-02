@@ -137,7 +137,7 @@ function render(){
         <input type="text" value="${fmt(lineLb)}" readonly />
       </div>
       <div class="right">
-        <button class="btn danger" data-role="del">Remove</button>
+        <button class="danger" data-role="del">Remove</button>
       </div>
     `;
 

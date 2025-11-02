@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../styles.css">
   <style>
     /* Additional styles can be added here if needed */
   </style>
@@ -11,7 +11,7 @@
 <title>Ductwork Take-Off & Budget Calculator (AK) — Materials + PDF OCR (Fixed)</title>
 </head>
 <body data-page="mechanical-ducting">
-  <div class="wrap-1260">
+  <main class="wrap">
     <h1>Ductwork Take-Off & Budget Calculator (Alaska) — Materials + PDF OCR</h1>
 
     <!-- Global Settings -->
@@ -33,12 +33,12 @@
             <option value="+4" selected>+4 in.wg</option>
             <option value="+6">+6 in.wg</option>
           </select>
-          <div class="mini">Also drives Auto Labor</div>
+          <div class="small">Also drives Auto Labor</div>
         </div>
         <div>
           <label>Mech. Labor Rate ($/hr)</label>
           <input type="number" id="laborRate" value="92" step="1" class="num" />
-          <div class="mini">Anchorage default</div>
+          <div class="small">Anchorage default</div>
         </div>
         <div>
           <label>Labor Unit Default (hr/LF)</label>
@@ -68,7 +68,7 @@
         </div>
         <div>
           <label><input type="checkbox" id="demoMode" /> Demolition / Removal mode</label>
-          <div class="mini">Focus on LBS and optional disposal cost</div>
+          <div class="small">Focus on LBS and optional disposal cost</div>
         </div>
         <div id="demoInputs" class="hidden">
           <label>Disposal Rate ($/lb)</label>
@@ -96,7 +96,7 @@
         </div>
       </div>
 
-      <div class="mini">
+      <div class="small">
         Area = <span class="mono">perimeter(in)/12 × LF</span> (rect) or <span class="mono">πD/12 × LF</span> (round).
         Weight = area × (base-gauge lb/sf × material factor + liner lb/sf + adders) + LF × (adders lb/LF) + joints × (flange lb/joint).
       </div>
@@ -106,7 +106,7 @@
     <div class="row">
       <div class="card" style="flex:1 1 560px">
         <div class="pill">Paste Blueprint Text</div>
-        <label class="mini">e.g., "78/28 SA, 24/18 RA, Ø18 SA …"</label>
+        <label class="small">e.g., "78/28 SA, 24/18 RA, Ø18 SA …"</label>
         <div class="row">
           <textarea id="paste" rows="4" style="flex:1 1 420px" placeholder="Paste schedule/notes here…"></textarea>
           <div>
@@ -140,7 +140,7 @@
             <button class="primary" id="runPdf">Run Extract</button>
           </div>
         </div>
-        <div class="mini" id="pdfStatus">No PDF processed.</div>
+        <div class="small" id="pdfStatus">No PDF processed.</div>
         <div class="progress"><div id="pdfProg"></div></div>
       </div>
     </div>
@@ -156,7 +156,7 @@
         <div>
           <label>Aspect Ratio (W:H)</label>
           <input type="text" id="rr_aspect" value="2:1" class="size" />
-          <div class="mini">Use 1:1 for square</div>
+          <div class="small">Use 1:1 for square</div>
         </div>
         <div>
           <label>&nbsp;</label>
@@ -167,7 +167,7 @@
           <button class="ghost" id="rr_add">+ Add to Rows</button>
         </div>
       </div>
-      <div id="rr_out" class="mini mono"></div>
+      <div id="rr_out" class="small mono"></div>
     </div>
 
     <!-- Line Items -->
@@ -212,7 +212,7 @@
           <tbody id="body"></tbody>
           <tfoot>
             <tr class="tight">
-              <td colspan="13" class="mini">Totals</td>
+              <td colspan="13" class="small">Totals</td>
               <td id="tPerim" class="mono"></td>
               <td id="tArea" class="mono"></td>
               <td id="tWeight" class="mono"></td>
@@ -227,12 +227,12 @@
         </table>
       </div>
 
-      <div class="mini">
+      <div class="small">
         Base gauge lb/sf (Galv.): 26ga 0.903 | 24ga 1.219 | 22ga 1.500 | 20ga 1.875 | 18ga 2.344 | 16ga 2.969.  
         Material factors: Galv=1.00, Stainless≈1.02, Aluminum≈0.35, Black steel≈1.00 (edit pricing above as needed).
       </div>
     </div>
-  </div>
+  </main>
 
 <!-- ✅ PDF.js UMD (3.x) so window.pdfjsLib exists -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha512-Ir5k6qV9f7MJ6MZbGqStsF3tqZcQWnQxQkJY+GyTpdC9jPQKj5V+No2B3X4Q4+0b5jLC5VuYQjC+9C9wP7oKMg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>

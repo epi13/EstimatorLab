@@ -6,7 +6,8 @@ const navigationData = [
         calculators: [
           { label: 'Home', href: 'src/home.html', keywords: 'landing overview start' },
           { label: 'JSON Search', href: 'src/search/fuzzy_search.html', keywords: 'data fuzzy finder' },
-          { label: 'Unit Conversion', href: 'src/miscellaneous/unitConvert/units.html', keywords: 'measurements conversions' }
+          { label: 'Unit Conversion', href: 'src/miscellaneous/unitConvert/units.html', keywords: 'measurements conversions' },
+          { label: 'Description Translator', href: 'src/miscellaneous/translator/descriptionTranslator.html', keywords: 'translate descriptions' }
         ]
       },
       {
@@ -32,9 +33,8 @@ const navigationData = [
         icon: 'cube',
         calculators: [
           { label: 'Volume from SF', href: 'src/volume/vFromSF/vFromSF.html', keywords: 'square footage depth' },
-          { label: 'Volume from L×W×H', href: 'src/volume/l_w_h/l_w_h.html', keywords: 'length width height' },
+          { label: 'Volume from L×W×H', href: 'src/volume/wireframe-box/wireframe-box.html', keywords: 'length width height' },
           { label: 'Trench Excavation Calculator', href: 'src/volume/trenchV/trenchV.html', keywords: 'excavation earthwork' },
-          { label: 'Wire Frame', href: 'src/volume/wireframe-box/wireframe-box.html', keywords: 'visual 3d box' },
           { label: 'Composite Volume', href: 'src/volume/composite-volume/composite-volume.html', keywords: 'composite volume' }
         ]
       },
@@ -270,7 +270,6 @@ const navigationData = [
       link.setAttribute('aria-current', 'page');
       link.parentElement.classList.add('is-active');
       categoryLabel.textContent = link.dataset.sectionTitle;
-      titleLabel.textContent = link.dataset.calculator;
       collapseButton.dataset.state = 'expanded';
       collapseLabel.textContent = 'Collapse all';
     };

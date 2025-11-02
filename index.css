@@ -328,12 +328,6 @@ body[data-page="root-index"] .workspace-category {
   color: var(--text-muted);
 }
 
-body[data-page="root-index"] .workspace-title {
-  margin: 0.2rem 0 0;
-  font-size: clamp(1.5rem, 2.2vw, 2rem);
-  font-weight: 650;
-}
-
 
 body[data-page="root-index"] .noscript {
   margin: 1rem auto 0;

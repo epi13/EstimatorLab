@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Line Item Formatter</title>
+<link rel="stylesheet" href="../../styles.css" />
+<link rel="stylesheet" href="../../app.css" />
+</head>
+<body data-page="translator">
+
+<div class="wrap--compact">
+
+  <!-- LEFT CARD: INPUT / AI ASSIST -->
+  <section class="card" id="leftCard">
+    <header class="stack">
+      <div class="row-between">
+        <h3 style="margin:0">Fuzzy Description → Parsed Fields</h3>
+        <span class="small muted">Alaska Estimating Helper v0.2</span>
+      </div>
+      <div class="small muted">
+        Type what you’d say in conversation. I’ll guess Dimension / Capacity / Power / Features / Item / Ancillaries using the selected trade preset.
+      </div>
+    </header>
+    <div class="stack">
+
+      <div class="stack">
+        <label for="tradeSelect">
+          Trade preset
+          <span class="hint">Helps guess ITEM + FEATURES vocabulary</span>
+        </label>
+        <select id="tradeSelect">
+          <option value="mechanical">Mechanical</option>
+          <option value="electrical">Electrical</option>
+          <option value="site">Site Furnishings</option>
+        </select>
+      </div>
+
+      <div class="stack">
+        <label for="fuzzyInput">
+          Fuzzy input
+          <span class="hint">ex: 24x24 4-way throw 120v diffuser with backdraft damper</span>
+        </label>
+        <textarea id="fuzzyInput" rows="4" placeholder="6&quot; sch80 steel floor drain with trap primer, dual port 50A NEMA 14-50 pedestal, custom stacked yellow cedar bench surface mounted, etc."></textarea>
+      </div>
+
+      <div class="row">
+        <button id="autoParseBtn">Auto-Parse</button>
+        <button id="clearBtn" class="secondary">Clear</button>
+      </div>
+
+      <details class="panel">
+        <summary class="row-between" style="cursor:pointer;">
+          <span class="small muted">Field guide</span>
+          <span class="small muted">Show/Hide</span>
+        </summary>
+        <div class="chips mt-sm">
+          <div class="pill">Dimension = physical size (24&quot;x24&quot;)</div>
+          <div class="pill">Capacity = performance (616 BTU/LF, 90 CFM)</div>
+          <div class="pill">Power = electrical/mech (120V, 1/3 HP)</div>
+          <div class="pill">Features = material/type (Steel, Schedule 80)</div>
+          <div class="pill">Item = noun (Diffuser, Bike Rack)</div>
+          <div class="pill">Ancillaries = extras (With backdraft damper)</div>
+        </div>
+      </details>
+
+      <div class="grid-3">
+        <div class="stack">
+          <label for="dimensionField">Dimension</label>
+          <input type="text" id="dimensionField" placeholder='ex: 24"x24"' />
+        </div>
+        <div class="stack">
+          <label for="capacityField">Capacity</label>
+          <input type="text" id="capacityField" placeholder="ex: 90 CFM" />
+        </div>
+        <div class="stack">
+          <label for="powerField">Power</label>
+          <input type="text" id="powerField" placeholder="ex: 120V / 1/3 HP / 15A" />
+        </div>
+        <div class="stack">
+          <label for="featuresField">Features</label>
+          <input type="text" id="featuresField" placeholder="ex: Steel, Schedule 80, 4-way Throw" />
+        </div>
+        <div class="stack">
+          <label for="itemField">Item</label>
+          <input type="text" id="itemField" placeholder="ex: Diffuser, Bike Rack, Bench" />
+        </div>
+        <div class="stack">
+          <label for="ancillariesField">Ancillaries</label>
+          <input type="text" id="ancillariesField" placeholder="ex: With backdraft damper" />
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- RIGHT CARD: OUTPUT -->
+  <section class="card" id="rightCard">
+    <header class="stack">
+      <div class="row-between">
+        <h3 style="margin:0">Formatted Line Item</h3>
+        <div class="badge" id="copiedBadge" style="display:none;">Copied</div>
+      </div>
+      <div class="small muted">
+        Output matches our standard: (Dimension)(Capacity)(Power)(Features) ITEM (Ancillaries)
+      </div>
+    </header>
+    <div class="stack">
+
+      <div class="stack">
+        <label for="finalString">
+          Result
+          <span class="hint">auto-updates when you click "Generate"</span>
+        </label>
+        <textarea class="final-string-box" id="finalString" rows="3" readonly></textarea>
+      </div>
+
+      <div class="row">
+        <button id="generateBtn">Generate Line Item</button>
+        <button id="copyBtn" class="secondary">Copy Line Item</button>
+      </div>
+
+      <div class="stack">
+        <label for="notesField">
+          Notes (not part of description)
+          <span class="hint">Internal notes: freight to Juneau, labor rate $96/hr Electrical, etc.</span>
+        </label>
+        <textarea id="notesField" placeholder="Assume barge to Juneau + local handling. Anchorage Electrical labor $96/hr. Add winter access premium."></textarea>
+      </div>
+
+      <div class="row-between">
+        <button id="exportBtn" class="warn">Export CSV+JSON</button>
+        <div class="small muted">Export includes: { lineItem, notes, date, initials }</div>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+<script>
+/*
+  NEW:
+  - Trade presets change vocab for ITEM / FEATURE detection
+  - Export CSV+JSON of the generated line item
+
+  Still does auto-parse of fuzzy text.
+*/
+
+// --- helpers ------------------------------------------------------
+
+function capitalizeFirst(str) {
+  if (!str) return "";
+  return str
+    .split(/\s+/)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function todayISODate() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,"0");
+  const dd = String(d.getDate()).padStart(2,"0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// trade-aware vocabulary
+const TRADE_DICTIONARIES = {
+  mechanical: {
+    items: [
+      "diffuser","register","grille","fan","pump","thermostat",
+      "valve","convector","drain","heat trace","floor drain",
+      "snow melt","panel radiator","vav box","air handler"
+    ],
+    features: [
+      "schedule","sch","steel","stainless",
+      "4-way","4 way","4-way throw","4 way throw",
+      "insulated","surface mounted","surface-mount","surface mount",
+      "wall mount","floor mount","trap primer","commercial controls",
+      "btuh","btu","cfm","gpm","psi rating"
+    ],
+  },
+  electrical: {
+    items: [
+      "charger","pedestal","panel","conduit","receptacle","luminaire",
+      "light","lighting","ev charger","distribution panel",
+      "outlet","duplex","ct4000","control panel"
+    ],
+    features: [
+      "surface mounted","surface mount","weatherproof","nema",
+      "outdoor rated","pole mounted","pole-mount","floor mount",
+      "120v","208v","240v","277v","480v","50a","15a","20a"
+    ],
+  },
+  site: {
+    items: [
+      "bench","bike rack","trash can","fire bowl",
+      "table","chair","set","patio set","enclosure"
+    ],
+    features: [
+      "yellow cedar","cedar","stacked timber","stacked timbers",
+      "locally sourced","surface mounted","surface mount",
+      "bar height","ada compliant","battery cafe","foro",
+      "commercial controls","portable","propane"
+    ],
+  }
+};
+
+// fallback if unknown trade
+const DEFAULT_TRADE = "mechanical";
+
+// regex patterns for categories
+const dimensionRegexes = [
+  /(\d+['"]?\s?x\s?\d+['"]?\s?x\s?\d+['"]?)/i, // 2'0"x7'0"x4"
+  /(\d+['"]?\s?x\s?\d+['"]?)/i,                // 24x24, 3'0"x7'0"
+  /(\d+(\.\d+)?\s?(inch|in\.?|"))/i,           // 6", 4 in, 4 inch
+  /(\d+(\.\d+)?\s?ft\b|\d+(\.\d+)?\s?lf\b)/i   // 10 ft, 25 lf
+];
+
+const capacityRegexes = [
+  /(\d+(\.\d+)?\s?(btu\/lf|btu|cfm|gpm|kw|w\/ft|w\/lf))/i,
+  /(\d+(\.\d+)?\s?(cfm|gpm|l\/s))/i
+];
+
+const powerRegexes = [
+  /(\d+(\.\d+)?\s?(v|volt|volts))/i,
+  /(\d+(\.\d+)?\s?(hp|horsepower))/i,
+  /(\d+(\.\d+)?\s?(a|amp|amps))/i
+];
+
+// split fuzzy string around "with", "including", etc to find ancillaries
+function splitAncillaries(str) {
+  const m = str.match(/\b(with|including|incl\.?|w\/)\b(.*)$/i);
+  if (m) {
+    return {
+      base: str.slice(0, m.index).trim(),
+      anc: m[2].trim()
+    };
+  }
+  return { base: str.trim(), anc: "" };
+}
+
+// try to find first regex match from list
+function findFirstRegex(str, list) {
+  for (const r of list) {
+    const m = str.match(r);
+    if (m) return m[0].trim();
+  }
+  return "";
+}
+
+// remove a found substring (case-insensitiveish) from a string
+function stripFragment(str, frag) {
+  if (!frag) return str;
+  const esc = frag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return str.replace(new RegExp(esc,'i')," ").replace(/\s+/g," ").trim();
+}
+
+// guess ITEM based on selected trade dictionary
+function guessItem(str, tradeDict) {
+  let lower = str.toLowerCase();
+  const sorted = [...tradeDict.items].sort((a,b)=>b.length-a.length);
+  for (const w of sorted) {
+    if (lower.includes(w)) {
+      return w;
+    }
+  }
+  return "";
+}
+
+// guess FEATURES based on selected trade dictionary
+function guessFeatures(str, tradeDict) {
+  let feats = [];
+  let lower = str.toLowerCase();
+  for (const f of tradeDict.features) {
+    if (lower.includes(f)) feats.push(f);
+  }
+  feats = [...new Set(feats)];
+  return feats.join(", ");
+}
+
+// nice formatter for final line item
+function buildLineItem(dim, cap, pow, feat, item, anc) {
+
+  function fixSegment(x) {
+    return x
+      .split(",")
+      .map(s => s.trim())
+      .map(s => {
+        // preserve units if already uppercase-like (BTU/CFM/etc)
+        if (/[A-Z]{2,}/.test(s)) return s;
+        return capitalizeFirst(s);
+      })
+      .join(", ");
+  }
+
+  const parts = [];
+  if (dim) parts.push(fixSegment(dim));
+  if (cap) parts.push(fixSegment(cap));
+  if (pow) parts.push(fixSegment(pow));
+  if (feat) parts.push(fixSegment(feat));
+
+  let main = parts.join(", ");
+  if (item) {
+    main += (main ? " " : "") + capitalizeFirst(item);
+  }
+
+  if (anc) {
+    main += " " + "(" + capitalizeFirst(anc) + ")";
+  }
+
+  return main.trim();
+}
+
+// generate CSV content from rows
+function toCSV(rows) {
+  // rows = [ { lineItem, notes, date, initials }, ... ]
+  const header = ["lineItem","notes","date","initials"];
+  const csvLines = [header.join(",")];
+  for (const r of rows) {
+    // naive CSV escaping with quotes around each field
+    const line = [
+      r.lineItem ?? "",
+      r.notes ?? "",
+      r.date ?? "",
+      r.initials ?? ""
+    ].map(f => `"${String(f).replace(/"/g,'""')}"`).join(",");
+    csvLines.push(line);
+  }
+  return csvLines.join("\n");
+}
+
+// trigger browser download for content
+function downloadFile(filename, content, mimeType="text/plain") {
+  const blob = new Blob([content], {type: mimeType});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 0);
+}
+
+// --- wire up UI ---------------------------------------------------
+
+const fuzzyInputEl       = document.getElementById("fuzzyInput");
+const dimensionFieldEl   = document.getElementById("dimensionField");
+const capacityFieldEl    = document.getElementById("capacityField");
+const powerFieldEl       = document.getElementById("powerField");
+const featuresFieldEl    = document.getElementById("featuresField");
+const itemFieldEl        = document.getElementById("itemField");
+const ancillariesFieldEl = document.getElementById("ancillariesField");
+const finalStringEl      = document.getElementById("finalString");
+const notesFieldEl       = document.getElementById("notesField");
+const tradeSelectEl      = document.getElementById("tradeSelect");
+
+const autoParseBtn = document.getElementById("autoParseBtn");
+const generateBtn  = document.getElementById("generateBtn");
+const copyBtn      = document.getElementById("copyBtn");
+const clearBtn     = document.getElementById("clearBtn");
+const copiedBadge  = document.getElementById("copiedBadge");
+const exportBtn    = document.getElementById("exportBtn");
+
+// This will accumulate all exports this session.
+// You can clear it manually by refreshing.
+let exportLog = [];
+
+autoParseBtn.addEventListener("click", () => {
+  const fuzzy = fuzzyInputEl.value.trim();
+  if (!fuzzy) return;
+
+  // pick trade dict
+  const tradeKey = tradeSelectEl.value || DEFAULT_TRADE;
+  const tradeDict = TRADE_DICTIONARIES[tradeKey] || TRADE_DICTIONARIES[DEFAULT_TRADE];
+
+  // pull ancillaries
+  let { base, anc } = splitAncillaries(fuzzy);
+
+  // detect dimension/capacity/power
+  const dim = findFirstRegex(base, dimensionRegexes);
+  base = stripFragment(base, dim);
+
+  const cap = findFirstRegex(base, capacityRegexes);
+  base = stripFragment(base, cap);
+
+  const pow = findFirstRegex(base, powerRegexes);
+  base = stripFragment(base, pow);
+
+  // guess item
+  const itemGuess = guessItem(base, tradeDict);
+
+  // guess features from remainder
+  const featGuess = guessFeatures(base, tradeDict);
+
+  // remove itemGuess from leftover so we don't double-list
+  let cleanedBase = base;
+  if (itemGuess) cleanedBase = stripFragment(cleanedBase, itemGuess);
+
+  // fill UI fields
+  dimensionFieldEl.value   = dim.replace(/\s+/g," ").trim();
+  capacityFieldEl.value    = cap.replace(/\s+/g," ").trim();
+  powerFieldEl.value       = pow.replace(/\s+/g," ").trim();
+  // If featGuess is empty, try.cleanedBase as fallback context
+  featuresFieldEl.value    = (featGuess || cleanedBase).trim();
+  itemFieldEl.value        = itemGuess;
+  ancillariesFieldEl.value = anc;
+});
+
+generateBtn.addEventListener("click", () => {
+  const dim  = dimensionFieldEl.value.trim();
+  const cap  = capacityFieldEl.value.trim();
+  const pow  = powerFieldEl.value.trim();
+  const feat = featuresFieldEl.value.trim();
+  const item = itemFieldEl.value.trim();
+  const anc  = ancillariesFieldEl.value.trim();
+
+  finalStringEl.value = buildLineItem(dim, cap, pow, feat, item, anc);
+});
+
+copyBtn.addEventListener("click", async () => {
+  const txt = finalStringEl.value.trim();
+  if (!txt) return;
+  try {
+    await navigator.clipboard.writeText(txt);
+    copiedBadge.style.display = "inline-block";
+    setTimeout(()=> {
+      copiedBadge.style.display = "none";
+    }, 1500);
+  } catch(e) {
+    console.warn("Copy failed", e);
+  }
+});
+
+clearBtn.addEventListener("click", () => {
+  fuzzyInputEl.value = "";
+  dimensionFieldEl.value = "";
+  capacityFieldEl.value = "";
+  powerFieldEl.value = "";
+  featuresFieldEl.value = "";
+  itemFieldEl.value = "";
+  ancillariesFieldEl.value = "";
+  finalStringEl.value = "";
+  notesFieldEl.value = "";
+});
+
+// EXPORT LOGIC
+exportBtn.addEventListener("click", () => {
+  const lineItem = finalStringEl.value.trim();
+  const notes = notesFieldEl.value.trim();
+  if (!lineItem) {
+    alert("Nothing to export. Generate a line item first.");
+    return;
+  }
+
+  // get initials from user
+  let initials = window.localStorage.getItem("estimatorInitials") || "";
+  if (!initials) {
+    initials = prompt("Your initials for export (e.g. AC):","AC") || "";
+    window.localStorage.setItem("estimatorInitials", initials);
+  }
+
+  const entry = {
+    lineItem,
+    notes,
+    date: todayISODate(),
+    initials
+  };
+
+  exportLog.push(entry);
+
+  // build CSV + JSON from exportLog
+  const csvContent = toCSV(exportLog);
+  const jsonContent = JSON.stringify(exportLog, null, 2);
+
+  // file names use today's date
+  const stamp = todayISODate();
+  downloadFile(`line_items_${stamp}.csv`, csvContent, "text/csv");
+  downloadFile(`line_items_${stamp}.json`, jsonContent, "application/json");
+});
+</script>
+
+</body>
+</html>

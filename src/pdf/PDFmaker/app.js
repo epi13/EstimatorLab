@@ -4,6 +4,7 @@ const blocks = [];
 
 const addTextBtn      = document.getElementById("addTextBtn");
 const imageInput      = document.getElementById("imageInput");
+const imageBtn        = document.getElementById("imageBtn");
 const printBtn        = document.getElementById("printBtn");
 
 const blockTitleEl    = document.getElementById("blockTitle");
@@ -253,6 +254,11 @@ function buildPrintArea() {
 addTextBtn.addEventListener("click", () => {
   blockTitleEl.focus();
 });
+
+// Trigger hidden file input from visible button
+if (imageBtn) {
+  imageBtn.addEventListener("click", () => imageInput && imageInput.click());
+}
 
 saveBlockBtn.addEventListener("click", () => {
   const title = blockTitleEl.value.trim();

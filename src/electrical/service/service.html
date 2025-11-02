@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../styles.css">
   <style>
     /* Additional styles can be added here if needed */
   </style>
@@ -11,8 +11,8 @@
   <title>Electrical Service & Distribution Calculator — Core (NEC‑aware)</title>
 </head>
 <body data-page="electrical-service">
-  <header class="header-sticky">
-    <div class="wrap-1180">
+  <header class="topbar topbar--compact">
+    <div>
       <div class="flex">
         <div>
           <h1>Electrical Service & Distribution Calculator — Core</h1>
@@ -20,13 +20,13 @@
         </div>
         <div class="right flex">
           <span class="pill">Anchorage Electrical Rate <strong>$<span id="anchRate">96</span>/hr</strong></span>
-          <button id="exportBtn" class="btn">Export JSON</button>
+          <button id="exportBtn">Export JSON</button>
         </div>
       </div>
     </div>
   </header>
 
-  <main class="main-1180">
+  <main class="wrap wrap--compact">
     <!-- LEFT COLUMN: INPUTS -->
     <section class="card">
       <h2>Inputs</h2>
@@ -65,7 +65,7 @@
           </div>
         </div>
 
-        <div class="row3">
+        <div class="row">
           <div>
             <label>Load Current (A) — per circuit/feed</label>
             <input id="ampacityTarget" type="number" value="200" min="1" />
@@ -80,7 +80,7 @@
           </div>
         </div>
 
-        <div class="row3">
+        <div class="row">
           <div>
             <label>Neutral</label>
             <select id="neutral">
@@ -126,7 +126,7 @@
           </div>
         </div>
 
-        <div class="row3">
+        <div class="row">
           <div>
             <label>Voltage Drop Limit (%)</label>
             <input id="vdLimit" type="number" value="3" step="0.5" />
@@ -142,7 +142,7 @@
         </div>
 
         <div class="section-title">Labor Settings (Estimator)</div>
-        <div class="row3">
+        <div class="row">
           <div>
             <label>Anchorage Electrical Rate ($/hr)</label>
             <input id="laborRate" type="number" value="96" step="1" />
@@ -156,7 +156,7 @@
             <input id="unitConduit" type="number" value="9.5" step="0.1" />
           </div>
         </div>
-        <div class="row3">
+        <div class="row">
           <div>
             <label>Remote/Logistics Factor (Alaska)</label>
             <input id="remoteFactor" type="number" value="1.15" step="0.05" />
@@ -166,7 +166,7 @@
             <input id="opPct" type="number" value="15" step="1" />
           </div>
           <div style="align-self:end">
-            <button id="calcBtn" class="btn">Calculate</button>
+            <button id="calcBtn">Calculate</button>
           </div>
         </div>
 

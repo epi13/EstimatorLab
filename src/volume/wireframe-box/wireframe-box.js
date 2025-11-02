@@ -135,7 +135,8 @@
     const { width, height } = canvas.getBoundingClientRect();
     let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
     for (const [X,Y] of proj){ minX=Math.min(minX,X); maxX=Math.max(maxX,X); minY=Math.min(minY,Y); maxY=Math.max(maxY,Y); }
-    const pad=40;
+    // Adaptive padding to better utilize available space
+    const pad = Math.max(24, Math.min(width, height) * 0.06);
     const scale = Math.min((width-2*pad)/(maxX-minX||1), (height-2*pad)/(maxY-minY||1));
     const offX = (width - scale*(minX+maxX))/2;
     const offY = (height - scale*(minY+maxY))/2;
@@ -268,6 +269,21 @@
     const volUnit = state.unitVol;
     const vol = vol_m3 / VOL_TO_M3[volUnit];
     document.getElementById('kpiVol').innerHTML = `${fmt(vol)} ${prettyVol(volUnit)}`;
+
+    // Additional KPIs: surface area, face areas, diagonal, center
+    function prettyArea(u){ return ({ft:'ft²', yd:'yd²', in:'in²', m:'m²', cm:'cm²'})[u] || `${u}²`; }
+    const areaUnit = prettyArea(unit);
+    const Axy = w*h; const Axz = w*d; const Ayz = h*d;
+    const SA = 2*(Axy + Axz + Ayz);
+    const diag = Math.sqrt(w*w + h*h + d*d);
+    const c = state.center_m;
+    const cx = c.x * toUnit, cy = c.y * toUnit, cz = c.z * toUnit;
+    const elArea = document.getElementById('kpiArea'); if (elArea) elArea.textContent = `${fmt(SA)} ${areaUnit}`;
+    const elAxy = document.getElementById('kpiAxy'); if (elAxy) elAxy.textContent = `${fmt(Axy)} ${areaUnit}`;
+    const elAxz = document.getElementById('kpiAxz'); if (elAxz) elAxz.textContent = `${fmt(Axz)} ${areaUnit}`;
+    const elAyz = document.getElementById('kpiAyz'); if (elAyz) elAyz.textContent = `${fmt(Ayz)} ${areaUnit}`;
+    const elDiag = document.getElementById('kpiDiag'); if (elDiag) elDiag.textContent = `${fmt(diag)} ${unit}`;
+    const elCenter = document.getElementById('kpiCenter'); if (elCenter) elCenter.textContent = `(${fmt(cx)}, ${fmt(cy)}, ${fmt(cz)}) ${unit}`;
   }
 
   function prettyVol(u){ return ({ft3:'ft³', yd3:'yd³', in3:'in³', m3:'m³', L:'L', gal:'gal'})[u] || u; }
@@ -343,12 +359,14 @@
   // Initial UI & draw
   pushDimsToUI();
   function ensureCanvasSize(){
-    const main = canvas.parentElement;
-    const rect = main.getBoundingClientRect();
-    canvas.style.width = rect.width + 'px';
-    canvas.style.height = rect.height + 'px';
+    // Rely on CSS percentages; ResizeObserver + resize() will set backing resolution
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
   }
   window.addEventListener('resize', ensureCanvasSize);
+  // Also observe the viewer container so canvas tracks layout changes
+  const viewerRO = new ResizeObserver(() => { ensureCanvasSize(); resize(); });
+  viewerRO.observe(canvas.parentElement);
   ensureCanvasSize();
   resize();
 })();

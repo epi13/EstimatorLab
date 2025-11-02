@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../styles.css">
+  <link rel="stylesheet" href="../../app.css">
   <style>
     /* Additional styles can be added here if needed */
   </style>
@@ -19,7 +20,7 @@
   <script src="PDFsearch.js" defer></script>
 </head>
 <body data-page="pdf-pdfsearch">
-  <header>
+  <header class="topbar topbar--compact">
     <div class="wrap">
       <div class="toolbar">
         <div class="row wrap">
@@ -33,17 +34,17 @@
           </div>
         </div>
         <div class="row">
-          <div class="status" id="status">No PDF loaded.</div>
+          <div class="small muted" id="status">No PDF loaded.</div>
         </div>
       </div>
     </div>
   </header>
 
-  <main class="grid">
+  <main class="wrap wrap--compact">
     <aside id="leftcol">
       <div id="drop" class="card" tabindex="0">
         <div style="font-weight:700;font-size:14px;margin-bottom:6px">Drag & drop a PDF here</div>
-        <div class="status">or use the controls above</div>
+        <div class="small muted">or use the controls above</div>
       </div>
 
       <div class="card">
@@ -114,11 +115,11 @@
         </div>
       </div>
 
-      <div class="footer status">All processing happens locally in your browser. No uploads.</div>
+      <div class="footer-note small">All processing happens locally in your browser. No uploads.</div>
     </aside>
 
     <section id="rightcol">
-      <div id="viewer" class="wrapv"></div>
+      <div id="viewer" class="viewer"></div>
     </section>
   </main>
 

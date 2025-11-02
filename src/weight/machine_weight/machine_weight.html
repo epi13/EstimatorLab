@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../styles.css">
   <style>
     /* Additional styles can be added here if needed */
   </style>
@@ -17,11 +17,11 @@
 
     <div class="card" id="controls">
       <div class="bar">
-        <button class="btn" id="addRow">+ Add Line</button>
-        <button class="btn secondary" id="exportCsv">Export CSV</button>
-        <button class="btn secondary" id="saveList">Save</button>
-        <button class="btn ghost" id="loadList">Load Last</button>
-        <button class="btn ghost" id="runTests" title="Runs a few built-in checks">Run Self‑Test</button>
+        <button id="addRow">+ Add Line</button>
+        <button class="secondary" id="exportCsv">Export CSV</button>
+        <button class="secondary" id="saveList">Save</button>
+        <button class="ghost" id="loadList">Load Last</button>
+        <button class="ghost" id="runTests" title="Runs a few built-in checks">Run Self‑Test</button>
         <span class="tag">Weights include fuel & fluids unless overridden</span>
       </div>
 
@@ -52,7 +52,7 @@
     <div style="height:12px"></div>
 
     <div class="card">
-      <div class="help">
+      <div class="small muted">
         <b>Attachment Class</b> is a generalized adder: None (0 lb), Light (+500 lb), Medium (+1,500 lb), Heavy (+4,000 lb).
         Use <b>Extra (lb)</b> to capture anything else (chains, winter kit, spare tracks, jib sections, etc.). If you know an exact spec weight, override <b>Base (lb)</b> directly.
       </div>

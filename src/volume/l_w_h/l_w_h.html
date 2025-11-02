@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../styles.css">
   <style>
     /* Additional styles can be added here if needed */
   </style>
@@ -11,10 +11,10 @@
   <title>Simple Volume Calculator (L × W × H)</title>
 </head>
 <body data-page="volume-l-w-h">
-  <div class="wrap-980">
+  <main class="wrap">
     <div class="card" role="form" aria-labelledby="title">
       <h1 id="title">Simple Volume Calculator (L × W × H)</h1>
-      <p class="desc">Choose a shape, enter dimensions, pick units, and get volume. Includes an SVG diagram with example axes (x, y, z).</p>
+      <p class="small muted">Choose a shape, enter dimensions, pick units, and get volume. Includes an SVG diagram with example axes (x, y, z).</p>
 
       <div class="grid" id="inputs">
         <div>
@@ -72,7 +72,7 @@
           <label for="qty">Quantity</label>
           <div class="row">
             <input id="qty" type="number" inputmode="decimal" step="1" min="1" value="1" />
-            <div class="inline muted" aria-hidden="true">items</div>
+            <div class="small muted" aria-hidden="true">items</div>
           </div>
         </div>
 
@@ -114,7 +114,7 @@
         <div class="foot" id="footnote"></div>
       </div>
     </div>
-  </div>
+  </main>
 
   <script src="l_w_h.js"></script>
 </body>

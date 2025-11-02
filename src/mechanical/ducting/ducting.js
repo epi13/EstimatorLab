@@ -159,10 +159,10 @@ if (window.pdfjsLib) {
           <option value="18">18</option><option value="16">16</option>
         </select>
       </td>
-      <td><label class="mini"><input type="checkbox" class="autoG" checked> Auto</label></td>
+      <td><label class="small"><input type="checkbox" class="autoG" checked> Auto</label></td>
 
       <td><input class="laborUnit num" type="number" step="0.01"></td>
-      <td><label class="mini"><input type="checkbox" class="autoLabor" checked> Auto</label></td>
+      <td><label class="small"><input type="checkbox" class="autoLabor" checked> Auto</label></td>
 
       <td>
         <select class="liner compact">

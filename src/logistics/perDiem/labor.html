@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../styles.css">
   <style>
     /* Additional styles can be added here if needed */
   </style>
@@ -11,8 +11,8 @@
 <title>Man-Days & Per-Diem Calculator (Offline, Auto Crew/Subs)</title>
 </head>
 <body data-page="logistics-labor">
-<header class="header-padded"><h1>Man-Days & Per-Diem Calculator — Offline (Auto Crew/Subs)</h1></header>
-<div class="wrap-1500">
+<header class="topbar topbar--compact"><h1>Man-Days & Per-Diem Calculator — Offline (Auto Crew/Subs)</h1></header>
+<main class="wrap">
   <div class="grid">
 
     <!-- MANPOWER INPUTS -->
@@ -36,17 +36,17 @@
         <div class="span-4">
           <label>Blended Labor Rate ($/hr)</label>
           <input id="blended_rate" type="number" value="90" min="1">
-          <div class="help">Anchorage guideline: Civil $82, Arch $87, Struct $90, Mech $92, Elec $96.</div>
+          <div class="small muted">Anchorage guideline: Civil $82, Arch $87, Struct $90, Mech $92, Elec $96.</div>
         </div>
         <div class="span-4">
           <label>Utilization (%)</label>
           <input id="util" type="number" value="92" min="50" max="100">
-          <div class="help">Accounts for Alaska/remote inefficiencies.</div>
+          <div class="small muted">Accounts for Alaska/remote inefficiencies.</div>
         </div>
         <div class="span-4">
           <label>Subs Share of Headcount (%)</label>
           <input id="subs_pct" type="number" value="25" min="0" max="100">
-          <div class="help">Used to split auto headcount into Crew vs Subs. Override below if needed.</div>
+          <div class="small muted">Used to split auto headcount into Crew vs Subs. Override below if needed.</div>
         </div>
       </div>
 
@@ -78,7 +78,7 @@
         <span class="pill">Man-Days: <b id="man_days">—</b></span>
         <span class="pill">Man-Hours: <b id="man_hours">—</b></span>
       </div>
-      <div class="help">Headcount = ceil( Labor$ ÷ (Rate × Hours/Day × Days × Util) ). Split by Subs % → Crew & Subs. Rooms = Crew+Subs; Nights = Days. You can override any of these.</div>
+      <div class="small muted">Headcount = ceil( Labor$ ÷ (Rate × Hours/Day × Days × Util) ). Split by Subs % → Crew & Subs. Rooms = Crew+Subs; Nights = Days. You can override any of these.</div>
     </div>
 
     <!-- PER DIEM -->
@@ -86,7 +86,7 @@
       <h2>2) Per-Diem & Lodging</h2>
       <label>Upload Per-Diem JSON (DoD OCONUS incl. Alaska)</label>
       <input type="file" id="file_input" accept=".json">
-      <div id="file_status" class="help">No file loaded</div>
+      <div id="file_status" class="small muted">No file loaded</div>
       <hr>
       <div id="perdiem_section" class="hidden">
         <div class="row">
@@ -114,7 +114,7 @@
           <span class="pill">Lodging Total: <b id="lodging_total">—</b></span>
           <span class="pill">Grand Total: <b id="perdiem_total">—</b></span>
         </div>
-        <div class="help">M&IE Total = M&IE × (Crew + Subs) × Nights. Lodging Total = (Override or Cap) × Rooms × Nights.</div>
+        <div class="small muted">M&IE Total = M&IE × (Crew + Subs) × Nights. Lodging Total = (Override or Cap) × Rooms × Nights.</div>
       </div>
     </div>
 
@@ -131,8 +131,7 @@
     </div>
 
   </div>
-</div>
-
+</main>
 <script src="labor.js"></script>
 </body>
 </html>

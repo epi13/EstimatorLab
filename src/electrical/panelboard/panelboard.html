@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../styles.css">
   <style>
     /* Additional styles can be added here if needed */
   </style>
@@ -11,12 +11,12 @@
   <title>Electrical Panelboard Price Calculator</title>
 </head>
 <body data-page="electrical-panelboard">
-  <header class="header-panelboard">
+  <header class="topbar topbar--compact">
     <h1>Electrical Panelboard Price Calculator</h1>
     <small>Alaska-ready • Includes materials, shipping/handling, and labor • Configurable pricing engine</small>
   </header>
 
-  <div class="wrap-panelboard">
+  <main class="wrap wrap--compact">
     <section class="card" id="inputs">
       <h2>Panel Inputs</h2>
       <div class="grid-2">
@@ -138,8 +138,8 @@
 
       <div class="hr"></div>
       <div class="row">
-        <button class="btn" id="calcBtn">Calculate Price</button>
-        <button class="btn" id="resetBtn">Reset</button>
+        <button id="calcBtn">Calculate Price</button>
+        <button id="resetBtn">Reset</button>
         <span class="pill">Configurable Pricing Engine</span>
       </div>
 
@@ -148,17 +148,17 @@
         <div class="muted" style="margin:8px 0">Edit and save to tweak base pricing without changing code. Values are rough industry ROMs; replace with your vendor data.</div>
         <textarea id="configArea" rows="18" spellcheck="false"></textarea>
         <div class="row" style="margin-top:8px">
-          <button class="btn" id="loadCfg">Load from editor</button>
-          <button class="btn" id="exportCfg">Download config.json</button>
+          <button id="loadCfg">Load from editor</button>
+          <button id="exportCfg">Download config.json</button>
           <input type="file" id="importCfgFile" accept="application/json"/>
-          <button class="btn" id="importCfg">Import</button>
+          <button id="importCfg">Import</button>
         </div>
       </details>
 
       <details>
         <summary><strong>Self‑Tests</strong> (sanity checks)</summary>
         <div class="row" style="margin:8px 0">
-          <button class="btn" id="runTests">Run Tests</button>
+          <button id="runTests">Run Tests</button>
           <span id="testSummary" class="badge"></span>
         </div>
         <table>
@@ -195,7 +195,7 @@
         <ul id="assumptions" class="muted"></ul>
       </details>
     </section>
-  </div>
+  </main>
 
 <script src="panelboard.js"></script>
 </body>

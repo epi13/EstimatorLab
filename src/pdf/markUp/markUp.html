@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../../styles.css">
+  <link rel="stylesheet" href="../../app.css">
   <style>
     /* Additional styles can be added here if needed */
   </style>
@@ -14,7 +15,7 @@
 </head>
 <body data-page="pdf-markup">
 <div class="app" aria-label="PDF Redline Editor">
-  <header>
+  <header class="topbar topbar--compact">
     <div class="toolbar" role="toolbar" aria-label="Main toolbar">
       <div class="group" role="group" aria-label="File">
         <input aria-label="Open PDF" type="file" id="openPDF" accept="application/pdf" />
@@ -162,7 +163,7 @@
     </aside>
   </div>
 
-  <footer class="status" role="status" aria-live="polite">
+  <footer class="footer-note small" role="status" aria-live="polite">
     <span id="statusTool" class="badge">Select</span>
     <span id="statusHint">Space: pan • Shift: constrain • Alt: duplicate</span>
     <span id="statusCoord">x:– y:–</span>

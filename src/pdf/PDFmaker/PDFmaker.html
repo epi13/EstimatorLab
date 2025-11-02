@@ -4,26 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Local PDF Builder</title>
-  <link rel="stylesheet" href="../styles.css"/>
+  <link rel="stylesheet" href="../../styles.css"/>
 </head>
 <body data-page="pdf-pdfmaker-index">
-  <header class="app-header">
-    <div class="header-left">
-      <h1>PDF Builder</h1>
-      <p class="tagline">Paste notes + drop screenshots → Save as PDF</p>
-    </div>
-
-    <div class="header-actions">
-      <button id="addTextBtn" class="btn primary">+ Text / Markdown</button>
-      <label class="btn file-btn">
-        + Screenshot / Image
+  <header class="topbar topbar--compact">
+    <div class="row-between">
+      <div>
+        <h1>PDF Builder</h1>
+        <div class="sub">Paste notes + drop screenshots → Save as PDF</div>
+      </div>
+      <div class="right flex">
+        <button id="addTextBtn">+ Text / Markdown</button>
         <input type="file" id="imageInput" accept="image/*" hidden />
-      </label>
-      <button id="printBtn" class="btn success">Export PDF</button>
+        <button id="imageBtn" type="button" class="secondary">+ Screenshot / Image</button>
+        <button id="printBtn">Export PDF</button>
+      </div>
     </div>
   </header>
 
-  <main class="main-layout">
+  <main class="wrap wrap--compact">
     <!-- Left panel: editor controls / new block form -->
     <section class="editor-panel card">
       <h2 class="panel-title">New Text Block</h2>
@@ -43,7 +42,7 @@
       </div>
 
       <div class="form-row">
-        <button id="saveBlockBtn" class="btn primary full">Add Block</button>
+        <button id="saveBlockBtn" style="width:100%">Add Block</button>
       </div>
 
       <hr class="section-divider"/>
@@ -78,9 +77,7 @@
     <div id="printBlocks"></div>
   </div>
 
-  <footer class="app-footer">
-    <p>All local. Nothing uploads anywhere.</p>
-  </footer>
+  <footer class="footer-note">All local. Nothing uploads anywhere.</footer>
 
   <script src="app.js"></script>
 </body>
