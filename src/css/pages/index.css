@@ -328,7 +328,6 @@ body[data-page="root-index"] .workspace-category {
   color: var(--text-muted);
 }
 
-
 body[data-page="root-index"] .noscript {
   margin: 1rem auto 0;
   max-width: 40rem;
