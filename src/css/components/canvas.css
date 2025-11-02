@@ -1,0 +1,18 @@
+.canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 140px);
+  background: repeating-conic-gradient(from 45deg, var(--surface-muted) 0 15deg, var(--surface) 0 30deg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.layer { position: absolute; inset: 0; }
+.canvas-stack { position: relative; display: inline-block; }
+#overlay { position: absolute; left: 0; top: 0; pointer-events: auto; }
+#labels { position: absolute; left: 0; top: 0; pointer-events: none; }
+.viewer .hint {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  background: rgba(15, 23, 42, 0.88); padding: 0.75rem 1rem; border-radius: 16px; font-size: 0.9rem; color: var(--text-muted);
+  text-align: center; box-shadow: 0 18px 40px -28px rgba(15, 23, 42, 0.9); max-width: 260px;
+}

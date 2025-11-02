@@ -1,0 +1,23 @@
+.toolbar {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  z-index: 10;
+}
+
+.topbar .tool { appearance: none; border: none; background: transparent; color: var(--text); font-weight: 600; font-size: 0.8rem; padding: 0.25rem 0.45rem; border-radius: 999px; transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, border 0.2s ease; cursor: pointer; }
+.topbar .tool:hover { background: rgba(96, 165, 250, 0.16); }
+.topbar .tool:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.topbar .tool.active { background: linear-gradient(135deg, var(--accent), var(--accent-strong)); color: #021024; box-shadow: 0 12px 28px -18px rgba(56, 189, 248, 0.85); }
+.topbar .tool.ghost { border: 1px solid var(--border); background: rgba(148, 163, 184, 0.05); color: var(--text-muted); }
+.topbar .tool.ghost:hover { color: var(--text); border-color: var(--accent); background: rgba(148, 163, 184, 0.12); }
+
+.tool { appearance: none; border: none; background: transparent; color: var(--text); font-weight: 600; font-size: 0.8rem; padding: 0.25rem 0.45rem; border-radius: 999px; transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, border 0.2s ease; cursor: pointer; }
+.tool:hover { background: rgba(96, 165, 250, 0.16); }
+.tool:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tool.active { background: linear-gradient(135deg, var(--accent), var(--accent-strong)); color: #021024; box-shadow: 0 12px 28px -18px rgba(56, 189, 248, 0.85); }
+.tool.ghost { border: 1px solid var(--border); background: rgba(148, 163, 184, 0.05); color: var(--text-muted); }
+.tool.ghost:hover { color: var(--text); border-color: var(--accent); background: rgba(148, 163, 184, 0.12); }

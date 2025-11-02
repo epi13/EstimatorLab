@@ -1,0 +1,5 @@
+.node { fill: var(--accent); stroke: var(--surface); stroke-width: 1; cursor: pointer; }
+.edge { stroke: var(--success); stroke-width: 2; fill: none; }
+.poly-fill { fill: rgba(52, 211, 153, 0.15); stroke: var(--success); stroke-width: 2; }
+.cal-line { stroke: var(--warn); stroke-dasharray: 6 6; stroke-width: 2; }
+.cal-node { fill: var(--warn); stroke: var(--surface); stroke-width: 1; }

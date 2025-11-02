@@ -1,0 +1,39 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  background: var(--background);
+  color: var(--text);
+  padding: clamp(0.5rem, 1.2vw, 1.25rem);
+  line-height: 1.6;
+}
+
+body[data-page] > *:not(script):not(style) {
+  max-width: min(1600px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+h1, h2, h3, h4 {
+  color: var(--heading);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+label {
+  font-weight: 600;
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--heading);
+}
+
+label span.hint {
+  display: block;
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}

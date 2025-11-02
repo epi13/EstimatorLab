@@ -1,0 +1,19 @@
+.topbar__row { display: flex; flex-wrap: wrap; gap: clamp(0.45rem, 1.2vw, 0.75rem); align-items: stretch; justify-content: space-between; }
+.topbar__row--layout { align-items: stretch; gap: clamp(0.55rem, 1.3vw, 0.8rem); }
+.topbar__row--tools { align-items: stretch; }
+.brand { display: flex; align-items: center; gap: clamp(0.4rem, 1.1vw, 0.65rem); color: var(--text); }
+.brand-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px;
+  background: radial-gradient(circle at 30% 30%, rgba(96, 165, 250, 0.25), rgba(56, 189, 248, 0.18)); box-shadow: 0 18px 32px -24px rgba(37, 99, 235, 0.75); font-size: 1.2rem; }
+.brand-copy h1 { margin: 0; font-size: clamp(0.95rem, 2vw, 1.15rem); letter-spacing: 0.02em; }
+.brand-copy p { margin: 0.1rem 0 0; font-size: 0.75rem; color: var(--text-muted); max-width: 32ch; }
+.topbar__clusters { display: grid; flex: 1 1 auto; gap: clamp(0.4rem, 1.1vw, 0.6rem); grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); align-items: stretch; }
+.pill__stack { display: flex; flex-direction: column; gap: 0.2rem; min-width: 120px; }
+.pill--file { flex: 1 1 240px; align-items: stretch; }
+.pill--file input[type="file"] { width: 100%; background: var(--input-bg); color: var(--text); border: 1px dashed var(--border); border-radius: 10px; padding: 0.35rem 0.5rem; cursor: pointer; }
+.pill--file input[type="file"]::file-selector-button {
+  margin-right: 0.75rem; border: none; border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: var(--button-text); padding: 0.35rem 0.75rem; font-weight: 600; cursor: pointer; transition: filter 0.2s ease;
+}
+.pill--file input[type="file"]::file-selector-button:hover { filter: brightness(1.05); }
+.pill--file .file-name { align-self: center; padding: 0.25rem 0.55rem; border-radius: 999px; background: var(--surface-muted); color: var(--text-muted); white-space: nowrap; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }

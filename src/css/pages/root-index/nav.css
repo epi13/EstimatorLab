@@ -1,0 +1,98 @@
+/* Root index navigation */
+body[data-page="root-index"] .nav {
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  margin-right: -0.5rem;
+  display: grid;
+  gap: 0.35rem;
+  scrollbar-width: thin;
+}
+
+body[data-page="root-index"] .nav-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(248, 250, 252, 0.8);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+body[data-page="root-index"] .nav-section {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body[data-page="root-index"] .nav-section:last-of-type { border-bottom: none; }
+
+body[data-page="root-index"] .nav-section__header { padding: 0.5rem 0; }
+
+body[data-page="root-index"] .nav-section__toggle {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+body[data-page="root-index"] .nav-section__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+body[data-page="root-index"] .nav-section__icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body[data-page="root-index"] .nav-section__icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+body[data-page="root-index"] .nav-section__chevron {
+  width: 0.9rem;
+  height: 0.9rem;
+  fill: rgba(248, 250, 252, 0.6);
+  transition: transform 0.2s ease;
+}
+
+body[data-page="root-index"] .nav-section[data-open="true"] .nav-section__chevron { transform: rotate(180deg); }
+
+body[data-page="root-index"] .nav-section__list {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0 0.4rem 1.75rem;
+  display: none;
+  gap: 0.25rem;
+}
+
+body[data-page="root-index"] .nav-section[data-open="true"] .nav-section__list { display: grid; }
+
+body[data-page="root-index"] .nav-section__item { position: relative; }
+
+body[data-page="root-index"] .nav-section__link {
+  display: block;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  color: inherit;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+body[data-page="root-index"] .nav-section__link:hover,
+body[data-page="root-index"] .nav-section__link:focus-visible { background: rgba(255, 255, 255, 0.12); }
+
+body[data-page="root-index"] .nav-section__item.is-active .nav-section__link { background: rgba(255, 255, 255, 0.18); }

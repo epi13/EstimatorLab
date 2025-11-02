@@ -1,0 +1,21 @@
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.25rem;
+  background: var(--surface);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+table th,
+table td {
+  border: 1px solid var(--border);
+  padding: 0.6rem;
+  text-align: left;
+}
+
+table thead {
+  background: var(--surface-muted);
+  color: var(--heading);
+  font-weight: 600;
+}

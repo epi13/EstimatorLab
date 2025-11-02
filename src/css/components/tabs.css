@@ -1,0 +1,11 @@
+.view-tabs { display: flex; gap: 10px; align-items: center; }
+.tab-btn {
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 700;
+}
+.tab-btn.active { border-color: var(--accent); color: var(--accent); }
