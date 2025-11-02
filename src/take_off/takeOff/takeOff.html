@@ -6,6 +6,13 @@
   <link rel="stylesheet" href="../../app.css">
   <style>
     /* Additional styles can be added here if needed */
+    /* Dropzone styling */
+    #dropzone { position: relative; display: grid; place-items: center; min-height: calc(100vh - 220px); border: 2px dashed var(--border); border-radius: 14px; background: var(--surface); color: var(--text-muted); }
+    #dropzone .inner { text-align: center; padding: 1rem; }
+    #dropzone .title { font-weight: 700; color: var(--heading); }
+    #dropzone .hint { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; position: static !important; left: auto !important; top: auto !important; transform: none !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
+    #dropzone .actions { margin-top: 0.6rem; display: flex; gap: 0.5rem; justify-content: center; }
+    #dropzone.drag { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2) inset; }
   </style>
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -17,68 +24,45 @@
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   </script>
 </head>
-<body data-page="take-off-takeoff">
+  <body data-page="take-off-takeoff">
   <div class="takeoff-shell">
-    <header class="topbar topbar--compact" role="banner">
-      <div class="topbar__row topbar__row--layout">
-        <div class="brand" aria-label="Blueprint Measure">
-          <span class="brand-icon" aria-hidden="true">📐</span>
-          <div class="brand-copy">
-            <h1>Blueprint Measure</h1>
-            <p>Calibrate drawings, trace geometry, and capture precise takeoffs.</p>
-          </div>
-        </div>
-        <div class="topbar__clusters" aria-label="Primary controls">
-          <div class="pill pill--file">
-            <div class="pill__stack">
-              <label class="small" for="file">Upload PDF</label>
-              <input id="file" type="file" accept="application/pdf" />
-            </div>
-            <span id="fileName" class="file-name small">No document loaded</span>
-            <button id="demoBtn" class="tool ghost" type="button" title="Load demo PDF">Demo</button>
-          </div>
-          <div class="pill pill--nav" aria-label="Page navigation">
-            <button class="tool" id="prev" type="button" title="Previous page">◀</button>
-            <span class="small">Page <span id="pageNum" class="num">–</span>/<span id="pageCount" class="num">–</span></span>
-            <button class="tool" id="next" type="button" title="Next page">▶</button>
-          </div>
-          <div class="pill pill--zoom" aria-label="Zoom controls">
-            <button class="tool" id="zoomOut" type="button" title="Zoom out">–</button>
-            <span class="small num" id="zoomLbl">100%</span>
-            <button class="tool" id="zoomIn" type="button" title="Zoom in">+</button>
-            <button class="tool ghost" id="zoomReset" type="button" title="Reset zoom">Reset</button>
-          </div>
-          <div class="pill pill--export" aria-label="Export">
-            <button class="tool" id="exportJson" type="button">⇩ Export JSON</button>
-            <button class="tool" id="exportPng" type="button">📸 Snapshot</button>
-          </div>
-        </div>
-      </div>
-      <div class="topbar__row topbar__row--tools">
-        <div class="pill pill--tools" id="toolGroup" aria-label="Measurement tools">
-          <button class="tool" data-tool="pan" type="button" title="Pan (hold Space to pan)">🖐️ Pan</button>
-          <button class="tool" data-tool="calibrate" type="button" title="Calibrate scale">🎯 Calibrate</button>
-          <button class="tool" data-tool="line" type="button" title="Measure line">📏 Line</button>
-          <button class="tool" data-tool="area" type="button" title="Measure polygon area">▱ Area</button>
-          <button class="tool" id="undo" type="button" title="Undo last point">↶ Undo</button>
-          <button class="tool" id="finish" type="button" title="Finish polygon">✔ Finish</button>
-          <button class="tool" id="clearMeasures" type="button" title="Clear measurements">🧹 Clear</button>
-        </div>
-        <div class="pill pill--units" aria-label="Display units">
-          <span class="small">Units</span>
-          <select id="units">
-            <option value="ft">ft</option>
-            <option value="in">in</option>
-            <option value="m">m</option>
-          </select>
-          <span class="small">Scale</span>
-          <span id="scaleLbl" class="badge mono">–</span>
-        </div>
-      </div>
-    </header>
-
     <main class="wrap wrap--compact" role="main">
       <aside class="panel" id="side">
+        <section class="panel-section">
+          <div class="topbar__clusters" aria-label="Primary controls">
+            <div class="pill pill--file">
+              <div class="pill__stack">
+                <label class="small" for="file">Upload PDF</label>
+                <input id="file" type="file" accept="application/pdf" />
+              </div>
+            </div>
+            <div class="pill pill--nav" aria-label="Page navigation">
+              <button class="tool" id="prev" type="button" title="Previous page">◀</button>
+              <span class="small">Page <span id="pageNum" class="num">–</span>/<span id="pageCount" class="num">–</span></span>
+              <button class="tool" id="next" type="button" title="Next page">▶</button>
+            </div>
+            <div class="pill pill--zoom" aria-label="Zoom controls">
+              <button class="tool" id="zoomOut" type="button" title="Zoom out">–</button>
+              <span class="small num" id="zoomLbl">100%</span>
+              <button class="tool" id="zoomIn" type="button" title="Zoom in">+</button>
+              <button class="tool ghost" id="zoomReset" type="button" title="Reset zoom">Reset</button>
+            </div>
+            <div class="pill pill--export" aria-label="Export">
+              <button class="tool" id="exportJson" type="button">⇩ Export JSON</button>
+              <button class="tool" id="exportPng" type="button">📸 Snapshot</button>
+            </div>
+            <div class="pill pill--units" aria-label="Display units">
+              <span class="small">Units</span>
+              <select id="units">
+                <option value="ft">ft</option>
+                <option value="in">in</option>
+                <option value="m">m</option>
+              </select>
+              <span class="small">Scale</span>
+              <span id="scaleLbl" class="badge mono">–</span>
+            </div>
+          </div>
+        </section>
         <section class="panel-section">
           <h3>Session</h3>
           <div class="kvs" id="sessionKVS">
@@ -114,12 +98,31 @@
       </aside>
 
       <section class="viewer" id="viewer" aria-live="polite">
+        <div class="toolbar" aria-label="Measurement tools">
+          <div id="toolGroup">
+            <button class="tool" data-tool="pan" type="button" title="Pan (hold Space to pan)">🖐️ Pan</button>
+            <button class="tool" data-tool="calibrate" type="button" title="Calibrate scale">🎯 Calibrate</button>
+            <button class="tool" data-tool="line" type="button" title="Measure line">📏 Line</button>
+            <button class="tool" data-tool="area" type="button" title="Measure polygon area">▱ Area</button>
+            <button class="tool" id="undo" type="button" title="Undo last point">↶ Undo</button>
+            <button class="tool" id="finish" type="button" title="Finish polygon">✔ Finish</button>
+            <button class="tool" id="clearMeasures" type="button" title="Clear measurements">🧹 Clear</button>
+          </div>
+        </div>
+        <div id="dropzone" tabindex="0">
+          <div class="inner">
+            <div class="title">Drag & drop a PDF here</div>
+            <div class="hint">or click Browse to select a file</div>
+            <div class="actions">
+              <button id="dropBrowse" class="tool ghost" type="button">Browse…</button>
+            </div>
+          </div>
+        </div>
         <div class="canvas-stack" id="stack" style="display:none">
           <canvas id="pdf"></canvas>
           <canvas id="overlay"></canvas>
           <canvas id="labels"></canvas>
         </div>
-        <div class="hint" id="hint">Load a PDF to begin.</div>
       </section>
     </main>
   </div>

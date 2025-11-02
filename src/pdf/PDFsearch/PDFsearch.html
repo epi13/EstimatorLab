@@ -20,44 +20,36 @@
   <script src="PDFsearch.js" defer></script>
 </head>
 <body data-page="pdf-pdfsearch">
-  <header class="topbar topbar--compact">
-    <div class="wrap">
-      <div class="toolbar">
-        <div class="row wrap">
-          <div>
-            <input id="urlInput" type="text" placeholder="Paste PDF URL (https://...) or leave empty to use File/Drop" />
-            <button id="loadUrlBtn" class="primary">Load URL</button>
-          </div>
-          <div>
-            <input id="fileInput" class="input" type="file" accept="application/pdf" />
-            <button id="clearBtn" class="ghost">Clear</button>
-          </div>
+  <!-- header removed; controls moved into left column -->
+
+  <main>
+    <div class="wrap--compact">
+    <aside id="leftcol">
+      <div class="card" id="loadCard">
+        <div class="row">
+          <input id="urlInput" class="grow" type="text" placeholder="Paste PDF URL (https://...) or leave empty to use File/Drop" />
+          <button id="loadUrlBtn" class="btn-sm">Load URL</button>
         </div>
         <div class="row">
-          <div class="small muted" id="status">No PDF loaded.</div>
+          <input id="fileInput" class="input" type="file" accept="application/pdf" />
+          <button id="clearBtn" class="ghost btn-sm">Clear</button>
         </div>
+        <div class="small muted" id="status">No PDF loaded. Drop a file or paste a URL.</div>
       </div>
-    </div>
-  </header>
-
-  <main class="wrap wrap--compact">
-    <aside id="leftcol">
       <div id="drop" class="card" tabindex="0">
         <div style="font-weight:700;font-size:14px;margin-bottom:6px">Drag & drop a PDF here</div>
         <div class="small muted">or use the controls above</div>
       </div>
 
       <div class="card">
-        <div class="row" style="align-items:flex-end;gap:8px">
-          <div style="flex:1">
-            <label for="q">Search</label>
-            <input id="q" type="text" placeholder="Type your query... supports fuzzy, regex, multi-term" />
-          </div>
-          <button id="searchBtn" class="primary">Search</button>
+        <div class="row" style="align-items:flex-end">
+          <label for="q">Search</label>
+          <input id="q" class="grow" type="text" placeholder="Type your query... supports fuzzy, regex, multi-term" />
+          <button id="searchBtn" class="btn-sm">Search</button>
         </div>
-        <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
-          <div>
-            <label>Mode</label>
+        <div class="row opts" style="flex-wrap:wrap">
+          <div class="row">
+            <label for="mode">Mode</label>
             <select id="mode">
               <option value="fuzzy">Fuzzy (Fuse.js)</option>
               <option value="regex">Regex</option>
@@ -65,23 +57,23 @@
               <option value="phonetic">Phonetic (Double‑Metaphone)</option>
             </select>
           </div>
-          <div>
-            <label>Fuzziness</label>
+          <div class="row">
+            <label for="thres">Fuzziness</label>
             <input id="thres" type="number" min="0" max="1" step="0.02" value="0.35"/>
           </div>
-          <div>
-            <label>Proximity (chars)</label>
+          <div class="row">
+            <label for="prox">Proximity (chars)</label>
             <input id="prox" type="number" min="20" max="800" step="10" value="120"/>
           </div>
-          <div>
-            <label>Case sensitive</label>
+          <div class="row">
+            <label for="case">Case</label>
             <select id="case">
               <option value="false" selected>No</option>
               <option value="true">Yes</option>
             </select>
           </div>
-          <div>
-            <label>OCR fallback</label>
+          <div class="row">
+            <label for="ocr">OCR</label>
             <select id="ocr">
               <option value="auto" selected>Auto (only pages with no text)</option>
               <option value="off">Off</option>
@@ -89,9 +81,9 @@
             </select>
           </div>
         </div>
-        <div class="row" style="margin-top:8px">
-          <button id="exportBtn">Export results (.json)</button>
-          <button id="clearMarksBtn" class="ghost">Clear highlights</button>
+        <div class="row">
+          <button id="exportBtn" class="btn-sm">Export results (.json)</button>
+          <button id="clearMarksBtn" class="ghost btn-sm">Clear highlights</button>
         </div>
       </div>
 
@@ -121,6 +113,7 @@
     <section id="rightcol">
       <div id="viewer" class="viewer"></div>
     </section>
+    </div>
   </main>
 
 </body>

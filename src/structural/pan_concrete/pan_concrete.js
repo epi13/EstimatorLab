@@ -64,11 +64,11 @@
     // Scales
     const pxPerIn = 8; // 1 in = 8 px
     const margin = 20;
-    const viewW = Math.max(400, (P*3)*pxPerIn + margin*2);
-    const viewH = 250;
+    const pitches = 2;
+    const viewW = Math.min(560, Math.max(360, (P*pitches)*pxPerIn + margin*2));
+    const viewH = 180;
 
-    // Build three-pitch profile
-    const pitches = 3;
+    // Build profile (number of pitches limited for compact view)
     const crestTop = (P - Wt)/2;
     const troughTop = crestTop + Wt;
     const crestBottom = (P - Wb)/2;
@@ -109,28 +109,22 @@
     const svg = document.createElementNS("http://www.w3.org/2000/svg","svg");
     svg.setAttribute("viewBox", `0 0 ${viewW} ${viewH}`);
     svg.setAttribute("preserveAspectRatio","xMidYMid meet");
+    svg.style.width = "100%";
+    svg.style.height = "auto";
 
-    // Background grid (light)
-    const grid = document.createElementNS(svg.namespaceURI,"g");
-    const gridStep = 1*pxPerIn;
-    for (let gx=margin; gx<viewW-margin; gx+=gridStep){
-      const l = document.createElementNS(svg.namespaceURI,"line");
-      l.setAttribute("x1",gx); l.setAttribute("y1",margin);
-      l.setAttribute("x2",gx); l.setAttribute("y2",viewH-margin);
-      l.setAttribute("stroke","#1b2330"); l.setAttribute("stroke-width","1");
-      grid.appendChild(l);
-    }
-    for (let gy=margin; gy<viewH-margin; gy+=gridStep){
-      const l = document.createElementNS(svg.namespaceURI,"line");
-      l.setAttribute("x1",margin); l.setAttribute("y1",gy);
-      l.setAttribute("x2",viewW-margin); l.setAttribute("y2",gy);
-      l.setAttribute("stroke","#1b2330"); l.setAttribute("stroke-width","1");
-      grid.appendChild(l);
-    }
-    svg.appendChild(grid);
+    // Clean frame only (no grid)
+    const frame = document.createElementNS(svg.namespaceURI, "rect");
+    frame.setAttribute("x", margin);
+    frame.setAttribute("y", margin);
+    frame.setAttribute("width", viewW - margin*2);
+    frame.setAttribute("height", viewH - margin*2);
+    frame.setAttribute("rx", "10"); frame.setAttribute("ry", "10");
+    frame.setAttribute("fill", "none"); frame.setAttribute("stroke", "rgba(15,23,42,0.35)");
+    frame.setAttribute("stroke-width", "1.2");
+    svg.appendChild(frame);
 
     // Origin for profile
-    const baseY = viewH - margin - 80; // place deck mid-height
+    const baseY = viewH - margin - 60; // place deck compactly
     const startX = margin + 20;
 
     // Deck polyline
@@ -141,7 +135,7 @@
     }
     deck.setAttribute("d", dAll);
     deck.setAttribute("fill","none");
-    deck.setAttribute("stroke","#6aa0ff");
+    deck.setAttribute("stroke","#5b8efb");
     deck.setAttribute("stroke-width","2");
     svg.appendChild(deck);
 
@@ -153,7 +147,7 @@
     slab.setAttribute("y1", slabY);
     slab.setAttribute("x2", startX + pitches*P*pxPerIn);
     slab.setAttribute("y2", slabY);
-    slab.setAttribute("stroke","#6ee787");
+    slab.setAttribute("stroke","#34d399");
     slab.setAttribute("stroke-width","3");
     svg.appendChild(slab);
 
@@ -201,17 +195,7 @@
     // Dimensions: t (effective slab)
     svg.appendChild(dimArrow(startX + pitches*P*pxPerIn + 14, slabY, startX + pitches*P*pxPerIn + 14, baseY, `t = ${t_in.toFixed(2)}"`));
 
-    // Labels
-    function label(x,y,text){
-      const tt = document.createElementNS(svg.namespaceURI,"text");
-      tt.setAttribute("x",x); tt.setAttribute("y",y);
-      tt.setAttribute("fill","#9da7b3"); tt.setAttribute("font-size","12");
-      tt.textContent = text;
-      svg.appendChild(tt);
-    }
-    label(startX, slabY - 6, "Slab top");
-    label(startX, baseY - 6, "High flute (deck crest)");
-    label(startX, baseY + H*pxPerIn + 14, "Low flute (deck valley)");
+    // Skip verbose labels to keep the diagram clear (dimension arrows remain)
 
     els.svgHost.innerHTML = "";
     els.svgHost.appendChild(svg);

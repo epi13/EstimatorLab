@@ -10,118 +10,129 @@
   /* Additional styles can be added here if needed */
 </style>
 </head>
-<body>
+<body data-page="composite-volume">
 
-<!-- LEFT: Controls -->
-<div class="panel left">
+<main>
+  <div class="wrap--compact">
+
+  <!-- LEFT: Controls -->
+  <section class="card" id="leftCol">
   <h1>Composite 3D Volume (Orthogonal Sections)</h1>
 
-  <div class="group">
-    <h2>1) Load Backdrops (PDF or Image)</h2>
-    <label>View A backdrop (PDF page or image)
-      <input id="fileA" type="file" accept="application/pdf,image/*" />
-    </label>
-    <div class="row">
-      <input id="pageA" type="number" min="1" value="1" />
-      <button id="renderA">Render A</button>
+  <details class="group">
+    <summary>1) Load Backdrops (PDF or Image)</summary>
+    <div class="small muted">Pick a file, set page, then click Render. Use Scale A/B to match drawing scale.</div>
+    <div class="stack">
+      <div class="small muted">A View (X–Z)</div>
+      <label for="fileA">View A file</label>
+      <div class="row">
+        <input id="fileA" class="sr-only" type="file" accept="application/pdf,image/*" />
+        <button type="button" id="chooseA" class="secondary btn-sm">Choose</button>
+        <span id="fileAName" class="small muted ellipsis grow">No file</span>
+      </div>
+      <div class="row">
+        <label for="pageA">Page</label>
+        <input id="pageA" type="number" min="1" value="1" />
+        <button id="renderA" class="btn-sm">Render</button>
+      </div>
     </div>
-    <label>View B backdrop (PDF page or image)
-      <input id="fileB" type="file" accept="application/pdf,image/*" />
-    </label>
-    <div class="row">
-      <input id="pageB" type="number" min="1" value="1" />
-      <button id="renderB">Render B</button>
+    <div class="stack">
+      <div class="small muted">B View (Y–Z)</div>
+      <label for="fileB">View B file</label>
+      <div class="row">
+        <input id="fileB" class="sr-only" type="file" accept="application/pdf,image/*" />
+        <button type="button" id="chooseB" class="secondary btn-sm">Choose</button>
+        <span id="fileBName" class="small muted ellipsis grow">No file</span>
+      </div>
+      <div class="row">
+        <label for="pageB">Page</label>
+        <input id="pageB" type="number" min="1" value="1" />
+        <button id="renderB" class="btn-sm">Render</button>
+      </div>
+    </div>
+    <div class="row form-pairs">
+      <label for="scaleA">Scale A</label>
+      <input id="scaleA" class="grow" type="range" min="0.2" max="3" step="0.01" value="1" title="Adjust A backdrop scale" />
+      <label for="scaleB">Scale B</label>
+      <input id="scaleB" class="grow" type="range" min="0.2" max="3" step="0.01" value="1" title="Adjust B backdrop scale" />
     </div>
     <div class="row">
-      <label>Backdrop scale A
-        <input id="scaleA" type="range" min="0.2" max="3" step="0.01" value="1" />
-      </label>
-      <label>Backdrop scale B
-        <input id="scaleB" type="range" min="0.2" max="3" step="0.01" value="1" />
-      </label>
+      <button id="toggleGridA" class="ghost btn-sm" title="Toggle grid overlay on A View">Grid A</button>
+      <button id="toggleGridB" class="ghost btn-sm" title="Toggle grid overlay on B View">Grid B</button>
     </div>
-    <div class="row">
-      <button id="toggleGridA">Toggle Grid A</button>
-      <button id="toggleGridB">Toggle Grid B</button>
-    </div>
-  </div>
+  </details>
 
   <div class="group">
     <h2>2) Unit Calibration</h2>
     <div class="small">Use the <span class="kbd">Calibrate</span> tool: draw a reference segment on each view and enter its real length.</div>
-    <div class="row">
-      <label>Units
-        <select id="units">
-          <option value="ft">Feet</option>
-          <option value="in">Inches</option>
-          <option value="m">Meters</option>
-          <option value="cm">Centimeters</option>
-        </select>
-      </label>
-      <label>Z axis units
-        <select id="zunits">
-          <option value="ft">Feet</option>
-          <option value="in">Inches</option>
-          <option value="m">Meters</option>
-          <option value="cm">Centimeters</option>
-        </select>
-      </label>
+    <div class="row form-pairs">
+      <label for="units">Units</label>
+      <select id="units" class="grow">
+        <option value="ft">Feet</option>
+        <option value="in">Inches</option>
+        <option value="m">Meters</option>
+        <option value="cm">Centimeters</option>
+      </select>
+      <label for="zunits">Z axis</label>
+      <select id="zunits" class="grow">
+        <option value="ft">Feet</option>
+        <option value="in">Inches</option>
+        <option value="m">Meters</option>
+        <option value="cm">Centimeters</option>
+      </select>
     </div>
-    <div class="row">
-      <label>Cal length A (<span id="unitsA">ft</span>)
-        <input id="calLenA" type="number" min="0" step="0.0001" value="0" />
-      </label>
-      <label>Cal length B (<span id="unitsB">ft</span>)
-        <input id="calLenB" type="number" min="0" step="0.0001" value="0" />
-      </label>
+    <div class="row form-pairs">
+      <label for="calLenA">Cal A (<span id="unitsA">ft</span>)</label>
+      <input id="calLenA" type="number" min="0" step="0.0001" value="0" placeholder="Real length" />
+      <label for="calLenB">Cal B (<span id="unitsB">ft</span>)</label>
+      <input id="calLenB" type="number" min="0" step="0.0001" value="0" placeholder="Real length" />
     </div>
   </div>
 
   <div class="group">
     <h2>3) Volume Settings</h2>
-    <div class="row">
-      <label>Extent X (<span id="ux">ft</span>)
-        <input id="extentX" type="number" step="0.001" value="10" />
-      </label>
-      <label>Extent Y (<span id="uy">ft</span>)
-        <input id="extentY" type="number" step="0.001" value="10" />
-      </label>
+    <div class="row form-pairs">
+      <label for="extentX">Extent X (<span id="ux">ft</span>)</label>
+      <input id="extentX" type="number" step="0.001" value="10" placeholder="Width X" />
+      <label for="extentY">Extent Y (<span id="uy">ft</span>)</label>
+      <input id="extentY" type="number" step="0.001" value="10" placeholder="Width Y" />
     </div>
-    <div class="row">
-      <label>Extent Z (<span id="uz">ft</span>)
-        <input id="extentZ" type="number" step="0.001" value="10" />
-      </label>
-      <label>Voxel Resolution (N³)
-        <input id="voxN" type="number" min="10" max="160" step="1" value="60" />
-      </label>
+    <div class="row form-pairs">
+      <label for="extentZ">Extent Z (<span id="uz">ft</span>)</label>
+      <input id="extentZ" type="number" step="0.001" value="10" placeholder="Height Z" />
+      <label for="voxN">Voxel N (N³)</label>
+      <input id="voxN" type="number" min="10" max="160" step="1" value="60" title="Voxel grid resolution" />
     </div>
-    <button id="compute" class="accent">Compute Volume</button>
+    <button id="compute" class="accent btn-sm">Compute</button>
     <div class="footer-note small">Tip: Start with N=40–80 for speed. Increase for accuracy.</div>
   </div>
 
-  <div class="group">
-    <h2>4) Save / Load</h2>
+  <details class="group">
+    <summary>4) Save / Load</summary>
     <div class="row">
-      <button id="exportJSON" class="good">Export Shapes JSON</button>
-      <button id="importJSON" class="warn">Import Shapes JSON</button>
+      <button id="exportJSON" class="good btn-sm">Export JSON</button>
+      <button id="importJSON" class="warn btn-sm">Import JSON</button>
     </div>
     <input id="jsonFile" type="file" accept="application/json" style="display:none" />
-  </div>
-</div>
+  </details>
+  </section>
 
 <!-- CENTER: Drawing Area -->
-<div class="panel center">
-  <div class="view-tabs">
-    <button class="tab-btn active" data-view="A">View A (X–Z)</button>
-    <button class="tab-btn" data-view="B">View B (Y–Z)</button>
-    <span class="pill">Tools:
-      <button class="tool" data-tool="select">Select/Drag</button>
-      <button class="tool" data-tool="add">Add Node</button>
-      <button class="tool" data-tool="close">Close Poly</button>
-      <button class="tool" data-tool="cal">Calibrate</button>
-      <button class="tool danger" data-tool="clear">Clear</button>
-    </span>
-    <span class="pill">Snap: <input id="snap" type="checkbox" /> grid</span>
+<section class="card" id="centerCol">
+  <div class="view-tabs row-between">
+    <div class="row">
+      <button class="tab-btn btn-sm active" data-view="A" title="A View (X–Z)">A View (X–Z)</button>
+      <button class="tab-btn btn-sm" data-view="B" title="B View (Y–Z)">B View (Y–Z)</button>
+      <button class="tool btn-sm" data-tool="select">Select</button>
+      <button class="tool btn-sm" data-tool="add">Add</button>
+      <button class="tool btn-sm" data-tool="close">Close</button>
+      <button class="tool btn-sm" data-tool="cal">Cal</button>
+      <button class="tool danger btn-sm" data-tool="clear">Clear</button>
+    </div>
+    <div class="row small muted">
+      <label for="snap">Snap</label>
+      <input id="snap" type="checkbox" />
+    </div>
   </div>
 
   <div class="canvas-wrap" id="workarea">
@@ -138,10 +149,10 @@
       <span class="pill">Area: <span id="areaOut">0.000</span> <span id="areaUnits">ft²</span></span>
     </div>
   </div>
-</div>
+  </section>
 
 <!-- RIGHT: Results -->
-<div class="panel right">
+<section class="card" id="rightCol">
   <h2>Areas & Volume</h2>
   <div class="stat" id="stats">
     <div><strong>View A Area:</strong> <span id="areaA">0.000</span> <span id="uAreaA">ft²</span></div>
@@ -159,7 +170,10 @@
     <li>Snap to grid for crisp tracing; adjust backdrop scale sliders to match your page scale.</li>
     <li>Increase N for higher fidelity; volume converges as N → large.</li>
   </ul>
-</div>
+  </section>
+
+  </div>
+</main>
 
 <!-- PDF.js (UMD) for in-browser PDF rendering; works offline once cached) -->
 <!-- If a CDN is blocked in your environment, optionally download pdf.min.js and pdf.worker.min.js and reference them locally. -->

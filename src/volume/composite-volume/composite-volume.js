@@ -252,6 +252,10 @@
   const scaleB = document.getElementById('scaleB');
   const toggleGridA = document.getElementById('toggleGridA');
   const toggleGridB = document.getElementById('toggleGridB');
+  const chooseA = document.getElementById('chooseA');
+  const chooseB = document.getElementById('chooseB');
+  const fileAName = document.getElementById('fileAName');
+  const fileBName = document.getElementById('fileBName');
 
   toggleGridA.addEventListener('click', ()=>{ state.backdrop.A.showGrid = !state.backdrop.A.showGrid; drawAll();});
   toggleGridB.addEventListener('click', ()=>{ state.backdrop.B.showGrid = !state.backdrop.B.showGrid; drawAll();});
@@ -288,6 +292,11 @@
   function handleFile(which, fileInput, pageInput) {
     const f = fileInput.files?.[0];
     if (!f) return;
+    // reflect filename in UI
+    try {
+      const span = document.getElementById(which === 'A' ? 'fileAName' : 'fileBName');
+      if (span) span.textContent = f.name || '—';
+    } catch(_){}
     const b = state.backdrop[which];
     b.img = null; b.pdf = null;
     if (f.type === 'application/pdf') {
@@ -307,6 +316,11 @@
     }
   }
 
+  // Choose buttons open hidden inputs
+  if (chooseA) chooseA.addEventListener('click', ()=> fileA && fileA.click());
+  if (chooseB) chooseB.addEventListener('click', ()=> fileB && fileB.click());
+
+  // When files selected, update filename + load
   fileA.addEventListener('change', ()=>handleFile('A', fileA, pageA));
   fileB.addEventListener('change', ()=>handleFile('B', fileB, pageB));
   renderA.addEventListener('click', ()=>{ const b=state.backdrop.A; if (b.pdf) { b.page = Math.max(1, Math.min(parseInt(pageA.value||'1',10), b.pdf.numPages)); drawBackdrop('A'); }});

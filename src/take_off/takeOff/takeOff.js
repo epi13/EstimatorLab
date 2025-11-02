@@ -57,6 +57,8 @@ const els = {
   overlay: document.getElementById('overlay'),
   labels: document.getElementById('labels'),
   hint: document.getElementById('hint'),
+  dropzone: document.getElementById('dropzone'),
+  dropBrowse: document.getElementById('dropBrowse'),
   toggleLabels: document.getElementById('toggleLabels'),
   toggleSnaps: document.getElementById('toggleSnaps'),
   // Modal
@@ -206,6 +208,7 @@ async function loadPDF(data){
     state.pageCount = state.pdf.numPages; els.pageCount.textContent = state.pageCount;
     state.pageNum = 1; els.pageNum.textContent = 1;
     setStatus('PDF loaded');
+    if(els.dropzone) els.dropzone.style.display = 'none';
     await renderPage();
   }catch(e){
     console.error(e); setStatus('Failed to load PDF');
@@ -236,7 +239,7 @@ async function renderPage(){
   }
 
   els.stack.style.display = 'inline-block';
-  els.hint.style.display = 'none';
+  if(els.hint) els.hint.style.display = 'none';
 
   const renderCtx = { canvasContext: ctx, viewport };
   renderTask = page.render(renderCtx);
@@ -388,26 +391,60 @@ function drawOverlay(){
 }
 
 // ====== Interactions ======
-// File loading
-els.file.addEventListener('change', async (e)=>{
-  const f = e.target.files[0];
+// File helpers
+async function openPdfFile(f){
   if(!f) return;
-  if(els.fileName) els.fileName.textContent = f.name;
+  // Accept by MIME or file extension
+  const name = f.name || 'Document.pdf';
+  const okType = (f.type === 'application/pdf') || /\.pdf$/i.test(name);
+  if(!okType){ setStatus('Not a PDF file'); return; }
+  if(els.fileName) els.fileName.textContent = name;
   setStatus('Loading…');
-  const buf = await f.arrayBuffer();
-  loadPDF({data: buf});
+  try{
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    if(els.dropzone) els.dropzone.style.display = 'none';
+    await loadPDF({data: bytes});
+  }catch(err){
+    console.error(err);
+    setStatus('Failed to load PDF');
+    if(els.dropzone) els.dropzone.style.display = '';
+  }
+}
+
+// File loading (left column)
+els.file.addEventListener('change', async (e)=>{
+  const f = e.target.files && e.target.files[0];
+  openPdfFile(f);
 });
 
-// Demo document (simple single-page grid created on the fly)
-els.demoBtn.addEventListener('click', async ()=>{
-  if(els.fileName) els.fileName.textContent = 'Sample demo plan.pdf';
-  // Fetch a tiny embedded PDF (data URL) for demo
-  // For portability, generate on the fly using a prebuilt minimal PDF string
-  const pdfData = atob("JVBERi0xLjMKJcTl8uXrp/Og0MTGCjEgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovUmVzb3VyY2VzIDw8Ci9Qcm9jU2V0IFsvUERGL1RleHRdCi9Gb250IDw8Ci9GMCAzIDAgUgo+PgovWE9iamVjdCA8PC9JbWFnZSA8PC9XaWR0aCA2MDAvSGVpZ2h0IDg0MC9Db2xvclNwYWNlIC9EZXZpY2VSR0IvQml0c1BlckNvbXBvbmVudCA4Pj4+PgovRXh0R1N0YXRlIDw8Pj4+PgovTWVkaWFCb3hbMCAwIDU5NSA4MzVdCi9Db250ZW50cyA0IDAgUgo+PgplbmRvYmoKMiAwIG9iago8PAovVHlwZSAvUGFnZXMKL0tpZHMgWyAxIDAgUiBdCi9Db3VudCAxCj4+CmVuZG9iagozIDAgb2JqCjw8Ci9UeXBlIC9Gb250Ci9TdWJ0eXBlIC9UeXBlMQovTmFtZSAvRjAKL0Jhc2VGb250IC9IZWx2ZXRpY2EKL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL0xlbmd0aCAyMDY+PgpzdHJlYW0KQlQKIC9GMCBUIDEyIFRmCiAgMCA3ODAgVGQKICAoR2VuZXJhdGVkIERlbW8gR3JpZCBGb3IgTWVhc3VyZW1lbnQpIFRqCkJUCiAgL0YwIFQgMTIgVGYKICAxMDAgNzEwIFRkCiAgKDIwIGZ0IG1ham9yIGdyaWQ6IGVhY2ggcXVhcmUgaXMgMSBmdClUagpCVApFcApRVQplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA3CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDEwMCAwMDAwMCBuIAowMDAwMDAwMDg3IDAwMDAwIG4gCjAwMDAwMDAxODIgMDAwMDAgbiAKMDAwMDAwMDMxMSAwMDAwMCBuIAowMDAwMDAwNTE5IDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNwo+PgpzdGFydHhyZWYKNTM3CiUlRU9G");
-  const bytes = new Uint8Array(pdfData.length);
-  for(let i=0;i<pdfData.length;i++) bytes[i]=pdfData.charCodeAt(i);
-  await loadPDF({data: bytes});
-});
+// Demo button removed: guard binding if present
+if(els.demoBtn){
+  els.demoBtn.addEventListener('click', async ()=>{/* no-op or legacy demo */});
+}
+
+// Viewer dropzone interactions
+if(els.dropBrowse){ els.dropBrowse.addEventListener('click', ()=> els.file && els.file.click()); }
+if(els.dropzone){
+  ['dragenter','dragover'].forEach(ev=> els.dropzone.addEventListener(ev, (e)=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev=> els.dropzone.addEventListener(ev, (e)=>{ e.preventDefault(); e.stopPropagation(); els.dropzone.classList.remove('drag'); }));
+  els.dropzone.addEventListener('drop', async (e)=>{
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    openPdfFile(f);
+  });
+  // Click anywhere on dropzone to open file chooser
+  els.dropzone.addEventListener('click', (e)=>{ if(e.target===els.dropzone) els.file && els.file.click(); });
+}
+
+// Also allow dropping anywhere within the viewer area
+if(els.viewer){
+  els.viewer.addEventListener('dragover', (e)=>{ e.preventDefault(); if(els.dropzone) els.dropzone.classList.add('drag'); });
+  els.viewer.addEventListener('dragleave', (e)=>{ e.preventDefault(); if(els.dropzone) els.dropzone.classList.remove('drag'); });
+  els.viewer.addEventListener('drop', (e)=>{ e.preventDefault(); const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; openPdfFile(f); });
+}
+
+// Prevent the browser from navigating away on file drop outside dropzone/viewer
+window.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+window.addEventListener('drop', (e)=>{ e.preventDefault(); });
 
 // Paging
 els.prev.addEventListener('click', ()=>{ if(!state.pdf) return; state.pageNum=Math.max(1,state.pageNum-1); els.pageNum.textContent=state.pageNum; renderPage(); });

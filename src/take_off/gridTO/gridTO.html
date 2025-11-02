@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <link rel="stylesheet" href="../../styles.css">
+  <link rel="stylesheet" href="../../app.css">
   <style>
     /* Additional styles can be added here if needed */
   </style>
@@ -16,9 +17,9 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js" id="xlsx-script"></script>
 </head>
 <body data-page="take-off-gridto">
-<div class="wrap">
-  <h1>Table OCR → Grid → XLSX (offline)</h1>
-  <div class="card">
+<div class="wrap wrap--compact">
+  <div id="leftCol" class="card">
+    <h1>Table OCR → Grid → XLSX (offline)</h1>
     <div class="row">
       <span class="pill">Paste (Ctrl/Cmd-V) or use “Paste from Clipboard”</span>
       <span class="pill">Set Target rows/cols, drag grid nodes to align, then click “Extract Table”.</span>
@@ -32,13 +33,6 @@
         <button id="chooseBtn">Choose Image</button>
         <button id="pasteBtn" class="secondary">Paste from Clipboard</button>
         <input id="file" type="file" accept="image/*" />
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:10px">
-      <div id="canvasWrap" class="canvas-wrap" style="width:100%">
-        <canvas id="preview" style="display:none"></canvas>
-        <canvas id="overlay" style="display:none"></canvas>
       </div>
     </div>
 
@@ -65,7 +59,15 @@
       <span>Cells: <code id="cells">–</code></span>
       <span>SheetJS: <code id="sj">checking…</code></span>
     </div>
+  </div>
 
+  <div id="rightCol" class="card">
+    <div class="viewer" style="overflow:visible">
+      <div id="canvasWrap" class="canvas-wrap" style="width:100%;overflow:auto">
+        <canvas id="preview" style="display:none"></canvas>
+        <canvas id="overlay" style="display:none"></canvas>
+      </div>
+    </div>
     <div class="row"><div style="width:100%;overflow:auto"><table id="tbl"></table></div></div>
   </div>
 </div>

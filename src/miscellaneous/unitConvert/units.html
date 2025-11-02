@@ -3,96 +3,110 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="stylesheet" href="../../styles.css">
-  <style>
-    /* Additional styles can be added here if needed */
-  </style>
+  <link rel="stylesheet" href="../../app.css">
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Universal Construction Unit Converter</title>
   <script src="units.js" defer></script>
 </head>
 <body data-page="miscellaneous-units">
-  <main class="wrap">
-    <header class="topbar topbar--compact">
-      <div>
-        <h1>Universal Construction Unit Converter</h1>
-        <div class="sub">Field-ready, offline, and fast. Covers typical construction/engineering unit families.</div>
-      </div>
-      <div class="right">
-        <span class="pill">Precision: <span id="precView" class="mono">4</span> sig figs</span>
-        <button id="decPrec" title="Decrease precision">−</button>
-        <button id="incPrec" title="Increase precision">+</button>
-        <button id="addRow">Add line</button>
-        <button id="clearRows" class="ghost">Clear</button>
-      </div>
-    </header>
-
-    <div class="card grid">
-      <div class="panel">
-        <div class="controls">
-          <div class="stack">
+  <main>
+    <div class="wrap--compact">
+      <!-- LEFT CARD: UNIT CONVERSION CONTROLS -->
+      <section class="card" id="leftCard">
+        <header class="stack">
+          <div class="row-between">
+            <h3>Universal Construction Unit Converter</h3>
+          </div>
+          <div class="small muted">
+            Field-ready, offline, and fast. Covers typical construction/engineering unit families with precision control.
+          </div>
+        </header>
+        <div class="stack">
+          <div class="row-between">
+            <span class="pill">Precision: <span id="precView" class="mono">4</span> sig figs</span>
+            <div class="row">
+              <button id="decPrec" title="Decrease precision">−</button>
+              <button id="incPrec" title="Increase precision">+</button>
+            </div>
+          </div>
+        <div class="stack">
+          <div class="row">
             <label for="value">Value</label>
-            <input id="value" type="number" step="any" inputmode="decimal" placeholder="Enter a value (e.g., 12.5)" />
+            <input id="value" class="grow" type="number" step="any" inputmode="decimal" placeholder="Enter a value (e.g., 12.5)" />
           </div>
-          <div class="stack">
+          <div class="row">
             <label for="category">Category</label>
-            <select id="category"></select>
+            <select id="category" class="grow"></select>
           </div>
-          <div class="stack">
+          <div class="row">
             <label for="fromUnit">From</label>
-            <select id="fromUnit"></select>
+            <select id="fromUnit" class="grow"></select>
           </div>
-          <div class="stack">
+          <div class="row">
             <label for="toUnit">To</label>
-            <select id="toUnit"></select>
+            <select id="toUnit" class="grow"></select>
           </div>
-          <div>
-            <button id="convert" style="width:100%">Convert</button>
+          <div class="row">
+            <button id="convert" class="grow">Convert</button>
           </div>
         </div>
 
-        <div class="panel">
-          <div class="section-title">
-            <strong>Quick Unit Search</strong>
-            <span class="badge">Power-user</span>
-          </div>
-          <div class="unit-search">
-            <input id="search" type="text" placeholder="Search units (e.g., psi, inH2O, kip, tonR, cfm, pcf, °F)" />
-            <button id="swap" title="Swap From/To">⇄ Swap</button>
+        <div class="stack">
+          <label for="search">
+            Quick Unit Search
+            <span class="hint">Power-user search</span>
+          </label>
+          <div class="row">
+            <input id="search" type="text" placeholder="Search units (e.g., psi, inH2O, kip)" />
+            <button id="swap" title="Swap From/To">⇄</button>
             <button id="star" class="fav" title="Toggle favorite pair">★</button>
           </div>
-          <div class="chips" id="favorites" style="margin-top:8px"></div>
+          <div class="chips mt-sm" id="favorites"></div>
         </div>
 
         <div class="panel notice" id="note"></div>
-      </div>
+        </div>
+      </section>
 
-      <div class="panel" style="border-left:1px solid #22283b">
-        <div class="section-title"><strong>Batch Lines</strong><span class="badge">Multi</span></div>
-        <div class="small muted" style="margin-bottom:8px">Add multiple conversions for copy/paste into takeoffs, RFIs, or emails.</div>
-        <div class="results">
-          <table id="lines">
-            <thead>
-              <tr>
-                <th style="width:28%">Input</th>
-                <th style="width:20%">From</th>
-                <th style="width:20%">To</th>
-                <th style="width:24%">Result</th>
-                <th style="width:8%"></th>
-              </tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-          </table>
+      <!-- RIGHT CARD: BATCH CONVERSIONS -->
+      <section class="card" id="rightCard">
+        <header class="stack">
+          <div class="row-between">
+            <h3>Batch Lines</h3>
+            <span class="badge">Multi</span>
+          </div>
+          <div class="small muted">Add multiple conversions for copy/paste into takeoffs, RFIs, or emails.</div>
+        </header>
+        <div class="stack">
+          <div class="results">
+            <table id="lines">
+              <thead>
+                <tr>
+                  <th class="col-input">Input</th>
+                  <th class="col-from">From</th>
+                  <th class="col-to">To</th>
+                  <th class="col-result">Result</th>
+                  <th class="col-actions"></th>
+                </tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+          <div class="row-between">
+            <div class="row">
+              <button id="addRow">Add line</button>
+              <button id="clearRows" class="ghost">Clear</button>
+            </div>
+            <button id="copyAll">Copy all</button>
+          </div>
         </div>
-        <div class="right" style="margin-top:10px">
-          <button id="copyAll">Copy all</button>
-        </div>
-      </div>
+      </section>
     </div>
 
     <div class="footer">
       <div>Tip: Temperature, angle, and slope use affine/non-linear formulas; others use exact SI-base factors. Density uses kg/m³ base; flow uses m³/s; pressure uses Pa.</div>
-      <div style="margin-top:6px" class="muted">Designed for construction & engineering: length, area, volume, mass, force, pressure, temperature, energy, power, volumetric flow, velocity, density, torque, angle/slope. Includes psi, psf, inH₂O (4 °C), inHg, kip, TR (tons of refrigeration), BTU, cfm, gpm, pcf, and more.</div>
+      <div class="muted mt-sm">Designed for construction & engineering: length, area, volume, mass, force, pressure, temperature, energy, power, volumetric flow, velocity, density, torque, angle/slope. Includes psi, psf, inH₂O (4 °C), inHg, kip, TR (tons of refrigeration), BTU, cfm, gpm, pcf, and more.</div>
     </div>
   </main>
 </body>

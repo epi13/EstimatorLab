@@ -107,9 +107,13 @@ async function preprocess(){
   setBusy('');
   matsCache={ rot, bw:bw2 };
   computeSnapCandidates(matsCache.bw);
+  const est = estimateGridCounts(matsCache.bw);
+  if(est.rows>0) targetRows.value = String(est.rows);
+  if(est.cols>0) targetCols.value = String(est.cols);
   bindOverlayEventsOnce();
   applyZoom();
   initGridFromTargets();
+  try{ estimateGridCountsOCR(matsCache.rot).then(o=>{ if(!o) return; let ch=false; if(o.rows>0){ targetRows.value=String(o.rows); ch=true; } if(o.cols>0){ targetCols.value=String(o.cols); ch=true; } if(ch) initGridFromTargets(); }); }catch{}
   enable(true);
   return matsCache;
 }
@@ -176,6 +180,52 @@ function insertVerticalAt(x){ const arr=grid.xLines; let i=0; while(i<arr.length
 function insertHorizontalAt(y){ const arr=grid.yLines; let i=0; while(i<arr.length && arr[i]<y) i++; const lo=i-1, hi=i; if(lo<0||hi>=arr.length) return; const minSep=3; const val=Math.max(arr[lo]+minSep, Math.min(arr[hi]-minSep, Math.round(y))); if(val<=arr[lo]+minSep || val>=arr[hi]-minSep) return; arr.splice(hi,0,val); drawOverlay(); }
 function deleteNearestLineAt(x,y){ const j=nearestIndex(grid.xLines,x); const i=nearestIndex(grid.yLines,y); const dX=Math.abs(grid.xLines[j]-x), dY=Math.abs(grid.yLines[i]-y); if(dX<dY){ if(j>0 && j<grid.xLines.length-1){ grid.xLines.splice(j,1); drawOverlay(); } } else { if(i>0 && i<grid.yLines.length-1){ grid.yLines.splice(i,1); drawOverlay(); } } }
 function computeSnapCandidates(bw){ const xs=project(bw,'y'); const ys=project(bw,'x'); snapX=findPeaks(xs,0.45,8); snapY=findPeaks(ys,0.45,8); }
+function estimateGridCounts(bw){
+  const vk = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(1, Math.max(8, Math.round(bw.rows/30))));
+  const hk = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(Math.max(8, Math.round(bw.cols/30)), 1));
+  let v=new cv.Mat(), h=new cv.Mat();
+  cv.morphologyEx(bw, v, cv.MORPH_OPEN, vk);
+  cv.morphologyEx(bw, h, cv.MORPH_OPEN, hk);
+  const xs=project(v,'y');
+  const ys=project(h,'x');
+  const vx=findPeaks(xs,0.6,10);
+  const hy=findPeaks(ys,0.6,10);
+  v.delete(); h.delete(); vk.delete(); hk.delete();
+  let cols = vx.length>=2 ? vx.length-1 : 0;
+  let rows = hy.length>=2 ? hy.length-1 : 0;
+  if(cols===0) cols = Math.max(0, (snapX?.length||0)-1);
+  if(rows===0) rows = Math.max(0, (snapY?.length||0)-1);
+  rows = Math.min(rows, 200);
+  cols = Math.min(cols, 60);
+  return {rows, cols};
+}
+async function estimateGridCountsOCR(rot){
+  try{
+    const worker = await getOcrWorker();
+    const rgba = rot.clone();
+    const id=new ImageData(new Uint8ClampedArray(rgba.data), rot.cols, rot.rows);
+    const master=document.createElement('canvas'); master.width=rot.cols; master.height=rot.rows;
+    master.getContext('2d').putImageData(id,0,0);
+    let img=master;
+    const maxSide=Math.max(master.width, master.height);
+    if(maxSide>1200){ const scale=1200/maxSide; const sc=document.createElement('canvas'); sc.width=Math.round(master.width*scale); sc.height=Math.round(master.height*scale); sc.getContext('2d').drawImage(master,0,0,sc.width,sc.height); img=sc; }
+    const { data } = await worker.recognize(img);
+    rgba.delete();
+    const lines = data?.lines||[]; const words=data?.words||[];
+    const H=img.height||rot.rows; const W=img.width||rot.cols;
+    const yC = lines.map(l=> Math.round(((l.bbox?.y0||0)+(l.bbox?.y1||0))/2)).filter(n=>Number.isFinite(n)).sort((a,b)=>a-b);
+    const xC = words.map(w=> Math.round(((w.bbox?.x0||0)+(w.bbox?.x1||0))/2)).filter(n=>Number.isFinite(n)).sort((a,b)=>a-b);
+    const rowGap=Math.max(6, Math.round(H/40));
+    const colGap=Math.max(10, Math.round(W/30));
+    const rowClusters = yC.length? mergeClose(yC, rowGap) : [];
+    const colClusters = xC.length? mergeClose(xC, colGap) : [];
+    let rows = rowClusters.length||0;
+    let cols = colClusters.length||0;
+    if(rows>0) rows=Math.min(rows,200);
+    if(cols>0) cols=Math.min(cols,60);
+    return {rows, cols};
+  }catch(e){ return {rows:0, cols:0}; }
+}
 function findPeaks(arr, frac, minGap){ const max=Math.max(...arr)||1; const th=max*frac; const idx=[]; for(let i=1;i<arr.length-1;i++){ if(arr[i]>=th && arr[i]>=arr[i-1] && arr[i]>=arr[i+1]) idx.push(i); } return mergeClose(idx, minGap); }
 function snapValue(v, cands, tol){ let best=v, bd=tol+1; for(const q of cands){ const d=Math.abs(q-v); if(d<=tol && d<bd){ bd=d; best=q; } } return best; }
 

@@ -10,64 +10,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 <body data-page="structural-pan-concrete">
-<div class="wrap">
-  <h1>Concrete over Pan Decking – Cubic Yard Calculator <span class="tag">With Live Profile</span></h1>
-  <div class="grid">
-    <div class="card" id="inputs">
-      <h2 style="margin:0 0 6px;font-size:18px">Inputs</h2>
+<main>
+  <div class="wrap--compact">
+    <!-- LEFT COLUMN: INPUTS -->
+    <section class="card" id="leftCol">
+      <h1 style="margin:0 0 8px;font-size:1.05rem;line-height:1.2">Concrete over Pan Decking — CY Calculator</h1>
       <div class="hr"></div>
 
       <label for="mode">Area entry</label>
-      <select id="mode">
+      <select id="mode" class="grow">
         <option value="lw">Length × Width (ft)</option>
         <option value="sf">Total Area (SF)</option>
       </select>
 
-      <div id="lwRow" class="row">
-        <div>
-          <label for="len">Length <span class="unit">(ft)</span></label>
-          <input id="len" type="number" step="0.01" value="100">
-        </div>
-        <div>
-          <label for="wid">Width <span class="unit">(ft)</span></label>
-          <input id="wid" type="number" step="0.01" value="30">
-        </div>
+      <div id="lwRow" class="row form-pairs">
+        <label for="len">Length <span class="unit">(ft)</span></label>
+        <input id="len" type="number" step="0.01" value="100">
+        <label for="wid">Width <span class="unit">(ft)</span></label>
+        <input id="wid" type="number" step="0.01" value="30">
       </div>
 
-      <div id="sfRow" class="row" style="display:none">
-        <div>
-          <label for="sf">Total Area <span class="unit">(square feet)</span></label>
-          <input id="sf" type="number" step="0.01" value="3000">
-        </div>
+      <div id="sfRow" class="row form-pairs" style="display:none">
+        <label for="sf">Total Area <span class="unit">(square feet)</span></label>
+        <input id="sf" type="number" step="0.01" value="3000">
       </div>
 
       <div class="hr"></div>
 
       <label for="profile">Pan Deck Profile</label>
-      <select id="profile">
+      <select id="profile" class="grow">
         <option value="1.5|6|2|1.25">Form Deck 1.5" (pitch 6", top flange 2", bottom 1.25")</option>
         <option value="2|6|2|1.25">Form Deck 2.0" (pitch 6", top flange 2", bottom 1.25")</option>
         <option value="3|12|3|2">Form Deck 3.0" (pitch 12", top flange 3", bottom 2")</option>
         <option value="custom">Custom…</option>
       </select>
 
-      <div id="customRow" class="row" style="display:none">
-        <div>
-          <label for="depth">Deck Depth H <span class="unit">(in)</span></label>
-          <input id="depth" type="number" step="0.01" value="1.5">
-        </div>
-        <div>
-          <label for="pitch">Pitch P <span class="unit">(in, crest-to-crest)</span></label>
-          <input id="pitch" type="number" step="0.01" value="6">
-        </div>
-        <div>
-          <label for="topFlange">Top Flange W<sub>t</sub> <span class="unit">(in)</span></label>
-          <input id="topFlange" type="number" step="0.01" value="2">
-        </div>
-        <div>
-          <label for="botFlange">Bottom Flange W<sub>b</sub> <span class="unit">(in)</span></label>
-          <input id="botFlange" type="number" step="0.01" value="1.25">
-        </div>
+      <div id="customRow" class="row form-pairs" style="display:none">
+        <label for="depth">Deck Depth H <span class="unit">(in)</span></label>
+        <input id="depth" type="number" step="0.01" value="1.5">
+        <label for="pitch">Pitch P <span class="unit">(in, crest-to-crest)</span></label>
+        <input id="pitch" type="number" step="0.01" value="6">
+        <label for="topFlange">Top Flange W<sub>t</sub> <span class="unit">(in)</span></label>
+        <input id="topFlange" type="number" step="0.01" value="2">
+        <label for="botFlange">Bottom Flange W<sub>b</sub> <span class="unit">(in)</span></label>
+        <input id="botFlange" type="number" step="0.01" value="1.25">
       </div>
 
       <div class="hr"></div>
@@ -75,10 +61,10 @@
       <label for="thick">Slab Thickness t <span class="unit">(in)</span></label>
       <input id="thick" type="number" step="0.01" value="4">
 
-      <div class="inline">
+      <label class="check-inline" title="If drawings specify thickness measured from the low flute (valley), enable this and we add 0.5×H overage.">
         <input id="fromLow" type="checkbox">
-        <label for="fromLow" style="font-weight:600">Drawings specify thickness from the low flute (valley)</label>
-      </div>
+        <span>Thickness from low flute (valley)</span>
+      </label>
       <div class="notes">
         If checked, calculator adds an <span class="warn">overage = 50% × deck depth</span> to approximate corrugation relief.
         This is a rule-of-thumb assumption; adjust if your specs give a different factor.
@@ -87,43 +73,42 @@
       <label for="waste">Waste/overage <span class="unit">(% add-on)</span></label>
       <input id="waste" type="number" step="0.1" value="5">
 
-      <button id="calc">Calculate</button>
-    </div>
+      <button id="calc" class="btn-sm">Compute</button>
+    </section>
 
-    <div class="card">
-      <h2 style="margin:0 0 6px;font-size:18px">Deck Profile & Slab (Side Profile)</h2>
+    <!-- RIGHT COLUMN: VIEWER + RESULTS -->
+    <section class="card" id="rightCol">
+      <h2 style="margin:0 0 6px;font-size:0.95rem">Deck Profile & Slab (Side Profile)</h2>
       <div class="hr"></div>
-      <div id="svgHost"></div>
+      <div id="svgHost" class="viewer"></div>
       <div class="notes" id="geomNote" style="margin-top:8px"></div>
-    </div>
-  </div>
 
-  <div class="card" style="margin-top:16px">
-    <h2 style="margin:0 0 6px;font-size:18px">Results</h2>
-    <div class="hr"></div>
-    <div class="flex">
-      <div>
-        <div class="muted small">Net Volume (no waste)</div>
-        <div class="out" id="vNet">—</div>
-        <div class="muted small">Cubic yards (and ft³)</div>
+      <div class="hr" style="margin:12px 0"></div>
+      <h2 style="margin:0 0 6px;font-size:0.95rem">Results</h2>
+      <div class="flex">
+        <div>
+          <div class="muted small">Net Volume (no waste)</div>
+          <div class="out" id="vNet">—</div>
+          <div class="muted small">Cubic yards (and ft³)</div>
+        </div>
+        <div>
+          <div class="muted small">With Waste</div>
+          <div class="out" id="vGross">—</div>
+          <div class="muted small">Cubic yards (and ft³)</div>
+        </div>
+        <div>
+          <div class="muted small">Approx. Ready-Mix Loads</div>
+          <div class="out" id="loads">—</div>
+          <div class="muted small">Assuming 9 CY per truck</div>
+        </div>
       </div>
-      <div>
-        <div class="muted small">With Waste</div>
-        <div class="out" id="vGross">—</div>
-        <div class="muted small">Cubic yards (and ft³)</div>
+      <div class="hr"></div>
+      <div class="notes" id="assumps">
+        Assumptions: slab thickness measured above high flute unless “from low flute” is checked (then +0.5×H). Deck profile dimensions vary by manufacturer; edit custom values to match your submittal for best accuracy.
       </div>
-      <div>
-        <div class="muted small">Approx. Ready-Mix Loads</div>
-        <div class="out" id="loads">—</div>
-        <div class="muted small">Assuming 9 CY per truck</div>
-      </div>
-    </div>
-    <div class="hr"></div>
-    <div class="notes" id="assumps">
-      Assumptions: slab thickness measured above high flute unless “from low flute” is checked (then +0.5×H). Deck profile dimensions vary by manufacturer; edit custom values to match your submittal for best accuracy.
-    </div>
+    </section>
   </div>
-</div>
+</main>
 
 <script src="pan_concrete.js"></script>
 </body>
