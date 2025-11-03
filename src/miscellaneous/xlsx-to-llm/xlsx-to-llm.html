@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>XLSX → LLM Converter</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<style>
+  :root { color-scheme: dark light; --bg:#0b0c0f; --fg:#eaeef4; --muted:#9aa3b2; --card:#141720; --accent:#77b6ff; --ok:#54d18a; --warn:#ffcd57; --err:#ff6b6b; }
+  body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji"; margin:0; background:var(--bg); color:var(--fg); }
+  .wrap { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+  h1 { font-size: 1.6rem; margin: 0 0 12px; }
+  .card { background: var(--card); border: 1px solid #222632; border-radius: 16px; padding: 16px; box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 6px 18px rgba(0,0,0,0.25); }
+  .row { display:flex; gap:16px; flex-wrap:wrap; }
+  .col { flex:1 1 320px; min-width: 280px; }
+  label { display:block; font-weight:600; margin:10px 0 6px; }
+  input[type="text"], input[type="number"], select, textarea {
+    width:100%; background:#0f1320; color:var(--fg); border:1px solid #23283a; border-radius:10px; padding:10px 12px; outline:none;
+  }
+  input[type="checkbox"] { transform: scale(1.15); margin-right: 8px; }
+  .btn { display:inline-flex; align-items:center; gap:8px; background:#1b2233; color:var(--fg); border:1px solid #2a334a; padding:10px 14px; border-radius:12px; cursor:pointer; text-decoration:none; }
+  .btn:hover { border-color:#3a4766; }
+  .btn.primary { background:#173352; border-color:#24507e; }
+  .btn.ok { background:#0f2a22; border-color:#244d3e; color:#aef3d1; }
+  .btn.warn { background:#2a2210; border-color:#584216; color:#ffe7a1; }
+  .btn.accent { background:#162033; border-color:#2a334a; color:#b4c9ff; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#162033; color:#b4c9ff; font-size:.8rem; }
+  .muted { color: var(--muted); }
+  .drop { border:2px dashed #2a334a; border-radius:16px; padding:20px; text-align:center; background:#0f1320; }
+  pre, code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+  .preview { white-space:pre-wrap; background:#0f1320; border:1px solid #23283a; border-radius:12px; padding:12px; max-height:360px; overflow:auto; }
+  details summary { cursor:pointer; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip { background:#0f1320; border:1px solid #2a334a; padding:6px 10px; border-radius:999px; }
+  .footer { font-size:.85rem; color:var(--muted); margin-top:10px; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <h1>📄 XLSX → 🧠 LLM Converter</h1>
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <label>1) Load XLSX</label>
+        <div id="drop" class="drop">
+          <div><strong>Drag & drop</strong> your .xlsx here, or</div>
+          <div style="margin-top:8px"><input type="file" id="file" accept=".xlsx,.xlsm,.xlsb" /></div>
+          <div class="footer">All processing is local in your browser.</div>
+        </div>
+
+        <label style="margin-top:16px;">Sheets to include</label>
+        <div id="sheets" class="chips muted">No workbook loaded.</div>
+
+        <div class="row" style="margin-top:16px">
+          <div class="col">
+            <label>Output format</label>
+            <select id="format">
+              <option value="jsonl">JSONL (one object per row)</option>
+              <option value="json">JSON (array of objects per sheet)</option>
+              <option value="md">Markdown (tables per sheet)</option>
+              <option value="txt">Plain Text (delimited)</option>
+            </select>
+          </div>
+          <div class="col">
+            <label>Delimiter (for Plain Text)</label>
+            <input id="delimiter" type="text" value=" | " />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button class="btn accent" id="tokenSaverBtn">🪄 Token Saver (one-click)</button>
+        </div>
+
+        <details style="margin-top:16px">
+          <summary><strong>Cleaning & normalization</strong></summary>
+          <div class="row">
+            <div class="col">
+              <label><input type="checkbox" id="normalizeHeaders" checked>Normalize headers (snake_case)</label>
+              <label><input type="checkbox" id="trim" checked>Trim whitespace</label>
+              <label><input type="checkbox" id="collapseWS" checked>Collapse internal whitespace</label>
+              <label><input type="checkbox" id="isoDates" checked>Convert Excel dates to ISO-8601 (only true Date cells)</label>
+              <label><input type="checkbox" id="addSheetName" checked>Include <code>sheet</code> field</label>
+              <label><input type="checkbox" id="addRowIndex">Include <code>row_index</code> field</label>
+              <label><input type="checkbox" id="emitHeaders" checked>Emit sheet headers once (in <code>_meta._headers</code>)</label>
+            </div>
+            <div class="col">
+              <label><input type="checkbox" id="redact">Redact PII (emails, phones)</label>
+              <label>Max field length (0 = unlimited)</label>
+              <input type="number" id="maxLen" value="0" min="0" />
+              <label>Custom redaction regex (optional)</label>
+              <input type="text" id="customRegex" placeholder="e.g. (?i)secret|token|apikey" />
+              <label>Replace with</label>
+              <input type="text" id="customReplace" value="[REDACTED]" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:12px">
+            <div class="col">
+              <label><input type="checkbox" id="sparse" checked>Omit null/empty fields (sparse)</label>
+              <label><input type="checkbox" id="dropEmptyRows" checked>Drop rows with no values</label>
+              <label><input type="checkbox" id="trimEmptyCols" checked>Trim trailing empty columns (sheet-wide)</label>
+              <label><input type="checkbox" id="compactJSONL">Compact JSONL (s/r/c with numeric column indexes)</label>
+              <label><input type="checkbox" id="suppressNoise">Suppress “noise” rows (all empty/zero-like)</label>
+            </div>
+          </div>
+        </details>
+
+        <details style="margin-top:16px">
+          <summary><strong>Chunking (for long prompts)</strong></summary>
+          <div class="row">
+            <div class="col">
+              <label>Chunk size (characters)</label>
+              <input type="number" id="chunkSize" value="0" min="0" />
+            </div>
+            <div class="col">
+              <label>Chunk filename prefix</label>
+              <input type="text" id="chunkPrefix" value="xlsx_llm_chunk" />
+            </div>
+          </div>
+          <div class="footer">Set chunk size &gt; 0 to export a ZIP of numbered chunks. Rough token estimate ≈ chars ÷ 4.</div>
+        </details>
+
+        <div class="row" style="margin-top:16px">
+          <button class="btn primary" id="convertBtn">Convert</button>
+          <button class="btn ok" id="downloadBtn" disabled>Download</button>
+          <button class="btn warn" id="copyBtn" disabled>Copy to Clipboard</button>
+        </div>
+        <div class="footer" id="stats"></div>
+      </div>
+
+      <div class="col">
+        <label>Preview</label>
+        <div class="preview" id="preview">Load a file to see the preview…</div>
+        <div class="footer">Only the first ~50 KB is shown here for performance; downloads include all data.</div>
+      </div>
+    </div>
+  </div>
+  <p class="footer" style="margin-top:10px">
+    Tips: For LLM ingestion, prefer <span class="pill">JSONL</span>. Use <span class="pill">Token Saver</span> for smallest outputs.
+  </p>
+</div>
+
+<script>
+/* ---------- Utilities ---------- */
+const $ = (id)=>document.getElementById(id);
+const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+
+function snakeCase(s) {
+  return String(s ?? "")
+    .replace(/[\u2010-\u2015]/g, "-")
+    .replace(/[^A-Za-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase();
+}
+
+function isZeroLike(v){
+  if (v == null) return true;
+  if (typeof v === "number") return !isFinite(v) ? false : v === 0;
+  if (v instanceof Date) return false;
+  const s = String(v).trim();
+  if (!s) return true;
+  // "0", "0.0", "00", "$0" etc.
+  return /^[$]?\s*0+(?:\.0+)?$/.test(s);
+}
+
+function isNoiseRowObject(obj){
+  // A row is "noise" if *all* values (except row_index) are zero-like.
+  const keys = Object.keys(obj).filter(k => k !== "row_index");
+  if (keys.length === 0) return true;
+  for (const k of keys) {
+    if (!isZeroLike(obj[k])) return false;
+  }
+  return true;
+}
+
+function cleanValue(v, opts) {
+  if (v == null) return null;
+  let out = v;
+
+  // Only convert if already a Date object (prevents 1900-xx serials)
+  if (opts.isoDates && out instanceof Date) out = out.toISOString();
+
+  if (typeof out !== "string") out = String(out);
+  if (opts.trim) out = out.trim();
+  if (opts.collapseWS) out = out.replace(/\s+/g, " ");
+
+  if (opts.redact) {
+    out = out.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[EMAIL]");
+    out = out.replace(/\+?\d[\d\s().-]{6,}\d/g, "[PHONE]");
+  }
+  if (opts.customRegex) {
+    try { out = out.replace(new RegExp(opts.customRegex, "g"), opts.customReplace ?? "[REDACTED]"); } catch {}
+  }
+
+  if (out === "") return null; // normalize empties
+  const max = Number(opts.maxLen||0);
+  if (max > 0 && out.length > max) out = out.slice(0, max) + "…";
+  return out;
+}
+
+function sheetToObjects(ws, opts) {
+  let rows = XLSX.utils.sheet_to_json(ws, { defval: null, raw: true, cellDates: true });
+  if (!rows.length) return { rows: [], headers: [] };
+
+  // Normalize headers
+  const originalKeys = Object.keys(rows[0]);
+  const headerMap = {};
+  originalKeys.forEach(k => headerMap[k] = opts.normalizeHeaders ? snakeCase(k) : String(k));
+
+  rows = rows.map(r => {
+    const o = {};
+    for (const k in r) o[headerMap[k]] = r[k];
+    return o;
+  });
+
+  // Clean values
+  rows = rows.map((r, i) => {
+    const o = {};
+    for (const k in r) o[k] = cleanValue(r[k], opts);
+    if (opts.addRowIndex) o.row_index = i + 2; // +2 = header + 1-based
+    return o;
+  });
+
+  // Determine headers (post-clean)
+  let headers = Object.keys(rows[0]);
+
+  // Trim trailing empty columns (sheet-wide)
+  if (opts.trimEmptyCols) {
+    const used = new Set();
+    for (const r of rows) for (const k of headers) if (r[k] != null) used.add(k);
+    headers = headers.filter(k => used.has(k));
+    rows = rows.map(r => {
+      const o = {};
+      for (const k of headers) o[k] = r[k];
+      if (opts.addRowIndex && r.row_index != null) o.row_index = r.row_index;
+      return o;
+    });
+  }
+
+  // Sparse rows (omit nulls)
+  if (opts.sparse) {
+    rows = rows.map(r => {
+      const o = {};
+      for (const k in r) {
+        if (k === "row_index") { o[k] = r[k]; continue; }
+        if (r[k] != null) o[k] = r[k];
+      }
+      return o;
+    });
+  }
+
+  // Drop fully empty rows
+  if (opts.dropEmptyRows) {
+    rows = rows.filter(r => {
+      for (const k in r) if (k !== "row_index" && r[k] != null) return true;
+      return false;
+    });
+  }
+
+  // Suppress noise rows (all cells empty/zero-like)
+  if (opts.suppressNoise) {
+    rows = rows.filter(r => !isNoiseRowObject(r));
+  }
+
+  return { rows, headers };
+}
+
+// Compact JSONL row: {s:<sheetIdx>, r:<row#?>, c:{<colIdx>:val,...}}
+function toCompactRow(row, headers, sheetIdx, includeRowIndex) {
+  const c = {};
+  for (let i = 0; i < headers.length; i++) {
+    const k = headers[i];
+    if (k === "row_index") continue;
+    const v = row[k];
+    if (v != null) c[i] = v;
+  }
+  const out = { s: sheetIdx };
+  if (includeRowIndex && row.row_index != null) out.r = row.row_index;
+  if (Object.keys(c).length) out.c = c;
+  return out;
+}
+
+function jsonToJSONL(arr) { return arr.map(o => JSON.stringify(o)).join("\n"); }
+function objectsToMarkdown(sheetName, objs) {
+  if (!objs.length) return `### ${sheetName}\n\n_(no rows)_\n`;
+  const headers = Object.keys(objs[0]);
+  const head = `### ${sheetName}\n\n| ${headers.join(" | ")} |\n| ${headers.map(()=> '---').join(" | ")} |`;
+  const rows = objs.map(o => `| ${headers.map(h => String(o[h] ?? "")).join(" | ")} |`);
+  return [head, ...rows, ""].join("\n");
+}
+function objectsToPlain(objs, delim) {
+  if (!objs.length) return "";
+  const headers = Object.keys(objs[0]);
+  const lines = [];
+  lines.push(headers.join(delim));
+  for (const o of objs) lines.push(headers.map(h => String(o[h] ?? "")).join(delim));
+  return lines.join("\n");
+}
+function download(filename, content, mime="text/plain;charset=utf-8") {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+}
+
+/* ---------- App State ---------- */
+let workbook = null;
+let workbookName = "workbook";
+let selectedSheets = new Set();
+let lastOutput = "";
+let lastMime = "text/plain";
+let lastExt = "txt";
+
+const ui = {
+  drop: $("drop"),
+  file: $("file"),
+  sheets: $("sheets"),
+  format: $("format"),
+  delimiter: $("delimiter"),
+  tokenSaverBtn: $("tokenSaverBtn"),
+  normalizeHeaders: $("normalizeHeaders"),
+  trim: $("trim"),
+  collapseWS: $("collapseWS"),
+  isoDates: $("isoDates"),
+  addSheetName: $("addSheetName"),
+  addRowIndex: $("addRowIndex"),
+  emitHeaders: $("emitHeaders"),
+  redact: $("redact"),
+  maxLen: $("maxLen"),
+  customRegex: $("customRegex"),
+  customReplace: $("customReplace"),
+  sparse: $("sparse"),
+  dropEmptyRows: $("dropEmptyRows"),
+  trimEmptyCols: $("trimEmptyCols"),
+  compactJSONL: $("compactJSONL"),
+  suppressNoise: $("suppressNoise"),
+  chunkSize: $("chunkSize"),
+  chunkPrefix: $("chunkPrefix"),
+  convertBtn: $("convertBtn"),
+  downloadBtn: $("downloadBtn"),
+  copyBtn: $("copyBtn"),
+  preview: $("preview"),
+  stats: $("stats"),
+};
+
+/* ---------- File Loading ---------- */
+function setSheetsList(names) {
+  ui.sheets.innerHTML = "";
+  if (!names || !names.length) { ui.sheets.textContent = "No sheets found."; return; }
+  selectedSheets = new Set();
+  names.forEach(name => {
+    const chip = document.createElement("label");
+    chip.className = "chip";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = true;
+    cb.addEventListener("change", () => { cb.checked ? selectedSheets.add(name) : selectedSheets.delete(name); });
+    const span = document.createElement("span");
+    span.textContent = name;
+    chip.appendChild(cb);
+    chip.appendChild(span);
+    ui.sheets.appendChild(chip);
+    selectedSheets.add(name);
+  });
+}
+
+async function handleFile(file) {
+  try {
+    const arr = await file.arrayBuffer();
+    workbook = XLSX.read(arr, { type: "array", cellDates: true });
+    workbookName = file.name.replace(/\.(xlsx|xlsm|xlsb)$/i,"") || "workbook";
+    setSheetsList(workbook.SheetNames);
+    ui.preview.textContent = `Loaded "${file.name}" with ${workbook.SheetNames.length} sheet(s). Choose options and click Convert.`;
+    ui.stats.textContent = "";
+    ui.downloadBtn.disabled = true;
+    ui.copyBtn.disabled = true;
+  } catch (err) {
+    ui.preview.textContent = "Failed to read workbook: " + (err?.message || err);
+  }
+}
+
+ui.file.addEventListener("change", (e) => {
+  const f = e.target.files?.[0];
+  if (f) handleFile(f);
+});
+
+["dragenter","dragover"].forEach(evt => ui.drop.addEventListener(evt, (e)=>{ e.preventDefault(); ui.drop.style.borderColor = "#3a4766"; }));
+["dragleave","drop"].forEach(evt => ui.drop.addEventListener(evt, (e)=>{ e.preventDefault(); ui.drop.style.borderColor = "#2a334a"; }));
+ui.drop.addEventListener("drop", (e)=>{
+  const f = e.dataTransfer?.files?.[0];
+  if (f) handleFile(f);
+});
+
+/* ---------- Options & Presets ---------- */
+function gatherOpts() {
+  return {
+    normalizeHeaders: ui.normalizeHeaders.checked,
+    trim: ui.trim.checked,
+    collapseWS: ui.collapseWS.checked,
+    isoDates: ui.isoDates.checked,
+    addSheetName: ui.addSheetName.checked,
+    addRowIndex: ui.addRowIndex.checked,
+    emitHeaders: ui.emitHeaders.checked,
+    redact: ui.redact.checked,
+    maxLen: parseInt(ui.maxLen.value || "0",10),
+    customRegex: (ui.customRegex.value || "").trim(),
+    customReplace: ui.customReplace.value,
+    sparse: ui.sparse.checked,
+    dropEmptyRows: ui.dropEmptyRows.checked,
+    trimEmptyCols: ui.trimEmptyCols.checked,
+    compactJSONL: ui.compactJSONL.checked,
+    suppressNoise: ui.suppressNoise.checked,
+  };
+}
+function approxTokens(chars) { return Math.ceil(chars / 4); }
+
+// One-click minimal-tokens preset
+function applyTokenSaver() {
+  ui.format.value = "jsonl";
+  ui.normalizeHeaders.checked = true;
+  ui.trim.checked = true;
+  ui.collapseWS.checked = true;
+  ui.isoDates.checked = true;
+
+  ui.addSheetName.checked = false;
+  ui.addRowIndex.checked = false;
+
+  ui.sparse.checked = true;
+  ui.dropEmptyRows.checked = true;
+  ui.trimEmptyCols.checked = true;
+  ui.compactJSONL.checked = true;
+  ui.emitHeaders.checked = true;
+  ui.suppressNoise.checked = true;
+
+  if (workbook) convertNow();
+}
+ui.tokenSaverBtn.addEventListener("click", applyTokenSaver);
+
+/* ---------- Conversion ---------- */
+async function convertNow() {
+  if (!workbook) { ui.preview.textContent = "Please load a workbook first."; return; }
+  const opts = gatherOpts();
+
+  const chosen = workbook.SheetNames.filter(n => selectedSheets.has(n));
+  if (!chosen.length) { ui.preview.textContent = "Select at least one sheet."; return; }
+
+  // Prepare a compact sheet-id map and header registry
+  const sheetIdMap = {};
+  const headersRegistry = {}; // idx -> headers[]
+  chosen.forEach((name, idx) => sheetIdMap[name] = idx);
+
+  const bundle = [];
+  const jsonlRows = [];
+  let metaPrelude = null;
+
+  for (const name of chosen) {
+    const ws = workbook.Sheets[name];
+    let { rows, headers } = sheetToObjects(ws, opts);
+
+    // Remember headers (excluding row_index)
+    const effectiveHeaders = headers.filter(h => h !== "row_index");
+    headersRegistry[String(sheetIdMap[name])] = effectiveHeaders;
+
+    // Add sheet name per-row only when requested & not compact
+    if (opts.addSheetName && !opts.compactJSONL) {
+      rows = rows.map(r => ({ sheet: name, ...r }));
+      headers = ["sheet", ...headers.filter(h => h !== "sheet")];
+    }
+
+    if (ui.format.value === "jsonl") {
+      if (opts.compactJSONL) {
+        if (!metaPrelude) {
+          const sheetsObj = chosen.reduce((o, n, i)=> (o[i]=n,o), {});
+          const headObj = opts.emitHeaders ? headersRegistry : undefined;
+          metaPrelude = JSON.stringify({ _meta: { sheets: sheetsObj, ...(headObj ? {_headers: headObj} : {}) } });
+        }
+        for (const r of rows) {
+          const cr = toCompactRow(r, headers, sheetIdMap[name], opts.addRowIndex);
+          if (!cr.c && cr.r == null) continue; // skip empty/sparse
+          jsonlRows.push(JSON.stringify(cr));
+        }
+      } else {
+        for (const r of rows) jsonlRows.push(JSON.stringify(r));
+      }
+    } else if (ui.format.value === "json") {
+      bundle.push({ sheet: name, headers: effectiveHeaders, rows });
+    } else if (ui.format.value === "md") {
+      bundle.push(objectsToMarkdown(name, rows));
+    } else {
+      bundle.push(`### ${name}\n` + objectsToPlain(rows, ui.delimiter.value));
+    }
+    await sleep(0);
+  }
+
+  if (ui.format.value === "jsonl") {
+    // In compact mode, ensure meta prelude contains headers
+    if (opts.compactJSONL) {
+      // metaPrelude created above with current headersRegistry
+      // (recreate to include the final registry)
+      const sheetsObj = chosen.reduce((o, n, i)=> (o[i]=n,o), {});
+      const headObj = opts.emitHeaders ? headersRegistry : undefined;
+      metaPrelude = JSON.stringify({ _meta: { sheets: sheetsObj, ...(headObj ? {_headers: headObj} : {}) } });
+    }
+    lastOutput = (opts.compactJSONL && metaPrelude ? metaPrelude + "\n" : "") + jsonlRows.join("\n");
+    lastMime = "application/x-ndjson";
+    lastExt = "jsonl";
+  } else if (ui.format.value === "json") {
+    lastOutput = JSON.stringify(bundle); // compact (no pretty spaces)
+    lastMime = "application/json";
+    lastExt = "json";
+  } else if (ui.format.value === "md") {
+    lastOutput = bundle.join("\n");
+    lastMime = "text/markdown;charset=utf-8";
+    lastExt = "md";
+  } else {
+    lastOutput = bundle.join("\n\n");
+    lastMime = "text/plain;charset=utf-8";
+    lastExt = "txt";
+  }
+
+  const previewSlice = lastOutput.slice(0, 50 * 1024);
+  ui.preview.textContent = previewSlice || "(empty output)";
+  const more = lastOutput.length - previewSlice.length;
+  ui.stats.textContent = `Output: ${lastOutput.length.toLocaleString()} chars (~${approxTokens(lastOutput.length).toLocaleString()} tokens). ${more>0 ? `Preview truncated by ${more.toLocaleString()} chars.` : ""}`;
+  ui.downloadBtn.disabled = !lastOutput;
+  ui.copyBtn.disabled = !lastOutput;
+}
+ui.convertBtn.addEventListener("click", convertNow);
+
+/* ---------- Download / Copy ---------- */
+ui.downloadBtn.addEventListener("click", async ()=>{
+  const chunkSize = parseInt(ui.chunkSize.value || "0", 10);
+  if (!lastOutput) return;
+  try {
+    if (chunkSize > 0) {
+      const zip = new JSZip();
+      let idx = 1;
+      for (let i=0; i<lastOutput.length; i+=chunkSize) {
+        const part = lastOutput.slice(i, i+chunkSize);
+        const fname = `${ui.chunkPrefix.value || "chunk"}_${String(idx).padStart(3,"0")}.${lastExt}`;
+        zip.file(fname, part);
+        idx++;
+      }
+      const blob = await zip.generateAsync({type:"blob"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `${workbookName}_${ui.chunkPrefix.value || "chunks"}.zip`;
+      document.body.appendChild(a); a.click();
+      setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 0);
+    } else {
+      download(`${workbookName}.${lastExt}`, lastOutput, lastMime);
+    }
+  } catch (err) {
+    alert("Download failed: " + (err?.message || err));
+  }
+});
+
+ui.copyBtn.addEventListener("click", async ()=>{
+  if (!lastOutput) return;
+  try {
+    await navigator.clipboard.writeText(lastOutput);
+    ui.copyBtn.textContent = "Copied ✓";
+    setTimeout(()=> ui.copyBtn.textContent = "Copy to Clipboard", 1200);
+  } catch (err) {
+    ui.copyBtn.textContent = "Copy failed";
+    ui.copyBtn.style.background = "#3a1010";
+    setTimeout(()=> { ui.copyBtn.textContent = "Copy to Clipboard"; ui.copyBtn.style.background=""; }, 1200);
+  }
+});
+</script>
+</body>
+</html>
