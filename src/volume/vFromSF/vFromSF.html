@@ -2,51 +2,431 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  
-    <link rel="stylesheet" href="../../css/base/index.css">
-<title>Cubic Yard Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Volume from Square Feet Calculator</title>
+  <link rel="stylesheet" href="../../css/base/index.css">
+  <link rel="stylesheet" href="../../css/components/index.css">
+  <style>
+    body[data-page="volume-cy-from-sfdepth"] {
+      font: 16px/1.4 var(--font-sans), sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 16px;
+      background: var(--background);
+      min-height: 100vh;
+    }
+
+    .calculator-container {
+      background: var(--surface);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .input-group {
+      margin-bottom: 24px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .calculate-btn {
+      width: 100%;
+      margin-top: 24px;
+    }
+
+    .results-section {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 2px solid var(--border);
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .result-card {
+      background: var(--surface-muted);
+      padding: 20px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+    }
+
+    .result-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .result-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .result-formula {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .error-message {
+      background: var(--surface-muted);
+      color: var(--danger);
+      padding: 12px;
+      border-radius: var(--radius-md);
+      margin-top: 16px;
+      border-left: 4px solid var(--danger);
+      font-weight: 500;
+    }
+
+    .success-message {
+      background: var(--surface-muted);
+      color: var(--success);
+      padding: 12px;
+      border-radius: var(--radius-md);
+      margin-top: 16px;
+      border-left: 4px solid var(--success);
+      font-weight: 500;
+    }
+
+    .help-text {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    .material-section {
+      margin-top: 32px;
+      padding: 24px;
+      background: var(--surface-muted);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+    }
+
+    .material-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .material-item {
+      text-align: center;
+      padding: 16px;
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 2px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 500;
+    }
+
+    .material-item:hover {
+      border-color: var(--accent);
+      background: var(--surface-muted);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .material-item.selected {
+      border-color: var(--accent-strong);
+      background: var(--surface-muted);
+      color: var(--heading);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .density-display {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-family: var(--font-mono);
+    }
+
+    @media (max-width: 768px) {
+      .input-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .results-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Override form styles for this page */
+    body[data-page="volume-cy-from-sfdepth"] input,
+    body[data-page="volume-cy-from-sfdepth"] select {
+      border-radius: var(--radius-md);
+      font-size: 16px;
+    }
+
+    body[data-page="volume-cy-from-sfdepth"] .input-row input,
+    body[data-page="volume-cy-from-sfdepth"] .input-row select {
+      width: auto;
+      min-width: 0;
+      flex: 1;
+    }
+
+    body[data-page="volume-cy-from-sfdepth"] .input-row select {
+      min-width: 120px;
+    }
+  </style>
 </head>
 <body data-page="volume-cy-from-sfdepth">
   <div class="calculator-container">
-    <h2>Cubic Yard Calculator</h2>
-    <label for="squareFeet">Square Feet:</label>
-    <input type="number" id="squareFeet" placeholder="Enter area in square feet">
+    <h2>Volume from Square Feet Calculator</h2>
+    <p class="help-text">Calculate volume from area and depth. Supports multiple unit conversions and material density calculations.</p>
 
-    <label for="depth">Depth:</label>
-    <input type="number" id="depth" placeholder="Enter depth">
+    <div class="input-group">
+      <label for="area">Area</label>
+      <div class="input-row">
+        <input type="number" id="area" placeholder="Enter area" step="any" min="0">
+        <select id="areaUnit">
+          <option value="ft²">Square Feet</option>
+          <option value="m²">Square Meters</option>
+          <option value="yd²">Square Yards</option>
+          <option value="in²">Square Inches</option>
+          <option value="ac">Acres</option>
+          <option value="ha">Hectares</option>
+        </select>
+      </div>
+    </div>
 
-    <label for="unit">Depth Unit:</label>
-    <select id="unit">
-      <option value="feet">Feet</option>
-      <option value="inches">Inches</option>
-    </select>
+    <div class="input-group">
+      <label for="depth">Depth</label>
+      <div class="input-row">
+        <input type="number" id="depth" placeholder="Enter depth" step="any" min="0">
+        <select id="depthUnit">
+          <option value="ft">Feet</option>
+          <option value="in">Inches</option>
+          <option value="yd">Yards</option>
+          <option value="m">Meters</option>
+          <option value="cm">Centimeters</option>
+          <option value="mm">Millimeters</option>
+        </select>
+      </div>
+    </div>
 
-    <button onclick="calculate()">Calculate</button>
+    <button class="calculate-btn" onclick="calculate()">Calculate Volume</button>
 
-    <div id="result"></div>
+    <div id="messageArea"></div>
+
+    <div class="results-section" id="resultsSection" style="display: none;">
+      <h3>Volume Results</h3>
+      <div class="results-grid" id="resultsGrid">
+        <!-- Results will be populated here -->
+      </div>
+    </div>
+
+    <div class="material-section">
+      <h3>Material Density (Optional)</h3>
+      <p class="help-text">Select a material to calculate weight based on volume</p>
+      <div class="material-grid" id="materialGrid">
+        <div class="material-item" data-density="108.9" data-unit="lb/ft³">
+          <div>Concrete</div>
+          <div class="density-display">108.9 lb/ft³</div>
+        </div>
+        <div class="material-item" data-density="120" data-unit="lb/ft³">
+          <div>Gravel</div>
+          <div class="density-display">120 lb/ft³</div>
+        </div>
+        <div class="material-item" data-density="75" data-unit="lb/ft³">
+          <div>Sand</div>
+          <div class="density-display">75 lb/ft³</div>
+        </div>
+        <div class="material-item" data-density="95" data-unit="lb/ft³">
+          <div>Soil</div>
+          <div class="density-display">95 lb/ft³</div>
+        </div>
+        <div class="material-item" data-density="62.4" data-unit="lb/ft³">
+          <div>Water</div>
+          <div class="density-display">62.4 lb/ft³</div>
+        </div>
+        <div class="material-item" data-density="490" data-unit="lb/ft³">
+          <div>Steel</div>
+          <div class="density-display">490 lb/ft³</div>
+        </div>
+      </div>
+      <div id="weightResults" style="display: none; margin-top: 20px;">
+        <!-- Weight results will be shown here -->
+      </div>
+    </div>
   </div>
-  <script>
-    function calculate() {
-      const sqFt = parseFloat(document.getElementById("squareFeet").value);
-      let depth = parseFloat(document.getElementById("depth").value);
-      const unit = document.getElementById("unit").value;
 
-      if (isNaN(sqFt) || isNaN(depth)) {
-        document.getElementById("result").textContent = "Please enter valid numbers.";
+  <script type="module">
+    import { convert, formatSig } from '../../lib/units/index.js';
+    import { $, $$, on } from '../../lib/dom.js';
+
+    let selectedMaterial = null;
+    let currentVolume = null;
+
+    // Material selection
+    const materialItems = $$('.material-item');
+    materialItems.forEach(item => {
+      on(item, 'click', () => {
+        materialItems.forEach(i => i.classList.remove('selected'));
+        item.classList.add('selected');
+        selectedMaterial = {
+          name: item.querySelector('div').textContent,
+          density: parseFloat(item.dataset.density),
+          unit: item.dataset.unit
+        };
+        if (currentVolume !== null) {
+          calculateWeight();
+        }
+      });
+    });
+
+    function showMessage(message, type = 'error') {
+      const messageArea = $('#messageArea');
+      messageArea.innerHTML = `
+        <div class="${type}-message">
+          ${message}
+        </div>
+      `;
+      
+      // Auto-hide success messages
+      if (type === 'success') {
+        setTimeout(() => {
+          messageArea.innerHTML = '';
+        }, 3000);
+      }
+    }
+
+    function calculate() {
+      const areaInput = $('#area');
+      const depthInput = $('#depth');
+      const areaUnit = $('#areaUnit').value;
+      const depthUnit = $('#depthUnit').value;
+
+      const area = parseFloat(areaInput.value);
+      const depth = parseFloat(depthInput.value);
+
+      // Validation
+      if (isNaN(area) || area <= 0) {
+        showMessage('Please enter a valid positive area.');
         return;
       }
 
-      // Convert depth to feet if it's in inches
-      if (unit === "inches") {
-        depth = depth / 12;
+      if (isNaN(depth) || depth <= 0) {
+        showMessage('Please enter a valid positive depth.');
+        return;
       }
 
-      const cubicFeet = sqFt * depth;
-      const cubicYards = cubicFeet / 27;
+      try {
+        // Convert to base units (square meters and meters)
+        const areaM2 = convert(area, 'Area', areaUnit, 'm²');
+        const depthM = convert(depth, 'Length', depthUnit, 'm');
 
-      document.getElementById("result").textContent =
-        `Cubic Yards: ${cubicYards.toFixed(2)}`;
+        // Calculate volume in cubic meters
+        const volumeM3 = areaM2 * depthM;
+
+        currentVolume = volumeM3;
+
+        // Display results in multiple units
+        displayResults(volumeM3);
+        
+        // Calculate weight if material is selected
+        if (selectedMaterial) {
+          calculateWeight();
+        }
+
+        showMessage('Calculation completed successfully!', 'success');
+
+      } catch (error) {
+        showMessage('Error in calculation: ' + error.message);
+      }
     }
+
+    function displayResults(volumeM3) {
+      const resultsSection = $('#resultsSection');
+      const resultsGrid = $('#resultsGrid');
+
+      // Calculate volume in different units
+      const results = [
+        { label: 'Cubic Meters', value: volumeM3, unit: 'm³' },
+        { label: 'Cubic Feet', value: convert(volumeM3, 'Volume', 'm³', 'ft³'), unit: 'ft³' },
+        { label: 'Cubic Yards', value: convert(volumeM3, 'Volume', 'm³', 'yd³'), unit: 'yd³' },
+        { label: 'Liters', value: convert(volumeM3, 'Volume', 'm³', 'L'), unit: 'L' },
+        { label: 'US Gallons', value: convert(volumeM3, 'Volume', 'm³', 'gal'), unit: 'gal' },
+        { label: 'Cubic Inches', value: convert(volumeM3, 'Volume', 'm³', 'in³'), unit: 'in³' }
+      ];
+
+      resultsGrid.innerHTML = results.map(result => `
+        <div class="result-card">
+          <div class="result-label">${result.label}</div>
+          <div class="result-value">${formatSig(result.value, 6)} ${result.unit}</div>
+          <div class="result-formula">= ${formatSig(result.value, 4)} ${result.unit}</div>
+        </div>
+      `).join('');
+
+      resultsSection.style.display = 'block';
+    }
+
+    function calculateWeight() {
+      if (!selectedMaterial || currentVolume === null) return;
+
+      const weightResults = $('#weightResults');
+      
+      try {
+        // Convert volume to cubic feet for weight calculation
+        const volumeFt3 = convert(currentVolume, 'Volume', 'm³', 'ft³');
+        
+        // Calculate weight in pounds
+        const weightLb = volumeFt3 * selectedMaterial.density;
+        
+        // Convert to other weight units
+        const weightKg = convert(weightLb, 'Mass', 'lb', 'kg');
+        const weightTons = convert(weightLb, 'Mass', 'lb', 'ton (US)');
+
+        weightResults.innerHTML = `
+          <h4>Weight Calculations for ${selectedMaterial.name}</h4>
+          <div class="results-grid">
+            <div class="result-card" style="border-left-color: var(--success);">
+              <div class="result-label">Pounds</div>
+              <div class="result-value">${formatSig(weightLb, 6)} lb</div>
+            </div>
+            <div class="result-card" style="border-left-color: var(--success);">
+              <div class="result-label">Kilograms</div>
+              <div class="result-value">${formatSig(weightKg, 6)} kg</div>
+            </div>
+            <div class="result-card" style="border-left-color: var(--success);">
+              <div class="result-label">US Tons</div>
+              <div class="result-value">${formatSig(weightTons, 6)} tons</div>
+            </div>
+          </div>
+        `;
+        
+        weightResults.style.display = 'block';
+
+      } catch (error) {
+        console.error('Weight calculation error:', error);
+      }
+    }
+
+    // Add enter key support
+    on($('#area'), 'keypress', (e) => {
+      if (e.key === 'Enter') calculate();
+    });
+
+    on($('#depth'), 'keypress', (e) => {
+      if (e.key === 'Enter') calculate();
+    });
+
+    // Initialize
+    window.calculate = calculate;
   </script>
 </body>
 </html>
