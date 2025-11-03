@@ -90,12 +90,21 @@ const navigationData = [
           { label: 'Duct Calculator', href: 'src/mechanical/ducting/ducting.html', keywords: 'airflow hvac' },
           { label: 'Boilers', href: 'src/mechanical/boiler/boiler.html', keywords: 'heating systems' },
           { label: 'DDC', href: 'src/mechanical/ddc/ddc.html', keywords: 'controls automation' },
-          { label: 'Vents and Diffuser', href: 'src/mechanical/diffuser/diffuser.html', keywords: 'air distribution' },
           { label: 'Exhaust Fans', href: 'src/mechanical/exhaust/exhaust.html', keywords: 'ventilation fans' },
           { label: 'Fuel Systems', href: 'src/mechanical/fuel/fuel.html', keywords: 'storage piping' },
           { label: 'Gas Systems', href: 'src/mechanical/gas/gas.html', keywords: 'gas piping' },
-          { label: 'HRV Calculator', href: 'src/mechanical/HRV/HRV.html', keywords: 'heat recovery ventilation' },
-          { label: 'Septic System', href: 'src/mechanical/septic/septic.html', keywords: 'wastewater treatment' }
+          { label: 'Medical Gas', href: 'src/mechanical/medical_gas/medical_gas.html', keywords: 'medical gas systems' },
+          { label: 'Septic System', href: 'src/mechanical/septic/septic.html', keywords: 'wastewater treatment' },
+          { label: 'Steam Systems', href: 'src/mechanical/steam/steam.html', keywords: 'steam heating systems' }
+        ]
+      },
+      {
+        title: 'Ventilation',
+        icon: 'wind',
+        calculators: [
+          { label: 'HRV Calculator', href: 'src/ventilation/HRV/HRV.html', keywords: 'heat recovery ventilation' },
+          { label: 'Vents and Diffuser', href: 'src/ventilation/diffuser/diffuser.html', keywords: 'air distribution' },
+          { label: 'Ducting', href: 'src/ventilation/ducting/ducting.html', keywords: 'airflow ductwork' }
         ]
       },
       {
@@ -130,7 +139,27 @@ const navigationData = [
         title: 'Productivity',
         icon: 'chart',
         calculators: [
-          { label: 'Carpentry Productivity', href: 'src/productivity/carpentry.html', keywords: 'crew output rates' }
+          { label: 'Site Work', href: 'src/productivity/01_Site_Work.html', keywords: 'site work excavation earthwork' },
+          { label: 'Substructure', href: 'src/productivity/02_Substructure.html', keywords: 'foundation concrete footings' },
+          { label: 'Superstructure', href: 'src/productivity/03_Superstructure.html', keywords: 'structural frame steel concrete' },
+          { label: 'Exterior Closure', href: 'src/productivity/04_Exterior_Closure.html', keywords: 'exterior walls envelope' },
+          { label: 'Roof Systems', href: 'src/productivity/05_Roof_Systems.html', keywords: 'roofing waterproofing' },
+          { label: 'Interior Construction', href: 'src/productivity/06_Interior_Construction.html', keywords: 'drywall partitions finishes' },
+          { label: 'Conveying Systems', href: 'src/productivity/07_Conveying_Systems.html', keywords: 'elevators escalators lifts' },
+          { label: 'Mechanical Productivity', href: 'src/productivity/08_Mechanical.html', keywords: 'hvac plumbing mechanical systems' },
+          { label: 'Electrical Productivity', href: 'src/productivity/09_Electrical.html', keywords: 'electrical wiring systems' },
+          { label: 'Equipment Productivity', href: 'src/productivity/10_Equipment.html', keywords: 'heavy machinery equipment' },
+          { label: 'Special Construction', href: 'src/productivity/11_Special_Construction.html', keywords: 'specialty construction systems' }
+        ]
+      },
+      {
+        title: 'Hazmat',
+        icon: 'alert-triangle',
+        calculators: [
+          { label: 'Asbestos', href: 'src/hazmat/asbestos/asbestos.html', keywords: 'asbestos abatement removal' },
+          { label: 'Lead', href: 'src/hazmat/lead/lead.html', keywords: 'lead paint removal abatement' },
+          { label: 'PCB', href: 'src/hazmat/pcb/pcb.html', keywords: 'polychlorinated biphenyl cleanup' },
+          { label: 'Fuel Remediation', href: 'src/hazmat/fuel/fuel_remediation.html', keywords: 'fuel contamination cleanup' }
         ]
       }
     ];
@@ -147,6 +176,8 @@ const navigationData = [
       bolt: 'M12.516 2.11A1 1 0 0 1 13.5 3v6h4a1 1 0 0 1 .78 1.625l-7 9a1 1 0 0 1-1.78-.625V13H5a1 1 0 0 1-.78-1.625l7-9a1 1 0 0 1 1.296-.265Z',
       fan: 'M13.732 2.084a1 1 0 0 1 1.241.647l1.286 3.857l3.858 1.286a1 1 0 0 1 .282 1.796l-3.27 2.36l.405 4.062a1 1 0 0 1-1.45.97l-3.784-1.89l-3.784 1.89a1 1 0 0 1-1.45-.97l.405-4.062l-3.27-2.36a1 1 0 0 1 .282-1.796l3.858-1.286l1.286-3.857a1 1 0 0 1 1.241-.647L12 2.5l1.732-.416Z',
       flame: 'M11.445 2.105a1 1 0 0 1 1.11 0C15.23 4.01 19 8.086 19 12.5a7 7 0 0 1-14 0c0-4.414 3.77-8.49 6.445-10.395ZM12 6.382C10.432 7.83 9 10.07 9 12.5a3 3 0 0 0 6 0c0-2.43-1.432-4.67-3-6.118Z',
+      'alert-triangle': 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0ZM12 9l1.89 3.89a1 1 0 0 1-.89 1.11h-2a1 1 0 0 1-.89-1.11L12 9Z',
+      wind: 'M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2',
       layers: 'M12 2a1 1 0 0 1 .447.105l8 4a1 1 0 0 1 0 1.79L12.447 12.895a1 1 0 0 1-.894 0L3.553 7.895a1 1 0 0 1 0-1.79l8-4A1 1 0 0 1 12 2Zm0 9.618L18.764 9L12 5.382L5.236 9L12 11.618Zm8.447 3.277a1 1 0 0 1-.447 1.342l-8 4a1 1 0 0 1-.894 0l-8-4a1 1 0 1 1 .894-1.788L12 18.618l7.447-3.17a1 1 0 0 1 1.342.447Z',
       route: 'M7 4a3 3 0 1 1 2.995 3.225l-2.94 9.8A3 3 0 1 1 5 16a2.99 2.99 0 0 1 1.005-2.225l2.94-9.8A3 3 0 0 1 7 4Zm10 6a3 3 0 1 1-.005 6A3 3 0 0 1 17 10Z',
       chart: 'M6 11a1 1 0 0 1 1 1v6h2V9a1 1 0 0 1 2 0v9h2v-6a1 1 0 1 1 2 0v6h2v-3a1 1 0 1 1 2 0v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6a1 1 0 0 1 1-1h1Zm11-9a1 1 0 0 1 .78 1.625l-4 5a1 1 0 0 1-1.424.144L10.4 7.2l-3.4 3.4a1 1 0 1 1-1.414-1.414l4-4a1 1 0 0 1 1.327-.077l1.91 1.432l3.37-4.212A1 1 0 0 1 17 2Z'

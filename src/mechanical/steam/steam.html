@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Boiler System Estimator (Hydronic, Non-Steam)</title>
+<title>Steam Boiler System Estimator (High/Low Pressure)</title>
 <style>
     :root {
         --bg: #0f172a;
@@ -12,7 +11,7 @@
         --card: #2a334d;
         --text-main: #f8fafc;
         --text-dim: #94a3b8;
-        --accent: #38bdf8;
+        --accent: #facc15;
         --border: #475569;
         --radius-xl: 1rem;
         --radius-lg: .75rem;
@@ -30,7 +29,10 @@
 
     body {
         margin: 0;
-        background: radial-gradient(circle at 20% 20%, rgba(56,189,248,0.12) 0%, rgba(15,23,42,0) 60%), radial-gradient(circle at 80% 30%, rgba(168,85,247,0.08) 0%, rgba(15,23,42,0) 60%), var(--bg);
+        background:
+            radial-gradient(circle at 20% 20%, rgba(250,204,21,0.14) 0%, rgba(15,23,42,0) 60%),
+            radial-gradient(circle at 80% 30%, rgba(168,85,247,0.08) 0%, rgba(15,23,42,0) 60%),
+            var(--bg);
         min-height: 100vh;
         color: var(--text-main);
         font-family: var(--font-stack);
@@ -67,8 +69,8 @@
         font-size: .6rem;
         line-height: 1;
         font-weight: 500;
-        background: rgba(56,189,248,.12);
-        border: 1px solid rgba(56,189,248,.4);
+        background: rgba(250,204,21,.12);
+        border: 1px solid rgba(250,204,21,.4);
         color: var(--accent);
         padding: .35rem .5rem .4rem;
         border-radius: var(--radius-md);
@@ -128,7 +130,7 @@
         content: "";
         position: absolute;
         inset: 0;
-        background: radial-gradient(circle at 20% 0%, rgba(56,189,248,.12) 0%, transparent 60%);
+        background: radial-gradient(circle at 20% 0%, rgba(250,204,21,.15) 0%, transparent 60%);
         filter: blur(60px);
         opacity: .4;
         z-index: 0;
@@ -341,8 +343,8 @@
     }
 
     button.calc-btn {
-        background: radial-gradient(circle at 10% 0%, rgba(56,189,248,.3) 0%, rgba(0,0,0,0) 60%), rgba(56,189,248,.08);
-        border: 1px solid rgba(56,189,248,.5);
+        background: radial-gradient(circle at 10% 0%, rgba(250,204,21,.3) 0%, rgba(0,0,0,0) 60%), rgba(250,204,21,.08);
+        border: 1px solid rgba(250,204,21,.5);
         border-radius: var(--radius-md);
         padding: .6rem .9rem .7rem;
         font-size: .8rem;
@@ -351,12 +353,12 @@
         font-weight: 600;
         line-height: 1.2;
         cursor: pointer;
-        box-shadow: 0 24px 40px rgba(0,0,0,.9), 0 0 30px rgba(56,189,248,.4);
+        box-shadow: 0 24px 40px rgba(0,0,0,.9), 0 0 30px rgba(250,204,21,.4);
         transition: box-shadow .12s, filter .12s;
     }
     button.calc-btn:active {
         filter: brightness(1.2);
-        box-shadow: 0 12px 20px rgba(0,0,0,.8), 0 0 20px rgba(56,189,248,.7);
+        box-shadow: 0 12px 20px rgba(0,0,0,.8), 0 0 20px rgba(250,204,21,.7);
     }
 
     button.reset-btn {
@@ -390,7 +392,7 @@
         color: var(--accent);
         padding: .15rem .4rem;
         border-radius: .3rem;
-        border: 1px solid rgba(56,189,248,.3);
+        border: 1px solid rgba(250,204,21,.3);
         font-size: .6rem;
     }
 </style>
@@ -400,20 +402,20 @@
 <header>
     <div class="title-group">
         <h1>
-            Hydronic Boiler System Estimator
+            Steam Boiler System Estimator
             <span class="badge">Alaska / Mechanical</span>
         </h1>
         <div class="subtitle">
-            For closed-loop <b>hot water (non-steam) boilers</b>, residential through clinic/school scale.
-            Output includes Material, Shipping, Labor @ $92/hr Mechanical, and Total.
+            For <b>steam boilers (low / high pressure)</b> typically used in schools, hospitals, plants.
+            Output shows Material, Shipping (remote adjusted), Labor @ $92/hr, and Total Installed.
         </div>
     </div>
 
     <div class="assumption-box">
         <div><b>Assumptions:</b></div>
-        <div>Indoor install, existing mechanical room, tie-in to distribution within ~10 LF.</div>
-        <div>Includes boiler, primary pump(s), venting, controls, startup & test.</div>
-        <div>Remote site shipping adder covers barge / small freight handling typical in Alaska.</div>
+        <div>Includes boiler, burner, sight glass, gauges, safeties, feedwater system, blowdown separator, & tie-in within ~10 LF.</div>
+        <div>Includes startup and test, but not full plant controls or new DA tank unless selected.</div>
+        <div>Remote factor adds barge / handling typical in Alaska communities off the road system.</div>
     </div>
 </header>
 
@@ -424,28 +426,34 @@
         <div class="panel-header">
             <div class="panel-title">
                 <span>1. System Inputs</span>
-                <small>Enter known / assumed design data</small>
+                <small>Enter design/assumed values</small>
             </div>
         </div>
 
         <div class="grid-2">
             <label>
-                Boiler Capacity (MBH)
-                <span class="desc">1 MBH = 1,000 BTU/hr. Example: 150 MBH = 150,000 BTU/hr.</span>
-                <input type="number" id="boilerMBH" value="150" min="20" step="10" />
+                Boiler Capacity (Boiler HP)
+                <span class="desc">
+                    1 Boiler HP ≈ 33,475 BTU/hr steam. Typical school plant 50-200 BHP, hospital often 200+.
+                </span>
+                <input type="number" id="boilerHP" value="100" min="10" step="5" />
             </label>
 
             <label>
-                Boiler Efficiency (%)
-                <span class="desc">Typical condensing 92–96%, non-condensing 82–86%.</span>
-                <input type="number" id="efficiency" value="94" min="70" max="99" step="0.5" />
+                Steam Pressure
+                <span class="desc">Affects code fittings, safeties, controls cost.</span>
+                <select id="steamPressure">
+                    <option value="low" selected>Low Pressure (&lt;15 psi)</option>
+                    <option value="med">Medium (15-150 psi)</option>
+                    <option value="high">High (&gt;150 psi)</option>
+                </select>
             </label>
         </div>
 
         <div class="grid-2">
             <label>
                 Fuel Type
-                <span class="desc">Impacts venting, accessories, burner cost.</span>
+                <span class="desc">Oil-fire packages run higher than natural gas.</span>
                 <select id="fuelType">
                     <option value="natgas" selected>Natural Gas</option>
                     <option value="propane">Propane</option>
@@ -454,36 +462,40 @@
             </label>
 
             <label>
-                Number of Heating Zones
-                <span class="desc">Each zone assumed to require its own circulator or zone valve kit.</span>
-                <input type="number" id="zoneCount" value="2" min="1" step="1" />
+                Feedwater / DA Tank
+                <span class="desc">Deaerator or feed tank skid w/ pumps.</span>
+                <select id="feedwaterType">
+                    <option value="basic" selected>Simple Feed Tank / Make-up Pump</option>
+                    <option value="deaerator">Pressurized Deaerator Skid</option>
+                </select>
             </label>
         </div>
 
         <div class="grid-3">
             <label>
-                Vent / Flue Length (LF)
-                <span class="desc">Approximate equivalent length of exhaust/combustion air piping.</span>
-                <input type="number" id="ventLength" value="20" min="0" step="5" />
+                Condensate Return Distance (LF)
+                <span class="desc">
+                    Approx piping tie-in distance for condensate return header work & traps.
+                </span>
+                <input type="number" id="returnLF" value="30" min="0" step="5" />
             </label>
 
             <label>
-                Vent Type
-                <span class="desc">Sidewall PVC / CPVC vs. Category IV SS, etc.</span>
-                <select id="ventType">
-                    <option value="pvc" selected>PVC / CPVC (condensing)</option>
-                    <option value="sscat4">Stainless Cat IV (high temp)</option>
-                    <option value="chimney">Existing Chimney Reuse / Liner</option>
+                Blowdown Arrangement
+                <span class="desc">Blowdown separator, cooling water, floor drain routing.</span>
+                <select id="blowdownTier">
+                    <option value="basic" selected>Single Separator / Floor Drain Nearby</option>
+                    <option value="pumped">Pumped &amp; Cooled Discharge System</option>
                 </select>
             </label>
 
             <label>
-                Control Tier
-                <span class="desc">Basic aquastat vs lead/lag + BMS tie-in.</span>
+                Controls / Integration
+                <span class="desc">Lead/lag, BMS, alarms, trending.</span>
                 <select id="controlTier">
-                    <option value="basic" selected>Basic / Single Boiler</option>
-                    <option value="leadlag">Lead-Lag / Multiple Boiler Logic</option>
-                    <option value="bms">Full BMS Integration</option>
+                    <option value="local" selected>Local Safeties Only</option>
+                    <option value="leadlag">Lead/Lag + Lead-Follow Sequencing</option>
+                    <option value="bms">Full BMS Monitoring &amp; Alarms</option>
                 </select>
             </label>
         </div>
@@ -491,28 +503,26 @@
         <div class="grid-2">
             <label>
                 Alaska Remote Factor
-                <span class="desc">1.00 = Anchorage/road system. 1.35+ = barge / remote village / SE with limited access.
+                <span class="desc">
+                    1.00 = Road system. 1.40+ = Barge / fly-in.
                 </span>
-                <input type="number" id="remoteFactor" value="1.15" min="1.00" max="1.75" step="0.05" />
+                <input type="number" id="remoteFactor" value="1.25" min="1.00" max="1.8" step="0.05" />
             </label>
 
             <div class="grid-1">
                 <div class="check-row">
                     <input type="checkbox" id="includeDemo" />
                     <div>
-                        Include Demo / Changeout
-                        <div class="desc">
-                            Adds labor for removal of existing boiler / pumps / vent.
-                        </div>
+                        Replace Existing / Demo
+                        <div class="desc">Adds demo of old boiler, cut/weld out, rig-out.</div>
                     </div>
                 </div>
+
                 <div class="check-row">
                     <input type="checkbox" id="afterHours" />
                     <div>
-                        After Hours / Occupied Facility
-                        <div class="desc">
-                            Adds 20% labor premium (hospital / school live swap).
-                        </div>
+                        Critical Facility / Off-Hours
+                        <div class="desc">20% labor cost premium (hospital live system, no shutdown).</div>
                     </div>
                 </div>
             </div>
@@ -529,25 +539,24 @@
         <div class="panel-header">
             <div class="panel-title">
                 <span>2. Estimate</span>
-                <small>Budgetary (Materials + Shipping + Labor)</small>
+                <small>Budgetary Installed Cost</small>
             </div>
         </div>
 
-        <!-- Totals -->
         <div class="totals-card">
             <div class="totals-header">
                 <div class="label">
-                    <span>Boiler System Cost</span>
+                    <span>Steam Plant Cost</span>
                 </div>
-                <small id="sizeTag">150 MBH @ 94%</small>
+                <small id="sizeTag">100 BHP / Low Pressure</small>
             </div>
 
             <div class="totals-grid">
-                <div class="label">Boiler & Major Equipment (Material)</div>
-                <div class="value" id="matEquip">$0</div>
+                <div class="label">Boiler, Burner, Safeties (Material)</div>
+                <div class="value" id="matBoiler">$0</div>
 
-                <div class="label">Pumps, Zones, Vent, Controls (Material)</div>
-                <div class="value" id="matAncillary">$0</div>
+                <div class="label">Feedwater, Return, Blowdown, Controls (Material)</div>
+                <div class="value" id="matSupport">$0</div>
 
                 <div class="label">Shipping & Handling</div>
                 <div class="value" id="shipping">$0</div>
@@ -568,7 +577,6 @@
             </div>
         </div>
 
-        <!-- Labor Breakdown -->
         <div class="labor-breakdown">
             <h3>
                 Labor Breakdown
@@ -580,7 +588,7 @@
             </div>
 
             <div class="labor-grid" id="laborRows">
-                <!-- rows injected here -->
+                <!-- injected rows -->
             </div>
 
             <div class="labor-grid" style="border-top:1px solid var(--border); padding-top:.5rem; margin-top:.5rem;">
@@ -597,81 +605,104 @@
 <footer>
     <div><b>Notes / Logic</b></div>
     <div>
-        Material boiler cost scales non-linearly with size (smaller units have higher $/MBH).
-        Zones add circulators/valves. Venting cost is based on vent type. Controls escalate with tier.
-        Shipping assumes ~12% base freight/handling on material, multiplied by <code>remoteFactor</code>.
+        Steam installs are more fabrication-heavy:
+        rigging, code-rated safeties, feedwater/condensate handling, blowdown cooling, and controls.
+        We assume an boiler skid, local code safeties, feed tank or DA skid, basic condensate tie-in,
+        and startup/combustion tuning.
     </div>
     <div>
-        Labor hours are based on Anchorage baseline plus remote handling factor. Demo adds removal hours.
-        After Hours adds 20% labor premium. Mechanical labor rate = $92/hr.
+        Material pricing is multiplied by <code>remoteFactor</code>. Shipping/handling is a % of that,
+        representing barge / crate / special handling in Alaska. Labor is Anchorage mechanical rate ($92/hr)
+        with a live-facility premium toggle.
     </div>
     <div>
-        This is a <b>budgetary tool</b>, not stamped engineering. For steam boilers, different code path (not included).
+        This is still budgetary. Final submittal needs stamped mechanical design and AHJ approval.
     </div>
 </footer>
 
 <script>
 /*
-CORE ESTIMATION LOGIC (Budgetary):
-----------------------------------
+STEAM BOILER ESTIMATION LOGIC (BUDGETARY, ALASKA CONTEXT):
 
-1. Boiler Cost Curve:
-   We'll approximate boiler cost ($) as:
-   - BaseCost = A * (MBH ^ B)
-   Where:
-   - For condensing/NatGas style sizes 100-2000 MBH,
-     A ~ 28 and B ~ 0.88 gives reasonable shape.
-   We'll then adjust for fuel type:
-   - natgas: 1.0x
-   - propane: 1.05x (LP kits, tanks/regulators handling)
-   - diesel: 1.25x (oil burner package cost)
+1. Boiler/Burner Assembly Cost:
+   We'll estimate material cost for a packaged steam boiler+burner+safeties.
+   Typical packaged cost per Boiler HP goes down as HP goes up, but steam gear
+   is still $$$ and code-driven.
 
-   We'll clamp min cost ~ $4,000 because even tiny residential boilers
-   with pumps/trim etc rarely come in below that installed as a package.
+   We'll use:
+     boilerCostRaw = HP * basePerHP * pressureMult * fuelMult
+   where basePerHP ~ $300 for low pressure school-sized, scaling down
+   slightly for bigger systems, but we’ll do that via HP^0.9 shaping.
 
-2. Ancillary Material:
-   - Pumps / Zone kits:
-        zoneCostPer = $650 per zone (pump, valves, isolation, check, wiring whip)
-   - Venting:
-        pvc:      $18/LF
-        sscat4:   $45/LF
-        chimney:  $28/LF  (liner or retrofit allowance)
-   - Controls:
-        basic:   $800
-        leadlag: $2,500
-        bms:     $4,000
+   We'll also apply a pressure class bump:
+    - low:   1.0
+    - med:   1.25
+    - high:  1.6
 
-3. Shipping & Handling:
-   shipBasePct = 0.12 (=12%) of (boiler + ancillary)
-   remoteFactor multiplies shipping and also applies mild bump to material
-   handling in remote conditions (we'll multiply material subtotal as well
-   before computing shipping, so remote drives both freight and handling).
+   Fuel multiplier:
+    - natgas: 1.00
+    - propane:1.07
+    - diesel: 1.20  (oil burners are pricier, fuel handling, filtration)
 
-   Effective Material Subtotal = (boiler + ancillary) * remoteFactor
-   Shipping = EffectiveMatSubtotal * shipBasePct
+   We'll clamp minimum (small boilers are still a major packaged item).
+   We'll assume a floor ~$25,000.
 
-4. Labor Hours (Mechanical @ $92/hr Anchorage base):
-   We'll break it down into tasks:
-   - "Set Boiler & Primary Piping": hrs = 6 + (MBH / 500)*2   (scaled)
-   - "Trim / Vent / Flue":         hrs = 4 + (ventLF / 20)*1.5
-   - "Zone Piping & Pumps":        hrs = zoneCount * 2
-   - "Controls & Startup":        hrs = {basic:4, leadlag:6, bms:10}
+2. Support Systems Material:
+   Feedwater / DA unit:
+    - basic feed tank skid: ~$15,000 base
+    - DA skid:               ~$40,000 base
+   Condensate Return Tie-in:
+    - returnLF * $120/LF (fittings, traps, insulation, weld labor portion valued as material)
+   Blowdown:
+    - basic:   $6,000
+    - pumped:  $15,000
+   Controls:
+    - local:   $8,000 (safeties, LWCO, pressuretrol, local panel)
+    - leadlag: $18,000
+    - bms:     $30,000
 
-   Demo toggle:
-   - add 4 hours flat for remove/haul existing
+   Then multiply that subtotal by remoteFactor (remote handling, sourcing complexity).
 
-   RemoteFactor:
-   - multiply all hours by (remoteFactor ^ 0.4)
-     rationale: remote mobilization/slowdown, but not fully linear
+3. Shipping / Handling:
+   shipPct = 0.15 (15%) of total remote-adjusted material.
+   This is higher than hydronic because boilers, DA tanks, etc. are heavy
+   and usually need crating, custom rigging, possible barge or air cargo.
 
-   AfterHours toggle:
-   - labor $ gets +20% premium, NOT hours.
+4. Labor Hours (Mechanical @ $92/hr base in Anchorage):
+   Steam is slower, heavier, and more regulated. We'll break down tasks:
 
-5. Output:
-   - LaborCost = laborHours * rate(92) * afterHoursPremium
-   - InstalledTotal = EffectiveMatSubtotal + Shipping + LaborCost
+   - "Rig / Set Boiler, Fuel Train Hookup":
+        hrs = 16 + (HP / 50)*4
+        (large boilers need cranes, riggers, fuel train, gas/oil train work)
 
-All dollar outputs formatted $X,XXX.
+   - "Steam Header / Condensate / Blowdown Piping":
+        hrs = 24 + (returnLF / 20)*4
+        (welding, high temp insulation, blowdown cooling tie-in)
+
+   - "Feedwater / DA Tank Install & Tie-in":
+        hrs = (feedwaterType == 'deaerator' ? 20 : 10)
+
+   - "Controls / Safety Devices / Startup & Tuning":
+        hrs = {local:12, leadlag:20, bms:30}
+
+   - Demo (if replacing):
+        hrs += 12  (cutting old boiler out, safe removal)
+
+   Remote slowdown:
+        hours *= (remoteFactor ^ 0.5)
+        Steam installs slow down even more remote vs hydronic.
+
+   AfterHours:
+        adds +20% COST, not hours.
+
+5. Totals:
+   laborCost = totalHrs * 92 * afterHoursPremium
+   matSubtotalRemoteAdj = (boilerMat + supportMatRemoteAdj)
+   shippingCost = matSubtotalRemoteAdj * shipPct
+
+   installedTotal = matSubtotalRemoteAdj + shippingCost + laborCost
+
+All outputs: Material, Shipping, Labor, Installed Total.
 */
 
 
@@ -687,14 +718,14 @@ function fmtHours(num) {
 }
 
 function resetForm() {
-    document.getElementById("boilerMBH").value = 150;
-    document.getElementById("efficiency").value = 94;
+    document.getElementById("boilerHP").value = 100;
+    document.getElementById("steamPressure").value = "low";
     document.getElementById("fuelType").value = "natgas";
-    document.getElementById("zoneCount").value = 2;
-    document.getElementById("ventLength").value = 20;
-    document.getElementById("ventType").value = "pvc";
-    document.getElementById("controlTier").value = "basic";
-    document.getElementById("remoteFactor").value = 1.15;
+    document.getElementById("feedwaterType").value = "basic";
+    document.getElementById("returnLF").value = 30;
+    document.getElementById("blowdownTier").value = "basic";
+    document.getElementById("controlTier").value = "local";
+    document.getElementById("remoteFactor").value = 1.25;
     document.getElementById("includeDemo").checked = false;
     document.getElementById("afterHours").checked = false;
     runCalc();
@@ -702,118 +733,121 @@ function resetForm() {
 
 function runCalc() {
     // INPUTS
-    const MBH = parseFloat(document.getElementById("boilerMBH").value) || 0;
-    const eff = parseFloat(document.getElementById("efficiency").value) || 0;
+    const HP = parseFloat(document.getElementById("boilerHP").value) || 0;
+    const steamPressure = document.getElementById("steamPressure").value;
     const fuelType = document.getElementById("fuelType").value;
-    const zones = parseFloat(document.getElementById("zoneCount").value) || 0;
-    const ventLF = parseFloat(document.getElementById("ventLength").value) || 0;
-    const ventType = document.getElementById("ventType").value;
+    const feedwaterType = document.getElementById("feedwaterType").value;
+    const returnLF = parseFloat(document.getElementById("returnLF").value) || 0;
+    const blowdownTier = document.getElementById("blowdownTier").value;
     const controlTier = document.getElementById("controlTier").value;
     const remoteFactor = parseFloat(document.getElementById("remoteFactor").value) || 1.0;
     const includeDemo = document.getElementById("includeDemo").checked;
     const afterHours = document.getElementById("afterHours").checked;
 
-    // --- 1. Boiler major equipment cost ---
-    // Boiler curve base
-    let A = 28;
-    let B = 0.88;
-    let boilerBase = A * Math.pow(MBH, B) * 100;
-    // Explanation:
-    // A * MBH^B gives ~cost/MBH, multiply by 100 to get total $
-    // Tuned for rough budgetary shape:
-    //   ~150 MBH condensing nat gas -> around ~$9k-$12k raw equipment
-    //   Larger units get more efficient $/MBH.
+    // --- 1. Boiler/Burner/Safeties Material ---
+    // Base cost curve: costPerHP ~ 300 * (HP^0.9 / HP) = ~300 * HP^-0.1,
+    // we'll just shape total like:
+    //   baseTotal = 3000 * (HP ^ 0.9)
+    // so that 100 HP → about 3000*(100^0.9) ≈ ~3000*63 ≈ $189k before multipliers.
+    // That's reasonable for packaged low-pressure school plant scale gear.
+    let baseTotal = 3000 * Math.pow(HP, 0.9);
 
-    // Fuel multipliers
+    // Pressure multiplier
+    let pressureMult = 1.0;
+    if (steamPressure === "med") pressureMult = 1.25;
+    else if (steamPressure === "high") pressureMult = 1.6;
+
+    // Fuel multiplier
     let fuelMult = 1.0;
-    if (fuelType === "propane") fuelMult = 1.05;
-    else if (fuelType === "diesel") fuelMult = 1.25;
+    if (fuelType === "propane") fuelMult = 1.07;
+    else if (fuelType === "diesel") fuelMult = 1.20;
 
-    // Efficiency tweak:
-    // higher efficiency (condensing) generally higher upfront:
-    // baseline assume 90% = 1.0. Add 1% cost per % above 90.
-    let effMult = 1.0 + Math.max(0, (eff - 90)) * 0.01;
+    let boilerMatRaw = baseTotal * pressureMult * fuelMult;
 
-    let boilerCostRaw = boilerBase * fuelMult * effMult;
+    // clamp minimum? Steam packages are expensive even small
+    if (boilerMatRaw < 25000) boilerMatRaw = 25000;
 
-    // clamp minimum to $4,000
-    if (boilerCostRaw < 4000) boilerCostRaw = 4000;
+    // --- 2. Support Systems Material ---
+    // Feedwater / DA
+    let feedwaterMat = (feedwaterType === "deaerator") ? 40000 : 15000;
 
-    // --- 2. Ancillary material ---
-    // Zones
-    const zoneCostPer = 650;
-    const zoneMat = zones * zoneCostPer;
+    // Condensate Return Tie-in
+    // returnLF * $120/LF
+    let condensateMat = returnLF * 120;
 
-    // Venting cost per LF
-    let ventCostPerLF = 18;
-    if (ventType === "sscat4") ventCostPerLF = 45;
-    else if (ventType === "chimney") ventCostPerLF = 28;
-    const ventMat = ventLF * ventCostPerLF;
+    // Blowdown
+    let blowdownMat = (blowdownTier === "pumped") ? 15000 : 6000;
 
-    // Controls tier
-    let controlMat = 800;
-    if (controlTier === "leadlag") controlMat = 2500;
-    else if (controlTier === "bms") controlMat = 4000;
+    // Controls
+    let controlMat = 8000;
+    if (controlTier === "leadlag") controlMat = 18000;
+    else if (controlTier === "bms") controlMat = 30000;
 
-    // Ancillary subtotal
-    const ancillaryMatRaw = zoneMat + ventMat + controlMat;
+    let supportMatRaw = feedwaterMat + condensateMat + blowdownMat + controlMat;
 
-    // --- Apply remote factor to material subtotal ---
-    const matSubtotalRaw = boilerCostRaw + ancillaryMatRaw;
-    const matSubtotalRemoteAdj = matSubtotalRaw * remoteFactor;
+    // Apply remote factor to support systems material
+    const supportMatRemoteAdj = supportMatRaw * remoteFactor;
+
+    // We'll ALSO apply remote factor to the boiler package (rigging/handling/lead time bump)
+    const boilerMatRemoteAdj = boilerMatRaw * remoteFactor;
 
     // --- 3. Shipping / Handling ---
-    const shipBasePct = 0.12; // 12%
-    const shippingCost = matSubtotalRemoteAdj * shipBasePct;
+    // shipPct = 15%
+    const shipPct = 0.15;
+    const matSubtotalRemoteAdj = boilerMatRemoteAdj + supportMatRemoteAdj;
+    const shippingCost = matSubtotalRemoteAdj * shipPct;
 
-    // --- 4. Labor hours ---
-    const mechRate = 92; // $/hr Mechanical (Anchorage base)
+    // --- 4. Labor Hours ---
+    const mechRate = 92;
+    const afterHoursPremiumMult = afterHours ? 1.2 : 1.0;
 
-    // Task 1: Set Boiler & Primary Piping
-    // hrs = 6 + (MBH/500)*2
-    let hrs_setBoiler = 6 + (MBH / 500) * 2;
-    if (hrs_setBoiler < 4) hrs_setBoiler = 4; // floor
+    // Task: Rig / Set Boiler, Fuel Train Hookup
+    // hrs = 16 + (HP/50)*4
+    let hrs_rigSet = 16 + (HP / 50) * 4;
+    if (hrs_rigSet < 12) hrs_rigSet = 12;
 
-    // Task 2: Trim / Vent / Flue
-    // hrs = 4 + (ventLF/20)*1.5
-    let hrs_vent = 4 + (ventLF / 20) * 1.5;
+    // Task: Steam Header / Condensate / Blowdown Piping
+    // hrs = 24 + (returnLF/20)*4
+    let hrs_piping = 24 + (returnLF / 20) * 4;
 
-    // Task 3: Zone Piping & Pumps
-    // hrs = zones * 2
-    let hrs_zones = zones * 2;
+    // Task: Feedwater / DA Tank Install & Tie-in
+    // deaerator heavier to set, pipe, wire
+    let hrs_feed = (feedwaterType === "deaerator") ? 20 : 10;
 
-    // Task 4: Controls & Startup
-    let hrs_ctrl = 4;
-    if (controlTier === "leadlag") hrs_ctrl = 6;
-    else if (controlTier === "bms") hrs_ctrl = 10;
+    // Task: Controls / Safety Devices / Startup & Tuning
+    let hrs_ctrl = 12;
+    if (controlTier === "leadlag") hrs_ctrl = 20;
+    else if (controlTier === "bms") hrs_ctrl = 30;
 
-    // Demo hours
-    let hrs_demo = includeDemo ? 4 : 0;
+    // Demo hours (cut out old boiler, haul out)
+    let hrs_demo = includeDemo ? 12 : 0;
 
-    // Sum hours before remote factor
-    let hrs_sum_base = hrs_setBoiler + hrs_vent + hrs_zones + hrs_ctrl + hrs_demo;
+    // Sum base hours
+    let hrs_sum_base = hrs_rigSet + hrs_piping + hrs_feed + hrs_ctrl + hrs_demo;
 
-    // Remote slowdown multiplier: remoteFactor^0.4
-    let remoteHourMult = Math.pow(remoteFactor, 0.4);
+    // Remote slowdown multiplier = remoteFactor ^ 0.5
+    let remoteHourMult = Math.pow(remoteFactor, 0.5);
     let hrs_sum_remote = hrs_sum_base * remoteHourMult;
 
-    // Cost per hour
-    let laborPremiumMult = afterHours ? 1.2 : 1.0;
-    let laborCostTotal = hrs_sum_remote * mechRate * laborPremiumMult;
+    // Labor cost
+    let laborCostTotal = hrs_sum_remote * mechRate * afterHoursPremiumMult;
 
-    // --- 5. Final rollups ---
+    // --- 5. Totals ---
     const totalMatPlusShip = matSubtotalRemoteAdj + shippingCost;
     const installedTotal = totalMatPlusShip + laborCostTotal;
-    const grandTotal = installedTotal; // clarity alias
+    const grandTotal = installedTotal;
 
-    // --- Inject into DOM ---
+    // --- Update UI ---
 
     // Header tag
-    document.getElementById("sizeTag").textContent = `${MBH} MBH @ ${eff}%`;
+    const pressureLabel = steamPressure === "low" ? "Low Pressure"
+                        : steamPressure === "med" ? "Medium Pressure"
+                        : "High Pressure";
+    document.getElementById("sizeTag").textContent = `${HP} BHP / ${pressureLabel}`;
 
     // Material pieces
-    document.getElementById("matEquip").textContent = fmtMoney(boilerCostRaw);
-    document.getElementById("matAncillary").textContent = fmtMoney(ancillaryMatRaw * remoteFactor); // show remote-adjusted share
+    document.getElementById("matBoiler").textContent = fmtMoney(boilerMatRemoteAdj);
+    document.getElementById("matSupport").textContent = fmtMoney(supportMatRemoteAdj);
     document.getElementById("shipping").textContent = fmtMoney(shippingCost);
 
     // Labor
@@ -824,12 +858,12 @@ function runCalc() {
     document.getElementById("installedTotal").textContent = fmtMoney(installedTotal);
     document.getElementById("grandTotal").textContent = fmtMoney(grandTotal);
 
-    // Labor breakdown table
+    // Labor breakdown rows
     const laborRowsEl = document.getElementById("laborRows");
     laborRowsEl.innerHTML = "";
 
     function addLaborRow(task, hrs) {
-        const cost = hrs * mechRate * laborPremiumMult;
+        const cost = hrs * mechRate * afterHoursPremiumMult;
         const rowTask = document.createElement("div");
         rowTask.textContent = task;
         const rowHrs = document.createElement("div");
@@ -844,22 +878,21 @@ function runCalc() {
         laborRowsEl.appendChild(rowCost);
     }
 
-    addLaborRow("Set Boiler & Primary Piping", hrs_setBoiler * remoteHourMult);
-    addLaborRow("Trim / Vent / Flue", hrs_vent * remoteHourMult);
-    addLaborRow("Zone Piping & Pumps", hrs_zones * remoteHourMult);
-    addLaborRow("Controls & Startup", hrs_ctrl * remoteHourMult);
+    addLaborRow("Rig / Set Boiler & Fuel Train", hrs_rigSet * remoteHourMult);
+    addLaborRow("Steam Header / Condensate / Blowdown Piping", hrs_piping * remoteHourMult);
+    addLaborRow("Feedwater / DA Tank Install", hrs_feed * remoteHourMult);
+    addLaborRow("Controls / Safeties / Startup", hrs_ctrl * remoteHourMult);
     if (includeDemo) {
-        addLaborRow("Demo / Remove Existing", hrs_demo * remoteHourMult);
+        addLaborRow("Demo Existing Boiler", hrs_demo * remoteHourMult);
     }
 
     // Totals
     document.getElementById("laborHrsSum").textContent = hrs_sum_remote.toFixed(1);
     document.getElementById("laborCostSum").textContent = fmtMoney(laborCostTotal);
-
     document.getElementById("laborHoursTotal").textContent = fmtHours(hrs_sum_remote);
 }
 
-// Initialize output once
+// init page with first calc
 runCalc();
 </script>
 

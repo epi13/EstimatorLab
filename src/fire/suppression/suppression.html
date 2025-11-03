@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-<title>Fire Alarm Estimator - Poor Louis Labs</title>
+<title>Fire Suppression Estimator - Poor Louis Labs</title>
 <style>
     :root {
-        --bg: #0f172a;
+        --bg:#0f172a;
         --panel:#1e2537;
         --panel-light:#2b344d;
-        --accent:#38bdf8;
+        --accent:#34d399;
         --text:#f8fafc;
         --subtext:#94a3b8;
         --border:#334155;
@@ -22,17 +22,17 @@
         --font-stack:-apple-system,BlinkMacSystemFont,"Inter","Roboto","Segoe UI",Helvetica,Arial,sans-serif;
     }
 
-    body {
+    body{
         background: radial-gradient(circle at 20% 20%, #1e293b 0%, #0f172a 60%);
-        color: var(--text);
-        font-family: var(--font-stack);
+        color:var(--text);
+        font-family:var(--font-stack);
         margin:0;
         min-height:100vh;
         display:flex;
         flex-direction:column;
     }
 
-    header {
+    header{
         background:rgba(15,23,42,.6);
         border-bottom:1px solid var(--border);
         backdrop-filter: blur(10px);
@@ -44,18 +44,18 @@
         justify-content:space-between;
         gap:var(--gap-sm);
     }
-    header h1 {
+    header h1{
         font-size:1rem;
         font-weight:500;
         color:var(--text);
         margin:0;
         letter-spacing:-0.03em;
     }
-    header h1 span {
+    header h1 span{
         font-weight:600;
         color:var(--accent);
     }
-    header .meta {
+    header .meta{
         font-size:.75rem;
         color:var(--subtext);
         line-height:1.2;
@@ -65,7 +65,7 @@
     main{
         flex:1;
         display:grid;
-        grid-template-columns: minmax(300px,400px) 1fr;
+        grid-template-columns:minmax(300px,400px) 1fr;
         gap:var(--gap-lg);
         padding:var(--gap-lg);
         max-width:1600px;
@@ -78,7 +78,7 @@
         }
     }
 
-    .panel {
+    .panel{
         background:var(--panel);
         border:1px solid var(--border);
         border-radius:var(--radius-xl);
@@ -95,7 +95,7 @@
         align-items:flex-start;
         justify-content:space-between;
         gap:var(--gap-sm);
-        background:linear-gradient(to right,rgba(56,189,248,.1),rgba(0,0,0,0));
+        background:linear-gradient(to right,rgba(52,211,153,.1),rgba(0,0,0,0));
     }
     .panel-header .title-group{
         min-width:0;
@@ -112,9 +112,9 @@
     .panel-header h2 .tag{
         font-size:.6rem;
         font-weight:500;
-        background:rgba(56,189,248,.12);
+        background:rgba(52,211,153,.12);
         color:var(--accent);
-        border:1px solid rgba(56,189,248,.4);
+        border:1px solid rgba(52,211,153,.4);
         padding:.15rem .4rem;
         border-radius:999px;
         line-height:1.2;
@@ -203,7 +203,7 @@
     input[type="text"]:focus,
     select:focus{
         border-color:var(--accent);
-        box-shadow:0 0 0 3px rgba(56,189,248,.25);
+        box-shadow:0 0 0 3px rgba(52,211,153,.25);
     }
 
     .mode-toggle{
@@ -227,13 +227,12 @@
         padding:.75rem 1rem;
         cursor:pointer;
         line-height:1.2;
-        box-shadow:0 20px 40px rgba(56,189,248,.4),0 2px 4px rgba(0,0,0,.7);
+        box-shadow:0 20px 40px rgba(52,211,153,.4),0 2px 4px rgba(0,0,0,.7);
     }
     button.calculate-btn:active{
         transform:scale(.98);
     }
 
-    /* OUTPUT */
     .results-wrapper{
         display:flex;
         flex-direction:column;
@@ -280,7 +279,7 @@
         box-shadow:0 30px 80px rgba(0,0,0,.6);
     }
     thead{
-        background:rgba(56,189,248,.08);
+        background:rgba(52,211,153,.08);
     }
     th,td{
         text-align:left;
@@ -307,22 +306,21 @@
         color:var(--subtext);
         line-height:1.4;
     }
-
 </style>
 </head>
 <body>
 <header>
     <h1>
-        <span>Fire Alarm Estimator</span> · Poor Louis Labs
+        <span>Fire Suppression Estimator</span> · Poor Louis Labs
     </h1>
     <div class="meta">
-        <div>Alaska labor basis ($96/hr Electrical)</div>
-        <div>Includes design, freight, and test line items</div>
+        <div>Alaska labor basis ($92/hr Mechanical / Sprinkler)</div>
+        <div>Includes design calc, hydro test, and freight</div>
     </div>
 </header>
 
 <main>
-    <!-- LEFT INPUT PANEL -->
+    <!-- LEFT: INPUTS -->
     <section class="panel">
         <div class="panel-header">
             <div class="title-group">
@@ -330,7 +328,7 @@
                     Inputs
                     <span class="tag" id="modeTag">High-Level</span>
                 </h2>
-                <p>Choose high-level (SF allowance) or detailed device takeoff.</p>
+                <p>Choose high-level ($/SF) or detailed head/pipe takeoff.</p>
             </div>
             <div class="mode-toggle">
                 <label for="modeSelect">
@@ -343,31 +341,32 @@
             </div>
         </div>
 
+        <!-- HIGH-LEVEL MODE -->
         <div class="panel-body" id="highLevelBlock">
             <fieldset>
                 <legend>High-Level Budget</legend>
                 <div class="row-2">
                     <label>
                         <span class="topline">
-                            <span class="name">Building Area (SF)</span>
-                            <span class="hint">gross floor</span>
+                            <span class="name">Protected Area (SF)</span>
+                            <span class="hint">gross sprinklered</span>
                         </span>
                         <input type="number" id="hl_sqft" value="10000" min="0" />
                     </label>
 
                     <label>
                         <span class="topline">
-                            <span class="name">System Allowance ($/SF)</span>
-                            <span class="hint">typ 2.50–4.00</span>
+                            <span class="name">Allowance ($/SF)</span>
+                            <span class="hint">typ 4–8+</span>
                         </span>
-                        <input type="number" id="hl_rate_per_sf" value="3.00" min="0" step="0.01" />
+                        <input type="number" id="hl_rate_per_sf" value="6.00" min="0" step="0.01" />
                     </label>
                 </div>
 
                 <div class="row-2">
                     <label>
                         <span class="topline">
-                            <span class="name">Design Fee (%)</span>
+                            <span class="name">Design / Calc Fee (%)</span>
                             <span class="hint">NIC if NIC</span>
                         </span>
                         <input type="number" id="hl_design_pct" value="8" min="0" step="0.1" />
@@ -375,10 +374,10 @@
 
                     <label>
                         <span class="topline">
-                            <span class="name">Testing & Certification ($)</span>
-                            <span class="hint">final sign-off</span>
+                            <span class="name">Hydro Test & Final Inspection ($)</span>
+                            <span class="hint">AHJ signoff</span>
                         </span>
-                        <input type="number" id="hl_test_lump" value="2500" min="0" step="50" />
+                        <input type="number" id="hl_test_lump" value="3500" min="0" step="50" />
                     </label>
                 </div>
 
@@ -386,17 +385,17 @@
                     <label>
                         <span class="topline">
                             <span class="name">Freight / Remote Logistics (%)</span>
-                            <span class="hint">Alaska uplift</span>
+                            <span class="hint">barge/air</span>
                         </span>
-                        <input type="number" id="hl_freight_pct" value="7" min="0" step="0.1" />
+                        <input type="number" id="hl_freight_pct" value="8" min="0" step="0.1" />
                     </label>
 
                     <label>
                         <span class="topline">
-                            <span class="name">Electrical Labor Rate ($/hr)</span>
-                            <span class="hint">Anchorage base</span>
+                            <span class="name">Sprinkler Labor Rate ($/hr)</span>
+                            <span class="hint">AK base</span>
                         </span>
-                        <input type="number" id="hl_labor_rate" value="96" min="0" step="1" />
+                        <input type="number" id="hl_labor_rate" value="92" min="0" step="1" />
                     </label>
                 </div>
             </fieldset>
@@ -404,81 +403,61 @@
             <button class="calculate-btn" id="calcHighBtn">Calculate High-Level</button>
         </div>
 
+        <!-- DETAILED MODE -->
         <div class="panel-body" id="detailedBlock" style="display:none;">
             <fieldset>
-                <legend>Device Counts</legend>
+                <legend>System Components</legend>
                 <div class="row-2">
                     <label>
                         <span class="topline">
-                            <span class="name">Pull Stations (EA)</span>
-                            <span class="hint">Manual pull</span>
+                            <span class="name">Standard Upright/Pendant Heads (EA)</span>
+                            <span class="hint">light hazard</span>
                         </span>
-                        <input type="number" id="dt_pull" value="4" min="0" />
+                        <input type="number" id="dt_heads_std" value="120" min="0" />
                     </label>
 
                     <label>
                         <span class="topline">
-                            <span class="name">Horn/Strobes (EA)</span>
-                            <span class="hint">A/V notif</span>
+                            <span class="name">Specialty / Concealed / Sidewall Heads (EA)</span>
+                            <span class="hint">rated / aesthetic</span>
                         </span>
-                        <input type="number" id="dt_hornstrobe" value="9" min="0" />
+                        <input type="number" id="dt_heads_special" value="10" min="0" />
                     </label>
                 </div>
 
                 <div class="row-2">
                     <label>
                         <span class="topline">
-                            <span class="name">Smoke/Heat Detectors (EA)</span>
-                            <span class="hint">addressable</span>
+                            <span class="name">Branch Line Piping (LF)</span>
+                            <span class="hint">1&quot;-1 1/2&quot; sch 40</span>
                         </span>
-                        <input type="number" id="dt_detectors" value="12" min="0" />
+                        <input type="number" id="dt_branch_lf" value="800" min="0" />
                     </label>
 
                     <label>
                         <span class="topline">
-                            <span class="name">Door Hold / Relay / Misc (EA)</span>
-                            <span class="hint">ancillary</span>
+                            <span class="name">Main / Riser Piping (LF)</span>
+                            <span class="hint">2&quot;+ mains</span>
                         </span>
-                        <input type="number" id="dt_misc" value="3" min="0" />
+                        <input type="number" id="dt_main_lf" value="200" min="0" />
                     </label>
                 </div>
 
                 <div class="row-2">
                     <label>
                         <span class="topline">
-                            <span class="name">Fire Alarm Control Panel (EA)</span>
-                            <span class="hint">FACU</span>
+                            <span class="name">Riser / Backflow / Valve Assembly (EA)</span>
+                            <span class="hint">incl. check, valves, gauges</span>
                         </span>
-                        <input type="number" id="dt_facu" value="1" min="0" />
+                        <input type="number" id="dt_riser" value="1" min="0" />
                     </label>
 
                     <label>
                         <span class="topline">
-                            <span class="name">Annunciator Panels (EA)</span>
-                            <span class="hint">lobby</span>
+                            <span class="name">Fire Dept Connection (EA)</span>
+                            <span class="hint">FDC</span>
                         </span>
-                        <input type="number" id="dt_annunciator" value="1" min="0" />
-                    </label>
-                </div>
-            </fieldset>
-
-            <fieldset>
-                <legend>Infrastructure</legend>
-                <div class="row-2">
-                    <label>
-                        <span class="topline">
-                            <span class="name">EMT Conduit (LF)</span>
-                            <span class="hint">3/4&quot; EMT</span>
-                        </span>
-                        <input type="number" id="dt_conduit_lf" value="195" min="0" />
-                    </label>
-
-                    <label>
-                        <span class="topline">
-                            <span class="name">Fire Alarm Cable (LF)</span>
-                            <span class="hint">2c/4c FPLP</span>
-                        </span>
-                        <input type="number" id="dt_wire_lf" value="283" min="0" />
+                        <input type="number" id="dt_fdc" value="1" min="0" />
                     </label>
                 </div>
             </fieldset>
@@ -488,26 +467,26 @@
                 <div class="row-3">
                     <label>
                         <span class="topline">
-                            <span class="name">Elec Labor Rate ($/hr)</span>
-                            <span class="hint">AK base 96</span>
+                            <span class="name">Sprinkler Labor Rate ($/hr)</span>
+                            <span class="hint">base 92</span>
                         </span>
-                        <input type="number" id="dt_labor_rate" value="96" min="0" />
+                        <input type="number" id="dt_labor_rate" value="92" min="0" />
                     </label>
 
                     <label>
                         <span class="topline">
-                            <span class="name">Design Fee (%)</span>
-                            <span class="hint">engineer / NIC</span>
+                            <span class="name">Design / Calc Fee (%)</span>
+                            <span class="hint">hydraulic calc</span>
                         </span>
                         <input type="number" id="dt_design_pct" value="8" min="0" step="0.1" />
                     </label>
 
                     <label>
                         <span class="topline">
-                            <span class="name">Testing & Cert ($)</span>
-                            <span class="hint">full system test</span>
+                            <span class="name">Hydro Test & Final Inspection ($)</span>
+                            <span class="hint">lump</span>
                         </span>
-                        <input type="number" id="dt_test_lump" value="2500" min="0" step="50" />
+                        <input type="number" id="dt_test_lump" value="3500" min="0" step="50" />
                     </label>
                 </div>
 
@@ -515,20 +494,20 @@
                     <label>
                         <span class="topline">
                             <span class="name">Freight / Remote Logistics (%)</span>
-                            <span class="hint">barge / air</span>
+                            <span class="hint">pipe is heavy</span>
                         </span>
-                        <input type="number" id="dt_freight_pct" value="7" min="0" step="0.1" />
+                        <input type="number" id="dt_freight_pct" value="8" min="0" step="0.1" />
                     </label>
 
                     <label>
                         <span class="topline">
-                            <span class="name">Occupied / After Hours Factor</span>
-                            <span class="hint">labor multiplier</span>
+                            <span class="name">Occupied / Off-Hours Factor</span>
+                            <span class="hint">productivity hit</span>
                         </span>
                         <select id="dt_afterhours">
-                            <option value="1.00">Normal (1.00x)</option>
-                            <option value="1.15">Tight Ceiling / Day Shift in Occupied Space (1.15x)</option>
-                            <option value="1.30">After Hours / Hospital / Airport (1.30x)</option>
+                            <option value="1.00">Normal New Build (1.00x)</option>
+                            <option value="1.20">Ceilings In / Occupied Day Shift (1.20x)</option>
+                            <option value="1.40">Night Work / Active Facility (1.40x)</option>
                         </select>
                     </label>
                 </div>
@@ -538,7 +517,7 @@
         </div>
     </section>
 
-    <!-- RIGHT OUTPUT PANEL -->
+    <!-- RIGHT: OUTPUT -->
     <section class="panel">
         <div class="panel-header">
             <div class="title-group">
@@ -546,7 +525,7 @@
                     Estimate
                     <span class="tag">Breakdown</span>
                 </h2>
-                <p>Materials, labor, design, test, and freight shown separately.</p>
+                <p>Materials, labor, design, hydro test, freight, total.</p>
             </div>
         </div>
 
@@ -561,11 +540,11 @@
                     <div class="value" id="out_labor">$0</div>
                 </div>
                 <div class="total-card">
-                    <div class="label">Design Fee</div>
+                    <div class="label">Design / Calc Fee</div>
                     <div class="value" id="out_design">$0</div>
                 </div>
                 <div class="total-card">
-                    <div class="label">Testing & Certification</div>
+                    <div class="label">Hydro Test & Final Insp</div>
                     <div class="value" id="out_test">$0</div>
                 </div>
                 <div class="total-card">
@@ -602,14 +581,13 @@
 </main>
 
 <script>
-// ==========================
+// ----------------------
 // Utility
-// ==========================
+// ----------------------
 function dollars(x){ return "$" + Number(x).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function num(x){ return Number(x)||0; }
 function hoursToDollars(hrs, rate){ return hrs*rate; }
 
-// helper to inject rows in the breakdown table
 function addRow(rows, label, qty, matCost, laborHrs, laborRate){
     const laborCost = hoursToDollars(laborHrs, laborRate);
     const total = matCost + laborCost;
@@ -623,9 +601,8 @@ function addRow(rows, label, qty, matCost, laborHrs, laborRate){
     });
 }
 
-// render table + totals
 function renderResults(rows, extras){
-    // extras: {design, test, freight, laborRate}
+    // extras: {design, test, freight}
     let materialSubtotal = 0;
     let laborSubtotal = 0;
 
@@ -634,14 +611,12 @@ function renderResults(rows, extras){
         laborSubtotal += r.laborCost;
     });
 
-    // design fee is % of system install (mat+labor) BEFORE freight/test
     const designFee = extras.design;
     const testFee   = extras.test;
     const freight   = extras.freight;
 
     const grandTotal = materialSubtotal + laborSubtotal + designFee + testFee + freight;
 
-    // update cards
     document.getElementById('out_mat').textContent    = dollars(materialSubtotal);
     document.getElementById('out_labor').textContent  = dollars(laborSubtotal);
     document.getElementById('out_design').textContent = dollars(designFee);
@@ -649,7 +624,6 @@ function renderResults(rows, extras){
     document.getElementById('out_freight').textContent= dollars(freight);
     document.getElementById('out_grand').textContent  = dollars(grandTotal);
 
-    // table body
     const tbody = document.getElementById('lineItemsBody');
     tbody.innerHTML = "";
     rows.forEach(r=>{
@@ -665,11 +639,11 @@ function renderResults(rows, extras){
         tbody.appendChild(tr);
     });
 
-    // Add design, test, freight rows if nonzero
+    // design row
     if (designFee>0){
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>Design / Engineering</td>
+            <td>Design / Hydraulic Calc / Stamp</td>
             <td>pct</td>
             <td class="num">${dollars(designFee)}</td>
             <td class="num">0.00</td>
@@ -679,10 +653,11 @@ function renderResults(rows, extras){
         tbody.appendChild(tr);
     }
 
+    // hydro / final inspection
     if (testFee>0){
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>Testing & Certification</td>
+            <td>Hydrostatic Test & Final Inspection</td>
             <td>lump</td>
             <td class="num">${dollars(testFee)}</td>
             <td class="num">0.00</td>
@@ -692,6 +667,7 @@ function renderResults(rows, extras){
         tbody.appendChild(tr);
     }
 
+    // freight
     if (freight>0){
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -705,13 +681,12 @@ function renderResults(rows, extras){
         tbody.appendChild(tr);
     }
 
-    // assumptions
     document.getElementById("assumptionsNote").textContent = extras.note;
 }
 
-// ==========================
-// MODE TOGGLING
-// ==========================
+// ----------------------
+// Mode toggle
+// ----------------------
 const modeSelect = document.getElementById('modeSelect');
 const modeTag    = document.getElementById('modeTag');
 const highBlock  = document.getElementById('highLevelBlock');
@@ -730,9 +705,9 @@ modeSelect.addEventListener('change', ()=>{
     }
 });
 
-// ==========================
-// HIGH-LEVEL CALC
-// ==========================
+// ----------------------
+// High-Level calc
+// ----------------------
 document.getElementById('calcHighBtn').addEventListener('click', ()=>{
     const sqft          = num(document.getElementById('hl_sqft').value);
     const ratePerSF     = num(document.getElementById('hl_rate_per_sf').value);
@@ -741,27 +716,22 @@ document.getElementById('calcHighBtn').addEventListener('click', ()=>{
     const freightPct    = num(document.getElementById('hl_freight_pct').value)/100;
     const laborRate     = num(document.getElementById('hl_labor_rate').value);
 
-    // Assume in a high-level budget:
-    // - We'll say 60% material / 40% labor split of the base system cost
-    //   This is a tunable assumption.
+    // assume 65% material / 35% labor split in sprinkler
+    // sprinkler systems are pipe + fittings heavy, and pipe shipping in AK is $$$
     const baseSystem = sqft * ratePerSF;
-    const matPortion = baseSystem * 0.60;
-    const laborPortion = baseSystem * 0.40;
+    const matPortion = baseSystem * 0.65;
+    const laborPortion = baseSystem * 0.35;
 
-    // Convert laborPortion dollars into hours @ laborRate so we can show hrs
+    // show labor hours by backing into rate
     const laborHours = laborRate>0 ? (laborPortion / laborRate) : 0;
 
-    // design fee is % of base system (mat+laborPortion)
     const designFee = baseSystem * designPct;
-
-    // freight is % of material portion only (assumption)
     const freightCost = matPortion * freightPct;
 
-    // rows
     const rows = [];
     addRow(
         rows,
-        "Fire Alarm System (Allowance)",
+        "Fire Suppression System (Allowance)",
         `${sqft.toLocaleString()} SF @ $${ratePerSF.toFixed(2)}/SF`,
         matPortion,
         laborHours,
@@ -772,100 +742,83 @@ document.getElementById('calcHighBtn').addEventListener('click', ()=>{
         design: designFee,
         test: testLump,
         freight: freightCost,
-        laborRate,
         note:
-        "High-level allowance. Split assumed 60% material / 40% labor. Labor converted to hours @ entered rate. " +
-        "Design fee as % of base system. Freight as % of materials only. Rates assume Anchorage electrical labor; " +
-        "remote/barge/after-hours not fully captured."
+        "High-level sprinkler allowance. Split assumed 65% material / 35% labor. Labor converted to hours @ entered sprinkler rate. " +
+        "Design covers hydraulic calc, layout, stamp. Hydro test & inspection carried as lump sum. " +
+        "Freight applied to material only and should be raised for remote barge / air delivery in Alaska."
     });
 });
 
 
-// ==========================
-// DETAILED CALC
-// ==========================
+// ----------------------
+// Detailed calc
+// ----------------------
 document.getElementById('calcDetailedBtn').addEventListener('click', ()=>{
-    // inputs
-    const qPull          = num(document.getElementById('dt_pull').value);
-    const qHornStrobe    = num(document.getElementById('dt_hornstrobe').value);
-    const qDetect        = num(document.getElementById('dt_detectors').value);
-    const qMisc          = num(document.getElementById('dt_misc').value);
-    const qFacu          = num(document.getElementById('dt_facu').value);
-    const qAnnun         = num(document.getElementById('dt_annunciator').value);
-    const lfConduit      = num(document.getElementById('dt_conduit_lf').value);
-    const lfWire         = num(document.getElementById('dt_wire_lf').value);
+    // INPUTS
+    const qHeadsStd       = num(document.getElementById('dt_heads_std').value);
+    const qHeadsSpecial   = num(document.getElementById('dt_heads_special').value);
+    const lfBranch        = num(document.getElementById('dt_branch_lf').value);
+    const lfMain          = num(document.getElementById('dt_main_lf').value);
+    const qRiser          = num(document.getElementById('dt_riser').value);
+    const qFdc            = num(document.getElementById('dt_fdc').value);
 
-    const laborRate      = num(document.getElementById('dt_labor_rate').value);
-    const designPct      = num(document.getElementById('dt_design_pct').value)/100;
-    const testLump       = num(document.getElementById('dt_test_lump').value);
-    const freightPct     = num(document.getElementById('dt_freight_pct').value)/100;
-    const afterHoursMult = num(document.getElementById('dt_afterhours').value);
+    const laborRate       = num(document.getElementById('dt_labor_rate').value);
+    const designPct       = num(document.getElementById('dt_design_pct').value)/100;
+    const testLump        = num(document.getElementById('dt_test_lump').value);
+    const freightPct      = num(document.getElementById('dt_freight_pct').value)/100;
+    const afterHoursMult  = num(document.getElementById('dt_afterhours').value);
 
-    // --- Assumed unit material costs ($ EA or $/LF)
-    // These are adjustable per project/vendor
-    const matPull = 120;          // pull station
-    const matHornStrobe = 185;    // horn/strobe combo
-    const matDetector = 145;      // smokes/heats addressable
-    const matMisc = 110;          // relays, door holders, etc.
-    const matFacu = 4800;         // main panel
-    const matAnnun = 950;         // remote annunciator
-    const matConduitLF = 4.00;    // 3/4" EMT material per LF (fittings incl.)
-    const matWireLF = 1.80;       // F/A cable per LF (2c/4c, rated plenum)
+    // ---------- MATERIAL ASSUMPTIONS ----------
+    // These are tunable. We're aiming for budgetary, not bid.
+    const matHeadStd        = 45;   // std pendent/upright
+    const matHeadSpecial    = 120;  // concealed/sidewall/rated finish
+    const matBranchLF       = 6.00; // 1" - 1-1/2" sch40 black incl. tees/hangers/groove/etc per LF
+    const matMainLF         = 12.00;// 2"+ main header / feed, incl. fittings and hangers per LF
+    const matRiser          = 4200; // riser/valve/backflow/check/gauges pac
+    const matFdc            = 800;  // siamese FDC body, signage, caps, etc.
 
-    // --- Assumed install hours per unit (Alaska-tilted)
-    // includes device mount, label, termination, as-built note
-    // We'll apply afterHoursMult to hours.
-    let hrPull = 0.75;
-    let hrHornStrobe = 1.10;
-    let hrDetector = 1.00;
-    let hrMisc = 1.00;
-    let hrFacu = 12.0;     // panel anchor, power, loops, programming
-    let hrAnnun = 4.0;
-    let hrConduitLF = 0.03; // 0.03 hr/LF EMT in typical T-bar ceiling
-    let hrWireLF = 0.02;    // 0.02 hr/LF pull/terminate FPLP
+    // ---------- LABOR HOUR ASSUMPTIONS ----------
+    // Per unit or per LF, then multiplied by afterHoursMult for occupied/night work.
+    let hrHeadStd       = 0.5;   // layout, thread/groove, fit, wrench, test
+    let hrHeadSpecial   = 0.75;  // fiddly escutcheon/finish alignment
+    let hrBranchLF      = 0.06;  // hrs per LF of branch line install & hang
+    let hrMainLF        = 0.08;  // hrs per LF of main/riser runs, usually heavier lifts
+    let hrRiser         = 10.0;  // set assembly, anchor, valve trim, drains
+    let hrFdc           = 4.0;   // FDC body mount + drill through wall / signage
 
-    // adjust hours for after hours / occupied / restricted access
-    hrPull        *= afterHoursMult;
-    hrHornStrobe  *= afterHoursMult;
-    hrDetector    *= afterHoursMult;
-    hrMisc        *= afterHoursMult;
-    hrFacu        *= afterHoursMult;
-    hrAnnun       *= afterHoursMult;
-    hrConduitLF   *= afterHoursMult;
-    hrWireLF      *= afterHoursMult;
+    hrHeadStd     *= afterHoursMult;
+    hrHeadSpecial *= afterHoursMult;
+    hrBranchLF    *= afterHoursMult;
+    hrMainLF      *= afterHoursMult;
+    hrRiser       *= afterHoursMult;
+    hrFdc         *= afterHoursMult;
 
-    // material costs
-    const costPull        = qPull        * matPull;
-    const costHornStrobe  = qHornStrobe  * matHornStrobe;
-    const costDetector    = qDetect      * matDetector;
-    const costMisc        = qMisc        * matMisc;
-    const costFacu        = qFacu        * matFacu;
-    const costAnnun       = qAnnun       * matAnnun;
-    const costConduit     = lfConduit    * matConduitLF;
-    const costWire        = lfWire       * matWireLF;
+    // MATERIAL COSTS
+    const costHeadStd     = qHeadsStd     * matHeadStd;
+    const costHeadSpecial = qHeadsSpecial * matHeadSpecial;
+    const costBranch      = lfBranch      * matBranchLF;
+    const costMain        = lfMain        * matMainLF;
+    const costRiser       = qRiser        * matRiser;
+    const costFdc         = qFdc          * matFdc;
 
-    // labor hours
-    const hrsPull        = qPull        * hrPull;
-    const hrsHornStrobe  = qHornStrobe  * hrHornStrobe;
-    const hrsDetector    = qDetect      * hrDetector;
-    const hrsMisc        = qMisc        * hrMisc;
-    const hrsFacu        = qFacu        * hrFacu;
-    const hrsAnnun       = qAnnun       * hrAnnun;
-    const hrsConduit     = lfConduit    * hrConduitLF;
-    const hrsWire        = lfWire       * hrWireLF;
+    // LABOR HOURS
+    const hrsHeadStd     = qHeadsStd     * hrHeadStd;
+    const hrsHeadSpecial = qHeadsSpecial * hrHeadSpecial;
+    const hrsBranch      = lfBranch      * hrBranchLF;
+    const hrsMain        = lfMain        * hrMainLF;
+    const hrsRiser       = qRiser        * hrRiser;
+    const hrsFdc         = qFdc          * hrFdc;
 
-    // build line items
+    // Build rows
     const rows = [];
-    addRow(rows,"Pull Station, Addressable",""+qPull+" EA",costPull,hrsPull,laborRate);
-    addRow(rows,"Horn/Strobe Combination",""+qHornStrobe+" EA",costHornStrobe,hrsHornStrobe,laborRate);
-    addRow(rows,"Smoke / Heat Detector, Addressable",""+qDetect+" EA",costDetector,hrsDetector,laborRate);
-    addRow(rows,"Door Hold / Relay / Misc",""+qMisc+" EA",costMisc,hrsMisc,laborRate);
-    addRow(rows,"Fire Alarm Control Panel (FACU)",""+qFacu+" EA",costFacu,hrsFacu,laborRate);
-    addRow(rows,"Remote Annunciator Panel",""+qAnnun+" EA",costAnnun,hrsAnnun,laborRate);
-    addRow(rows,'3/4" EMT Conduit',''+lfConduit+' LF',costConduit,hrsConduit,laborRate);
-    addRow(rows,"Fire Alarm Cable (FPLP Rated)",""+lfWire+" LF",costWire,hrsWire,laborRate);
+    addRow(rows,"Sprinkler Head, Standard Upright/Pendant",`${qHeadsStd} EA`,costHeadStd,hrsHeadStd,laborRate);
+    addRow(rows,"Sprinkler Head, Specialty / Concealed / Sidewall",`${qHeadsSpecial} EA`,costHeadSpecial,hrsHeadSpecial,laborRate);
+    addRow(rows,'Branch Line Piping (1"-1 1/2" sch 40)',`${lfBranch} LF`,costBranch,hrsBranch,laborRate);
+    addRow(rows,'Main / Riser Piping (2"+)',`${lfMain} LF`,costMain,hrsMain,laborRate);
+    addRow(rows,'Riser / Check / Backflow / Valve Assembly',`${qRiser} EA`,costRiser,hrsRiser,laborRate);
+    addRow(rows,'Fire Dept Connection (FDC)',`${qFdc} EA`,costFdc,hrsFdc,laborRate);
 
-    // subtotal mat+labor (for design fee calc)
+    // subtotal for design %
     let matSubtotal=0, laborSubtotal=0;
     rows.forEach(r=>{
         matSubtotal += r.matCost;
@@ -873,22 +826,18 @@ document.getElementById('calcDetailedBtn').addEventListener('click', ()=>{
     });
     const baseSystemTotal = matSubtotal + laborSubtotal;
 
-    // design fee
-    const designFee = baseSystemTotal * designPct;
-
-    // freight: % of materials only
+    const designFee   = baseSystemTotal * designPct;
     const freightCost = matSubtotal * freightPct;
 
     renderResults(rows,{
         design: designFee,
         test: testLump,
         freight: freightCost,
-        laborRate,
         note:
-        "Detailed takeoff. Labor hrs include Alaska uplift & after-hours multiplier. " +
-        "Labor rate is electrical ($/hr). Design fee is % of mat+labor subtotal. " +
-        "Freight/logistics is % of materials (assumes barge/air to AK or remote hub). " +
-        "Testing & certification is entered as a lump sum for final acceptance / AHJ sign-off."
+        "Detailed sprinkler takeoff. Labor hrs already bumped for occupied/off-hours via multiplier. " +
+        "Labor rate is sprinkler fitter / mechanical. Design % covers hydraulic calcs, stamped drawings, " +
+        "submittal package. Hydrostatic test & final inspection carried as lump sum. Freight/logistics " +
+        "applies to material only and should increase for remote Alaska barge/air delivery."
     });
 });
 </script>

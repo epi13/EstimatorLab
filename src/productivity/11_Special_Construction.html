@@ -1,1 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>11 – Special Construction Productivity Estimator</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  .card {@apply bg-white/80 backdrop-blur shadow-md rounded-2xl border border-slate-300 p-4 mb-6;}
+  .section-header {@apply text-lg font-semibold text-slate-800 flex items-baseline justify-between flex-wrap gap-2;}
+  .section-sub {@apply text-[10px] text-slate-500 font-mono;}
+  .label-sm {@apply text-xs font-medium text-slate-600;}
+  .number-input {@apply w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-rose-400 focus:border-rose-400;}
+  .result-box {@apply text-sm font-semibold text-slate-800 bg-slate-100 rounded-lg px-2 py-1 text-right;}
+  .chip {@apply text-[10px] leading-tight font-mono bg-slate-800 text-white rounded px-2 py-[2px] mr-1;}
+  .subgroup-header {@apply text-slate-900 text-base font-bold flex items-center gap-2 mb-2;}
+  .subchip {@apply bg-rose-600 text-white text-[10px] font-mono px-2 py-[2px] rounded;}
+  .assumption-note {@apply text-[10px] leading-snug text-slate-500 italic;}
+  table thead tr {@apply bg-slate-800 text-white;}
+  table tbody tr:nth-child(even) {@apply bg-slate-50/60;}
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 to-rose-100 text-slate-900 min-h-screen">
+
+<!-- HEADER -->
+<header class="px-4 py-4 border-b border-slate-300 bg-white/70 backdrop-blur sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">11 – Special Construction Productivity</h1>
+      <p class="text-xs text-slate-600">
+        111 Structural / Secure · 112 Containment / Clean · 113 Server / ICS · 114 Exterior Specialties
+      </p>
+      <p class="text-[10px] text-slate-500 font-mono">
+        Outputs crew-days & man-hours. Alaska factor included.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="exportSummary()">
+        Export Summary (.json)
+      </button>
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="resetAll()">
+        Reset
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- GLOBAL CREW / SHIFT SETTINGS -->
+  <section class="card">
+    <div class="section-header">
+      <span>Global Crew / Shift</span>
+      <span class="section-sub">Used in all productivity calcs</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Crew Size (people)</label>
+        <input id="crewSize" type="number" min="1" value="4" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          4-person mixed crew (carp/iron/MEP support) for special scopes
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Hours / shift</label>
+        <input id="hoursPerShift" type="number" min="1" value="10" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          Remote sites / off-hours tie-ins tend to run long shifts
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Productivity Factor</label>
+        <input id="prodFactorGlobal" type="number" step="0.01" value="1.50" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          1.00 = easy access shop install.<br>&gt;1.00 = Alaska (security protocol, remote staging, arctic boardwalk work)
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Project Name / ID</label>
+        <input id="projectId" type="text" placeholder="Secure Upgrades / Remote Boardwalk"
+          class="number-input" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ==================== 111 SPECIAL CONSTRUCTION / STRUCTURAL / SECURE ==================== -->
+  <section class="card" id="secureBlock">
+    <div class="subgroup-header">
+      <span class="subchip">111</span>
+      <span>Special Construction / Structural Mods / Seismic / Blast / Secure</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Seismic bracing, structural steel add-ons, ballistic/forced-entry resistant walls, secured armory/holding areas,
+      safe rooms, blast plate installs. Usually retrofit, usually awkward, usually under escort.
+    </p>
+
+    <!-- 111.01 Structural / Secure Retrofit Work -->
+    <div class="section-header">
+      <span>111.01 Structural / Secure Retrofit Work</span>
+      <span class="section-sub">Plate, brace, reinforce, secure partitions/doors</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Secure / Structural Area (SF)</label>
+        <input id="secureSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          Approximate floor area touched by seismic/securing/blast upgrades
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="secureProdBase" type="number" step="1" value="800" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          Includes layout, cut, weld/bolt plate, secure door frames, brace
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="secureProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="secureCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="secureManHours" class="result-box">0</div>
+        <p class="assumption-note">= Crew-Days × Crew Size × Hrs/Shift</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="secureNotes" type="text"
+        placeholder="Add steel plate, brace CMU, install FRP/ballistic panels, reinforce door frames for secure/ICRA/seismic."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 112 HAZARDOUS CONTAINMENT / CLEAN ROOMS ==================== -->
+  <section class="card" id="containBlock">
+    <div class="subgroup-header">
+      <span class="subchip">112</span>
+      <span>Hazardous Containment / Clean Rooms</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Infection control barriers, clean-room envelope buildout, negative air containment,
+      anterooms, zipper doors, HEPA scrubber ducting, sealed panel systems.
+      This is burn-down work in occupied medical / lab environments.
+    </p>
+
+    <!-- 112.01 Containment / Clean Envelope Build -->
+    <div class="section-header">
+      <span>112.01 Containment / Clean Envelope Build</span>
+      <span class="section-sub">Temp walls, poly, seals, negative air, clean finishes</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Containment Area (SF)</label>
+        <input id="containSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          Floor area under containment / clean construction
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="containProdBase" type="number" step="1" value="1200" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          Frame/install poly/board, seal penetrations, get neg air running
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="containProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="containCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="containManHours" class="result-box">0</div>
+        <p class="assumption-note">
+          Includes HEPA scrubber setup / duct runs / zipper doors
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="containNotes" type="text"
+        placeholder="Temp partitions, poly/zip walls, anterooms, negative air with HEPA, sealed penetrations, wipe-down surfaces."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 113 COMMUNICATIONS ROOMS / SERVER / ICS ==================== -->
+  <section class="card" id="serverBlock">
+    <div class="subgroup-header">
+      <span class="subchip">113</span>
+      <span>Communications Rooms / Server / ICS</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Build-out of comm/server/ICS control rooms: racks, ladder tray, power/data stubs,
+      grounding grid/bus, cooling prep, door security, labeling.
+      Treated per “room” because each one turns into a mini-project.
+    </p>
+
+    <!-- 113.01 Server / ICS Room Build-Out -->
+    <div class="section-header">
+      <span>113.01 Server / ICS Room Build-Out</span>
+      <span class="section-sub">Racks, tray, bonding, cooling prep, secure door</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Critical Rooms (EA)</label>
+        <input id="serverEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          Each MDF/IDF/server/ICS room brought to “ready for equipment”
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="serverProdBase" type="number" step="0.1" value="0.8" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          Tray, rack, dedicated circuits, bonding, mini-split pad/rough
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="serverProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="serverCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="serverManHours" class="result-box">0</div>
+        <p class="assumption-note">
+          Includes labeling, secure door hardware basic install
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="serverNotes" type="text"
+        placeholder="Ladder tray, racks, grounding/bonding, dedicated power, cooling rough-in, door/security hardware prep."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 114 EXTERIOR SITE SPECIALTIES ==================== -->
+  <section class="card" id="siteSpecBlock">
+    <div class="subgroup-header">
+      <span class="subchip">114</span>
+      <span>Exterior Site Specialties (Boardwalks, Towers, Tanks)</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Boardwalks on piles or helical anchors in muskeg/permafrost-ish conditions,
+      observation or comm towers, exterior fuel/water tanks, saddle/support frames,
+      misc exterior platforms. This is remote logistics and awkward rigging work.
+    </p>
+
+    <!-- 114.01 Boardwalk / Tower / Tank Install -->
+    <div class="section-header">
+      <span>114.01 Boardwalk / Tower / Tank Install</span>
+      <span class="section-sub">Foundations/posts, frame, set structure in place</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Exterior Scope (LF or EA)</label>
+        <input id="siteSpecQty" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          LF of boardwalk OR count of tower/tank units (treat as “quantity of structures”)
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (Qty/day)</label>
+        <input id="siteSpecProdBase" type="number" step="1" value="60" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          Includes setting posts/anchors, frame, platform/tank placement
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (Qty/day)</label>
+        <div id="siteSpecProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="siteSpecCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="siteSpecManHours" class="result-box">0</div>
+        <p class="assumption-note">
+          Includes rigging/handling, assumes materials are on site
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="siteSpecNotes" type="text"
+        placeholder="Remote boardwalk framing on helical piles, small comm tower set, exterior tank on saddles. Barge delivery assumed staged."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== ROLLUP SUMMARY ==================== -->
+  <section class="card">
+    <div class="section-header">
+      <span>Rollup – Labor Demand</span>
+      <span class="section-sub">
+        Crew-Days & Man-Hours by Subgroup (111–114) and Total
+      </span>
+    </div>
+
+    <div class="overflow-x-auto mt-4">
+      <table class="min-w-full text-xs text-left border border-slate-300 rounded-xl overflow-hidden">
+        <thead>
+          <tr>
+            <th class="px-2 py-2 font-semibold">Activity</th>
+            <th class="px-2 py-2 font-semibold text-right">Crew-Days</th>
+            <th class="px-2 py-2 font-semibold text-right">Man-Hours</th>
+            <th class="px-2 py-2 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white/80">
+          <!-- 111 -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">111.01</span>Structural / Secure Retrofit Work</td>
+            <td class="px-2 py-2 text-right" id="sumSecureDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumSecureMH">0</td>
+            <td class="px-2 py-2" id="sumSecureNotes"></td>
+          </tr>
+
+          <!-- 112 -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">112.01</span>Containment / Clean Envelope Build</td>
+            <td class="px-2 py-2 text-right" id="sumContainDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumContainMH">0</td>
+            <td class="px-2 py-2" id="sumContainNotes"></td>
+          </tr>
+
+          <!-- 113 -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">113.01</span>Server / ICS Room Build-Out</td>
+            <td class="px-2 py-2 text-right" id="sumServerDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumServerMH">0</td>
+            <td class="px-2 py-2" id="sumServerNotes"></td>
+          </tr>
+
+          <!-- 114 -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">114.01</span>Boardwalk / Tower / Tank Install</td>
+            <td class="px-2 py-2 text-right" id="sumSiteSpecDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumSiteSpecMH">0</td>
+            <td class="px-2 py-2" id="sumSiteSpecNotes"></td>
+          </tr>
+
+          <!-- TOTAL -->
+          <tr class="bg-slate-800 text-white font-semibold text-right">
+            <td class="px-2 py-2 text-left">TOTAL</td>
+            <td class="px-2 py-2" id="sumTotalDays">0</td>
+            <td class="px-2 py-2" id="sumTotalMH">0</td>
+            <td class="px-2 py-2 text-left text-[10px] font-normal italic">
+              These man-hours are just install/field labor. They do NOT include design-assist,
+              security clearance delays, permit inspections, or barge mobilization hours.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-[10px] text-slate-500 leading-snug mt-3">
+      Baselines assume materials on site, access provided, and no extended escort delays.
+      If you’re flying crews to a remote village and staging boardwalk lumber off a landing barge,
+      raise Productivity Factor well above 1.50.
+    </p>
+  </section>
+
+  <footer class="text-[10px] text-slate-400 text-center py-6">
+    © 2025 Poor Louis Labs · Alaska Productivity Toolkit · 11_Special_Construction.html
+  </footer>
+</main>
+
+<script>
+// --- helpers ---
+function safeNum(v){const n=parseFloat(v);return isNaN(n)?0:n;}
+
+function crewDaysNeeded(qty, prodAdjPerDay){
+  if(prodAdjPerDay<=0)return 0;
+  return qty/prodAdjPerDay;
+}
+
+function totalManHours(crewDays, crewSize, hrsPerShift){
+  return crewDays*crewSize*hrsPerShift;
+}
+
+function recalcGeneric(qtyId, prodBaseId, prodAdjId, crewDaysId, mhId,
+                       notesId, sumDaysId, sumMhId, sumNotesId){
+  const qty = safeNum(document.getElementById(qtyId).value);
+  const prodBase = safeNum(document.getElementById(prodBaseId).value);
+
+  const pfGlobal = safeNum(document.getElementById('prodFactorGlobal').value);
+  const crewSize = safeNum(document.getElementById('crewSize').value);
+  const hrsPerShift = safeNum(document.getElementById('hoursPerShift').value);
+
+  const prodAdj = (pfGlobal>0)?(prodBase/pfGlobal):0;
+  document.getElementById(prodAdjId).textContent = prodAdj.toFixed(2);
+
+  const cDays = crewDaysNeeded(qty, prodAdj);
+  document.getElementById(crewDaysId).textContent = cDays.toFixed(2);
+
+  const mh = totalManHours(cDays, crewSize, hrsPerShift);
+  document.getElementById(mhId).textContent = mh.toFixed(1);
+
+  const notesVal = document.getElementById(notesId).value;
+  document.getElementById(sumDaysId).textContent = cDays.toFixed(2);
+  document.getElementById(sumMhId).textContent = mh.toFixed(1);
+  document.getElementById(sumNotesId).textContent = notesVal;
+
+  return {cDays, mh};
+}
+
+function recalcAll(){
+  // 111 Structural / Secure
+  const secure = recalcGeneric(
+    'secureSF','secureProdBase','secureProdAdj','secureCrewDays','secureManHours',
+    'secureNotes','sumSecureDays','sumSecureMH','sumSecureNotes'
+  );
+
+  // 112 Containment / Clean
+  const contain = recalcGeneric(
+    'containSF','containProdBase','containProdAdj','containCrewDays','containManHours',
+    'containNotes','sumContainDays','sumContainMH','sumContainNotes'
+  );
+
+  // 113 Server / ICS
+  const server = recalcGeneric(
+    'serverEA','serverProdBase','serverProdAdj','serverCrewDays','serverManHours',
+    'serverNotes','sumServerDays','sumServerMH','sumServerNotes'
+  );
+
+  // 114 Exterior Site Specialties
+  const siteSpec = recalcGeneric(
+    'siteSpecQty','siteSpecProdBase','siteSpecProdAdj','siteSpecCrewDays','siteSpecManHours',
+    'siteSpecNotes','sumSiteSpecDays','sumSiteSpecMH','sumSiteSpecNotes'
+  );
+
+  // totals
+  const totalDays =
+    secure.cDays + contain.cDays + server.cDays + siteSpec.cDays;
+
+  const totalMH =
+    secure.mh + contain.mh + server.mh + siteSpec.mh;
+
+  document.getElementById('sumTotalDays').textContent = totalDays.toFixed(2);
+  document.getElementById('sumTotalMH').textContent   = totalMH.toFixed(1);
+}
+
+function exportSummary(){
+  const data = {
+    project: document.getElementById('projectId').value,
+    timestamp_utc: new Date().toISOString(),
+    globals:{
+      crewSize: safeNum(document.getElementById('crewSize').value),
+      hoursPerShift: safeNum(document.getElementById('hoursPerShift').value),
+      productivityFactor: safeNum(document.getElementById('prodFactorGlobal').value)
+    },
+    "111_structural_secure":{
+      structural_secure_retrofit:{
+        qty_sf: safeNum(document.getElementById('secureSF').value),
+        crewDays: safeNum(document.getElementById('sumSecureDays').textContent),
+        manHours: safeNum(document.getElementById('sumSecureMH').textContent),
+        notes: document.getElementById('secureNotes').value
+      }
+    },
+    "112_containment_clean":{
+      containment_clean_envelope:{
+        qty_sf: safeNum(document.getElementById('containSF').value),
+        crewDays: safeNum(document.getElementById('sumContainDays').textContent),
+        manHours: safeNum(document.getElementById('sumContainMH').textContent),
+        notes: document.getElementById('containNotes').value
+      }
+    },
+    "113_server_ics":{
+      server_ics_room_buildout:{
+        qty_each: safeNum(document.getElementById('serverEA').value),
+        crewDays: safeNum(document.getElementById('sumServerDays').textContent),
+        manHours: safeNum(document.getElementById('sumServerMH').textContent),
+        notes: document.getElementById('serverNotes').value
+      }
+    },
+    "114_exterior_specialties":{
+      boardwalk_tower_tank_install:{
+        qty_qty: safeNum(document.getElementById('siteSpecQty').value),
+        crewDays: safeNum(document.getElementById('sumSiteSpecDays').textContent),
+        manHours: safeNum(document.getElementById('sumSiteSpecMH').textContent),
+        notes: document.getElementById('siteSpecNotes').value
+      }
+    },
+    totals:{
+      crewDays: safeNum(document.getElementById('sumTotalDays').textContent),
+      manHours: safeNum(document.getElementById('sumTotalMH').textContent)
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const projName=(data.project||'special_construction').replace(/\s+/g,'_');
+  a.download = projName + "_div11_productivity.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetAll(){
+  // globals
+  document.getElementById('crewSize').value = 4;
+  document.getElementById('hoursPerShift').value = 10;
+  document.getElementById('prodFactorGlobal').value = 1.50;
+  document.getElementById('projectId').value = "";
+
+  // 111 Structural / Secure
+  document.getElementById('secureSF').value = 0;
+  document.getElementById('secureProdBase').value = 800;
+  document.getElementById('secureNotes').value =
+    "Add steel plate / brace, ballistic or blast reinforcement, seismic anchors, secure door frames.";
+
+  // 112 Containment / Clean
+  document.getElementById('containSF').value = 0;
+  document.getElementById('containProdBase').value = 1200;
+  document.getElementById('containNotes').value =
+    "Temp partitions, poly/zip walls, negative air setup, sealed penetrations.";
+
+  // 113 Server / ICS
+  document.getElementById('serverEA').value = 0;
+  document.getElementById('serverProdBase').value = 0.8;
+  document.getElementById('serverNotes').value =
+    "Server/ICS room: racks, ladder tray, bonding, dedicated power, cooling prep, secure door hardware.";
+
+  // 114 Exterior Specialties
+  document.getElementById('siteSpecQty').value = 0;
+  document.getElementById('siteSpecProdBase').value = 60;
+  document.getElementById('siteSpecNotes').value =
+    "Remote boardwalks on piles/helical, comm tower, exterior tank on saddles. Materials staged at site.";
+
+  recalcAll();
+}
+
+// init totals on load
+recalcAll();
+</script>
+
+</body>
+</html>
 

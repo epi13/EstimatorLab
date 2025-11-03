@@ -1,4 +1,637 @@
-091 - Electrical Demolition
-092 - Service and Distribution
-093 - Lighting and Power
-094 - Special Electrical Systems 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>09 – Electrical Productivity Estimator</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  .card {@apply bg-white/80 backdrop-blur shadow-md rounded-2xl border border-slate-300 p-4 mb-6;}
+  .section-header {@apply text-lg font-semibold text-slate-800 flex items-baseline justify-between flex-wrap gap-2;}
+  .section-sub {@apply text-[10px] text-slate-500 font-mono;}
+  .label-sm {@apply text-xs font-medium text-slate-600;}
+  .number-input {@apply w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400;}
+  .result-box {@apply text-sm font-semibold text-slate-800 bg-slate-100 rounded-lg px-2 py-1 text-right;}
+  .chip {@apply text-[10px] leading-tight font-mono bg-slate-800 text-white rounded px-2 py-[2px] mr-1;}
+  .subgroup-header {@apply text-slate-900 text-base font-bold flex items-center gap-2 mb-2;}
+  .subchip {@apply bg-amber-500 text-white text-[10px] font-mono px-2 py-[2px] rounded;}
+  .assumption-note {@apply text-[10px] leading-snug text-slate-500 italic;}
+  table thead tr {@apply bg-slate-800 text-white;}
+  table tbody tr:nth-child(even) {@apply bg-slate-50/60;}
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 to-amber-100 text-slate-900 min-h-screen">
+
+<!-- HEADER -->
+<header class="px-4 py-4 border-b border-slate-300 bg-white/70 backdrop-blur sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">09 – Electrical Productivity</h1>
+      <p class="text-xs text-slate-600">
+        091 Demo · 092 Service & Distribution · 093 Lighting & Power · 094 Special Systems
+      </p>
+      <p class="text-[10px] text-slate-500 font-mono">
+        Outputs crew-days & man-hours. Alaska factor included.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="exportSummary()">
+        Export Summary (.json)
+      </button>
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="resetAll()">
+        Reset
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- GLOBAL CREW / SHIFT SETTINGS -->
+  <section class="card">
+    <div class="section-header">
+      <span>Global Crew / Shift</span>
+      <span class="section-sub">Used in all productivity calcs</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Crew Size (people)</label>
+        <input id="crewSize" type="number" min="1" value="3" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">2–3 electricians typical for TI</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Hours / shift</label>
+        <input id="hoursPerShift" type="number" min="1" value="10" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">10 hr shutdown windows common in Alaska schools/clinics</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Productivity Factor</label>
+        <input id="prodFactorGlobal" type="number" step="0.01" value="1.40" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">1.00 = ideal shop-floor pace. &gt;1.00 = real ceiling congestion, outage limits, travel</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Project Name / ID</label>
+        <input id="projectId" type="text" placeholder="Civic Center Electrical Upgrade"
+          class="number-input" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ==================== 091 ELECTRICAL DEMOLITION ==================== -->
+  <section class="card" id="elecDemoBlock">
+    <div class="subgroup-header">
+      <span class="subchip">091</span>
+      <span>Electrical Demolition</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Trace, lockout/tagout, remove/cut back branch circuits, demo lights/devices, temp bypass if needed,
+      safe termination / cap / label. This is almost always slow, careful work in occupied spaces.
+    </p>
+
+    <!-- 091.01 Electrical Demo & Safe Terminations -->
+    <div class="section-header">
+      <span>091.01 Electrical Demo & Safe Terminations</span>
+      <span class="section-sub">Pull back circuits, remove fixtures/devices, cap safe</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Demo Area (SF)</label>
+        <input id="elecDemoSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Floor SF of affected renovation area</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="elecDemoProdBase" type="number" step="1" value="3000" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Ceiling open, controlled shutdown window</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="elecDemoProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="elecDemoCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="elecDemoManHours" class="result-box">0</div>
+        <p class="assumption-note">= Crew-Days × Crew Size × Hrs/Shift</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="elecDemoNotes" type="text"
+        placeholder="Lockout/tagout, trace, pull dead, cap, temp lighting/power if needed. No hazmat abatement."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 092 SERVICE AND DISTRIBUTION ==================== -->
+  <section class="card" id="serviceDistBlock">
+    <div class="subgroup-header">
+      <span class="subchip">092</span>
+      <span>Service and Distribution</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Main service equipment, feeders, panels, EMT / conduit runs, wire pulls, terminations,
+      grounding, bonding. This is the “backbone”: gear that feeds everything else.
+    </p>
+
+    <!-- 092.01 Gear / Panels / Feeders -->
+    <div class="section-header">
+      <span>092.01 Gear / Panels / Feeders Install</span>
+      <span class="section-sub">Set/disconnects, main panels, feeders, grounding</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Feeder Conduit+Wire (LF)</label>
+        <input id="feederLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Total linear feet of home runs / feeders</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="feederProdBase" type="number" step="1" value="140" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Includes hang conduit, pull wire, terminate lugs</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="feederProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="feederCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="feederManHours" class="result-box">0</div>
+        <p class="assumption-note">Assumes lift access available for overhead runs</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="feederNotes" type="text"
+        placeholder="Set main gear/panels, install and pull feeders, bond/ground. Includes terminations."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 093 LIGHTING AND POWER ==================== -->
+  <section class="card" id="lightingPowerBlock">
+    <div class="subgroup-header">
+      <span class="subchip">093</span>
+      <span>Lighting and Power</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Branch conduit, wiring, receptacles, switches, lighting fixtures, whips, aim/label.
+      This is the tenant improvement bread-and-butter work.
+    </p>
+
+    <!-- 093.01 Lighting Fixtures Install -->
+    <div class="section-header">
+      <span>093.01 Lighting Fixtures Install</span>
+      <span class="section-sub">Hang/tie-in light fixtures, aim/label</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Light Fixtures (EA)</label>
+        <input id="lightEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Troffers, cans, strips, wall packs, etc.</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="lightProdBase" type="number" step="1" value="28" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Fixture mount + whip + ID/aim check</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="lightProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="lightCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="lightManHours" class="result-box">0</div>
+        <p class="assumption-note">No final controls programming</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="lightNotes" type="text"
+        placeholder="Hang fixtures, connect whip/driver, basic aim/label. Controls integration not included."
+        class="number-input" />
+    </div>
+
+    <!-- 093.02 Branch Devices (Receptacles / Switches / Small Power) -->
+    <div class="section-header mt-8">
+      <span>093.02 Branch Devices (Recpts / Switches / Drops)</span>
+      <span class="section-sub">Install box/device/plate, pull conductors</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Devices (EA)</label>
+        <input id="deviceEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Receptacles, switches, local power drops</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="deviceProdBase" type="number" step="1" value="50" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Box, wire, device, plate</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="deviceProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="deviceCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="deviceManHours" class="result-box">0</div>
+        <p class="assumption-note">Includes trim/cover. No specialty GFCI labeling program, etc.</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="deviceNotes" type="text"
+        placeholder="Standard receptacles, switches, drops. Specialty circuits for equipment go in Special Systems."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 094 SPECIAL ELECTRICAL SYSTEMS ==================== -->
+  <section class="card" id="specialElecBlock">
+    <div class="subgroup-header">
+      <span class="subchip">094</span>
+      <span>Special Electrical Systems</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Fire alarm, low voltage, comm/security, card readers, door strikes, cameras.
+      Includes device mounting and low-voltage homeruns, not full programming or testing certs.
+    </p>
+
+    <!-- 094.01 Fire Alarm / Low Voltage Devices & Home Runs -->
+    <div class="section-header">
+      <span>094.01 Special Systems Devices & Home Runs</span>
+      <span class="section-sub">FA devices, card readers, cameras, LV cabling</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Special Devices (EA)</label>
+        <input id="specialEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Pulls, terminations, mounting per device</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="specialProdBase" type="number" step="1" value="35" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Horn/strobe, pull station, camera, reader, etc.</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="specialProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="specialCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="specialManHours" class="result-box">0</div>
+        <p class="assumption-note">Does not include AHJ witness test / certification time</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="specialNotes" type="text"
+        placeholder="Install FA/LV/security devices, pull cable, terminate. Final programming & testing by vendor."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== ROLLUP SUMMARY ==================== -->
+  <section class="card">
+    <div class="section-header">
+      <span>Rollup – Labor Demand</span>
+      <span class="section-sub">
+        Crew-Days & Man-Hours by Subgroup (091–094) and Total
+      </span>
+    </div>
+
+    <div class="overflow-x-auto mt-4">
+      <table class="min-w-full text-xs text-left border border-slate-300 rounded-xl overflow-hidden">
+        <thead>
+          <tr>
+            <th class="px-2 py-2 font-semibold">Activity</th>
+            <th class="px-2 py-2 font-semibold text-right">Crew-Days</th>
+            <th class="px-2 py-2 font-semibold text-right">Man-Hours</th>
+            <th class="px-2 py-2 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white/80">
+          <!-- 091 Demo -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">091.01</span>Electrical Demo & Safe Terminations</td>
+            <td class="px-2 py-2 text-right" id="sumElecDemoDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumElecDemoMH">0</td>
+            <td class="px-2 py-2" id="sumElecDemoNotes"></td>
+          </tr>
+
+          <!-- 092 Service & Distribution -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">092.01</span>Gear / Panels / Feeders Install</td>
+            <td class="px-2 py-2 text-right" id="sumFeederDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumFeederMH">0</td>
+            <td class="px-2 py-2" id="sumFeederNotes"></td>
+          </tr>
+
+          <!-- 093 Lighting & Power -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">093.01</span>Lighting Fixtures Install</td>
+            <td class="px-2 py-2 text-right" id="sumLightDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumLightMH">0</td>
+            <td class="px-2 py-2" id="sumLightNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">093.02</span>Branch Devices / Receptacles / Switches</td>
+            <td class="px-2 py-2 text-right" id="sumDeviceDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumDeviceMH">0</td>
+            <td class="px-2 py-2" id="sumDeviceNotes"></td>
+          </tr>
+
+          <!-- 094 Special Electrical Systems -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">094.01</span>Special Systems Devices & Home Runs</td>
+            <td class="px-2 py-2 text-right" id="sumSpecialDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumSpecialMH">0</td>
+            <td class="px-2 py-2" id="sumSpecialNotes"></td>
+          </tr>
+
+          <!-- TOTAL -->
+          <tr class="bg-slate-800 text-white font-semibold text-right">
+            <td class="px-2 py-2 text-left">TOTAL</td>
+            <td class="px-2 py-2" id="sumTotalDays">0</td>
+            <td class="px-2 py-2" id="sumTotalMH">0</td>
+            <td class="px-2 py-2 text-left text-[10px] font-normal italic">
+              These man-hours are field labor to rough/set/trim. Final energization, labeling, programming,
+              AHJ signoff, and commissioning usually take extra shift(s).
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-[10px] text-slate-500 leading-snug mt-3">
+      Baselines assume permanent power available, lift access for ceiling work,
+      and materials staged within the work area. Remote barge delivery / night work /
+      occupied clinic adds friction → increase Productivity Factor above 1.40.
+    </p>
+  </section>
+
+  <footer class="text-[10px] text-slate-400 text-center py-6">
+    © 2025 Poor Louis Labs · Alaska Productivity Toolkit · 09_Electrical.html
+  </footer>
+</main>
+
+<script>
+// --- helpers ---
+function safeNum(v){const n=parseFloat(v);return isNaN(n)?0:n;}
+
+function crewDaysNeeded(qty, prodAdjPerDay){
+  if(prodAdjPerDay<=0)return 0;
+  return qty/prodAdjPerDay;
+}
+
+function totalManHours(crewDays, crewSize, hrsPerShift){
+  return crewDays*crewSize*hrsPerShift;
+}
+
+// generic calc function
+function recalcGeneric(qtyId, prodBaseId, prodAdjId, crewDaysId, mhId,
+                       notesId, sumDaysId, sumMhId, sumNotesId){
+  const qty = safeNum(document.getElementById(qtyId).value);
+  const prodBase = safeNum(document.getElementById(prodBaseId).value);
+
+  const pfGlobal = safeNum(document.getElementById('prodFactorGlobal').value);
+  const crewSize = safeNum(document.getElementById('crewSize').value);
+  const hrsPerShift = safeNum(document.getElementById('hoursPerShift').value);
+
+  const prodAdj = (pfGlobal>0)?(prodBase/pfGlobal):0;
+  document.getElementById(prodAdjId).textContent = prodAdj.toFixed(2);
+
+  const cDays = crewDaysNeeded(qty, prodAdj);
+  document.getElementById(crewDaysId).textContent = cDays.toFixed(2);
+
+  const mh = totalManHours(cDays, crewSize, hrsPerShift);
+  document.getElementById(mhId).textContent = mh.toFixed(1);
+
+  const notesVal = document.getElementById(notesId).value;
+  document.getElementById(sumDaysId).textContent = cDays.toFixed(2);
+  document.getElementById(sumMhId).textContent = mh.toFixed(1);
+  document.getElementById(sumNotesId).textContent = notesVal;
+
+  return {cDays, mh};
+}
+
+function recalcAll(){
+  // 091 Electrical Demo
+  const elecDemo = recalcGeneric(
+    'elecDemoSF','elecDemoProdBase','elecDemoProdAdj','elecDemoCrewDays','elecDemoManHours',
+    'elecDemoNotes','sumElecDemoDays','sumElecDemoMH','sumElecDemoNotes'
+  );
+
+  // 092 Service & Distribution
+  const feeder = recalcGeneric(
+    'feederLF','feederProdBase','feederProdAdj','feederCrewDays','feederManHours',
+    'feederNotes','sumFeederDays','sumFeederMH','sumFeederNotes'
+  );
+
+  // 093 Lighting & Power
+  const light = recalcGeneric(
+    'lightEA','lightProdBase','lightProdAdj','lightCrewDays','lightManHours',
+    'lightNotes','sumLightDays','sumLightMH','sumLightNotes'
+  );
+
+  const device = recalcGeneric(
+    'deviceEA','deviceProdBase','deviceProdAdj','deviceCrewDays','deviceManHours',
+    'deviceNotes','sumDeviceDays','sumDeviceMH','sumDeviceNotes'
+  );
+
+  // 094 Special Electrical Systems
+  const special = recalcGeneric(
+    'specialEA','specialProdBase','specialProdAdj','specialCrewDays','specialManHours',
+    'specialNotes','sumSpecialDays','sumSpecialMH','sumSpecialNotes'
+  );
+
+  // totals
+  const totalDays =
+    elecDemo.cDays + feeder.cDays + light.cDays + device.cDays + special.cDays;
+
+  const totalMH =
+    elecDemo.mh + feeder.mh + light.mh + device.mh + special.mh;
+
+  document.getElementById('sumTotalDays').textContent = totalDays.toFixed(2);
+  document.getElementById('sumTotalMH').textContent   = totalMH.toFixed(1);
+}
+
+// export JSON snapshot
+function exportSummary(){
+  const data = {
+    project: document.getElementById('projectId').value,
+    timestamp_utc: new Date().toISOString(),
+    globals:{
+      crewSize: safeNum(document.getElementById('crewSize').value),
+      hoursPerShift: safeNum(document.getElementById('hoursPerShift').value),
+      productivityFactor: safeNum(document.getElementById('prodFactorGlobal').value)
+    },
+    "091_electrical_demo":{
+      electrical_demo_safe_term:{
+        qty_sf: safeNum(document.getElementById('elecDemoSF').value),
+        crewDays: safeNum(document.getElementById('sumElecDemoDays').textContent),
+        manHours: safeNum(document.getElementById('sumElecDemoMH').textContent),
+        notes: document.getElementById('elecDemoNotes').value
+      }
+    },
+    "092_service_distribution":{
+      gear_panels_feeders_install:{
+        qty_lf: safeNum(document.getElementById('feederLF').value),
+        crewDays: safeNum(document.getElementById('sumFeederDays').textContent),
+        manHours: safeNum(document.getElementById('sumFeederMH').textContent),
+        notes: document.getElementById('feederNotes').value
+      }
+    },
+    "093_lighting_power":{
+      lighting_fixtures_install:{
+        qty_each: safeNum(document.getElementById('lightEA').value),
+        crewDays: safeNum(document.getElementById('sumLightDays').textContent),
+        manHours: safeNum(document.getElementById('sumLightMH').textContent),
+        notes: document.getElementById('lightNotes').value
+      },
+      branch_devices_recepts_switches:{
+        qty_each: safeNum(document.getElementById('deviceEA').value),
+        crewDays: safeNum(document.getElementById('sumDeviceDays').textContent),
+        manHours: safeNum(document.getElementById('sumDeviceMH').textContent),
+        notes: document.getElementById('deviceNotes').value
+      }
+    },
+    "094_special_electrical_systems":{
+      special_systems_devices_home_runs:{
+        qty_each: safeNum(document.getElementById('specialEA').value),
+        crewDays: safeNum(document.getElementById('sumSpecialDays').textContent),
+        manHours: safeNum(document.getElementById('sumSpecialMH').textContent),
+        notes: document.getElementById('specialNotes').value
+      }
+    },
+    totals:{
+      crewDays: safeNum(document.getElementById('sumTotalDays').textContent),
+      manHours: safeNum(document.getElementById('sumTotalMH').textContent)
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const projName=(data.project||'electrical_systems').replace(/\s+/g,'_');
+  a.download = projName + "_div09_productivity.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetAll(){
+  // globals
+  document.getElementById('crewSize').value = 3;
+  document.getElementById('hoursPerShift').value = 10;
+  document.getElementById('prodFactorGlobal').value = 1.40;
+  document.getElementById('projectId').value = "";
+
+  // 091 Demo
+  document.getElementById('elecDemoSF').value = 0;
+  document.getElementById('elecDemoProdBase').value = 3000;
+  document.getElementById('elecDemoNotes').value =
+    "Trace, pull back, cap safe, temp lighting/power if needed. No hazmat.";
+
+  // 092 Service & Distribution
+  document.getElementById('feederLF').value = 0;
+  document.getElementById('feederProdBase').value = 140;
+  document.getElementById('feederNotes').value =
+    "Set gear/panels, feeders, pulls, terminations, bond/ground.";
+
+  // 093 Lighting & Power
+  document.getElementById('lightEA').value = 0;
+  document.getElementById('lightProdBase').value = 28;
+  document.getElementById('lightNotes').value =
+    "Hang light, connect whip/driver, aim/label. No control programming.";
+
+  document.getElementById('deviceEA').value = 0;
+  document.getElementById('deviceProdBase').value = 50;
+  document.getElementById('deviceNotes').value =
+    "Receptacles, switches, local branch drops, box+device+cover.";
+
+  // 094 Special Systems
+  document.getElementById('specialEA').value = 0;
+  document.getElementById('specialProdBase').value = 35;
+  document.getElementById('specialNotes').value =
+    "Fire alarm/LV/security/card readers: mount device, pull low-voltage home run, terminate.";
+
+  recalcAll();
+}
+
+// init totals on load
+recalcAll();
+</script>
+
+</body>
+</html>

@@ -1,4 +1,791 @@
-011 - Hazmat Abatement
-012 - Site Preparation
-013 - Site Mechanical 
-015 - Site Electrical
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>01 – Site / Early Package Productivity Estimator</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  .card {@apply bg-white/80 backdrop-blur shadow-md rounded-2xl border border-slate-300 p-4 mb-6;}
+  .section-header {@apply text-lg font-semibold text-slate-800 flex items-baseline justify-between flex-wrap gap-2;}
+  .section-sub {@apply text-[10px] text-slate-500 font-mono;}
+  .label-sm {@apply text-xs font-medium text-slate-600;}
+  .number-input {@apply w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400;}
+  .result-box {@apply text-sm font-semibold text-slate-800 bg-slate-100 rounded-lg px-2 py-1 text-right;}
+  .chip {@apply text-[10px] leading-tight font-mono bg-slate-800 text-white rounded px-2 py-[2px] mr-1;}
+  .assumption-note {@apply text-[10px] leading-snug text-slate-500 italic;}
+  .subgroup-header {@apply text-slate-900 text-base font-bold flex items-center gap-2 mb-2;}
+  .subchip {@apply bg-sky-800 text-white text-[10px] font-mono px-2 py-[2px] rounded;}
+  table thead tr {@apply bg-slate-800 text-white;}
+  table tbody tr:nth-child(even) {@apply bg-slate-50/60;}
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 to-sky-100 text-slate-900 min-h-screen">
+
+<header class="px-4 py-4 border-b border-slate-300 bg-white/70 backdrop-blur sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">01 – Site / Early Package Productivity</h1>
+      <p class="text-xs text-slate-600">
+        011 Hazmat · 012 Site Prep · 013 Site Mechanical · 015 Site Electrical
+      </p>
+      <p class="text-[10px] text-slate-500 font-mono">
+        Output is crew-days & man-hours. Alaska factor included.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="exportSummary()">
+        Export Summary (.json)
+      </button>
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="resetAll()">
+        Reset
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- GLOBAL CREW / SHIFT SETTINGS -->
+  <section class="card">
+    <div class="section-header">
+      <span>Global Crew / Shift</span>
+      <span class="section-sub">Used in all calculations</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Crew Size (people)</label>
+        <input id="crewSize" type="number" min="1" value="4" class="number-input" oninput="recalcAll()" />
+      </div>
+
+      <div>
+        <label class="label-sm">Hours / shift</label>
+        <input id="hoursPerShift" type="number" min="1" value="10" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">10 hr days typical remote Alaska</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Productivity Factor</label>
+        <input id="prodFactorGlobal" type="number" step="0.01" value="1.25" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">1.00 = Lower 48 baseline, &gt;1.00 = slower conditions</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Project Name / ID</label>
+        <input id="projectId" type="text" placeholder="Civic Center Early Package"
+          class="number-input" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ==================== 011 HAZMAT ABATEMENT ==================== -->
+  <section class="card" id="hazmatBlock">
+    <div class="subgroup-header">
+      <span class="subchip">011</span>
+      <span>Hazmat Abatement</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Asbestos, lead, PCB, fuel-contaminated soil removal. Baselines assume standard containment,
+      negative air, bag & stage for disposal. Disposal haul logistics NOT included in prod rate.
+    </p>
+
+    <!-- Activity: Asbestos Abatement (SF surface / LF pipe wrap) -->
+    <div class="section-header">
+      <span>011.01 Asbestos / Hazard Removal</span>
+      <span class="section-sub">Glove-bag, scrape, HEPA, bag & stage</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Scope Qty (SF or LF)</label>
+        <input id="hazQty" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Enter total SF of mastic/ceiling tile/etc. OR LF pipe wrap</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (units/day)</label>
+        <input id="hazProdBase" type="number" step="1" value="300" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Light/moderate conditions, standard PPE</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adjusted Prod (units/day)</label>
+        <div id="hazProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days Needed</label>
+        <div id="hazCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Total Man-Hours</label>
+        <div id="hazManHours" class="result-box">0</div>
+        <p class="assumption-note">= Crew-Days × Crew Size × Hrs/Shift</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="hazNotes" type="text"
+        placeholder="Full containment, negative air, 3-stage decon, no 55-gal drum load-out time"
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 012 SITE PREPARATION ==================== -->
+  <section class="card" id="sitePrepBlock">
+    <div class="subgroup-header">
+      <span class="subchip">012</span>
+      <span>Site Preparation</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Clearing, grubbing, cut/fill, base course, trench & initial backfill. Civil crew.
+    </p>
+
+    <!-- Clearing / Grubbing -->
+    <div class="section-header">
+      <span>012.01 Clearing / Grubbing</span>
+      <span class="section-sub">Brush, organics removal, stump to ~18"</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Area (ACRES)</label>
+        <input id="clrArea" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (ACRE/day)</label>
+        <input id="clrProdBase" type="number" step="0.01" value="1.2" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Dozer + excavator, light/med timber</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (ACRE/day)</label>
+        <div id="clrProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="clrCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="clrManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="clrNotes" type="text"
+        placeholder="Windrow & burn onsite, no offsite disposal"
+        class="number-input" />
+    </div>
+
+    <!-- Mass Excavation / Cut & Fill -->
+    <div class="section-header mt-8">
+      <span>012.02 Mass Excavation / Cut & Fill</span>
+      <span class="section-sub">Bulk earthwork to subgrade</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Total Volume (CY)</label>
+        <input id="excavCY" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (CY/day)</label>
+        <input id="excavProdBase" type="number" step="1" value="600" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Loader + 2 trucks + excavator, haul &lt;500'</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (CY/day)</label>
+        <div id="excavProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="excavCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="excavManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="excavNotes" type="text"
+        placeholder="Cut/fill onsite, rough grade, no export trucking allowance"
+        class="number-input" />
+    </div>
+
+    <!-- Trenching + Initial Backfill -->
+    <div class="section-header mt-8">
+      <span>012.03 Trench & Initial Backfill (General)</span>
+      <span class="section-sub">General trench production before utilities get specialized</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Trench Length (LF)</label>
+        <input id="trenchLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="trenchProdBase" type="number" step="1" value="120" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">8' deep or less, decent soils</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="trenchProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="trenchCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="trenchManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="trenchNotes" type="text"
+        placeholder="Excavate, bed, lay pipe/conduit placeholder, initial backfill 12&quot; cover"
+        class="number-input" />
+    </div>
+
+    <!-- Aggregate Base / Pad Prep -->
+    <div class="section-header mt-8">
+      <span>012.04 Aggregate Base / Pad Prep</span>
+      <span class="section-sub">Import, place, grade, compact</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Volume (CY)</label>
+        <input id="aggCY" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (CY/day)</label>
+        <input id="aggProdBase" type="number" step="1" value="300" class="number-input" oninput="recalcAll()" />
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (CY/day)</label>
+        <div id="aggProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="aggCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="aggManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="aggNotes" type="text"
+        placeholder="Grader + roller + loader; haul &lt;10 miles"
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 013 SITE MECHANICAL ==================== -->
+  <section class="card" id="siteMechBlock">
+    <div class="subgroup-header">
+      <span class="subchip">013</span>
+      <span>Site Mechanical</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Underground mechanical systems: water, sewer, storm, fuel, hydronic mains. Crew usually pipefitters / plumbers.
+      Assumes trench is open and safe to work in (012 already dug / shored).
+    </p>
+
+    <!-- Underground Utility Pipe Install -->
+    <div class="section-header">
+      <span>013.01 Underground Utility Pipe Install</span>
+      <span class="section-sub">Set pipe, bed, laser grade, joint, restraint</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Pipe Run (LF)</label>
+        <input id="mechPipeLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+      </div>
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="mechPipeProdBase" type="number" step="1" value="100" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Includes bedding & setting pipe, not final backfill</p>
+      </div>
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="mechPipeProdAdj" class="result-box">0</div>
+      </div>
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="mechPipeCrewDays" class="result-box">0</div>
+      </div>
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="mechPipeManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="mechPipeNotes" type="text"
+        placeholder="Potable / sanitary / storm / fuel piping, typical depth &lt;10'"
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 015 SITE ELECTRICAL ==================== -->
+  <section class="card" id="siteElecBlock">
+    <div class="subgroup-header">
+      <span class="subchip">015</span>
+      <span>Site Electrical</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Duct banks, site lighting conduit, pull boxes, grounding. Assumes trench provided by 012 and open.
+    </p>
+
+    <!-- Conduit / Duct Bank Install -->
+    <div class="section-header">
+      <span>015.01 Conduit / Duct Bank Install</span>
+      <span class="section-sub">Set conduit in trench, spacers, encasement prep</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Conduit Run (LF)</label>
+        <input id="elecConduitLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+      </div>
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="elecConduitProdBase" type="number" step="1" value="150" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">2-4 conduits typical civic center / school</p>
+      </div>
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="elecConduitProdAdj" class="result-box">0</div>
+      </div>
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="elecConduitCrewDays" class="result-box">0</div>
+      </div>
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="elecConduitManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="elecConduitNotes" type="text"
+        placeholder="Includes spacers, stub-ups, no wire pull yet"
+        class="number-input" />
+    </div>
+
+    <!-- Light Pole Foundations / Sets -->
+    <div class="section-header mt-8">
+      <span>015.02 Exterior Light Pole Foundations & Sets</span>
+      <span class="section-sub">Form, rebar, bolt cage, set pole base</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Qty Poles (EA)</label>
+        <input id="lightPoleEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+      </div>
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="lightPoleProdBase" type="number" step="1" value="4" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Excavation / form / anchor cage / pour</p>
+      </div>
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="lightPoleProdAdj" class="result-box">0</div>
+      </div>
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="lightPoleCrewDays" class="result-box">0</div>
+      </div>
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="lightPoleManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="lightPoleNotes" type="text"
+        placeholder="Does not include pole erection / wiring terminations"
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== ROLLUP SUMMARY ==================== -->
+  <section class="card">
+    <div class="section-header">
+      <span>Rollup – Labor Demand</span>
+      <span class="section-sub">
+        Crew-Days & Man-Hours by Subgroup (011 / 012 / 013 / 015) and Total
+      </span>
+    </div>
+
+    <div class="overflow-x-auto mt-4">
+      <table class="min-w-full text-xs text-left border border-slate-300 rounded-xl overflow-hidden">
+        <thead>
+          <tr>
+            <th class="px-2 py-2 font-semibold">Activity</th>
+            <th class="px-2 py-2 font-semibold text-right">Crew-Days</th>
+            <th class="px-2 py-2 font-semibold text-right">Man-Hours</th>
+            <th class="px-2 py-2 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white/80">
+          <!-- 011 -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">011.01</span>Hazmat Abatement</td>
+            <td class="px-2 py-2 text-right" id="sumHazDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumHazMH">0</td>
+            <td class="px-2 py-2" id="sumHazNotes"></td>
+          </tr>
+
+          <!-- 012 -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">012.01</span>Clearing / Grubbing</td>
+            <td class="px-2 py-2 text-right" id="sumClrDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumClrMH">0</td>
+            <td class="px-2 py-2" id="sumClrNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">012.02</span>Mass Excavation</td>
+            <td class="px-2 py-2 text-right" id="sumExcavDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumExcavMH">0</td>
+            <td class="px-2 py-2" id="sumExcavNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">012.03</span>Trench & Initial Backfill</td>
+            <td class="px-2 py-2 text-right" id="sumTrenchDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumTrenchMH">0</td>
+            <td class="px-2 py-2" id="sumTrenchNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">012.04</span>Aggregate Base / Pad Prep</td>
+            <td class="px-2 py-2 text-right" id="sumAggDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumAggMH">0</td>
+            <td class="px-2 py-2" id="sumAggNotes"></td>
+          </tr>
+
+          <!-- 013 -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">013.01</span>Underground Mechanical Pipe</td>
+            <td class="px-2 py-2 text-right" id="sumMechPipeDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumMechPipeMH">0</td>
+            <td class="px-2 py-2" id="sumMechPipeNotes"></td>
+          </tr>
+
+          <!-- 015 -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">015.01</span>Conduit / Duct Bank</td>
+            <td class="px-2 py-2 text-right" id="sumElecCondDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumElecCondMH">0</td>
+            <td class="px-2 py-2" id="sumElecCondNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">015.02</span>Light Pole Foundations</td>
+            <td class="px-2 py-2 text-right" id="sumLightPoleDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumLightPoleMH">0</td>
+            <td class="px-2 py-2" id="sumLightPoleNotes"></td>
+          </tr>
+
+          <!-- TOTAL -->
+          <tr class="bg-slate-800 text-white font-semibold text-right">
+            <td class="px-2 py-2 text-left">TOTAL</td>
+            <td class="px-2 py-2" id="sumTotalDays">0</td>
+            <td class="px-2 py-2" id="sumTotalMH">0</td>
+            <td class="px-2 py-2 text-left text-[10px] font-normal italic">
+              Crew-Days sum assumes a single crew working sequentially (no parallel staffing).
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-[10px] text-slate-500 leading-snug mt-3">
+      These are planning / budgeting productivity rates. Adjust for blasting, deep trench (>10'),
+      dewatering, contaminated soils, arctic insulation foam layers, winter heat, long haul distances,
+      remote camp impacts, etc.
+    </p>
+  </section>
+
+  <footer class="text-[10px] text-slate-400 text-center py-6">
+    © 2025 Poor Louis Labs · Alaska Productivity Toolkit · 01_Site_Work.html
+  </footer>
+</main>
+
+<script>
+function safeNum(v){const n=parseFloat(v);return isNaN(n)?0:n;}
+
+function crewDaysNeeded(qty, prodAdjPerDay){
+  if(prodAdjPerDay<=0)return 0;
+  return qty/prodAdjPerDay;
+}
+
+function totalManHours(crewDays, crewSize, hrsPerShift){
+  return crewDays*crewSize*hrsPerShift;
+}
+
+// generic calc block helper
+function recalcGeneric(qtyId, prodBaseId, prodAdjId, crewDaysId, mhId,
+                       notesId, sumDaysId, sumMhId, sumNotesId) {
+
+  const qty = safeNum(document.getElementById(qtyId).value);
+  const prodBase = safeNum(document.getElementById(prodBaseId).value);
+
+  const pfGlobal = safeNum(document.getElementById('prodFactorGlobal').value);
+  const crewSize = safeNum(document.getElementById('crewSize').value);
+  const hrsPerShift = safeNum(document.getElementById('hoursPerShift').value);
+
+  const prodAdj = (pfGlobal>0)?(prodBase/pfGlobal):0;
+  document.getElementById(prodAdjId).textContent = prodAdj.toFixed(2);
+
+  const cDays = crewDaysNeeded(qty, prodAdj);
+  document.getElementById(crewDaysId).textContent = cDays.toFixed(2);
+
+  const mh = totalManHours(cDays, crewSize, hrsPerShift);
+  document.getElementById(mhId).textContent = mh.toFixed(1);
+
+  const notesVal = document.getElementById(notesId).value;
+  document.getElementById(sumDaysId).textContent = cDays.toFixed(2);
+  document.getElementById(sumMhId).textContent = mh.toFixed(1);
+  document.getElementById(sumNotesId).textContent = notesVal;
+
+  return {cDays, mh};
+}
+
+function recalcAll(){
+  // 011 Hazmat
+  const haz = recalcGeneric(
+    'hazQty','hazProdBase','hazProdAdj','hazCrewDays','hazManHours',
+    'hazNotes','sumHazDays','sumHazMH','sumHazNotes'
+  );
+
+  // 012 Site Prep
+  const clr = recalcGeneric(
+    'clrArea','clrProdBase','clrProdAdj','clrCrewDays','clrManHours',
+    'clrNotes','sumClrDays','sumClrMH','sumClrNotes'
+  );
+
+  const excav = recalcGeneric(
+    'excavCY','excavProdBase','excavProdAdj','excavCrewDays','excavManHours',
+    'excavNotes','sumExcavDays','sumExcavMH','sumExcavNotes'
+  );
+
+  const trench = recalcGeneric(
+    'trenchLF','trenchProdBase','trenchProdAdj','trenchCrewDays','trenchManHours',
+    'trenchNotes','sumTrenchDays','sumTrenchMH','sumTrenchNotes'
+  );
+
+  const agg = recalcGeneric(
+    'aggCY','aggProdBase','aggProdAdj','aggCrewDays','aggManHours',
+    'aggNotes','sumAggDays','sumAggMH','sumAggNotes'
+  );
+
+  // 013 Site Mechanical
+  const mechPipe = recalcGeneric(
+    'mechPipeLF','mechPipeProdBase','mechPipeProdAdj','mechPipeCrewDays','mechPipeManHours',
+    'mechPipeNotes','sumMechPipeDays','sumMechPipeMH','sumMechPipeNotes'
+  );
+
+  // 015 Site Electrical
+  const elecCond = recalcGeneric(
+    'elecConduitLF','elecConduitProdBase','elecConduitProdAdj','elecConduitCrewDays','elecConduitManHours',
+    'elecConduitNotes','sumElecCondDays','sumElecCondMH','sumElecCondNotes'
+  );
+
+  const lightPole = recalcGeneric(
+    'lightPoleEA','lightPoleProdBase','lightPoleProdAdj','lightPoleCrewDays','lightPoleManHours',
+    'lightPoleNotes','sumLightPoleDays','sumLightPoleMH','sumLightPoleNotes'
+  );
+
+  // Totals
+  const totalDays = haz.cDays + clr.cDays + excav.cDays + trench.cDays + agg.cDays +
+                    mechPipe.cDays + elecCond.cDays + lightPole.cDays;
+
+  const totalMH = haz.mh + clr.mh + excav.mh + trench.mh + agg.mh +
+                  mechPipe.mh + elecCond.mh + lightPole.mh;
+
+  document.getElementById('sumTotalDays').textContent = totalDays.toFixed(2);
+  document.getElementById('sumTotalMH').textContent = totalMH.toFixed(1);
+}
+
+// export JSON snapshot
+function exportSummary(){
+  const data = {
+    project: document.getElementById('projectId').value,
+    timestamp_utc: new Date().toISOString(),
+    globals:{
+      crewSize: safeNum(document.getElementById('crewSize').value),
+      hoursPerShift: safeNum(document.getElementById('hoursPerShift').value),
+      productivityFactor: safeNum(document.getElementById('prodFactorGlobal').value)
+    },
+    "011_hazmat": {
+      qty_units: safeNum(document.getElementById('hazQty').value),
+      crewDays: safeNum(document.getElementById('sumHazDays').textContent),
+      manHours: safeNum(document.getElementById('sumHazMH').textContent),
+      notes: document.getElementById('hazNotes').value
+    },
+    "012_site_prep": {
+      clearing:{
+        qty_acres: safeNum(document.getElementById('clrArea').value),
+        crewDays: safeNum(document.getElementById('sumClrDays').textContent),
+        manHours: safeNum(document.getElementById('sumClrMH').textContent),
+        notes: document.getElementById('clrNotes').value
+      },
+      excavation:{
+        qty_cy: safeNum(document.getElementById('excavCY').value),
+        crewDays: safeNum(document.getElementById('sumExcavDays').textContent),
+        manHours: safeNum(document.getElementById('sumExcavMH').textContent),
+        notes: document.getElementById('excavNotes').value
+      },
+      trench_general:{
+        qty_lf: safeNum(document.getElementById('trenchLF').value),
+        crewDays: safeNum(document.getElementById('sumTrenchDays').textContent),
+        manHours: safeNum(document.getElementById('sumTrenchMH').textContent),
+        notes: document.getElementById('trenchNotes').value
+      },
+      aggregate:{
+        qty_cy: safeNum(document.getElementById('aggCY').value),
+        crewDays: safeNum(document.getElementById('sumAggDays').textContent),
+        manHours: safeNum(document.getElementById('sumAggMH').textContent),
+        notes: document.getElementById('aggNotes').value
+      }
+    },
+    "013_site_mechanical":{
+      pipe_install:{
+        qty_lf: safeNum(document.getElementById('mechPipeLF').value),
+        crewDays: safeNum(document.getElementById('sumMechPipeDays').textContent),
+        manHours: safeNum(document.getElementById('sumMechPipeMH').textContent),
+        notes: document.getElementById('mechPipeNotes').value
+      }
+    },
+    "015_site_electrical":{
+      conduit_bank:{
+        qty_lf: safeNum(document.getElementById('elecConduitLF').value),
+        crewDays: safeNum(document.getElementById('sumElecCondDays').textContent),
+        manHours: safeNum(document.getElementById('sumElecCondMH').textContent),
+        notes: document.getElementById('elecConduitNotes').value
+      },
+      light_poles:{
+        qty_each: safeNum(document.getElementById('lightPoleEA').value),
+        crewDays: safeNum(document.getElementById('sumLightPoleDays').textContent),
+        manHours: safeNum(document.getElementById('sumLightPoleMH').textContent),
+        notes: document.getElementById('lightPoleNotes').value
+      }
+    },
+    totals:{
+      crewDays: safeNum(document.getElementById('sumTotalDays').textContent),
+      manHours: safeNum(document.getElementById('sumTotalMH').textContent)
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url;
+  const projName=(data.project||'site_work').replace(/\s+/g,'_');
+  a.download=projName+"_div01_productivity.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// reset defaults
+function resetAll(){
+  document.getElementById('crewSize').value = 4;
+  document.getElementById('hoursPerShift').value = 10;
+  document.getElementById('prodFactorGlobal').value = 1.25;
+  document.getElementById('projectId').value = "";
+
+  // 011
+  document.getElementById('hazQty').value = 0;
+  document.getElementById('hazProdBase').value = 300;
+  document.getElementById('hazNotes').value = "Full containment, neg air, 3-stage decon";
+
+  // 012
+  document.getElementById('clrArea').value = 0;
+  document.getElementById('clrProdBase').value = 1.2;
+  document.getElementById('clrNotes').value = "Windrow & burn onsite, no offsite disposal";
+
+  document.getElementById('excavCY').value = 0;
+  document.getElementById('excavProdBase').value = 600;
+  document.getElementById('excavNotes').value = "Cut/fill onsite, rough grade, no export trucking allowance";
+
+  document.getElementById('trenchLF').value = 0;
+  document.getElementById('trenchProdBase').value = 120;
+  document.getElementById('trenchNotes').value = "Trench open/safe, initial backfill only";
+
+  document.getElementById('aggCY').value = 0;
+  document.getElementById('aggProdBase').value = 300;
+  document.getElementById('aggNotes').value = "Grader+roller+loader; haul <10 miles";
+
+  // 013
+  document.getElementById('mechPipeLF').value = 0;
+  document.getElementById('mechPipeProdBase').value = 100;
+  document.getElementById('mechPipeNotes').value = "Potable/sanitary/storm/fuel piping, depth <10'";
+
+  // 015
+  document.getElementById('elecConduitLF').value = 0;
+  document.getElementById('elecConduitProdBase').value = 150;
+  document.getElementById('elecConduitNotes').value = "Conduit in trench, spacers, stub-ups; no wire pull";
+
+  document.getElementById('lightPoleEA').value = 0;
+  document.getElementById('lightPoleProdBase').value = 4;
+  document.getElementById('lightPoleNotes').value = "Form, rebar, bolt cage, pour base only";
+
+  recalcAll();
+}
+
+// init on load
+recalcAll();
+</script>
+
+</body>
+</html>

@@ -1,9 +1,793 @@
-081 - Mechanical Demolition
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>08 – Mechanical Systems Productivity Estimator</title>
 
-082 - Plumbing
+<script src="https://cdn.tailwindcss.com"></script>
 
-083 - HVAC
+<style>
+  .card {@apply bg-white/80 backdrop-blur shadow-md rounded-2xl border border-slate-300 p-4 mb-6;}
+  .section-header {@apply text-lg font-semibold text-slate-800 flex items-baseline justify-between flex-wrap gap-2;}
+  .section-sub {@apply text-[10px] text-slate-500 font-mono;}
+  .label-sm {@apply text-xs font-medium text-slate-600;}
+  .number-input {@apply w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400;}
+  .result-box {@apply text-sm font-semibold text-slate-800 bg-slate-100 rounded-lg px-2 py-1 text-right;}
+  .chip {@apply text-[10px] leading-tight font-mono bg-slate-800 text-white rounded px-2 py-[2px] mr-1;}
+  .subgroup-header {@apply text-slate-900 text-base font-bold flex items-center gap-2 mb-2;}
+  .subchip {@apply bg-indigo-600 text-white text-[10px] font-mono px-2 py-[2px] rounded;}
+  .assumption-note {@apply text-[10px] leading-snug text-slate-500 italic;}
+  table thead tr {@apply bg-slate-800 text-white;}
+  table tbody tr:nth-child(even) {@apply bg-slate-50/60;}
+</style>
+</head>
 
-084 - Fire Protection
+<body class="bg-gradient-to-br from-slate-100 to-indigo-100 text-slate-900 min-h-screen">
 
-085 - Special Mechanical Systems
+<!-- HEADER -->
+<header class="px-4 py-4 border-b border-slate-300 bg-white/70 backdrop-blur sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">08 – Mechanical Systems Productivity</h1>
+      <p class="text-xs text-slate-600">
+        081 Mechanical Demo · 082 Plumbing · 083 HVAC · 084 Fire Protection · 085 Special Mech
+      </p>
+      <p class="text-[10px] text-slate-500 font-mono">
+        Outputs crew-days & man-hours. Alaska factor included.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="exportSummary()">
+        Export Summary (.json)
+      </button>
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="resetAll()">
+        Reset
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- GLOBAL CREW / SHIFT SETTINGS -->
+  <section class="card">
+    <div class="section-header">
+      <span>Global Crew / Shift</span>
+      <span class="section-sub">Used in all productivity calcs</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Crew Size (people)</label>
+        <input id="crewSize" type="number" min="1" value="4" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Mech crew of 3–4 is typical on site</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Hours / shift</label>
+        <input id="hoursPerShift" type="number" min="1" value="10" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">10 hr shifts common for remote / shut-down windows</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Productivity Factor</label>
+        <input id="prodFactorGlobal" type="number" step="0.01" value="1.30" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">1.00 = easy access shop work, &gt;1.00 = Alaska real world (tight ceilings, shutdowns)</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Project Name / ID</label>
+        <input id="projectId" type="text" placeholder="Clinic Upgrade - Mechanical"
+          class="number-input" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ==================== 081 MECHANICAL DEMOLITION ==================== -->
+  <section class="card" id="mechDemoBlock">
+    <div class="subgroup-header">
+      <span class="subchip">081</span>
+      <span>Mechanical Demolition</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Selective removal of existing duct, piping, sprinklers, fixtures, equipment. Includes safe drain-down,
+      capping, labeling, and haul-off staging. Assumes no asbestos/PCB lead work (that's Division 1 Hazmat).
+    </p>
+
+    <!-- 081.01 Mech Demo (Piping / Duct / Fixtures / Equipment) -->
+    <div class="section-header">
+      <span>081.01 Mechanical Demo & Safe Offlining</span>
+      <span class="section-sub">Cut, cap, remove, stage for disposal</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Demo Scope Size (SF)</label>
+        <input id="demoSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Approximate floor SF affected by demo</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="demoProdBase" type="number" step="1" value="2500" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Ceilings open, shutdown window available</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="demoProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="demoCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="demoManHours" class="result-box">0</div>
+        <p class="assumption-note">= Crew-Days × Crew Size × Hrs/Shift</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="demoNotes" type="text"
+        placeholder="Drain, cap, remove piping/duct/fixtures/units. No hazmat abatement included."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 082 PLUMBING ==================== -->
+  <section class="card" id="plumbingBlock">
+    <div class="subgroup-header">
+      <span class="subchip">082</span>
+      <span>Plumbing</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Domestic water, sanitary, vent, condensate, hangers, insulation. Also fixture set/trim.
+      Assumes reasonable ceiling access and piping already coordinated.
+    </p>
+
+    <!-- 082.01 Plumbing Rough-In (Pipe & Hangers) -->
+    <div class="section-header">
+      <span>082.01 Plumbing Rough-In (Pipe & Hangers)</span>
+      <span class="section-sub">Run pipe, support, insulate typical</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Pipe Length (LF)</label>
+        <input id="plumbLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Combined water/waste/vent LF installed</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="plumbProdBase" type="number" step="1" value="180" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Copper/PVC/PEX mix, typical commercial TI</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="plumbProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="plumbCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="plumbManHours" class="result-box">0</div>
+        <p class="assumption-note">Includes hangers, standard insulation wrap</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="plumbNotes" type="text"
+        placeholder="Domestic water/san/vent rough-in, hangers, line insulation. No med gas, no heat trace."
+        class="number-input" />
+    </div>
+
+    <!-- 082.02 Fixture Set / Trim -->
+    <div class="section-header mt-8">
+      <span>082.02 Fixture Set / Trim</span>
+      <span class="section-sub">Toilets, sinks, faucets, carriers, final hook-up</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Fixtures (EA)</label>
+        <input id="fixtureEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Water closets, lavs, mop sinks, etc.</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="fixtureProdBase" type="number" step="1" value="14" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Set, connect, seal, test for leaks</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="fixtureProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="fixtureCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="fixtureManHours" class="result-box">0</div>
+        <p class="assumption-note">Includes sealant, caulk, basic trim</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="fixtureNotes" type="text"
+        placeholder="Toilets/lavs/mop basins etc. No special medical fixtures."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 083 HVAC ==================== -->
+  <section class="card" id="hvacBlock">
+    <div class="subgroup-header">
+      <span class="subchip">083</span>
+      <span>HVAC</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Supply/return/exhaust duct install and hangers, VAV/terminal units, FCUs, AHUs,
+      basic control device placement. Hydronic reheat piping to terminals is included here.
+    </p>
+
+    <!-- 083.01 Duct & Hangers -->
+    <div class="section-header">
+      <span>083.01 Duct & Hangers Install</span>
+      <span class="section-sub">Sheet metal, flex drops, supports</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Duct Length (LF)</label>
+        <input id="ductLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Combined supply/return/exhaust LF equivalent</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="ductProdBase" type="number" step="1" value="160" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Includes hangers & basic flex to diffusers</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="ductProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="ductCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="ductManHours" class="result-box">0</div>
+        <p class="assumption-note">No full TAB/commissioning here</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="ductNotes" type="text"
+        placeholder="Install main/branch duct, hangers, flex drops to grilles/diffusers. No final balancing."
+        class="number-input" />
+    </div>
+
+    <!-- 083.02 Air Handling / Terminal Units / Mechanical Equipment Set -->
+    <div class="section-header mt-8">
+      <span>083.02 Units / Equipment Set & Connect</span>
+      <span class="section-sub">AHUs, RTUs, VAVs, FCUs, pumps, small boilers</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">HVAC Units (EA)</label>
+        <input id="hvacEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">VAVs, FCUs, fan coils, small AHUs, pumps</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="hvacProdBase" type="number" step="1" value="10" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Set, anchor, connect duct/hydronic stub, controls stub</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="hvacProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="hvacCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="hvacManHours" class="result-box">0</div>
+        <p class="assumption-note">Does not include full control checkout/startup</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="hvacNotes" type="text"
+        placeholder="Set/anchor VAVs, FCUs, pumps, AHU cabinets, connect to duct and hydronic stub-outs."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 084 FIRE PROTECTION ==================== -->
+  <section class="card" id="fireProtBlock">
+    <div class="subgroup-header">
+      <span class="subchip">084</span>
+      <span>Fire Protection</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Overhead sprinkler mains and branch lines, hangers, head install/change-out,
+      hydrotest, flush. Assumes water supply and riser available.
+    </p>
+
+    <!-- 084.01 Sprinkler Piping & Heads -->
+    <div class="section-header">
+      <span>084.01 Sprinkler Piping & Heads</span>
+      <span class="section-sub">Mains, branches, head install/adjust</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Sprinkler Heads (EA)</label>
+        <input id="sprinkEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Includes branch piping to each head</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="sprinkProdBase" type="number" step="1" value="30" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Install/adjust heads, run branch, hangers, basic hydro test</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="sprinkProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="sprinkCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="sprinkManHours" class="result-box">0</div>
+        <p class="assumption-note">Does not include FM-200 / special gas</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="sprinkNotes" type="text"
+        placeholder="Wet sprinkler system piping, heads, hangers, hydrotest. No clean agent / foam."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 085 SPECIAL MECHANICAL SYSTEMS ==================== -->
+  <section class="card" id="specialMechBlock">
+    <div class="subgroup-header">
+      <span class="subchip">085</span>
+      <span>Special Mechanical Systems</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Includes medical gas, fuel oil/day tank piping, glycol heat trace loops, specialty hydronic skids,
+      boilers with day tanks, etc. These installs are slower, more controlled, and often inspection-heavy.
+    </p>
+
+    <!-- 085.01 Special Systems Piping / Skid Tie-In -->
+    <div class="section-header">
+      <span>085.01 Special Systems Piping / Skid Tie-In</span>
+      <span class="section-sub">Med gas, fuel oil/day tank, glycol, etc.</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Specialty Pipe (LF)</label>
+        <input id="specialLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Certified systems: med gas, fuel oil, glycol</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="specialProdBase" type="number" step="1" value="60" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Slow, QA/QC heavy, inspector sign-off</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="specialProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="specialCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="specialManHours" class="result-box">0</div>
+        <p class="assumption-note">Certified labor, shutdown coordination</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="specialNotes" type="text"
+        placeholder="Med gas brazed lines, fuel oil to boiler/day tank, glycol loops, specialty boiler skid tie-in."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== ROLLUP SUMMARY ==================== -->
+  <section class="card">
+    <div class="section-header">
+      <span>Rollup – Labor Demand</span>
+      <span class="section-sub">
+        Crew-Days & Man-Hours by Subgroup (081–085) and Total
+      </span>
+    </div>
+
+    <div class="overflow-x-auto mt-4">
+      <table class="min-w-full text-xs text-left border border-slate-300 rounded-xl overflow-hidden">
+        <thead>
+          <tr>
+            <th class="px-2 py-2 font-semibold">Activity</th>
+            <th class="px-2 py-2 font-semibold text-right">Crew-Days</th>
+            <th class="px-2 py-2 font-semibold text-right">Man-Hours</th>
+            <th class="px-2 py-2 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white/80">
+          <!-- 081 Mech Demo -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">081.01</span>Mechanical Demo & Safe Offlining</td>
+            <td class="px-2 py-2 text-right" id="sumDemoDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumDemoMH">0</td>
+            <td class="px-2 py-2" id="sumDemoNotes"></td>
+          </tr>
+
+          <!-- 082 Plumbing -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">082.01</span>Plumbing Rough-In</td>
+            <td class="px-2 py-2 text-right" id="sumPlumbDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumPlumbMH">0</td>
+            <td class="px-2 py-2" id="sumPlumbNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">082.02</span>Fixture Set / Trim</td>
+            <td class="px-2 py-2 text-right" id="sumFixtureDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumFixtureMH">0</td>
+            <td class="px-2 py-2" id="sumFixtureNotes"></td>
+          </tr>
+
+          <!-- 083 HVAC -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">083.01</span>Duct & Hangers</td>
+            <td class="px-2 py-2 text-right" id="sumDuctDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumDuctMH">0</td>
+            <td class="px-2 py-2" id="sumDuctNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">083.02</span>Units / Equipment Set & Connect</td>
+            <td class="px-2 py-2 text-right" id="sumHvacDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumHvacMH">0</td>
+            <td class="px-2 py-2" id="sumHvacNotes"></td>
+          </tr>
+
+          <!-- 084 Fire Protection -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">084.01</span>Sprinkler Piping & Heads</td>
+            <td class="px-2 py-2 text-right" id="sumSprinkDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumSprinkMH">0</td>
+            <td class="px-2 py-2" id="sumSprinkNotes"></td>
+          </tr>
+
+          <!-- 085 Special Mechanical -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">085.01</span>Special Systems Piping / Skid Tie-In</td>
+            <td class="px-2 py-2 text-right" id="sumSpecialDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumSpecialMH">0</td>
+            <td class="px-2 py-2" id="sumSpecialNotes"></td>
+          </tr>
+
+          <!-- TOTAL -->
+          <tr class="bg-slate-800 text-white font-semibold text-right">
+            <td class="px-2 py-2 text-left">TOTAL</td>
+            <td class="px-2 py-2" id="sumTotalDays">0</td>
+            <td class="px-2 py-2" id="sumTotalMH">0</td>
+            <td class="px-2 py-2 text-left text-[10px] font-normal italic">
+              These man-hours are field install only. Startup, commissioning, TAB, and punch typically add extra days later.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-[10px] text-slate-500 leading-snug mt-3">
+      Baselines assume conditioned interior or heated tent if exterior,
+      coordinated ceiling space, and material staged near install area.
+      Shutdown work in live facilities or remote winter work should increase Productivity Factor &gt; 1.30.
+    </p>
+  </section>
+
+  <footer class="text-[10px] text-slate-400 text-center py-6">
+    © 2025 Poor Louis Labs · Alaska Productivity Toolkit · 08_Mechanical.html
+  </footer>
+</main>
+
+<script>
+// --- helpers ---
+function safeNum(v){const n=parseFloat(v);return isNaN(n)?0:n;}
+
+function crewDaysNeeded(qty, prodAdjPerDay){
+  if(prodAdjPerDay<=0)return 0;
+  return qty/prodAdjPerDay;
+}
+
+function totalManHours(crewDays, crewSize, hrsPerShift){
+  return crewDays*crewSize*hrsPerShift;
+}
+
+// generic activity calculator
+function recalcGeneric(qtyId, prodBaseId, prodAdjId, crewDaysId, mhId,
+                       notesId, sumDaysId, sumMhId, sumNotesId){
+  const qty = safeNum(document.getElementById(qtyId).value);
+  const prodBase = safeNum(document.getElementById(prodBaseId).value);
+
+  const pfGlobal = safeNum(document.getElementById('prodFactorGlobal').value);
+  const crewSize = safeNum(document.getElementById('crewSize').value);
+  const hrsPerShift = safeNum(document.getElementById('hoursPerShift').value);
+
+  const prodAdj = (pfGlobal>0)?(prodBase/pfGlobal):0;
+  document.getElementById(prodAdjId).textContent = prodAdj.toFixed(2);
+
+  const cDays = crewDaysNeeded(qty, prodAdj);
+  document.getElementById(crewDaysId).textContent = cDays.toFixed(2);
+
+  const mh = totalManHours(cDays, crewSize, hrsPerShift);
+  document.getElementById(mhId).textContent = mh.toFixed(1);
+
+  const notesVal = document.getElementById(notesId).value;
+  document.getElementById(sumDaysId).textContent = cDays.toFixed(2);
+  document.getElementById(sumMhId).textContent = mh.toFixed(1);
+  document.getElementById(sumNotesId).textContent = notesVal;
+
+  return {cDays, mh};
+}
+
+function recalcAll(){
+  // 081 Mechanical Demo
+  const mechDemo = recalcGeneric(
+    'demoSF','demoProdBase','demoProdAdj','demoCrewDays','demoManHours',
+    'demoNotes','sumDemoDays','sumDemoMH','sumDemoNotes'
+  );
+
+  // 082 Plumbing
+  const plumb = recalcGeneric(
+    'plumbLF','plumbProdBase','plumbProdAdj','plumbCrewDays','plumbManHours',
+    'plumbNotes','sumPlumbDays','sumPlumbMH','sumPlumbNotes'
+  );
+
+  const fixture = recalcGeneric(
+    'fixtureEA','fixtureProdBase','fixtureProdAdj','fixtureCrewDays','fixtureManHours',
+    'fixtureNotes','sumFixtureDays','sumFixtureMH','sumFixtureNotes'
+  );
+
+  // 083 HVAC
+  const duct = recalcGeneric(
+    'ductLF','ductProdBase','ductProdAdj','ductCrewDays','ductManHours',
+    'ductNotes','sumDuctDays','sumDuctMH','sumDuctNotes'
+  );
+
+  const hvac = recalcGeneric(
+    'hvacEA','hvacProdBase','hvacProdAdj','hvacCrewDays','hvacManHours',
+    'hvacNotes','sumHvacDays','sumHvacMH','sumHvacNotes'
+  );
+
+  // 084 Fire Protection
+  const sprink = recalcGeneric(
+    'sprinkEA','sprinkProdBase','sprinkProdAdj','sprinkCrewDays','sprinkManHours',
+    'sprinkNotes','sumSprinkDays','sumSprinkMH','sumSprinkNotes'
+  );
+
+  // 085 Special Mechanical
+  const special = recalcGeneric(
+    'specialLF','specialProdBase','specialProdAdj','specialCrewDays','specialManHours',
+    'specialNotes','sumSpecialDays','sumSpecialMH','sumSpecialNotes'
+  );
+
+  // totals
+  const totalDays =
+    mechDemo.cDays + plumb.cDays + fixture.cDays +
+    duct.cDays + hvac.cDays +
+    sprink.cDays +
+    special.cDays;
+
+  const totalMH =
+    mechDemo.mh + plumb.mh + fixture.mh +
+    duct.mh + hvac.mh +
+    sprink.mh +
+    special.mh;
+
+  document.getElementById('sumTotalDays').textContent = totalDays.toFixed(2);
+  document.getElementById('sumTotalMH').textContent   = totalMH.toFixed(1);
+}
+
+// export JSON snapshot
+function exportSummary(){
+  const data = {
+    project: document.getElementById('projectId').value,
+    timestamp_utc: new Date().toISOString(),
+    globals:{
+      crewSize: safeNum(document.getElementById('crewSize').value),
+      hoursPerShift: safeNum(document.getElementById('hoursPerShift').value),
+      productivityFactor: safeNum(document.getElementById('prodFactorGlobal').value)
+    },
+    "081_mechanical_demo":{
+      mechanical_demo_offline:{
+        qty_sf: safeNum(document.getElementById('demoSF').value),
+        crewDays: safeNum(document.getElementById('sumDemoDays').textContent),
+        manHours: safeNum(document.getElementById('sumDemoMH').textContent),
+        notes: document.getElementById('demoNotes').value
+      }
+    },
+    "082_plumbing":{
+      plumbing_rough_in:{
+        qty_lf: safeNum(document.getElementById('plumbLF').value),
+        crewDays: safeNum(document.getElementById('sumPlumbDays').textContent),
+        manHours: safeNum(document.getElementById('sumPlumbMH').textContent),
+        notes: document.getElementById('plumbNotes').value
+      },
+      fixture_set_trim:{
+        qty_each: safeNum(document.getElementById('fixtureEA').value),
+        crewDays: safeNum(document.getElementById('sumFixtureDays').textContent),
+        manHours: safeNum(document.getElementById('sumFixtureMH').textContent),
+        notes: document.getElementById('fixtureNotes').value
+      }
+    },
+    "083_hvac":{
+      duct_install:{
+        qty_lf: safeNum(document.getElementById('ductLF').value),
+        crewDays: safeNum(document.getElementById('sumDuctDays').textContent),
+        manHours: safeNum(document.getElementById('sumDuctMH').textContent),
+        notes: document.getElementById('ductNotes').value
+      },
+      hvac_units_set_connect:{
+        qty_each: safeNum(document.getElementById('hvacEA').value),
+        crewDays: safeNum(document.getElementById('sumHvacDays').textContent),
+        manHours: safeNum(document.getElementById('sumHvacMH').textContent),
+        notes: document.getElementById('hvacNotes').value
+      }
+    },
+    "084_fire_protection":{
+      sprinkler_install_heads:{
+        qty_each: safeNum(document.getElementById('sprinkEA').value),
+        crewDays: safeNum(document.getElementById('sumSprinkDays').textContent),
+        manHours: safeNum(document.getElementById('sumSprinkMH').textContent),
+        notes: document.getElementById('sprinkNotes').value
+      }
+    },
+    "085_special_mech_systems":{
+      special_systems_piping:{
+        qty_lf: safeNum(document.getElementById('specialLF').value),
+        crewDays: safeNum(document.getElementById('sumSpecialDays').textContent),
+        manHours: safeNum(document.getElementById('sumSpecialMH').textContent),
+        notes: document.getElementById('specialNotes').value
+      }
+    },
+    totals:{
+      crewDays: safeNum(document.getElementById('sumTotalDays').textContent),
+      manHours: safeNum(document.getElementById('sumTotalMH').textContent)
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const projName=(data.project||'mechanical_systems').replace(/\s+/g,'_');
+  a.download = projName + "_div08_productivity.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetAll(){
+  // globals
+  document.getElementById('crewSize').value = 4;
+  document.getElementById('hoursPerShift').value = 10;
+  document.getElementById('prodFactorGlobal').value = 1.30;
+  document.getElementById('projectId').value = "";
+
+  // 081 Mech Demo
+  document.getElementById('demoSF').value = 0;
+  document.getElementById('demoProdBase').value = 2500;
+  document.getElementById('demoNotes').value =
+    "Cut, cap, remove piping/duct/fixtures/equipment. No hazmat abatement.";
+
+  // 082 Plumbing
+  document.getElementById('plumbLF').value = 0;
+  document.getElementById('plumbProdBase').value = 180;
+  document.getElementById('plumbNotes').value =
+    "Domestic water/san/vent rough-in incl. hangers + pipe insulation.";
+
+  document.getElementById('fixtureEA').value = 0;
+  document.getElementById('fixtureProdBase').value = 14;
+  document.getElementById('fixtureNotes').value =
+    "Set toilet/lav/etc incl. sealant, hook-up, leak test.";
+
+  // 083 HVAC
+  document.getElementById('ductLF').value = 0;
+  document.getElementById('ductProdBase').value = 160;
+  document.getElementById('ductNotes').value =
+    "Hang duct, flex to terminals. No final TAB.";
+
+  document.getElementById('hvacEA').value = 0;
+  document.getElementById('hvacProdBase').value = 10;
+  document.getElementById('hvacNotes').value =
+    "Set VAVs/FCUs/AHUs/pumps, anchor, connect to duct/hydronic stub, stub controls.";
+
+  // 084 Fire Protection
+  document.getElementById('sprinkEA').value = 0;
+  document.getElementById('sprinkProdBase').value = 30;
+  document.getElementById('sprinkNotes').value =
+    "Sprinkler mains/branches, heads, hangers, hydrotest. Wet system only.";
+
+  // 085 Special Mechanical
+  document.getElementById('specialLF').value = 0;
+  document.getElementById('specialProdBase').value = 60;
+  document.getElementById('specialNotes').value =
+    "Med gas / fuel oil / glycol / skid tie-in. Inspector-driven, slow, QA/QC heavy.";
+
+  recalcAll();
+}
+
+// init totals on load
+recalcAll();
+</script>
+
+</body>
+</html>

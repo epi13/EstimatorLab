@@ -1,4 +1,895 @@
-021 - Standard Foundations
-022 - Slab on Grade
-023 - Basement
-024 - Special Foundations (piles, tridetics, etc)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>02 – Substructure Productivity Estimator</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  .card {@apply bg-white/80 backdrop-blur shadow-md rounded-2xl border border-slate-300 p-4 mb-6;}
+  .section-header {@apply text-lg font-semibold text-slate-800 flex items-baseline justify-between flex-wrap gap-2;}
+  .section-sub {@apply text-[10px] text-slate-500 font-mono;}
+  .label-sm {@apply text-xs font-medium text-slate-600;}
+  .number-input {@apply w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400;}
+  .result-box {@apply text-sm font-semibold text-slate-800 bg-slate-100 rounded-lg px-2 py-1 text-right;}
+  .chip {@apply text-[10px] leading-tight font-mono bg-slate-800 text-white rounded px-2 py-[2px] mr-1;}
+  .subgroup-header {@apply text-slate-900 text-base font-bold flex items-center gap-2 mb-2;}
+  .subchip {@apply bg-emerald-800 text-white text-[10px] font-mono px-2 py-[2px] rounded;}
+  .assumption-note {@apply text-[10px] leading-snug text-slate-500 italic;}
+  table thead tr {@apply bg-slate-800 text-white;}
+  table tbody tr:nth-child(even) {@apply bg-slate-50/60;}
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 to-emerald-100 text-slate-900 min-h-screen">
+
+<!-- HEADER -->
+<header class="px-4 py-4 border-b border-slate-300 bg-white/70 backdrop-blur sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">02 – Substructure Productivity</h1>
+      <p class="text-xs text-slate-600">
+        021 Standard Foundations · 022 Slab on Grade · 023 Basement · 024 Special Foundations
+      </p>
+      <p class="text-[10px] text-slate-500 font-mono">
+        Crew-days & man-hours. Alaska factor included.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="exportSummary()">
+        Export Summary (.json)
+      </button>
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="resetAll()">
+        Reset
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- GLOBAL CREW / SHIFT SETTINGS -->
+  <section class="card">
+    <div class="section-header">
+      <span>Global Crew / Shift</span>
+      <span class="section-sub">Used in all productivity calcs</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Crew Size (people)</label>
+        <input id="crewSize" type="number" min="1" value="4" class="number-input" oninput="recalcAll()" />
+      </div>
+
+      <div>
+        <label class="label-sm">Hours / shift</label>
+        <input id="hoursPerShift" type="number" min="1" value="10" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">10 hr days typical remote Alaska</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Productivity Factor</label>
+        <input id="prodFactorGlobal" type="number" step="0.01" value="1.25" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">1.00 = Lower 48 baseline, &gt;1.00 = slower (weather/logistics)</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Project Name / ID</label>
+        <input id="projectId" type="text" placeholder="School Addition - Substructure"
+          class="number-input" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ==================== 021 STANDARD FOUNDATIONS ==================== -->
+  <section class="card" id="stdFoundBlock">
+    <div class="subgroup-header">
+      <span class="subchip">021</span>
+      <span>Standard Foundations</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Conventional spread footings / strip footings / stem walls. Includes form, rebar place, pour.
+      Excavation to subgrade is assumed available/accessible.
+    </p>
+
+    <!-- 021.01 Strip / Continuous Footing -->
+    <div class="section-header">
+      <span>021.01 Strip / Continuous Footing</span>
+      <span class="section-sub">Form, place rebar, pour</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Footing Length (LF)</label>
+        <input id="footingLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Typical 2'-3' wide continuous footing</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="footingProdBase" type="number" step="1" value="120" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Crew sets forms, ties steel, pours same day or next</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="footingProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="footingCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="footingManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="footingNotes" type="text"
+        placeholder="Includes layout, forms, rebar install, pour; no winter heat/blankets"
+        class="number-input" />
+    </div>
+
+    <!-- 021.02 Isolated Spread Footings -->
+    <div class="section-header mt-8">
+      <span>021.02 Spread Footings (Pads)</span>
+      <span class="section-sub">Form, rebar cage, pour individual pads</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Footing Count (EA)</label>
+        <input id="padEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Column footings, pier pads</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="padProdBase" type="number" step="1" value="8" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Excav open, bolt cage set same day</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="padProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="padCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="padManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="padNotes" type="text"
+        placeholder="Includes form, rebar cage, anchor bolts; does not include frost protection blankets"
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 022 SLAB ON GRADE ==================== -->
+  <section class="card" id="slabBlock">
+    <div class="subgroup-header">
+      <span class="subchip">022</span>
+      <span>Slab on Grade</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Prep, place, finish slab on grade. Includes vapor barrier, WWF/rebar placement, screed, bull float, finish.
+      Does not include under-slab utilities (handled earlier in 013/015).
+    </p>
+
+    <!-- 022.01 Slab Placement & Finish -->
+    <div class="section-header">
+      <span>022.01 Slab Placement & Finish</span>
+      <span class="section-sub">Place concrete, screed, finish</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Slab Area (SF)</label>
+        <input id="slabSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Typical 4&quot;-6&quot; slab, open floor area</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="slabProdBase" type="number" step="1" value="4000" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Crew, pump truck, power trowel finish</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="slabProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="slabCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="slabManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="slabNotes" type="text"
+        placeholder="Includes vapor barrier, WWF/rebar mat placement, pour, finish; no winter heat"
+        class="number-input" />
+    </div>
+
+    <!-- 022.02 Thickened Edge / Turned-Down Slab -->
+    <div class="section-header mt-8">
+      <span>022.02 Thickened Edge / Turned-Down Slab</span>
+      <span class="section-sub">Integrated footing edge at perimeter</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Perimeter Length (LF)</label>
+        <input id="thickEdgeLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Typical mono pour slab+edge</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="thickEdgeProdBase" type="number" step="1" value="100" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Form + reinforce thickened edge ahead of pour</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="thickEdgeProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="thickEdgeCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="thickEdgeManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="thickEdgeNotes" type="text"
+        placeholder="Thickened edge/turned-down perimeter, short stem for frost"
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 023 BASEMENT ==================== -->
+  <section class="card" id="basementBlock">
+    <div class="subgroup-header">
+      <span class="subchip">023</span>
+      <span>Basement</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Excavation to basement subgrade, form/tie/pour basement walls, waterproof, backfill.
+      Assumes reasonable access for equipment (not full downtown hand-dig in winter).
+    </p>
+
+    <!-- 023.01 Basement Dig / Overexcavate -->
+    <div class="section-header">
+      <span>023.01 Basement Excavation</span>
+      <span class="section-sub">Excavate to bottom of slab, stockpile onsite</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Volume (CY)</label>
+        <input id="basementExcavCY" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Includes overexcavation allowance</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (CY/day)</label>
+        <input id="basementExcavProdBase" type="number" step="1" value="500" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Excavator + trucks, short onsite haul</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (CY/day)</label>
+        <div id="basementExcavProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="basementExcavCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="basementExcavManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="basementExcavNotes" type="text"
+        placeholder="Spoils staged onsite; no export trucking; no rock hammer"
+        class="number-input" />
+    </div>
+
+    <!-- 023.02 Basement Walls Form / Rebar / Pour -->
+    <div class="section-header mt-8">
+      <span>023.02 Basement Wall Form & Pour</span>
+      <span class="section-sub">Set forms, install rebar, pour vertical wall</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Wall Area (SF of form face)</label>
+        <input id="basementWallSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Linear ft × wall height</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="basementWallProdBase" type="number" step="1" value="600" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Gang forms, crane assist if available</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="basementWallProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="basementWallCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="basementWallManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="basementWallNotes" type="text"
+        placeholder="Includes form, rebar, pour, strip; no hot water/blankets"
+        class="number-input" />
+    </div>
+
+    <!-- 023.03 Waterproof & Backfill -->
+    <div class="section-header mt-8">
+      <span>023.03 Waterproof & Backfill</span>
+      <span class="section-sub">Membrane, drain board, perimeter drain, backfill</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Perimeter Length (LF)</label>
+        <input id="basementBackfillLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Linear basement wall length</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="basementBackfillProdBase" type="number" step="1" value="120" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Install damp-proofing + drain + backfill</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="basementBackfillProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="basementBackfillCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="basementBackfillManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="basementBackfillNotes" type="text"
+        placeholder="Includes waterproofing membrane, drain board, perf pipe + gravel, lift backfill/compact"
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 024 SPECIAL FOUNDATIONS ==================== -->
+  <section class="card" id="specialFoundBlock">
+    <div class="subgroup-header">
+      <span class="subchip">024</span>
+      <span>Special Foundations</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Piles, pile caps/grade beams, elevated systems (e.g. tridetics, arctic foundations, thermal piles).
+      Baselines assume decent access with rig on site; frozen refusal / predrill not included.
+    </p>
+
+    <!-- 024.01 Driven Piles -->
+    <div class="section-header">
+      <span>024.01 Driven Piles</span>
+      <span class="section-sub">Mobilized hammer, drive & cut off</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Pile Count (EA)</label>
+        <input id="pileEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Steel H or pipe piles, typical civic/school size</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="pileProdBase" type="number" step="1" value="15" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Good driving, minimal refusal</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="pileProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="pileCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="pileManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="pileNotes" type="text"
+        placeholder="Does not include predrill in refusal zones or thermal pile freeze-back monitoring"
+        class="number-input" />
+    </div>
+
+    <!-- 024.02 Pile Caps / Grade Beams / Tridetic Nodes -->
+    <div class="section-header mt-8">
+      <span>024.02 Pile Caps / Grade Beams / Special Frame Nodes</span>
+      <span class="section-sub">Form, reinforce, pour caps/beams or modular node sets</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Cap / Node Count (EA)</label>
+        <input id="capEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Pile caps, grade beam intersections, tridetic nodes</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="capProdBase" type="number" step="1" value="10" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Form, rebar, set embed/connector steel, pour</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="capProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="capCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="capManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="capNotes" type="text"
+        placeholder="Includes forming/tying cap or node seat; assumes ready-mix access"
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== ROLLUP SUMMARY ==================== -->
+  <section class="card">
+    <div class="section-header">
+      <span>Rollup – Labor Demand</span>
+      <span class="section-sub">Crew-Days & Man-Hours by Subgroup (021 / 022 / 023 / 024) and Total</span>
+    </div>
+
+    <div class="overflow-x-auto mt-4">
+      <table class="min-w-full text-xs text-left border border-slate-300 rounded-xl overflow-hidden">
+        <thead>
+          <tr>
+            <th class="px-2 py-2 font-semibold">Activity</th>
+            <th class="px-2 py-2 font-semibold text-right">Crew-Days</th>
+            <th class="px-2 py-2 font-semibold text-right">Man-Hours</th>
+            <th class="px-2 py-2 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white/80">
+          <!-- 021 Standard Foundations -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">021.01</span>Strip / Continuous Footing</td>
+            <td class="px-2 py-2 text-right" id="sumFootingDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumFootingMH">0</td>
+            <td class="px-2 py-2" id="sumFootingNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">021.02</span>Spread Footings (Pads)</td>
+            <td class="px-2 py-2 text-right" id="sumPadDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumPadMH">0</td>
+            <td class="px-2 py-2" id="sumPadNotes"></td>
+          </tr>
+
+          <!-- 022 Slab on Grade -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">022.01</span>Slab Placement & Finish</td>
+            <td class="px-2 py-2 text-right" id="sumSlabDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumSlabMH">0</td>
+            <td class="px-2 py-2" id="sumSlabNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">022.02</span>Thickened Edge / Turned-Down Slab</td>
+            <td class="px-2 py-2 text-right" id="sumThickEdgeDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumThickEdgeMH">0</td>
+            <td class="px-2 py-2" id="sumThickEdgeNotes"></td>
+          </tr>
+
+          <!-- 023 Basement -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">023.01</span>Basement Excavation</td>
+            <td class="px-2 py-2 text-right" id="sumBasementExcavDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumBasementExcavMH">0</td>
+            <td class="px-2 py-2" id="sumBasementExcavNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">023.02</span>Basement Wall Form & Pour</td>
+            <td class="px-2 py-2 text-right" id="sumBasementWallDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumBasementWallMH">0</td>
+            <td class="px-2 py-2" id="sumBasementWallNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">023.03</span>Waterproof & Backfill</td>
+            <td class="px-2 py-2 text-right" id="sumBasementBackfillDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumBasementBackfillMH">0</td>
+            <td class="px-2 py-2" id="sumBasementBackfillNotes"></td>
+          </tr>
+
+          <!-- 024 Special Foundations -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">024.01</span>Driven Piles</td>
+            <td class="px-2 py-2 text-right" id="sumPileDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumPileMH">0</td>
+            <td class="px-2 py-2" id="sumPileNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">024.02</span>Pile Caps / Grade Beams / Special Nodes</td>
+            <td class="px-2 py-2 text-right" id="sumCapDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumCapMH">0</td>
+            <td class="px-2 py-2" id="sumCapNotes"></td>
+          </tr>
+
+          <!-- TOTAL -->
+          <tr class="bg-slate-800 text-white font-semibold text-right">
+            <td class="px-2 py-2 text-left">TOTAL</td>
+            <td class="px-2 py-2" id="sumTotalDays">0</td>
+            <td class="px-2 py-2" id="sumTotalMH">0</td>
+            <td class="px-2 py-2 text-left text-[10px] font-normal italic">
+              Sequential crew assumption. Parallel crews will reduce calendar days.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-[10px] text-slate-500 leading-snug mt-3">
+      Baselines assume no extreme winter heat/blankets, no arctic slab glycol loops, no refusal on piles,
+      no tight downtown shoring. Adjust rates for those conditions.
+    </p>
+  </section>
+
+  <footer class="text-[10px] text-slate-400 text-center py-6">
+    © 2025 Poor Louis Labs · Alaska Productivity Toolkit · 02_Substructure.html
+  </footer>
+</main>
+
+<script>
+// --- helpers ---
+function safeNum(v){const n=parseFloat(v);return isNaN(n)?0:n;}
+
+function crewDaysNeeded(qty, prodAdjPerDay){
+  if(prodAdjPerDay<=0)return 0;
+  return qty/prodAdjPerDay;
+}
+
+function totalManHours(crewDays, crewSize, hrsPerShift){
+  return crewDays*crewSize*hrsPerShift;
+}
+
+// generic calculator for each activity card
+function recalcGeneric(qtyId, prodBaseId, prodAdjId, crewDaysId, mhId,
+                       notesId, sumDaysId, sumMhId, sumNotesId){
+  const qty = safeNum(document.getElementById(qtyId).value);
+  const prodBase = safeNum(document.getElementById(prodBaseId).value);
+
+  const pfGlobal = safeNum(document.getElementById('prodFactorGlobal').value);
+  const crewSize = safeNum(document.getElementById('crewSize').value);
+  const hrsPerShift = safeNum(document.getElementById('hoursPerShift').value);
+
+  const prodAdj = (pfGlobal>0)?(prodBase/pfGlobal):0;
+  document.getElementById(prodAdjId).textContent = prodAdj.toFixed(2);
+
+  const cDays = crewDaysNeeded(qty, prodAdj);
+  document.getElementById(crewDaysId).textContent = cDays.toFixed(2);
+
+  const mh = totalManHours(cDays, crewSize, hrsPerShift);
+  document.getElementById(mhId).textContent = mh.toFixed(1);
+
+  const notesVal = document.getElementById(notesId).value;
+  document.getElementById(sumDaysId).textContent = cDays.toFixed(2);
+  document.getElementById(sumMhId).textContent = mh.toFixed(1);
+  document.getElementById(sumNotesId).textContent = notesVal;
+
+  return {cDays, mh};
+}
+
+function recalcAll(){
+  // 021 Standard Foundations
+  const footing = recalcGeneric(
+    'footingLF','footingProdBase','footingProdAdj','footingCrewDays','footingManHours',
+    'footingNotes','sumFootingDays','sumFootingMH','sumFootingNotes'
+  );
+
+  const pad = recalcGeneric(
+    'padEA','padProdBase','padProdAdj','padCrewDays','padManHours',
+    'padNotes','sumPadDays','sumPadMH','sumPadNotes'
+  );
+
+  // 022 Slab on Grade
+  const slab = recalcGeneric(
+    'slabSF','slabProdBase','slabProdAdj','slabCrewDays','slabManHours',
+    'slabNotes','sumSlabDays','sumSlabMH','sumSlabNotes'
+  );
+
+  const thickEdge = recalcGeneric(
+    'thickEdgeLF','thickEdgeProdBase','thickEdgeProdAdj','thickEdgeCrewDays','thickEdgeManHours',
+    'thickEdgeNotes','sumThickEdgeDays','sumThickEdgeMH','sumThickEdgeNotes'
+  );
+
+  // 023 Basement
+  const basementExcav = recalcGeneric(
+    'basementExcavCY','basementExcavProdBase','basementExcavProdAdj','basementExcavCrewDays','basementExcavManHours',
+    'basementExcavNotes','sumBasementExcavDays','sumBasementExcavMH','sumBasementExcavNotes'
+  );
+
+  const basementWall = recalcGeneric(
+    'basementWallSF','basementWallProdBase','basementWallProdAdj','basementWallCrewDays','basementWallManHours',
+    'basementWallNotes','sumBasementWallDays','sumBasementWallMH','sumBasementWallNotes'
+  );
+
+  const basementBackfill = recalcGeneric(
+    'basementBackfillLF','basementBackfillProdBase','basementBackfillProdAdj','basementBackfillCrewDays','basementBackfillManHours',
+    'basementBackfillNotes','sumBasementBackfillDays','sumBasementBackfillMH','sumBasementBackfillNotes'
+  );
+
+  // 024 Special Foundations
+  const pile = recalcGeneric(
+    'pileEA','pileProdBase','pileProdAdj','pileCrewDays','pileManHours',
+    'pileNotes','sumPileDays','sumPileMH','sumPileNotes'
+  );
+
+  const cap = recalcGeneric(
+    'capEA','capProdBase','capProdAdj','capCrewDays','capManHours',
+    'capNotes','sumCapDays','sumCapMH','sumCapNotes'
+  );
+
+  // Totals
+  const totalDays =
+    footing.cDays + pad.cDays +
+    slab.cDays + thickEdge.cDays +
+    basementExcav.cDays + basementWall.cDays + basementBackfill.cDays +
+    pile.cDays + cap.cDays;
+
+  const totalMH =
+    footing.mh + pad.mh +
+    slab.mh + thickEdge.mh +
+    basementExcav.mh + basementWall.mh + basementBackfill.mh +
+    pile.mh + cap.mh;
+
+  document.getElementById('sumTotalDays').textContent = totalDays.toFixed(2);
+  document.getElementById('sumTotalMH').textContent = totalMH.toFixed(1);
+}
+
+// export JSON snapshot
+function exportSummary(){
+  const data = {
+    project: document.getElementById('projectId').value,
+    timestamp_utc: new Date().toISOString(),
+    globals:{
+      crewSize: safeNum(document.getElementById('crewSize').value),
+      hoursPerShift: safeNum(document.getElementById('hoursPerShift').value),
+      productivityFactor: safeNum(document.getElementById('prodFactorGlobal').value)
+    },
+    "021_standard_foundations":{
+      strip_continuous:{
+        qty_lf: safeNum(document.getElementById('footingLF').value),
+        crewDays: safeNum(document.getElementById('sumFootingDays').textContent),
+        manHours: safeNum(document.getElementById('sumFootingMH').textContent),
+        notes: document.getElementById('footingNotes').value
+      },
+      spread_pads:{
+        qty_each: safeNum(document.getElementById('padEA').value),
+        crewDays: safeNum(document.getElementById('sumPadDays').textContent),
+        manHours: safeNum(document.getElementById('sumPadMH').textContent),
+        notes: document.getElementById('padNotes').value
+      }
+    },
+    "022_slab_on_grade":{
+      slab_place_finish:{
+        qty_sf: safeNum(document.getElementById('slabSF').value),
+        crewDays: safeNum(document.getElementById('sumSlabDays').textContent),
+        manHours: safeNum(document.getElementById('sumSlabMH').textContent),
+        notes: document.getElementById('slabNotes').value
+      },
+      thickened_edge:{
+        qty_lf: safeNum(document.getElementById('thickEdgeLF').value),
+        crewDays: safeNum(document.getElementById('sumThickEdgeDays').textContent),
+        manHours: safeNum(document.getElementById('sumThickEdgeMH').textContent),
+        notes: document.getElementById('thickEdgeNotes').value
+      }
+    },
+    "023_basement":{
+      basement_excav:{
+        qty_cy: safeNum(document.getElementById('basementExcavCY').value),
+        crewDays: safeNum(document.getElementById('sumBasementExcavDays').textContent),
+        manHours: safeNum(document.getElementById('sumBasementExcavMH').textContent),
+        notes: document.getElementById('basementExcavNotes').value
+      },
+      basement_wall:{
+        qty_sf: safeNum(document.getElementById('basementWallSF').value),
+        crewDays: safeNum(document.getElementById('sumBasementWallDays').textContent),
+        manHours: safeNum(document.getElementById('sumBasementWallMH').textContent),
+        notes: document.getElementById('basementWallNotes').value
+      },
+      waterproof_backfill:{
+        qty_lf: safeNum(document.getElementById('basementBackfillLF').value),
+        crewDays: safeNum(document.getElementById('sumBasementBackfillDays').textContent),
+        manHours: safeNum(document.getElementById('sumBasementBackfillMH').textContent),
+        notes: document.getElementById('basementBackfillNotes').value
+      }
+    },
+    "024_special_foundations":{
+      driven_piles:{
+        qty_each: safeNum(document.getElementById('pileEA').value),
+        crewDays: safeNum(document.getElementById('sumPileDays').textContent),
+        manHours: safeNum(document.getElementById('sumPileMH').textContent),
+        notes: document.getElementById('pileNotes').value
+      },
+      pile_caps_nodes:{
+        qty_each: safeNum(document.getElementById('capEA').value),
+        crewDays: safeNum(document.getElementById('sumCapDays').textContent),
+        manHours: safeNum(document.getElementById('sumCapMH').textContent),
+        notes: document.getElementById('capNotes').value
+      }
+    },
+    totals:{
+      crewDays: safeNum(document.getElementById('sumTotalDays').textContent),
+      manHours: safeNum(document.getElementById('sumTotalMH').textContent)
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url;
+  const projName=(data.project||'substructure').replace(/\s+/g,'_');
+  a.download=projName+"_div02_productivity.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// reset defaults
+function resetAll(){
+  // globals
+  document.getElementById('crewSize').value = 4;
+  document.getElementById('hoursPerShift').value = 10;
+  document.getElementById('prodFactorGlobal').value = 1.25;
+  document.getElementById('projectId').value = "";
+
+  // 021 Standard Foundations
+  document.getElementById('footingLF').value = 0;
+  document.getElementById('footingProdBase').value = 120;
+  document.getElementById('footingNotes').value =
+    "Includes layout, forms, rebar install, pour; no winter heat/blankets";
+
+  document.getElementById('padEA').value = 0;
+  document.getElementById('padProdBase').value = 8;
+  document.getElementById('padNotes').value =
+    "Form, rebar cage, anchor bolts; no frost blanket time";
+
+  // 022 Slab on Grade
+  document.getElementById('slabSF').value = 0;
+  document.getElementById('slabProdBase').value = 4000;
+  document.getElementById('slabNotes').value =
+    "Vapor barrier, WWF/rebar mat, pour + finish; no winter heat";
+
+  document.getElementById('thickEdgeLF').value = 0;
+  document.getElementById('thickEdgeProdBase').value = 100;
+  document.getElementById('thickEdgeNotes').value =
+    "Turned-down edge, perimeter frost detail";
+
+  // 023 Basement
+  document.getElementById('basementExcavCY').value = 0;
+  document.getElementById('basementExcavProdBase').value = 500;
+  document.getElementById('basementExcavNotes').value =
+    "Spoils staged onsite; no export trucking; no hammer";
+
+  document.getElementById('basementWallSF').value = 0;
+  document.getElementById('basementWallProdBase').value = 600;
+  document.getElementById('basementWallNotes').value =
+    "Gang forms, crane assist; no heated cure";
+
+  document.getElementById('basementBackfillLF').value = 0;
+  document.getElementById('basementBackfillProdBase').value = 120;
+  document.getElementById('basementBackfillNotes').value =
+    "Membrane + drain board + perf pipe + lift backfill";
+
+  // 024 Special Foundations
+  document.getElementById('pileEA').value = 0;
+  document.getElementById('pileProdBase').value = 15;
+  document.getElementById('pileNotes').value =
+    "Driven piles with rig, good driving, no refusal core drilling";
+
+  document.getElementById('capEA').value = 0;
+  document.getElementById('capProdBase').value = 10;
+  document.getElementById('capNotes').value =
+    "Form, rebar, embed/connector set, pour cap/beam/node seat";
+
+  recalcAll();
+}
+
+// init totals on load
+recalcAll();
+</script>
+
+</body>
+</html>

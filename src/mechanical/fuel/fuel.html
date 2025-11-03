@@ -1,1 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Fuel System Estimator - AK</title>
+<style>
+    :root {
+        --bg-main:#0f172a;
+        --bg-card:#1e253a;
+        --bg-section:#2a324d;
+        --accent:#38bdf8;
+        --text-main:#f8fafc;
+        --text-dim:#94a3b8;
+        --radius-xl:1rem;
+        --radius-lg:.75rem;
+        --radius-md:.5rem;
+        --pad-lg:1rem;
+        --pad-md:.75rem;
+        --pad-sm:.5rem;
+        --gap-lg:1.25rem;
+        --gap-md:.75rem;
+        --gap-sm:.5rem;
+        --font-stack: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+        --border-card:1px solid rgba(148,163,184,.18);
+    }
+    *{
+        box-sizing:border-box;
+    }
+    body{
+        background-color:var(--bg-main);
+        color:var(--text-main);
+        font-family:var(--font-stack);
+        line-height:1.4;
+        margin:0;
+        padding:var(--pad-lg);
+        display:flex;
+        flex-direction:column;
+        min-height:100vh;
+    }
+    header{
+        display:flex;
+        flex-wrap:wrap;
+        justify-content:space-between;
+        align-items:flex-start;
+        row-gap:var(--gap-sm);
+        margin-bottom:var(--gap-lg);
+    }
+    .title-block{
+        display:flex;
+        flex-direction:column;
+    }
+    h1{
+        margin:0;
+        font-size:1.1rem;
+        font-weight:600;
+        color:var(--text-main);
+        letter-spacing:-0.03em;
+    }
+    .subtitle{
+        font-size:.8rem;
+        color:var(--text-dim);
+        max-width:700px;
+    }
+    .badge-row{
+        display:flex;
+        flex-wrap:wrap;
+        gap:.4rem;
+        font-size:.7rem;
+    }
+    .badge{
+        background-color:rgba(56,189,248,.12);
+        color:var(--accent);
+        border:1px solid rgba(56,189,248,.4);
+        padding:.35rem .5rem;
+        border-radius:999px;
+        font-weight:500;
+        line-height:1.1;
+        white-space:nowrap;
+    }
+
+    /* layout */
+    .layout{
+        flex:1;
+        display:grid;
+        grid-template-columns:1fr 320px;
+        gap:var(--gap-lg);
+        width:100%;
+        max-width:1400px;
+        margin:0 auto;
+    }
+    @media(max-width:1100px){
+        .layout{
+            grid-template-columns:1fr;
+        }
+    }
+
+    /* cards */
+    .card{
+        background-color:var(--bg-card);
+        border:var(--border-card);
+        border-radius:var(--radius-xl);
+        padding:var(--pad-lg);
+        box-shadow:0 30px 80px rgba(0,0,0,.6);
+    }
+    .card + .card{
+        margin-top:var(--gap-lg);
+    }
+    .card-header{
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        flex-wrap:wrap;
+        row-gap:var(--gap-sm);
+        margin-bottom:var(--gap-md);
+    }
+    .card-title{
+        font-size:.9rem;
+        font-weight:600;
+        color:var(--text-main);
+        display:flex;
+        align-items:center;
+        gap:.5rem;
+    }
+    .card-hint{
+        font-size:.7rem;
+        color:var(--text-dim);
+        max-width:600px;
+        line-height:1.3;
+    }
+
+    /* form grid */
+    .form-grid{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));
+        gap:var(--gap-md);
+    }
+    label{
+        font-size:.7rem;
+        font-weight:500;
+        color:var(--text-main);
+        display:block;
+        margin-bottom:.4rem;
+        letter-spacing:-0.02em;
+    }
+    .hint{
+        font-size:.65rem;
+        line-height:1.3;
+        color:var(--text-dim);
+        margin-top:.25rem;
+    }
+    input,select{
+        width:100%;
+        background-color:var(--bg-section);
+        border:1px solid rgba(148,163,184,.3);
+        border-radius:var(--radius-md);
+        padding:.6rem .6rem .6rem .6rem;
+        font-size:.8rem;
+        line-height:1.2;
+        color:var(--text-main);
+        font-family:inherit;
+        font-weight:500;
+        outline:none;
+    }
+    input:focus,select:focus{
+        border-color:var(--accent);
+        box-shadow:0 0 0 3px rgba(56,189,248,.25);
+    }
+    .inline-suffix{
+        display:flex;
+        align-items:center;
+        background-color:var(--bg-section);
+        border:1px solid rgba(148,163,184,.3);
+        border-radius:var(--radius-md);
+        overflow:hidden;
+    }
+    .inline-suffix input{
+        border:0;
+        flex:1;
+        border-radius:0;
+        background:transparent;
+        padding-right:.4rem;
+    }
+    .suffix{
+        font-size:.7rem;
+        line-height:1;
+        padding:.6rem .6rem;
+        color:var(--text-dim);
+        background-color:rgba(15,23,42,.4);
+        border-left:1px solid rgba(148,163,184,.3);
+    }
+
+    .section-divider{
+        height:1px;
+        background:radial-gradient(circle at 50% 0%,rgba(148,163,184,.6) 0%,rgba(148,163,184,0) 70%);
+        margin:var(--gap-lg) 0 var(--gap-md) 0;
+    }
+
+    /* results table */
+    .results-card{
+        background-color:var(--bg-card);
+        border:var(--border-card);
+        border-radius:var(--radius-xl);
+        padding:var(--pad-lg);
+        box-shadow:0 30px 80px rgba(0,0,0,.6);
+        max-height:90vh;
+        overflow:auto;
+        position:sticky;
+        top:var(--pad-lg);
+    }
+    .results-title{
+        font-size:.8rem;
+        font-weight:600;
+        color:var(--text-main);
+        margin:0 0 .25rem 0;
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        flex-wrap:wrap;
+        row-gap:.5rem;
+    }
+    .results-sub{
+        font-size:.7rem;
+        color:var(--text-dim);
+        line-height:1.3;
+    }
+
+    table{
+        width:100%;
+        border-collapse:collapse;
+        font-size:.7rem;
+        line-height:1.3;
+        color:var(--text-main);
+        margin-top:var(--gap-md);
+    }
+    thead{
+        position:sticky;
+        top:0;
+        z-index:10;
+    }
+    th{
+        text-align:left;
+        font-weight:600;
+        font-size:.65rem;
+        text-transform:uppercase;
+        letter-spacing:.05em;
+        color:var(--text-dim);
+        padding:.5rem .5rem;
+        background-color:rgba(42,50,77,.7);
+        backdrop-filter:blur(6px);
+        white-space:nowrap;
+    }
+    td{
+        padding:.6rem .5rem;
+        border-bottom:1px solid rgba(148,163,184,.15);
+        vertical-align:top;
+    }
+    .num{
+        text-align:right;
+        font-feature-settings:"tnum";
+        font-variant-numeric:tabular-nums;
+        white-space:nowrap;
+    }
+    .totals-row{
+        background-color:rgba(56,189,248,.07);
+    }
+    .totals-label{
+        color:var(--accent);
+        font-weight:600;
+    }
+    .GrandTotal{
+        font-size:.9rem;
+        font-weight:700;
+        color:var(--accent);
+    }
+
+    /* button */
+    .btn{
+        cursor:pointer;
+        user-select:none;
+        background:radial-gradient(circle at 0% 0%,rgba(56,189,248,.4) 0%,rgba(56,189,248,0) 60%),linear-gradient(to right,#1e293b 0%,#0f172a 100%);
+        color:var(--text-main);
+        border:1px solid rgba(56,189,248,.4);
+        border-radius:var(--radius-lg);
+        font-size:.75rem;
+        font-weight:600;
+        padding:.6rem .9rem;
+        line-height:1.2;
+        box-shadow:0 18px 40px rgba(56,189,248,.2);
+        min-width:110px;
+        text-align:center;
+    }
+    .btn:active{
+        transform:scale(.98);
+    }
+
+    .mini-note{
+        font-size:.6rem;
+        color:var(--text-dim);
+        line-height:1.4;
+        margin-top:.5rem;
+    }
+
+    .row-tight{
+        display:flex;
+        align-items:flex-start;
+        flex-wrap:wrap;
+        gap:.5rem;
+    }
+
+    .two-col-split{
+        display:flex;
+        flex-wrap:wrap;
+        gap:var(--gap-md);
+    }
+    .two-col-split > div{
+        flex:1 1 220px;
+        min-width:0;
+    }
+
+    .mono{
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size:.65rem;
+        color:var(--text-dim);
+        background-color:rgba(15,23,42,.6);
+        border-radius:var(--radius-md);
+        padding:.25rem .4rem;
+        line-height:1.2;
+        border:1px solid rgba(148,163,184,.3);
+        word-break:break-all;
+    }
+
+</style>
+</head>
+<body>
+
+<header>
+    <div class="title-block">
+        <h1>Fuel System Estimator — Alaska</h1>
+        <div class="subtitle">
+            Budgetary pricing for Above-Ground Storage Tanks (AST), Below-Ground Storage Tanks (UST), and Generator Day Tanks / Transfer Systems.
+            Includes freight and cold-weather labor factors common in Alaska.
+        </div>
+    </div>
+    <div class="badge-row">
+        <div class="badge">Civil $82/hr</div>
+        <div class="badge">Mechanical $92/hr</div>
+        <div class="badge">Electrical $96/hr</div>
+        <div class="badge">Rev&nbsp;Nov&nbsp;2&nbsp;2025</div>
+    </div>
+</header>
+
+<main class="layout">
+    <!-- INPUT SIDE -->
+    <section>
+
+        <!-- SYSTEM TYPE / TANK DATA -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>1. System & Tank</span>
+                </div>
+                <button class="btn" id="calcBtn">Recalculate</button>
+            </div>
+            <div class="card-hint">
+                Select fuel system type, enter tank capacity (gallons), and main run lengths. Costs assume UL-142/UL-2085 style tanks and double-wall piping unless noted.
+            </div>
+
+            <div class="form-grid">
+                <div>
+                    <label for="systemType">System Type</label>
+                    <select id="systemType">
+                        <option value="AST">Above-Ground Bulk Tank (AST)</option>
+                        <option value="UST">Below-Ground Bulk Tank (UST)</option>
+                        <option value="DAYTANK">Generator Day Tank / Transfer Pump</option>
+                    </select>
+                    <div class="hint">
+                        AST typically skid-mounted with integrated secondary containment or dike.
+                        UST includes excavation/backfill.
+                        Day tank accounts for pump set / polish loop.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="tankCapacity">Tank Capacity (Gallons)</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="tankCapacity" min="1" value="5000" />
+                        <div class="suffix">gal</div>
+                    </div>
+                    <div class="hint">
+                        For day tanks, use actual day tank size (often 50–300 gal).
+                    </div>
+                </div>
+
+                <div>
+                    <label for="dispensers">Dispensers / Fill Stands / Fuel Drops (Qty)</label>
+                    <input type="number" id="dispensers" min="0" value="1" />
+                    <div class="hint">
+                        Vehicle dispensers, fill station skids, or building day-tank fill/drop assemblies that need pumps, meter, nozzle.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="pipingRunLF">Piping / Fuel Transfer Run</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="pipingRunLF" min="0" value="120" />
+                        <div class="suffix">LF</div>
+                    </div>
+                    <div class="hint">
+                        Double-wall fuel pipe supply/return from main tank to load (genset, dispenser, etc.).
+                    </div>
+                </div>
+
+                <div>
+                    <label for="electricalDevices">Controls / Leak Detection / Sensors</label>
+                    <input type="number" id="electricalDevices" min="0" value="4" />
+                    <div class="hint">
+                        Overfill alarms, high-level floats, leak sensors, pump controllers, tank monitor panel points, etc. We’ll use this for electrical terminations.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="excavationCY">UST Excavation Volume (if UST)</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="excavationCY" min="0" value="60" />
+                        <div class="suffix">CY</div>
+                    </div>
+                    <div class="hint">
+                        Only applies to UST systems. Includes dig, bedding, backfill, and surface patch.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALASKA FACTORS -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>2. Alaska Factors</span>
+                </div>
+            </div>
+            <div class="card-hint">
+                These multipliers reflect typical work in Alaska: remote barge/air freight, cold weather slowdowns, and winter install.
+            </div>
+
+            <div class="form-grid">
+
+                <div>
+                    <label for="remoteFactor">Remote / Logistical Difficulty Factor</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="remoteFactor" min="1" step="0.05" value="1.15" />
+                        <div class="suffix">x</div>
+                    </div>
+                    <div class="hint">
+                        1.00 = Road system / Anchorage bowl.
+                        1.15 = Small hub (Juneau, Bethel).
+                        1.30+ = Barge / fly-in village.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="laborSlowdown">Cold Weather Labor Slowdown (%)</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="laborSlowdown" min="0" value="10" />
+                        <div class="suffix">%</div>
+                    </div>
+                    <div class="hint">
+                        Productivity hit for fuel work in freezing temps, snow management, tenting/heating, etc.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="freightPct">Freight / Handling (%)</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="freightPct" min="0" value="12" />
+                        <div class="suffix">%</div>
+                    </div>
+                    <div class="hint">
+                        Covers tank + pipe crating, barge/flatbed to site, forklift/telehandler handling and laydown.
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="two-col-split">
+                <div>
+                    <div class="card-title" style="font-size:.75rem;">Anchorage Base Labor Rates</div>
+                    <div class="mini-note">
+                        Civil: $82/hr
+                        Mechanical: $92/hr
+                        Electrical: $96/hr
+                    </div>
+                </div>
+                <div>
+                    <div class="card-title" style="font-size:.75rem;">Estimator Notes</div>
+                    <div class="mini-note">
+                        - Material costs are baseline.
+                        - Freight % and Remote Factor scale material.
+                        - Labor slowdown % and Remote Factor scale hours.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- OUTPUT SNIPPET INFO -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>3. Line Item Preview</span>
+                </div>
+                <button class="btn" id="copyLineItemBtn">Copy Line Item</button>
+            </div>
+            <div class="card-hint">
+                This is how you’d actually write the line item in the estimate following our naming syntax.
+            </div>
+
+            <div style="background-color:var(--bg-section);border:1px solid rgba(148,163,184,.3);border-radius:var(--radius-md);padding:var(--pad-md);font-size:.7rem;line-height:1.4;color:var(--text-main);min-height:4rem;" id="lineItemText">
+                <!-- filled by JS -->
+            </div>
+
+            <div class="mini-note">
+                Format: (Dimension)(Capacity)(Power)(Features) ITEM (Ancillaries)
+            </div>
+        </div>
+
+    </section>
+
+    <!-- RESULTS SIDE -->
+    <aside class="results-card">
+        <div class="results-title">
+            <div>Estimate Summary</div>
+            <div class="mono" id="estimatorStamp">est AK-FUEL • 2025-11-02 • AC</div>
+        </div>
+        <div class="results-sub">
+            Costs below reflect: Materials + Freight, Labor (civil/mech/elec), and total. All values are budgetary assumptions.
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Scope Item</th>
+                    <th scope="col" class="num">Matl $</th>
+                    <th scope="col" class="num">Ship $</th>
+                    <th scope="col" class="num">Labor hrs</th>
+                    <th scope="col" class="num">Labor $</th>
+                    <th scope="col" class="num">Total $</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody">
+                <!-- rows injected -->
+            </tbody>
+            <tfoot>
+                <tr class="totals-row">
+                    <td class="totals-label">PROJECT TOTAL</td>
+                    <td class="num totals-label" id="grandMatl">$0</td>
+                    <td class="num totals-label" id="grandShip">$0</td>
+                    <td class="num totals-label" id="grandHrs">0</td>
+                    <td class="num totals-label" id="grandLabor">$0</td>
+                    <td class="num GrandTotal" id="grandTotal">$0</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="mini-note">
+            Assumptions:
+            <ul style="margin:.5rem 0 0 1rem;padding:0;font-size:.6rem;color:var(--text-dim);line-height:1.4;">
+                <li>UST excavation includes dig, bedding, set tank, backfill, patch. No contaminated soils, no dewatering.</li>
+                <li>Day tank system assumes pump skid, level controls, leak basin, and hard pipe to genset.</li>
+                <li>Electrical assumes terminations, alarms, level sends, leak detection, heater tracing as required.</li>
+                <li>Labor includes Alaska cold-weather slowdown and remote access factor multipliers.</li>
+            </ul>
+        </div>
+    </aside>
+</main>
+
+<script>
+/*
+CONFIG SECTION
+Adjust baseline unit costs and production assumptions here.
+All dollars are base Anchorage-ish before remoteFactor & freight/etc.
+*/
+
+const CONFIG = {
+    // Tank cost per gallon (material only)
+    // AST usually UL-142 w/ skid & containment; UST often UL-2085 or equivalent.
+    tankCostPerGal: {
+        AST: 8.50,     // $/gal material baseline
+        UST: 11.00,    // $/gal material baseline (protected, double-wall)
+        DAYTANK: 22.00 // $/gal material baseline (small day tank w/ controls)
+    },
+
+    // Dispenser / Fill Stand / Drop Assembly
+    dispenserMatl: 18000, // includes pump, meter, hose, nozzle, pedestal skid
+    dispenserMechHrs: 16, // install, anchor, pipe connect
+    dispenserElecHrs: 8,  // power/controls terminations
+
+    // Piping run (double-wall fuel piping, heat trace / insulation assumed in cold climates)
+    pipeCostPerLF: 95,   // material $/LF baseline
+    pipeMechHrsPerLF: 0.15, // hrs/LF for run+support routing in Alaska-ish conditions
+
+    // UST excavation/backfill
+    excavMatlPerCY: 45,   // bedding / backfill / spoils handling $/CY
+    excavCivilHrsPerCY: 0.4, // hrs/CY for dig, set tank, backfill, site patch, no dewater
+
+    // Day tank transfer skid / pump set (besides the physical day tank shell above)
+    dayTankTransferSkidMatl: 12000, // pump skid, valves, polish loop, control panel
+    dayTankTransferMechHrs: 18,
+    dayTankTransferElecHrs: 10,
+
+    // Electrical devices / sensors / leak detection heads / alarms
+    elecDeviceMatl: 450,        // per point (float switch, leak sensor, alarm strobe/horn share)
+    elecDeviceElecHrs: 1.5,     // hrs per device to wire/terminate/test
+
+    // Labor base rates Anchorage
+    rateCivil: 82,
+    rateMech: 92,
+    rateElec: 96,
+};
+
+
+/*
+CORE CALC
+Steps:
+1. Read inputs
+2. Compute base material + hours for:
+   - Tank
+   - Dispensers
+   - Piping
+   - Excavation (if UST)
+   - Day tank skid (if DAYTANK)
+   - Electrical devices
+3. Apply Alaska multipliers:
+   - remoteFactor scales MATERIAL and LABOR HOURS
+   - laborSlowdown% scales LABOR HOURS
+4. Freight% applies to material dollars as "Ship $"
+5. Sum everything
+*/
+
+function calcEstimate() {
+    // 1. inputs
+    const systemType = document.getElementById('systemType').value;
+    const tankCapacity = parseFloat(document.getElementById('tankCapacity').value || "0");
+    const dispensers = parseFloat(document.getElementById('dispensers').value || "0");
+    const pipingLF = parseFloat(document.getElementById('pipingRunLF').value || "0");
+    const elecDevices = parseFloat(document.getElementById('electricalDevices').value || "0");
+    const excavationCY = parseFloat(document.getElementById('excavationCY').value || "0");
+
+    const remoteFactor = parseFloat(document.getElementById('remoteFactor').value || "1");
+    const laborSlowdownPct = parseFloat(document.getElementById('laborSlowdown').value || "0");
+    const freightPct = parseFloat(document.getElementById('freightPct').value || "0");
+
+    // helpers
+    const slowdownFactor = 1 + (laborSlowdownPct / 100);
+
+    // 2. build line items as array of scopes
+    // Each item: {label, matl, mechHrs, elecHrs, civilHrs, ship, totalLabor$, totalRow$}
+
+    let scopes = [];
+
+    // Tank itself (AST/UST/DAYTANK)
+    {
+        const matlBase = tankCapacity * CONFIG.tankCostPerGal[systemType];
+        // labor: setting tank, anchoring, connections
+        // AST: mostly mech handling. UST: civil heavy. DAYTANK: mostly mech + elec light.
+        let mechHrs = 0;
+        let elecHrs = 0;
+        let civilHrs = 0;
+
+        if (systemType === "AST") {
+            mechHrs = 24;    // rig, level, anchor, connect, heat trace tie-in
+            civilHrs = 8;    // simple pad work / dunnage / containment berm touch-up
+            elecHrs = 6;     // level alarm, high-level shutoff, heat trace power
+        } else if (systemType === "UST") {
+            mechHrs = 20;    // set tank, pipe terminations in sump
+            civilHrs = 24;   // layout, bedding, backfill, surface patch
+            elecHrs = 8;     // leak detection, overfill alarm, cathodic monitor wiring
+        } else if (systemType === "DAYTANK") {
+            mechHrs = 12;    // hang/stand tank, hard pipe supply/return, isolation valves
+            civilHrs = 0;    // no earthwork
+            elecHrs = 10;    // transfer pump control, level switches, alarm points
+        }
+
+        scopes.push({
+            label: (systemType==="DAYTANK"?"Day Tank Assembly":"Primary Tank Assembly"),
+            matlBase,
+            mechHrs,
+            elecHrs,
+            civilHrs
+        });
+    }
+
+    // Dispensers / Fill Stands
+    if (dispensers > 0) {
+        const matlBase = dispensers * CONFIG.dispenserMatl;
+        const mechHrs = dispensers * CONFIG.dispenserMechHrs;
+        const elecHrs = dispensers * CONFIG.dispenserElecHrs;
+        const civilHrs = 4 * dispensers * (systemType==="UST" ? 1 : 0); // assume some pad / bollards for UST dispensers
+
+        scopes.push({
+            label: "Dispenser / Fill Stand ("+dispensers+" ea)",
+            matlBase,
+            mechHrs,
+            elecHrs,
+            civilHrs
+        });
+    }
+
+    // Piping run
+    if (pipingLF > 0) {
+        const matlBase = pipingLF * CONFIG.pipeCostPerLF;
+        const mechHrs = pipingLF * CONFIG.pipeMechHrsPerLF;
+        const elecHrs = 0.05 * pipingLF; // tracing heat tape terminations, leak sensor lines
+        const civilHrs = (systemType==="UST") ? 0.05 * pipingLF : 0; // shallow trench backfill for UST runs
+
+        scopes.push({
+            label: "Fuel Piping ("+pipingLF+" LF)",
+            matlBase,
+            mechHrs,
+            elecHrs,
+            civilHrs
+        });
+    }
+
+    // Excavation / Backfill (UST only)
+    if (systemType==="UST" && excavationCY > 0) {
+        const matlBase = excavationCY * CONFIG.excavMatlPerCY;
+        const civilHrs = excavationCY * CONFIG.excavCivilHrsPerCY;
+        const mechHrs = 2; // minor assist setting tank
+        const elecHrs = 0;
+
+        scopes.push({
+            label: "UST Excavation & Backfill ("+excavationCY+" CY)",
+            matlBase,
+            mechHrs,
+            elecHrs,
+            civilHrs
+        });
+    }
+
+    // Day tank transfer skid (DAYTANK only)
+    if (systemType==="DAYTANK") {
+        const matlBase = CONFIG.dayTankTransferSkidMatl;
+        const mechHrs = CONFIG.dayTankTransferMechHrs;
+        const elecHrs = CONFIG.dayTankTransferElecHrs;
+        const civilHrs = 0;
+
+        scopes.push({
+            label: "Day Tank Transfer Skid / Pump Set",
+            matlBase,
+            mechHrs,
+            elecHrs,
+            civilHrs
+        });
+    }
+
+    // Electrical devices / leak detection / alarms
+    if (elecDevices > 0) {
+        const matlBase = elecDevices * CONFIG.elecDeviceMatl;
+        const mechHrs = 0; // mech sets floats physically but we’ll count that in tank hours above
+        const elecHrs = elecDevices * CONFIG.elecDeviceElecHrs;
+        const civilHrs = 0;
+
+        scopes.push({
+            label: "Controls / Leak Detection ("+elecDevices+" points)",
+            matlBase,
+            mechHrs,
+            elecHrs,
+            civilHrs
+        });
+    }
+
+    // 3. Apply multipliers and calculate dollars
+    let grandMatl = 0;
+    let grandShip = 0;
+    let grandHrsTotal = 0;
+    let grandLabor = 0;
+    let grandTotal = 0;
+
+    const resultsBody = document.getElementById('resultsBody');
+    resultsBody.innerHTML = "";
+
+    scopes.forEach(scope => {
+        // base material -> remoteFactor
+        const matlAdj = scope.matlBase * remoteFactor;
+
+        // freight shipping dollars on this scope
+        const shipCost = matlAdj * (freightPct/100);
+
+        // labor hours per trade -> remoteFactor & slowdownFactor
+        const mechHrsAdj  = scope.mechHrs  * remoteFactor * slowdownFactor;
+        const elecHrsAdj  = scope.elecHrs  * remoteFactor * slowdownFactor;
+        const civilHrsAdj = scope.civilHrs * remoteFactor * slowdownFactor;
+
+        // cost for each trade
+        const mechCost = mechHrsAdj * CONFIG.rateMech;
+        const elecCost = elecHrsAdj * CONFIG.rateElec;
+        const civilCost = civilHrsAdj * CONFIG.rateCivil;
+
+        // rollup
+        const laborHrsScope = mechHrsAdj + elecHrsAdj + civilHrsAdj;
+        const laborCostScope = mechCost + elecCost + civilCost;
+        const totalScope = matlAdj + shipCost + laborCostScope;
+
+        // accumulate grand totals
+        grandMatl += matlAdj;
+        grandShip += shipCost;
+        grandHrsTotal += laborHrsScope;
+        grandLabor += laborCostScope;
+        grandTotal += totalScope;
+
+        // append table row
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${scope.label}</td>
+            <td class="num">$${matlAdj.toFixed(0)}</td>
+            <td class="num">$${shipCost.toFixed(0)}</td>
+            <td class="num">${laborHrsScope.toFixed(1)}</td>
+            <td class="num">$${laborCostScope.toFixed(0)}</td>
+            <td class="num">$${totalScope.toFixed(0)}</td>
+        `;
+        resultsBody.appendChild(tr);
+    });
+
+    // 4. inject totals
+    document.getElementById('grandMatl').textContent  = "$"+grandMatl.toFixed(0);
+    document.getElementById('grandShip').textContent  = "$"+grandShip.toFixed(0);
+    document.getElementById('grandHrs').textContent   = grandHrsTotal.toFixed(1);
+    document.getElementById('grandLabor').textContent = "$"+grandLabor.toFixed(0);
+    document.getElementById('grandTotal').textContent = "$"+grandTotal.toFixed(0);
+
+    // 5. generate line item string using our naming syntax
+    // (Dimension)(Capacity)(Power)(Features) ITEM (Ancillaries)
+    // We'll try to build something intelligent based on systemType.
+
+    let capacityStr = tankCapacity.toString()+" Gallon";
+    let powerStr = "";
+    let featuresStr = "";
+    let itemStr = "";
+    let ancStr = "";
+
+    if(systemType==="AST"){
+        // Example:
+        // (96"x144")(5000 Gallon)(120V Heat Trace, Insulated Double-Wall Steel) FUEL STORAGE TANK (With Dispenser, Containment Dike, Leak Detection)
+        // We don't know actual dims, so we'll leave Dimension blank.
+        powerStr = "120V Heat Trace";
+        featuresStr = "Insulated Double-Wall Steel";
+        itemStr = "Fuel Storage Tank";
+        ancStr = "With Dispenser, Containment Dike, Leak Detection";
+    } else if(systemType==="UST"){
+        powerStr = "120V Heat Trace";
+        featuresStr = "Double-Wall Buried Steel, UL-2085, Cathodic Protection";
+        itemStr = "Underground Fuel Storage Tank";
+        ancStr = "With Excavation, Backfill, Leak Monitoring, Spill/Overfill Protection";
+    } else if(systemType==="DAYTANK"){
+        powerStr = "120V Transfer Pump";
+        featuresStr = "Double-Wall Day Tank, Level Controls";
+        itemStr = "Generator Day Tank";
+        ancStr = "With Pump Skid, High/Low Level Alarms, Return/Polish Loop Piping";
+    }
+
+    // Construct string pieces in order:
+    // (Dimension)(Capacity)(Power)(Features) ITEM (Ancillaries)
+    // We don't have Dimension data, so skip Dimension but keep order.
+    // Capacity is tankCapacity, Power is powerStr, Features is featuresStr
+    // ITEM is itemStr, Ancillaries is ancStr
+
+    const lineItem =
+        "(" + capacityStr + ")"
+        + (powerStr ? "(" + powerStr + ")" : "")
+        + (featuresStr ? "(" + featuresStr + ")" : "")
+        + " " + itemStr.toUpperCase()
+        + (ancStr ? " (" + ancStr + ")" : "");
+
+    document.getElementById('lineItemText').textContent = lineItem;
+    return lineItem;
+}
+
+// Copy helper
+function copyLineItem() {
+    const txt = document.getElementById('lineItemText').textContent;
+    if (!navigator.clipboard) {
+        // fallback
+        const ta = document.createElement('textarea');
+        ta.value = txt;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        alert('Line item copied');
+        return;
+    }
+    navigator.clipboard.writeText(txt).then(()=>{
+        alert('Line item copied:\n' + txt);
+    });
+}
+
+// Events
+document.getElementById('calcBtn').addEventListener('click', calcEstimate);
+document.getElementById('copyLineItemBtn').addEventListener('click', copyLineItem);
+
+// Auto-run on load
+calcEstimate();
+</script>
+</body>
+</html>
 

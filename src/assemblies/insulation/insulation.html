@@ -1,1 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Insulation Estimator (Alaska)</title>
+<style>
+    :root {
+        --bg: #0f172a;
+        --panel: #1e253a;
+        --accent: #38bdf8;
+        --text-main: #f8fafc;
+        --text-dim: #94a3b8;
+        --border: #334155;
+        --radius-xl: 1rem;
+    }
+
+    body {
+        background: var(--bg);
+        color: var(--text-main);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Roboto", "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 2rem;
+        display: flex;
+        justify-content: center;
+    }
+
+    .app-shell {
+        width: 100%;
+        max-width: 1200px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    header {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .title-block h1 {
+        margin: 0;
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--text-main);
+        letter-spacing: -0.03em;
+    }
+    .title-block p {
+        margin: .25rem 0 0 0;
+        font-size: .8rem;
+        color: var(--text-dim);
+        max-width: 50ch;
+        line-height: 1.4;
+    }
+
+    .meta-block {
+        font-size: .7rem;
+        color: var(--text-dim);
+        text-align: right;
+        line-height: 1.3;
+    }
+
+    .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 1rem 1.25rem 1.25rem;
+        box-shadow: 0 30px 80px rgb(0 0 0 / .6);
+    }
+
+    .panel h2 {
+        margin: 0 0 1rem 0;
+        font-size: .9rem;
+        font-weight: 600;
+        color: var(--text-main);
+        letter-spacing: -.02em;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+    }
+
+    .panel h2 span.sub {
+        font-size: .7rem;
+        font-weight: 400;
+        color: var(--text-dim);
+    }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .75rem;
+    }
+
+    .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: .75rem;
+    }
+
+    .field {
+        display: flex;
+        flex-direction: column;
+        font-size: .75rem;
+    }
+    .field label {
+        color: var(--text-main);
+        font-weight: 500;
+        margin-bottom: .4rem;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        line-height: 1.2;
+    }
+    .hint {
+        color: var(--text-dim);
+        font-weight: 400;
+        font-size: .7rem;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+        background: #111729;
+        border: 1px solid var(--border);
+        color: var(--text-main);
+        border-radius: .5rem;
+        padding: .6rem .7rem;
+        font-size: .8rem;
+        line-height: 1.3;
+        font-family: inherit;
+        outline: none;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgb(56 189 248 / .15);
+    }
+
+    .row-sep {
+        border-top: 1px solid var(--border);
+        margin: 1rem 0;
+    }
+
+    .results-block {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .75rem;
+        margin-top: .5rem;
+        font-size: .8rem;
+    }
+
+    .result-card {
+        background: #0f172a;
+        border: 1px solid var(--border);
+        border-radius: .75rem;
+        padding: .75rem .9rem;
+    }
+
+    .result-card h3 {
+        margin: 0 0 .5rem 0;
+        font-size: .8rem;
+        font-weight: 600;
+        color: var(--text-main);
+        letter-spacing: -.02em;
+        display: flex;
+        justify-content: space-between;
+    }
+    .result-card h3 span {
+        font-size: .7rem;
+        font-weight: 400;
+        color: var(--text-dim);
+    }
+
+    .stat-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: .35rem;
+        line-height: 1.3;
+        color: var(--text-main);
+    }
+    .stat-row .label {
+        color: var(--text-dim);
+        font-size: .7rem;
+    }
+    .stat-row .value {
+        font-weight: 500;
+        font-size: .8rem;
+        color: var(--text-main);
+    }
+
+    .total-emph {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--accent);
+        letter-spacing: -.03em;
+    }
+
+    .footer-note {
+        grid-column: 1 / -1;
+        font-size: .7rem;
+        color: var(--text-dim);
+        line-height: 1.4;
+        margin-top: .75rem;
+        background: rgb(15 23 42 / .4);
+        border: 1px solid var(--border);
+        border-radius: .75rem;
+        padding: .75rem .9rem;
+    }
+
+    .flex-end {
+        display: flex;
+        justify-content: flex-end;
+        gap: .5rem;
+        flex-wrap: wrap;
+        font-size: .7rem;
+        line-height: 1.2;
+    }
+
+    .inline-badge {
+        background: #0f172a;
+        border: 1px solid var(--border);
+        border-radius: .5rem;
+        padding: .4rem .5rem;
+        font-weight: 500;
+        color: var(--text-main);
+    }
+
+    @media (max-width: 1000px) {
+        .app-shell {
+            grid-template-columns: 1fr;
+        }
+        header {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .meta-block {
+            text-align: left;
+        }
+        .results-block {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="app-shell">
+    <header>
+        <div class="title-block">
+            <h1>Insulation Estimator · Alaska</h1>
+            <p>
+                Calculates material, shipping, labor hours, and total cost for typical
+                commercial / residential scopes in Alaska. Spray foam is calculated in
+                board feet (1 ft² @ 1" thick).
+            </p>
+        </div>
+        <div class="meta-block">
+            <div>Labor Rates: Arch $87/hr · Mech $92/hr</div>
+            <div>Productivity already derated for Alaska</div>
+            <div>Shipping default 10%</div>
+        </div>
+    </header>
+
+    <!-- INPUTS PANEL -->
+    <section class="panel">
+        <h2>
+            Scope & Inputs
+            <span class="sub">Enter dimensions and unit pricing</span>
+        </h2>
+
+        <div class="grid-2">
+            <div class="field">
+                <label>
+                    Insulation Type
+                    <span class="hint">drives calc mode</span>
+                </label>
+                <select id="insulType">
+                    <option value="batts">Fiberglass / Mineral Wool Batts</option>
+                    <option value="rigid">Rigid Board (Polyiso / XPS / EPS)</option>
+                    <option value="blown">Blown-In / Loose Fill</option>
+                    <option value="spray">Spray Foam (Closed-Cell)</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label>
+                    Area (Square Feet)
+                    <span class="hint">SF of surface OR cavity area</span>
+                </label>
+                <input type="number" id="areaSF" value="1000" min="0" />
+            </div>
+
+            <div class="field">
+                <label>
+                    Thickness (Inches)
+                    <span class="hint">Use installed thickness</span>
+                </label>
+                <input type="number" id="thicknessIn" value="3.5" step="0.1" min="0" />
+            </div>
+
+            <div class="field">
+                <label>
+                    Target R-Value
+                    <span class="hint">Optional note only</span>
+                </label>
+                <input type="number" id="rValue" value="21" step="1" min="0" />
+            </div>
+        </div>
+
+        <div class="row-sep"></div>
+
+        <div class="grid-3">
+            <div class="field">
+                <label>
+                    Material Unit Cost
+                    <span class="hint" id="matUnitHint">$ / SF OR $ / Board Foot</span>
+                </label>
+                <input type="number" id="matUnitCost" value="2.50" step="0.01" min="0" />
+            </div>
+
+            <div class="field">
+                <label>
+                    Shipping %
+                    <span class="hint">Alaska logistics add-on</span>
+                </label>
+                <input type="number" id="shipPct" value="10" step="1" min="0" />
+            </div>
+
+            <div class="field">
+                <label>
+                    Labor Premium %
+                    <span class="hint">OT / remote / PPE</span>
+                </label>
+                <input type="number" id="laborPremPct" value="20" step="1" min="0" />
+            </div>
+        </div>
+
+        <div class="row-sep"></div>
+
+        <div class="grid-2">
+            <div class="field">
+                <label>
+                    Notes / Location
+                    <span class="hint">Village access? Staging? Phasing?</span>
+                </label>
+                <textarea id="notes" rows="3" placeholder="Example: Juneau civic center, attic retrofit, night work."></textarea>
+            </div>
+
+            <div class="field">
+                <label>
+                    Estimator Initials
+                    <span class="hint">for export log</span>
+                </label>
+                <input type="text" id="initials" value="AC" />
+                <div class="flex-end" style="margin-top:.5rem;">
+                    <button class="inline-badge" id="calcBtn">Recalculate</button>
+                    <button class="inline-badge" id="exportBtn">Export CSV</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- RESULTS PANEL -->
+    <section class="panel">
+        <h2>
+            Output
+            <span class="sub">Quantities · Labor · Cost</span>
+        </h2>
+
+        <div class="results-block">
+            <div class="result-card">
+                <h3>
+                    Quantities
+                    <span>takeoff</span>
+                </h3>
+                <div class="stat-row">
+                    <div class="label">Insulation Mode</div>
+                    <div class="value" id="outMode">Batts</div>
+                </div>
+                <div class="stat-row">
+                    <div class="label">Area (SF)</div>
+                    <div class="value" id="outArea">-</div>
+                </div>
+                <div class="stat-row">
+                    <div class="label">Thickness (in)</div>
+                    <div class="value" id="outThick">-</div>
+                </div>
+                <div class="stat-row">
+                    <div class="label">Board Feet (Spray)</div>
+                    <div class="value" id="outBoardFeet">-</div>
+                </div>
+                <div class="stat-row">
+                    <div class="label">Install Units</div>
+                    <div class="value" id="outUnitsLabel">-</div>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <h3>
+                    Labor
+                    <span>Anchorage rate base</span>
+                </h3>
+                <div class="stat-row">
+                    <div class="label">Crew Rate ($/hr)</div>
+                    <div class="value" id="outCrewRate">$-</div>
+                </div>
+                <div class="stat-row">
+                    <div class="label">Raw Labor Hrs</div>
+                    <div class="value" id="outLaborHrsRaw">-</div>
+                </div>
+                <div class="stat-row">
+                    <div class="label">Labor Hrs w/ Prem</div>
+                    <div class="value" id="outLaborHrsAdj">-</div>
+                </div>
+                <div class="stat-row">
+                    <div class="label">Labor $ w/ Prem</div>
+                    <div class="value" id="outLaborCostAdj">$-</div>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <h3>
+                    Material & Shipping
+                    <span>budgetary</span>
+                </h3>
+                <div class="stat-row">
+                    <div class="label">Material $</div>
+                    <div class="value" id="outMatCost">$-</div>
+                </div>
+                <div class="stat-row">
+                    <div class="label">Shipping $</div>
+                    <div class="value" id="outShipCost">$-</div>
+                </div>
+                <div class="stat-row">
+                    <div class="label">Material+Ship $</div>
+                    <div class="value" id="outMatPlusShip">$-</div>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <h3>
+                    Total
+                    <span>materials + labor</span>
+                </h3>
+                <div class="stat-row">
+                    <div class="label">Subtotal $</div>
+                    <div class="value" id="outSubtotal">$-</div>
+                </div>
+                <div class="stat-row">
+                    <div class="label">$/SF (or $/BF)</div>
+                    <div class="value" id="outUnitRate">$-</div>
+                </div>
+                <div class="stat-row">
+                    <div class="label total-emph">Total $</div>
+                    <div class="value total-emph" id="outTotal">$-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-note" id="assumptionNote">
+            Assumptions will populate here.
+        </div>
+    </section>
+</div>
+
+<script>
+(function() {
+    // labor rates $/hr
+    const ARCH_RATE = 87;   // batts, rigid, blown
+    const MECH_RATE = 92;   // spray foam
+
+    // productivity (derated for Alaska conditions)
+    // units:
+    //  - batts, rigid, blown: sf/hr
+    //  - spray: board-feet/hr
+    const PRODUCTIVITY = {
+        batts: 150,  // sf/hr
+        rigid: 100,  // sf/hr
+        blown: 250,  // sf/hr
+        spray: 120   // board-ft/hr
+    };
+
+    function fmtMoney(v) {
+        if (isNaN(v) || !isFinite(v)) return "$-";
+        return "$" + v.toFixed(2);
+    }
+
+    function recalc() {
+        const insulType = document.getElementById('insulType').value;
+        const areaSF = parseFloat(document.getElementById('areaSF').value) || 0;
+        const thicknessIn = parseFloat(document.getElementById('thicknessIn').value) || 0;
+        const rValue = parseFloat(document.getElementById('rValue').value) || 0;
+
+        const matUnitCost = parseFloat(document.getElementById('matUnitCost').value) || 0;
+        const shipPct = parseFloat(document.getElementById('shipPct').value) || 0;
+        const laborPremPct = parseFloat(document.getElementById('laborPremPct').value) || 0;
+
+        const notes = document.getElementById('notes').value.trim();
+        const initials = document.getElementById('initials').value.trim();
+
+        // ----- Quantity calcs -----
+        // spray foam uses board feet
+        let boardFeet = 0;
+        if (insulType === 'spray') {
+            // board foot = 1 sf @ 1" thick
+            // so BF = areaSF * (thickness in inches)
+            boardFeet = areaSF * thicknessIn;
+        }
+
+        // For "install units" label/value
+        let unitsLabelTxt = "-";
+        let installQty = 0;
+        if (insulType === 'spray') {
+            unitsLabelTxt = "Board Feet";
+            installQty = boardFeet;
+        } else {
+            unitsLabelTxt = "Square Feet";
+            installQty = areaSF;
+        }
+
+        // ----- Material cost -----
+        // For non-spray: assume matUnitCost is $/SF installed thickness at this scope.
+        // For spray: assume matUnitCost is $/board-foot.
+        let matCost = installQty * matUnitCost;
+        let shipCost = matCost * (shipPct / 100.0);
+        let matPlusShip = matCost + shipCost;
+
+        // ----- Labor -----
+        const crewRate = (insulType === 'spray') ? MECH_RATE : ARCH_RATE;
+        const baseProd = PRODUCTIVITY[insulType] || 1;
+
+        // how many hours?
+        // for spray, production is board-feet/hr
+        // others are sf/hr
+        let rawLaborHrs;
+        if (insulType === 'spray') {
+            rawLaborHrs = boardFeet / baseProd;
+        } else {
+            rawLaborHrs = areaSF / baseProd;
+        }
+
+        // labor premium multiplies hours (not just $),
+        // because premium reflects inefficiency, PPE, OT, travel, etc.
+        const adjLaborHrs = rawLaborHrs * (1 + laborPremPct / 100.0);
+        const adjLaborCost = adjLaborHrs * crewRate;
+
+        // ----- Totals -----
+        const subtotal = matPlusShip + adjLaborCost;
+        const unitRate = installQty > 0 ? (subtotal / installQty) : 0;
+        const total = subtotal; // if we later add GC OH&P it would go above this
+
+        // ----- Assumptions blurb -----
+        // Alaska-specific rationale.
+        let assumptionLines = [];
+        let modeLabel = "";
+        if (insulType === 'batts') {
+            modeLabel = "Fiberglass / Mineral Wool Batts";
+            assumptionLines.push("Productivity ~150 SF/hr (derated from ~250 SF/hr L48).");
+            assumptionLines.push("Crew billed at Architectural rate $" + ARCH_RATE + "/hr.");
+        } else if (insulType === 'rigid') {
+            modeLabel = "Rigid Board (Polyiso / XPS / EPS)";
+            assumptionLines.push("Productivity ~100 SF/hr due to cutting & fasteners.");
+            assumptionLines.push("Crew billed at Architectural rate $" + ARCH_RATE + "/hr.");
+        } else if (insulType === 'blown') {
+            modeLabel = "Blown-In / Loose Fill";
+            assumptionLines.push("Productivity ~250 SF/hr factoring setup/containment.");
+            assumptionLines.push("Crew billed at Architectural rate $" + ARCH_RATE + "/hr.");
+        } else if (insulType === 'spray') {
+            modeLabel = "Closed-Cell Spray Foam";
+            assumptionLines.push("Board Foot = 1 SF @ 1\" thick.");
+            assumptionLines.push("Productivity ~120 BF/hr (PPE, venting, heat).");
+            assumptionLines.push("Crew billed at Mechanical rate $" + MECH_RATE + "/hr.");
+        }
+
+        assumptionLines.push("Labor Premium " + laborPremPct.toFixed(1) + "% covers OT, remote work, PPE, fall protection, staging.");
+        assumptionLines.push("Shipping " + shipPct.toFixed(1) + "% placeholder for Alaska freight / barge / air cargo to site.");
+        if (notes) {
+            assumptionLines.push("Notes: " + notes);
+        }
+        assumptionLines.push("Estimator: " + (initials || "N/A"));
+
+        // ----- Update UI -----
+        document.getElementById('outMode').textContent = modeLabel;
+        document.getElementById('outArea').textContent = areaSF.toFixed(1) + " SF";
+        document.getElementById('outThick').textContent = thicknessIn.toFixed(2) + " in";
+        document.getElementById('outBoardFeet').textContent = (boardFeet > 0 ? boardFeet.toFixed(1) : "-");
+
+        document.getElementById('outUnitsLabel').textContent =
+            (installQty > 0 ? installQty.toFixed(1) + " " + unitsLabelTxt : "-");
+
+        document.getElementById('outCrewRate').textContent = fmtMoney(crewRate) + "/hr";
+        document.getElementById('outLaborHrsRaw').textContent = rawLaborHrs.toFixed(2) + " hrs";
+        document.getElementById('outLaborHrsAdj').textContent = adjLaborHrs.toFixed(2) + " hrs";
+        document.getElementById('outLaborCostAdj').textContent = fmtMoney(adjLaborCost);
+
+        document.getElementById('outMatCost').textContent = fmtMoney(matCost);
+        document.getElementById('outShipCost').textContent = fmtMoney(shipCost);
+        document.getElementById('outMatPlusShip').textContent = fmtMoney(matPlusShip);
+
+        document.getElementById('outSubtotal').textContent = fmtMoney(subtotal);
+        document.getElementById('outUnitRate').textContent = fmtMoney(unitRate) + " / " + unitsLabelTxt.replace(" ", "");
+        document.getElementById('outTotal').textContent = fmtMoney(total);
+
+        document.getElementById('assumptionNote').textContent = assumptionLines.join(" ");
+    }
+
+    // update hint text depending on type
+    function updateHints() {
+        const insulType = document.getElementById('insulType').value;
+        const hintEl = document.getElementById('matUnitHint');
+
+        if (insulType === 'spray') {
+            hintEl.textContent = "$ / Board Foot (Spray Foam)";
+        } else {
+            hintEl.textContent = "$ / SF (Installed thickness)";
+        }
+    }
+
+    // export CSV
+    function exportCSV() {
+        // grab visible values
+        const rows = [
+            ["Insulation Mode", document.getElementById('outMode').textContent],
+            ["Area SF", document.getElementById('outArea').textContent],
+            ["Thickness in", document.getElementById('outThick').textContent],
+            ["Board Feet", document.getElementById('outBoardFeet').textContent],
+            ["Install Units", document.getElementById('outUnitsLabel').textContent],
+            ["Crew Rate $/hr", document.getElementById('outCrewRate').textContent],
+            ["Raw Labor Hrs", document.getElementById('outLaborHrsRaw').textContent],
+            ["Adj Labor Hrs", document.getElementById('outLaborHrsAdj').textContent],
+            ["Adj Labor Cost $", document.getElementById('outLaborCostAdj').textContent],
+            ["Material $", document.getElementById('outMatCost').textContent],
+            ["Shipping $", document.getElementById('outShipCost').textContent],
+            ["Mat+Ship $", document.getElementById('outMatPlusShip').textContent],
+            ["Subtotal $", document.getElementById('outSubtotal').textContent],
+            ["Unit Rate", document.getElementById('outUnitRate').textContent],
+            ["Total $", document.getElementById('outTotal').textContent],
+            ["Assumptions", document.getElementById('assumptionNote').textContent.replace(/\s+/g," ")],
+        ];
+
+        // Basic CSV escape
+        const csvLines = rows.map(r =>
+            r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+        );
+        const csvBlob = new Blob([csvLines.join("\n")], { type: "text/csv" });
+        const url = URL.createObjectURL(csvBlob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "insulation_estimate.csv";
+        a.click();
+
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    // Wire up events
+    document.getElementById('insulType').addEventListener('change', () => {
+        updateHints();
+        recalc();
+    });
+
+    document.getElementById('calcBtn').addEventListener('click', recalc);
+    document.getElementById('exportBtn').addEventListener('click', exportCSV);
+
+    // initial load
+    updateHints();
+    recalc();
+})();
+</script>
+</body>
+</html>
 

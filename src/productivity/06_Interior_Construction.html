@@ -1,3 +1,815 @@
-061 - Partitions and Doors
-062 - Interior Finishes
-063 - Specialties
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>06 – Interior Construction Productivity Estimator</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  .card {@apply bg-white/80 backdrop-blur shadow-md rounded-2xl border border-slate-300 p-4 mb-6;}
+  .section-header {@apply text-lg font-semibold text-slate-800 flex items-baseline justify-between flex-wrap gap-2;}
+  .section-sub {@apply text-[10px] text-slate-500 font-mono;}
+  .label-sm {@apply text-xs font-medium text-slate-600;}
+  .number-input {@apply w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-pink-400;}
+  .result-box {@apply text-sm font-semibold text-slate-800 bg-slate-100 rounded-lg px-2 py-1 text-right;}
+  .chip {@apply text-[10px] leading-tight font-mono bg-slate-800 text-white rounded px-2 py-[2px] mr-1;}
+  .subgroup-header {@apply text-slate-900 text-base font-bold flex items-center gap-2 mb-2;}
+  .subchip {@apply bg-pink-600 text-white text-[10px] font-mono px-2 py-[2px] rounded;}
+  .assumption-note {@apply text-[10px] leading-snug text-slate-500 italic;}
+  table thead tr {@apply bg-slate-800 text-white;}
+  table tbody tr:nth-child(even) {@apply bg-slate-50/60;}
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 to-pink-100 text-slate-900 min-h-screen">
+
+<!-- HEADER -->
+<header class="px-4 py-4 border-b border-slate-300 bg-white/70 backdrop-blur sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">06 – Interior Construction Productivity</h1>
+      <p class="text-xs text-slate-600">
+        061 Partitions & Doors · 062 Interior Finishes · 063 Specialties
+      </p>
+      <p class="text-[10px] text-slate-500 font-mono">
+        Outputs crew-days & man-hours. Alaska factor included.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="exportSummary()">
+        Export Summary (.json)
+      </button>
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="resetAll()">
+        Reset
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- GLOBAL CREW / SHIFT SETTINGS -->
+  <section class="card">
+    <div class="section-header">
+      <span>Global Crew / Shift</span>
+      <span class="section-sub">Used in all productivity calcs</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Crew Size (people)</label>
+        <input id="crewSize" type="number" min="1" value="4" class="number-input" oninput="recalcAll()" />
+      </div>
+
+      <div>
+        <label class="label-sm">Hours / shift</label>
+        <input id="hoursPerShift" type="number" min="1" value="10" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">10 hr days typical remote Alaska / tight schedule</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Productivity Factor</label>
+        <input id="prodFactorGlobal" type="number" step="0.01" value="1.25" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">1.00 = Lower 48 baseline, &gt;1.00 = slower (occupied space, rework, winter)</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Project Name / ID</label>
+        <input id="projectId" type="text" placeholder="Clinic TI - Interiors"
+          class="number-input" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ==================== 061 PARTITIONS & DOORS ==================== -->
+  <section class="card" id="partitionsBlock">
+    <div class="subgroup-header">
+      <span class="subchip">061</span>
+      <span>Partitions & Doors</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Framing and boarding new partitions, tape/finish GWB, plus hanging interior doors/frames/hardware.
+      Assumes typical commercial tenant improvement or school/classroom work.
+    </p>
+
+    <!-- 061.01 Metal Stud Framing & GWB Board -->
+    <div class="section-header">
+      <span>061.01 Metal Stud Framing & GWB Board</span>
+      <span class="section-sub">Frame, hang board both sides</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Partition Length (LF)</label>
+        <input id="gwbLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Full-height walls, both faces boarded</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="gwbProdBase" type="number" step="1" value="120" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Open floor, normal ceiling height (~9-10')</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="gwbProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="gwbCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="gwbManHours" class="result-box">0</div>
+        <p class="assumption-note">= Crew-Days × Crew Size × Hrs/Shift</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="gwbNotes" type="text"
+        placeholder="Metal studs, track, board both sides. No insulation, no taping yet."
+        class="number-input" />
+    </div>
+
+    <!-- 061.02 Tape / Mud / Finish / Ready for Paint -->
+    <div class="section-header mt-8">
+      <span>061.02 Tape / Mud / Finish / Ready for Paint</span>
+      <span class="section-sub">Tape, mud, sand, Level 4 finish</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Boarded Wall Area (SF)</label>
+        <input id="tapeSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Both faces of partitions, measured as surface SF</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="tapeProdBase" type="number" step="1" value="1500" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Level 4 finish, light sanding</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="tapeProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="tapeCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="tapeManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="tapeNotes" type="text"
+        placeholder="Standard tape/mud/sand to paint-ready. No Level 5 skim, no high-abuse corners."
+        class="number-input" />
+    </div>
+
+    <!-- 061.03 Interior Doors & Hardware -->
+    <div class="section-header mt-8">
+      <span>061.03 Interior Doors & Hardware</span>
+      <span class="section-sub">Frame, hang, hardware basic</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Door Sets (EA)</label>
+        <input id="intDoorEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Door + frame + basic hardware</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="intDoorProdBase" type="number" step="1" value="8" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Drop-in frame, hang leaf, closer/lever/stop</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="intDoorProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="intDoorCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="intDoorManHours" class="result-box">0</div>
+        <p class="assumption-note">Does not include access control devices</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="intDoorNotes" type="text"
+        placeholder="Standard hollow metal or solid core, standard hardware. No card readers / mag locks."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 062 INTERIOR FINISHES ==================== -->
+  <section class="card" id="finishesBlock">
+    <div class="subgroup-header">
+      <span class="subchip">062</span>
+      <span>Interior Finishes</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Painting, floor finishes (LVT / sheet vinyl / carpet tile), and acoustic ceiling grid/tile.
+      Assumes conditioned interior, power available, and normal ceiling heights.
+    </p>
+
+    <!-- 062.01 Paint (Walls / Ceilings) -->
+    <div class="section-header">
+      <span>062.01 Paint (Walls / Ceilings)</span>
+      <span class="section-sub">Prime + 2 coats typical commercial</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Paint Area (SF)</label>
+        <input id="paintSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Surface SF, walls+ceilings to be painted</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="paintProdBase" type="number" step="1" value="3500" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Roll/spray, occupied-lite conditions</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="paintProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="paintCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="paintManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="paintNotes" type="text"
+        placeholder="Prime + 2 coats latex/epoxy as spec. Includes masking and cleanup."
+        class="number-input" />
+    </div>
+
+    <!-- 062.02 Flooring (LVT / Carpet Tile / Sheet Vinyl) -->
+    <div class="section-header mt-8">
+      <span>062.02 Flooring Install</span>
+      <span class="section-sub">LVT / sheet vinyl / carpet tile</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Floor Area (SF)</label>
+        <input id="flooringSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Finish flooring install area</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="flooringProdBase" type="number" step="1" value="2200" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Assumes subfloor is prep-ready</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="flooringProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="flooringCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="flooringManHours" class="result-box">0</div>
+        <p class="assumption-note">No abatement, no demo, no skim coat time</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="flooringNotes" type="text"
+        placeholder="LVT / carpet tile / sheet vinyl install only. Slab/underlayment already prepped."
+        class="number-input" />
+    </div>
+
+    <!-- 062.03 Acoustic Ceiling Grid & Tile -->
+    <div class="section-header mt-8">
+      <span>062.03 Acoustical Ceiling Grid & Tile</span>
+      <span class="section-sub">Hang grid, place ACT tiles</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Ceiling Area (SF)</label>
+        <input id="ceilSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">ACT ceiling area</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="ceilProdBase" type="number" step="1" value="2500" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Open ceiling, MEP mostly roughed</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="ceilProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="ceilCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="ceilManHours" class="result-box">0</div>
+        <p class="assumption-note">Includes hang wire, main tees, secondaries, tile drop-in</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="ceilNotes" type="text"
+        placeholder="Drop-in ACT ceiling incl. hangers, grid, tile. Lights/MEP trims by others."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 063 SPECIALTIES ==================== -->
+  <section class="card" id="specialtiesBlock">
+    <div class="subgroup-header">
+      <span class="subchip">063</span>
+      <span>Specialties</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Install of accessories, casework/millwork, lockers, markerboards, restroom accessories.
+      These usually hit the punchlist / closeout window when schedule is compressed.
+    </p>
+
+    <!-- 063.01 Casework / Millwork Install -->
+    <div class="section-header">
+      <span>063.01 Casework / Millwork Install</span>
+      <span class="section-sub">Cabinets, counters, trim pieces</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Casework Runs (LF)</label>
+        <input id="caseworkLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Lower + uppers + tops, per LF</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="caseworkProdBase" type="number" step="1" value="35" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Cab boxes set, shimmed, anchored, scribe trim</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="caseworkProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="caseworkCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="caseworkManHours" class="result-box">0</div>
+        <p class="assumption-note">Assumes casework delivered to room</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="caseworkNotes" type="text"
+        placeholder="Cabinet install, scribe to walls, attach tops. No plumbing hookups."
+        class="number-input" />
+    </div>
+
+    <!-- 063.02 Toilet / Restroom / Misc Accessories -->
+    <div class="section-header mt-8">
+      <span>063.02 Toilet / Restroom / Misc Accessories</span>
+      <span class="section-sub">Grab bars, mirrors, soap, paper, signage</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Accessory Count (EA)</label>
+        <input id="accEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Each mounted item counts (mirror, grab bar, etc.)</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="accProdBase" type="number" step="1" value="40" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Layout, drill, mount, anchor, caulk if req.</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="accProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="accCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="accManHours" class="result-box">0</div>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="accNotes" type="text"
+        placeholder="Toilet grab bars, mirrors, soap/paper/towel dispensers, room signage."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== ROLLUP SUMMARY ==================== -->
+  <section class="card">
+    <div class="section-header">
+      <span>Rollup – Labor Demand</span>
+      <span class="section-sub">
+        Crew-Days & Man-Hours by Subgroup (061 / 062 / 063) and Total
+      </span>
+    </div>
+
+    <div class="overflow-x-auto mt-4">
+      <table class="min-w-full text-xs text-left border border-slate-300 rounded-xl overflow-hidden">
+        <thead>
+          <tr>
+            <th class="px-2 py-2 font-semibold">Activity</th>
+            <th class="px-2 py-2 font-semibold text-right">Crew-Days</th>
+            <th class="px-2 py-2 font-semibold text-right">Man-Hours</th>
+            <th class="px-2 py-2 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white/80">
+          <!-- 061 Partitions & Doors -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">061.01</span>Stud Framing & GWB Board</td>
+            <td class="px-2 py-2 text-right" id="sumGwbDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumGwbMH">0</td>
+            <td class="px-2 py-2" id="sumGwbNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">061.02</span>Tape / Mud / Finish</td>
+            <td class="px-2 py-2 text-right" id="sumTapeDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumTapeMH">0</td>
+            <td class="px-2 py-2" id="sumTapeNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">061.03</span>Interior Doors & Hardware</td>
+            <td class="px-2 py-2 text-right" id="sumIntDoorDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumIntDoorMH">0</td>
+            <td class="px-2 py-2" id="sumIntDoorNotes"></td>
+          </tr>
+
+          <!-- 062 Finishes -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">062.01</span>Paint</td>
+            <td class="px-2 py-2 text-right" id="sumPaintDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumPaintMH">0</td>
+            <td class="px-2 py-2" id="sumPaintNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">062.02</span>Flooring Install</td>
+            <td class="px-2 py-2 text-right" id="sumFlooringDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumFlooringMH">0</td>
+            <td class="px-2 py-2" id="sumFlooringNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">062.03</span>ACT Grid & Tile</td>
+            <td class="px-2 py-2 text-right" id="sumCeilDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumCeilMH">0</td>
+            <td class="px-2 py-2" id="sumCeilNotes"></td>
+          </tr>
+
+          <!-- 063 Specialties -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">063.01</span>Casework / Millwork</td>
+            <td class="px-2 py-2 text-right" id="sumCaseworkDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumCaseworkMH">0</td>
+            <td class="px-2 py-2" id="sumCaseworkNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">063.02</span>Restroom / Misc Accessories</td>
+            <td class="px-2 py-2 text-right" id="sumAccDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumAccMH">0</td>
+            <td class="px-2 py-2" id="sumAccNotes"></td>
+          </tr>
+
+          <!-- TOTAL -->
+          <tr class="bg-slate-800 text-white font-semibold text-right">
+            <td class="px-2 py-2 text-left">TOTAL</td>
+            <td class="px-2 py-2" id="sumTotalDays">0</td>
+            <td class="px-2 py-2" id="sumTotalMH">0</td>
+            <td class="px-2 py-2 text-left text-[10px] font-normal italic">
+              Finish work is schedule-critical. Crowded trades and punchlist pressure usually slow production in Alaska interiors.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-[10px] text-slate-500 leading-snug mt-3">
+      These baselines assume conditioned space, working daylight or adequate temp lighting,
+      and material already staged in the area. Live clinics / occupied schools will run slower.
+    </p>
+  </section>
+
+  <footer class="text-[10px] text-slate-400 text-center py-6">
+    © 2025 Poor Louis Labs · Alaska Productivity Toolkit · 06_Interior_Construction.html
+  </footer>
+</main>
+
+<script>
+// --- helpers ---
+function safeNum(v){const n=parseFloat(v);return isNaN(n)?0:n;}
+
+function crewDaysNeeded(qty, prodAdjPerDay){
+  if(prodAdjPerDay<=0)return 0;
+  return qty/prodAdjPerDay;
+}
+
+function totalManHours(crewDays, crewSize, hrsPerShift){
+  return crewDays*crewSize*hrsPerShift;
+}
+
+// generic activity calculator
+function recalcGeneric(qtyId, prodBaseId, prodAdjId, crewDaysId, mhId,
+                       notesId, sumDaysId, sumMhId, sumNotesId){
+  const qty = safeNum(document.getElementById(qtyId).value);
+  const prodBase = safeNum(document.getElementById(prodBaseId).value);
+
+  const pfGlobal = safeNum(document.getElementById('prodFactorGlobal').value);
+  const crewSize = safeNum(document.getElementById('crewSize').value);
+  const hrsPerShift = safeNum(document.getElementById('hoursPerShift').value);
+
+  const prodAdj = (pfGlobal>0)?(prodBase/pfGlobal):0;
+  document.getElementById(prodAdjId).textContent = prodAdj.toFixed(2);
+
+  const cDays = crewDaysNeeded(qty, prodAdj);
+  document.getElementById(crewDaysId).textContent = cDays.toFixed(2);
+
+  const mh = totalManHours(cDays, crewSize, hrsPerShift);
+  document.getElementById(mhId).textContent = mh.toFixed(1);
+
+  const notesVal = document.getElementById(notesId).value;
+  document.getElementById(sumDaysId).textContent = cDays.toFixed(2);
+  document.getElementById(sumMhId).textContent = mh.toFixed(1);
+  document.getElementById(sumNotesId).textContent = notesVal;
+
+  return {cDays, mh};
+}
+
+function recalcAll(){
+  // 061 Partitions & Doors
+  const gwb = recalcGeneric(
+    'gwbLF','gwbProdBase','gwbProdAdj','gwbCrewDays','gwbManHours',
+    'gwbNotes','sumGwbDays','sumGwbMH','sumGwbNotes'
+  );
+
+  const tape = recalcGeneric(
+    'tapeSF','tapeProdBase','tapeProdAdj','tapeCrewDays','tapeManHours',
+    'tapeNotes','sumTapeDays','sumTapeMH','sumTapeNotes'
+  );
+
+  const intDoor = recalcGeneric(
+    'intDoorEA','intDoorProdBase','intDoorProdAdj','intDoorCrewDays','intDoorManHours',
+    'intDoorNotes','sumIntDoorDays','sumIntDoorMH','sumIntDoorNotes'
+  );
+
+  // 062 Finishes
+  const paint = recalcGeneric(
+    'paintSF','paintProdBase','paintProdAdj','paintCrewDays','paintManHours',
+    'paintNotes','sumPaintDays','sumPaintMH','sumPaintNotes'
+  );
+
+  const floor = recalcGeneric(
+    'flooringSF','flooringProdBase','flooringProdAdj','flooringCrewDays','flooringManHours',
+    'flooringNotes','sumFlooringDays','sumFlooringMH','sumFlooringNotes'
+  );
+
+  const ceil = recalcGeneric(
+    'ceilSF','ceilProdBase','ceilProdAdj','ceilCrewDays','ceilManHours',
+    'ceilNotes','sumCeilDays','sumCeilMH','sumCeilNotes'
+  );
+
+  // 063 Specialties
+  const casework = recalcGeneric(
+    'caseworkLF','caseworkProdBase','caseworkProdAdj','caseworkCrewDays','caseworkManHours',
+    'caseworkNotes','sumCaseworkDays','sumCaseworkMH','sumCaseworkNotes'
+  );
+
+  const acc = recalcGeneric(
+    'accEA','accProdBase','accProdAdj','accCrewDays','accManHours',
+    'accNotes','sumAccDays','sumAccMH','sumAccNotes'
+  );
+
+  // totals
+  const totalDays =
+    gwb.cDays + tape.cDays + intDoor.cDays +
+    paint.cDays + floor.cDays + ceil.cDays +
+    casework.cDays + acc.cDays;
+
+  const totalMH =
+    gwb.mh + tape.mh + intDoor.mh +
+    paint.mh + floor.mh + ceil.mh +
+    casework.mh + acc.mh;
+
+  document.getElementById('sumTotalDays').textContent = totalDays.toFixed(2);
+  document.getElementById('sumTotalMH').textContent = totalMH.toFixed(1);
+}
+
+// export JSON snapshot
+function exportSummary(){
+  const data = {
+    project: document.getElementById('projectId').value,
+    timestamp_utc: new Date().toISOString(),
+    globals:{
+      crewSize: safeNum(document.getElementById('crewSize').value),
+      hoursPerShift: safeNum(document.getElementById('hoursPerShift').value),
+      productivityFactor: safeNum(document.getElementById('prodFactorGlobal').value)
+    },
+    "061_partitions_doors":{
+      studs_board:{
+        qty_lf: safeNum(document.getElementById('gwbLF').value),
+        crewDays: safeNum(document.getElementById('sumGwbDays').textContent),
+        manHours: safeNum(document.getElementById('sumGwbMH').textContent),
+        notes: document.getElementById('gwbNotes').value
+      },
+      tape_finish:{
+        qty_sf: safeNum(document.getElementById('tapeSF').value),
+        crewDays: safeNum(document.getElementById('sumTapeDays').textContent),
+        manHours: safeNum(document.getElementById('sumTapeMH').textContent),
+        notes: document.getElementById('tapeNotes').value
+      },
+      interior_doors:{
+        qty_each: safeNum(document.getElementById('intDoorEA').value),
+        crewDays: safeNum(document.getElementById('sumIntDoorDays').textContent),
+        manHours: safeNum(document.getElementById('sumIntDoorMH').textContent),
+        notes: document.getElementById('intDoorNotes').value
+      }
+    },
+    "062_interior_finishes":{
+      paint:{
+        qty_sf: safeNum(document.getElementById('paintSF').value),
+        crewDays: safeNum(document.getElementById('sumPaintDays').textContent),
+        manHours: safeNum(document.getElementById('sumPaintMH').textContent),
+        notes: document.getElementById('paintNotes').value
+      },
+      flooring:{
+        qty_sf: safeNum(document.getElementById('flooringSF').value),
+        crewDays: safeNum(document.getElementById('sumFlooringDays').textContent),
+        manHours: safeNum(document.getElementById('sumFlooringMH').textContent),
+        notes: document.getElementById('flooringNotes').value
+      },
+      act_ceilings:{
+        qty_sf: safeNum(document.getElementById('ceilSF').value),
+        crewDays: safeNum(document.getElementById('sumCeilDays').textContent),
+        manHours: safeNum(document.getElementById('sumCeilMH').textContent),
+        notes: document.getElementById('ceilNotes').value
+      }
+    },
+    "063_specialties":{
+      casework:{
+        qty_lf: safeNum(document.getElementById('caseworkLF').value),
+        crewDays: safeNum(document.getElementById('sumCaseworkDays').textContent),
+        manHours: safeNum(document.getElementById('sumCaseworkMH').textContent),
+        notes: document.getElementById('caseworkNotes').value
+      },
+      accessories:{
+        qty_each: safeNum(document.getElementById('accEA').value),
+        crewDays: safeNum(document.getElementById('sumAccDays').textContent),
+        manHours: safeNum(document.getElementById('sumAccMH').textContent),
+        notes: document.getElementById('accNotes').value
+      }
+    },
+    totals:{
+      crewDays: safeNum(document.getElementById('sumTotalDays').textContent),
+      manHours: safeNum(document.getElementById('sumTotalMH').textContent)
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const projName=(data.project||'interior_construction').replace(/\s+/g,'_');
+  a.download = projName + "_div06_productivity.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetAll(){
+  // globals
+  document.getElementById('crewSize').value = 4;
+  document.getElementById('hoursPerShift').value = 10;
+  document.getElementById('prodFactorGlobal').value = 1.25;
+  document.getElementById('projectId').value = "";
+
+  // 061 Partitions & Doors
+  document.getElementById('gwbLF').value = 0;
+  document.getElementById('gwbProdBase').value = 120;
+  document.getElementById('gwbNotes').value =
+    "Metal studs, track, board both sides. No batt insulation, no taping.";
+
+  document.getElementById('tapeSF').value = 0;
+  document.getElementById('tapeProdBase').value = 1500;
+  document.getElementById('tapeNotes').value =
+    "Tape/mud/sand to Level 4 finish. No Level 5 skim.";
+
+  document.getElementById('intDoorEA').value = 0;
+  document.getElementById('intDoorProdBase').value = 8;
+  document.getElementById('intDoorNotes').value =
+    "Hang door, set frame, basic closer/levers/stop. No access control.";
+
+  // 062 Interior Finishes
+  document.getElementById('paintSF').value = 0;
+  document.getElementById('paintProdBase').value = 3500;
+  document.getElementById('paintNotes').value =
+    "Prime + 2 coats. Includes masking/cleanup.";
+
+  document.getElementById('flooringSF').value = 0;
+  document.getElementById('flooringProdBase').value = 2200;
+  document.getElementById('flooringNotes').value =
+    "LVT / carpet tile / sheet vinyl install. Subfloor already prepped.";
+
+  document.getElementById('ceilSF').value = 0;
+  document.getElementById('ceilProdBase').value = 2500;
+  document.getElementById('ceilNotes').value =
+    "Hang ACT grid + tile. Lights/MEP trims by others.";
+
+  // 063 Specialties
+  document.getElementById('caseworkLF').value = 0;
+  document.getElementById('caseworkProdBase').value = 35;
+  document.getElementById('caseworkNotes').value =
+    "Cab boxes, tops, scribe/trim. No plumbing hook-ups.";
+
+  document.getElementById('accEA').value = 0;
+  document.getElementById('accProdBase').value = 40;
+  document.getElementById('accNotes').value =
+    "Grab bars, mirrors, soap/towel dispensers, signage.";
+
+  recalcAll();
+}
+
+// init totals on load
+recalcAll();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Medical Gas System Estimator</title>
+<style>
+    :root {
+        --bg: #0f172a;
+        --panel: #1e253a;
+        --accent: #38bdf8;
+        --text-main: #f8fafc;
+        --text-dim: #94a3b8;
+        --line: #334155;
+        --good: #4ade80;
+        --warn: #facc15;
+        --bad: #f87171;
+        --radius-xl: 1rem;
+    }
+
+    body {
+        background-color: var(--bg);
+        color: var(--text-main);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", Roboto, "Helvetica Neue", Arial, sans-serif;
+        margin: 0;
+        min-height: 100dvh;
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1rem;
+        padding: 1rem;
+        box-sizing: border-box;
+    }
+
+    /* Left sidebar */
+    .sidebar {
+        background: radial-gradient(circle at 20% 20%, rgba(56,189,248,.12) 0%, rgba(15,23,42,0) 70%), var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-xl);
+        padding: 1rem 1rem 7rem;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        box-shadow: 0 30px 80px rgba(0,0,0,.8);
+    }
+
+    .header-block {
+        margin-bottom: 1rem;
+    }
+
+    h1 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-main);
+        margin: 0 0 .25rem;
+        display: flex;
+        align-items: baseline;
+        gap: .5rem;
+    }
+
+    h1 span.badge {
+        font-size: .7rem;
+        font-weight: 500;
+        color: var(--bg);
+        background: var(--accent);
+        border-radius: .5rem;
+        padding: .15rem .5rem;
+        line-height: 1.2;
+    }
+
+    .project-meta {
+        font-size: .8rem;
+        color: var(--text-dim);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .5rem .75rem;
+    }
+
+    .project-meta label {
+        font-size: .7rem;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: var(--text-dim);
+        display: block;
+        margin-bottom: .25rem;
+    }
+
+    .project-meta input,
+    .project-meta select {
+        width: 100%;
+        background: #0f172a;
+        border: 1px solid var(--line);
+        border-radius: .5rem;
+        color: var(--text-main);
+        padding: .4rem .5rem;
+        font-size: .8rem;
+        box-sizing: border-box;
+    }
+
+    .factor-block {
+        margin-top:1rem;
+        background-color:#111827;
+        border:1px solid var(--line);
+        border-radius:.75rem;
+        padding:.75rem;
+    }
+
+    .factor-block h2 {
+        margin:0 0 .5rem;
+        font-size:.8rem;
+        font-weight:600;
+        color:var(--text-main);
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+    }
+
+    .factor-block h2 .tag {
+        font-size:.65rem;
+        font-weight:500;
+        background:#1e293b;
+        color:var(--accent);
+        padding:.2rem .4rem;
+        border-radius:.4rem;
+        border:1px solid var(--line);
+        line-height:1.2;
+    }
+
+    .factor-row {
+        display:grid;
+        grid-template-columns: 1fr auto;
+        gap:.5rem;
+        align-items:center;
+        margin-bottom:.5rem;
+    }
+
+    .factor-row label {
+        font-size:.7rem;
+        color:var(--text-dim);
+        display:flex;
+        flex-direction:column;
+        line-height:1.2;
+    }
+
+    .factor-row small {
+        font-size:.6rem;
+        color:var(--text-dim);
+        font-weight:400;
+    }
+
+    .factor-row input {
+        width:5rem;
+        background:#0f172a;
+        border:1px solid var(--line);
+        border-radius:.5rem;
+        color:var(--text-main);
+        padding:.4rem .5rem;
+        font-size:.8rem;
+        text-align:right;
+    }
+
+    .labor-block {
+        margin-top:1rem;
+        background-color:#111827;
+        border:1px solid var(--line);
+        border-radius:.75rem;
+        padding:.75rem;
+    }
+
+    .labor-block h2 {
+        margin:0 0 .5rem;
+        font-size:.8rem;
+        font-weight:600;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        color:var(--text-main);
+    }
+
+    .labor-row {
+        display:grid;
+        grid-template-columns: 1fr auto;
+        gap:.5rem;
+        align-items:center;
+        margin-bottom:.5rem;
+    }
+
+    .labor-row label {
+        font-size:.7rem;
+        color:var(--text-dim);
+        display:flex;
+        flex-direction:column;
+        line-height:1.2;
+    }
+
+    .labor-row small {
+        font-size:.6rem;
+        color:var(--text-dim);
+    }
+
+    .labor-row input {
+        width:5rem;
+        background:#0f172a;
+        border:1px solid var(--line);
+        border-radius:.5rem;
+        color:var(--text-main);
+        padding:.4rem .5rem;
+        font-size:.8rem;
+        text-align:right;
+    }
+
+    .export-area {
+        position:absolute;
+        bottom:1rem;
+        left:1rem;
+        right:1rem;
+        display:flex;
+        flex-direction:column;
+        gap:.5rem;
+    }
+
+    button.export-btn {
+        background:var(--accent);
+        color:#0f172a;
+        border:none;
+        border-radius:.6rem;
+        padding:.6rem .75rem;
+        font-size:.8rem;
+        font-weight:600;
+        cursor:pointer;
+        width:100%;
+        text-align:center;
+    }
+
+    button.export-btn:hover {
+        filter:brightness(1.1);
+    }
+
+    .export-note {
+        font-size:.6rem;
+        color:var(--text-dim);
+        line-height:1.4;
+        text-align:center;
+    }
+
+    /* Main content */
+    .main {
+        min-width:0;
+        display:flex;
+        flex-direction:column;
+        gap:1rem;
+    }
+
+    .card {
+        background: radial-gradient(circle at 80% 0%, rgba(56,189,248,.08) 0%, rgba(15,23,42,0) 70%), var(--panel);
+        border:1px solid var(--line);
+        border-radius:var(--radius-xl);
+        box-shadow: 0 30px 80px rgba(0,0,0,.8);
+        padding:1rem 1rem 0;
+    }
+
+    .card-header {
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        flex-wrap:wrap;
+        gap:.5rem;
+        border-bottom:1px solid var(--line);
+        padding-bottom:.5rem;
+        margin-bottom:.75rem;
+    }
+
+    .card-title {
+        font-size:.9rem;
+        font-weight:600;
+        color:var(--text-main);
+        display:flex;
+        align-items:center;
+        gap:.5rem;
+    }
+
+    .card-title .hint {
+        font-size:.7rem;
+        color:var(--text-dim);
+        font-weight:400;
+    }
+
+    .totals-pill {
+        display:flex;
+        flex-direction:column;
+        background:#111827;
+        border:1px solid var(--line);
+        border-radius:.6rem;
+        padding:.5rem .75rem;
+        min-width:9rem;
+    }
+
+    .totals-pill span.label {
+        color:var(--text-dim);
+        font-size:.6rem;
+        letter-spacing:.05em;
+        text-transform:uppercase;
+        line-height:1.2;
+    }
+
+    .totals-pill span.value {
+        font-size:.9rem;
+        font-weight:600;
+        color:var(--good);
+        line-height:1.3;
+    }
+
+    table {
+        width:100%;
+        border-collapse:collapse;
+        color:var(--text-main);
+        font-size:.75rem;
+        min-width:800px;
+    }
+
+    thead {
+        background:#111827;
+    }
+
+    th {
+        text-align:left;
+        font-weight:500;
+        color:var(--text-dim);
+        padding:.5rem;
+        border-bottom:1px solid var(--line);
+        white-space:nowrap;
+        font-size:.65rem;
+        text-transform:uppercase;
+        letter-spacing:.05em;
+    }
+
+    tbody tr:nth-child(odd) {
+        background:#1e253a;
+    }
+    tbody tr:nth-child(even) {
+        background:#1a2134;
+    }
+
+    td {
+        padding:.5rem;
+        border-bottom:1px solid var(--line);
+        vertical-align:top;
+    }
+
+    td .item-name {
+        font-weight:600;
+        font-size:.75rem;
+        color:var(--text-main);
+        line-height:1.3;
+    }
+    td .item-desc {
+        font-size:.65rem;
+        color:var(--text-dim);
+        line-height:1.3;
+    }
+
+    td input {
+        width:5rem;
+        background:#0f172a;
+        border:1px solid var(--line);
+        border-radius:.4rem;
+        color:var(--text-main);
+        padding:.4rem .5rem;
+        font-size:.7rem;
+        text-align:right;
+    }
+
+    td.readout {
+        text-align:right;
+        font-variant-numeric: tabular-nums;
+        white-space:nowrap;
+    }
+
+    .footer-row {
+        display:flex;
+        flex-wrap:wrap;
+        gap:1rem;
+        justify-content:flex-end;
+        padding:1rem 0 1rem;
+    }
+
+    .summary-box {
+        background:#111827;
+        border:1px solid var(--line);
+        border-radius:.75rem;
+        padding:.75rem 1rem;
+        min-width:10rem;
+        display:flex;
+        flex-direction:column;
+        line-height:1.3;
+    }
+
+    .summary-box .label {
+        font-size:.6rem;
+        color:var(--text-dim);
+        text-transform:uppercase;
+        letter-spacing:.05em;
+    }
+    .summary-box .value {
+        font-size:.9rem;
+        color:var(--text-main);
+        font-weight:600;
+        text-align:right;
+    }
+    .summary-box.total .value {
+        color:var(--good);
+    }
+
+    /* responsive */
+    @media(max-width:1000px){
+        body{
+            grid-template-columns:1fr;
+        }
+        .sidebar{
+            order:2;
+            position:static;
+            padding-bottom:1rem;
+        }
+        .export-area{
+            position:static;
+        }
+    }
+
+    @media(max-width:600px){
+        .project-meta{
+            grid-template-columns:1fr;
+        }
+        td input{
+            width:4rem;
+        }
+    }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+    <div class="header-block">
+        <h1>
+            Medical Gas Estimator
+            <span class="badge">Alaska</span>
+        </h1>
+
+        <div class="project-meta">
+            <div>
+                <label for="projectName">Project</label>
+                <input id="projectName" type="text" placeholder="Clinic TI, 3rd floor">
+            </div>
+            <div>
+                <label for="location">Location</label>
+                <input id="location" type="text" placeholder="Juneau, AK">
+            </div>
+            <div>
+                <label for="estimatorInit">Estimator</label>
+                <input id="estimatorInit" type="text" placeholder="AC">
+            </div>
+            <div>
+                <label for="dateField">Date</label>
+                <input id="dateField" type="date">
+            </div>
+        </div>
+    </div>
+
+    <!-- FACTORS -->
+    <div class="factor-block">
+        <h2>
+            Project Factors
+            <span class="tag">Logistics/Uplift</span>
+        </h2>
+
+        <div class="factor-row">
+            <label>
+                Remote/Logistics Factor
+                <small>% add to labor hrs for access, controls, infection, shutdown windows</small>
+            </label>
+            <input id="remoteFactor" type="number" step="1" value="15">
+        </div>
+
+        <div class="factor-row">
+            <label>
+                Freight %
+                <small>Material freight/handling to AK jobsite</small>
+            </label>
+            <input id="freightPct" type="number" step="1" value="12">
+        </div>
+
+        <div class="factor-row">
+            <label>
+                O&amp;P %
+                <small>Overhead + profit on subtotal</small>
+            </label>
+            <input id="opPct" type="number" step="1" value="15">
+        </div>
+    </div>
+
+    <!-- LABOR -->
+    <div class="labor-block">
+        <h2>
+            Labor Rates
+            <span class="tag">$/hr</span>
+        </h2>
+
+        <div class="labor-row">
+            <label>
+                Mechanical
+                <small>Anchorage base for med gas fitter</small>
+            </label>
+            <input id="mechRate" type="number" step="1" value="92">
+        </div>
+
+        <div class="labor-row">
+            <label>
+                Electrical
+                <small>Alarm panels, sensors, tie-in</small>
+            </label>
+            <input id="elecRate" type="number" step="1" value="96">
+        </div>
+
+        <div class="labor-row">
+            <label>
+                Commission/QC
+                <small>Cert, cross-connection test</small>
+            </label>
+            <input id="qcRate" type="number" step="1" value="96">
+        </div>
+    </div>
+
+    <!-- EXPORT -->
+    <div class="export-area">
+        <button class="export-btn" id="exportBtn">Export CSV</button>
+        <div class="export-note">
+            CSV includes line item string, qty, material $, freight $, labor hrs, labor $, total $, plus project header.
+        </div>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+    <!-- MATERIAL / LABOR TABLE -->
+    <section class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <div>
+                    Materials &amp; Labor
+                </div>
+                <div class="hint">
+                    Enter takeoff (qty or LF). Edit unit costs/hrs if needed.
+                </div>
+            </div>
+            <div class="totals-pill">
+                <span class="label">Running Total (pre O&amp;P)</span>
+                <span class="value" id="runningTotal">$0.00</span>
+            </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th style="min-width:220px;">Line Item</th>
+                    <th>Qty</th>
+                    <th>Unit</th>
+                    <th>Mat $/Unit</th>
+                    <th>Base Labor Hrs/Unit</th>
+                    <th>Trade</th>
+                    <th class="readout">Mat $</th>
+                    <th class="readout">Freight $</th>
+                    <th class="readout">Labor Hrs (Adj)</th>
+                    <th class="readout">Labor $</th>
+                    <th class="readout">Total $</th>
+                </tr>
+            </thead>
+            <tbody id="itemBody">
+                <!-- Oxygen main -->
+                <tr data-id="oxygen_main">
+                    <td>
+                        <div class="item-name">1" Diameter, Copper Type K, 50 PSI O2 MAIN, Piped Medical Gas Main</div>
+                        <div class="item-desc">Includes hangers, ID tape, brazed joints, supports. Assume overhead corridor routing.</div>
+                    </td>
+                    <td><input class="qty" type="number" min="0" step="1" value="120"></td>
+                    <td>LF</td>
+                    <td><input class="matUnit" type="number" step="0.01" value="28"></td>
+                    <td><input class="hrsUnit" type="number" step="0.01" value="0.35"></td>
+                    <td>
+                        <select class="trade">
+                            <option value="mech" selected>Mech</option>
+                            <option value="elec">Elec</option>
+                            <option value="qc">QC</option>
+                        </select>
+                    </td>
+                    <td class="readout matTotal">$0.00</td>
+                    <td class="readout freightTotal">$0.00</td>
+                    <td class="readout hrsAdj">0.00</td>
+                    <td class="readout laborTotal">$0.00</td>
+                    <td class="readout lineTotal">$0.00</td>
+                </tr>
+
+                <!-- Vacuum main -->
+                <tr data-id="vac_main">
+                    <td>
+                        <div class="item-name">1-1/4" Diameter, Copper Type L, Medical VACUUM MAIN, Piped Medical Vacuum</div>
+                        <div class="item-desc">Oil-less evac header piping to pump skid / manifold.</div>
+                    </td>
+                    <td><input class="qty" type="number" min="0" step="1" value="100"></td>
+                    <td>LF</td>
+                    <td><input class="matUnit" type="number" step="0.01" value="24"></td>
+                    <td><input class="hrsUnit" type="number" step="0.01" value="0.33"></td>
+                    <td>
+                        <select class="trade">
+                            <option value="mech" selected>Mech</option>
+                            <option value="elec">Elec</option>
+                            <option value="qc">QC</option>
+                        </select>
+                    </td>
+                    <td class="readout matTotal">$0.00</td>
+                    <td class="readout freightTotal">$0.00</td>
+                    <td class="readout hrsAdj">0.00</td>
+                    <td class="readout laborTotal">$0.00</td>
+                    <td class="readout lineTotal">$0.00</td>
+                </tr>
+
+                <!-- WAGD (waste anesthesia gas disposal) -->
+                <tr data-id="wagd">
+                    <td>
+                        <div class="item-name">3/4" Diameter, Copper Type L, WAGD EXHAUST LINE, Waste Anesthesia Gas Disposal</div>
+                        <div class="item-desc">Run from OR outlet to scavenging header. Includes supports.</div>
+                    </td>
+                    <td><input class="qty" type="number" min="0" step="1" value="60"></td>
+                    <td>LF</td>
+                    <td><input class="matUnit" type="number" step="0.01" value="18"></td>
+                    <td><input class="hrsUnit" type="number" step="0.01" value="0.30"></td>
+                    <td>
+                        <select class="trade">
+                            <option value="mech" selected>Mech</option>
+                            <option value="elec">Elec</option>
+                            <option value="qc">QC</option>
+                        </select>
+                    </td>
+                    <td class="readout matTotal">$0.00</td>
+                    <td class="readout freightTotal">$0.00</td>
+                    <td class="readout hrsAdj">0.00</td>
+                    <td class="readout laborTotal">$0.00</td>
+                    <td class="readout lineTotal">$0.00</td>
+                </tr>
+
+                <!-- Med air main -->
+                <tr data-id="med_air">
+                    <td>
+                        <div class="item-name">1" Diameter, Copper Type K, 50 PSI MEDICAL AIR MAIN, Piped Compressed Medical Air</div>
+                        <div class="item-desc">Includes oil-free compressor header tie-in and drip legs.</div>
+                    </td>
+                    <td><input class="qty" type="number" min="0" step="1" value="80"></td>
+                    <td>LF</td>
+                    <td><input class="matUnit" type="number" step="0.01" value="30"></td>
+                    <td><input class="hrsUnit" type="number" step="0.01" value="0.38"></td>
+                    <td>
+                        <select class="trade">
+                            <option value="mech" selected>Mech</option>
+                            <option value="elec">Elec</option>
+                            <option value="qc">QC</option>
+                        </select>
+                    </td>
+                    <td class="readout matTotal">$0.00</td>
+                    <td class="readout freightTotal">$0.00</td>
+                    <td class="readout hrsAdj">0.00</td>
+                    <td class="readout laborTotal">$0.00</td>
+                    <td class="readout lineTotal">$0.00</td>
+                </tr>
+
+                <!-- Nitrogen -->
+                <tr data-id="nitrogen">
+                    <td>
+                        <div class="item-name">1/2" Diameter, Copper Type K, 160 PSI NITROGEN MAIN, High-Pressure Med Gas</div>
+                        <div class="item-desc">Cylinder manifold to zone valve header.</div>
+                    </td>
+                    <td><input class="qty" type="number" min="0" step="1" value="40"></td>
+                    <td>LF</td>
+                    <td><input class="matUnit" type="number" step="0.01" value="22"></td>
+                    <td><input class="hrsUnit" type="number" step="0.01" value="0.32"></td>
+                    <td>
+                        <select class="trade">
+                            <option value="mech" selected>Mech</option>
+                            <option value="elec">Elec</option>
+                            <option value="qc">QC</option>
+                        </select>
+                    </td>
+                    <td class="readout matTotal">$0.00</td>
+                    <td class="readout freightTotal">$0.00</td>
+                    <td class="readout hrsAdj">0.00</td>
+                    <td class="readout laborTotal">$0.00</td>
+                    <td class="readout lineTotal">$0.00</td>
+                </tr>
+
+                <!-- Zone valve boxes -->
+                <tr data-id="zone_valve_box">
+                    <td>
+                        <div class="item-name">3-Gas, Recessed Steel ZONE VALVE BOX, Labeled, Valve/Indicator Assembly</div>
+                        <div class="item-desc">O2 / VAC / MED AIR shutoff, installed in corridor per code.</div>
+                    </td>
+                    <td><input class="qty" type="number" min="0" step="1" value="4"></td>
+                    <td>EA</td>
+                    <td><input class="matUnit" type="number" step="0.01" value="1450"></td>
+                    <td><input class="hrsUnit" type="number" step="0.01" value="4.5"></td>
+                    <td>
+                        <select class="trade">
+                            <option value="mech" selected>Mech</option>
+                            <option value="elec">Elec</option>
+                            <option value="qc">QC</option>
+                        </select>
+                    </td>
+                    <td class="readout matTotal">$0.00</td>
+                    <td class="readout freightTotal">$0.00</td>
+                    <td class="readout hrsAdj">0.00</td>
+                    <td class="readout laborTotal">$0.00</td>
+                    <td class="readout lineTotal">$0.00</td>
+                </tr>
+
+                <!-- Outlets / headwalls -->
+                <tr data-id="patient_outlet">
+                    <td>
+                        <div class="item-name">Duo Headwall with O2 / VAC / MED AIR Outlets, Patient Service Headwall</div>
+                        <div class="item-desc">Rough-in, install, braze, test. Typical patient room headwall drop.</div>
+                    </td>
+                    <td><input class="qty" type="number" min="0" step="1" value="8"></td>
+                    <td>EA</td>
+                    <td><input class="matUnit" type="number" step="0.01" value="2200"></td>
+                    <td><input class="hrsUnit" type="number" step="0.01" value="6.0"></td>
+                    <td>
+                        <select class="trade">
+                            <option value="mech" selected>Mech</option>
+                            <option value="elec">Elec</option>
+                            <option value="qc">QC</option>
+                        </select>
+                    </td>
+                    <td class="readout matTotal">$0.00</td>
+                    <td class="readout freightTotal">$0.00</td>
+                    <td class="readout hrsAdj">0.00</td>
+                    <td class="readout laborTotal">$0.00</td>
+                    <td class="readout lineTotal">$0.00</td>
+                </tr>
+
+                <!-- Ceiling service boom / OR pendant -->
+                <tr data-id="or_boom">
+                    <td>
+                        <div class="item-name">Ceiling-Mounted Surgical Boom, Multi-Gas + Power + Data Pendant</div>
+                        <div class="item-desc">Anchorage, med gas drops, power whip, alignment, test. Operating Room use.</div>
+                    </td>
+                    <td><input class="qty" type="number" min="0" step="1" value="2"></td>
+                    <td>EA</td>
+                    <td><input class="matUnit" type="number" step="0.01" value="38500"></td>
+                    <td><input class="hrsUnit" type="number" step="0.01" value="28"></td>
+                    <td>
+                        <select class="trade">
+                            <option value="mech" selected>Mech</option>
+                            <option value="elec">Elec</option>
+                            <option value="qc">QC</option>
+                        </select>
+                    </td>
+                    <td class="readout matTotal">$0.00</td>
+                    <td class="readout freightTotal">$0.00</td>
+                    <td class="readout hrsAdj">0.00</td>
+                    <td class="readout laborTotal">$0.00</td>
+                    <td class="readout lineTotal">$0.00</td>
+                </tr>
+
+                <!-- Master alarm panel -->
+                <tr data-id="master_alarm">
+                    <td>
+                        <div class="item-name">120V, Wall-Mounted MASTER ALARM PANEL, Digital, Med Gas Alarm/Monitor</div>
+                        <div class="item-desc">Tie into pressure/vac sensors, test and certify.</div>
+                    </td>
+                    <td><input class="qty" type="number" min="0" step="1" value="1"></td>
+                    <td>EA</td>
+                    <td><input class="matUnit" type="number" step="0.01" value="5200"></td>
+                    <td><input class="hrsUnit" type="number" step="0.01" value="10"></td>
+                    <td>
+                        <select class="trade">
+                            <option value="elec" selected>Elec</option>
+                            <option value="mech">Mech</option>
+                            <option value="qc">QC</option>
+                        </select>
+                    </td>
+                    <td class="readout matTotal">$0.00</td>
+                    <td class="readout freightTotal">$0.00</td>
+                    <td class="readout hrsAdj">0.00</td>
+                    <td class="readout laborTotal">$0.00</td>
+                    <td class="readout lineTotal">$0.00</td>
+                </tr>
+
+                <!-- Certification / cross-connection test -->
+                <tr data-id="cert_test">
+                    <td>
+                        <div class="item-name">Systemwide MED GAS CERTIFICATION, Pressure Test, Cross-Connection Verification</div>
+                        <div class="item-desc">Third-party cert and documentation package for AHJ.</div>
+                    </td>
+                    <td><input class="qty" type="number" min="0" step="1" value="1"></td>
+                    <td>LOT</td>
+                    <td><input class="matUnit" type="number" step="0.01" value="3500"></td>
+                    <td><input class="hrsUnit" type="number" step="0.01" value="24"></td>
+                    <td>
+                        <select class="trade">
+                            <option value="qc" selected>QC</option>
+                            <option value="mech">Mech</option>
+                            <option value="elec">Elec</option>
+                        </select>
+                    </td>
+                    <td class="readout matTotal">$0.00</td>
+                    <td class="readout freightTotal">$0.00</td>
+                    <td class="readout hrsAdj">0.00</td>
+                    <td class="readout laborTotal">$0.00</td>
+                    <td class="readout lineTotal">$0.00</td>
+                </tr>
+            </tbody>
+        </table>
+        </div>
+
+        <!-- SUMMARY -->
+        <div class="footer-row">
+            <div class="summary-box">
+                <div class="label">Material Subtotal</div>
+                <div class="value" id="matSubtotal">$0.00</div>
+            </div>
+
+            <div class="summary-box">
+                <div class="label">Freight/Handling</div>
+                <div class="value" id="freightSubtotal">$0.00</div>
+            </div>
+
+            <div class="summary-box">
+                <div class="label">Labor Hrs (Adj)</div>
+                <div class="value" id="laborHrsSubtotal">0.00</div>
+            </div>
+
+            <div class="summary-box">
+                <div class="label">Labor $</div>
+                <div class="value" id="laborCostSubtotal">$0.00</div>
+            </div>
+
+            <div class="summary-box total">
+                <div class="label">Subtotal (Pre O&amp;P)</div>
+                <div class="value" id="subtotalPreOP">$0.00</div>
+            </div>
+
+            <div class="summary-box total">
+                <div class="label">Total w/ O&amp;P</div>
+                <div class="value" id="grandTotal">$0.00</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ASSUMPTIONS -->
+    <section class="card" style="margin-bottom:2rem;">
+        <div class="card-header">
+            <div class="card-title">
+                <div>Assumptions / Notes</div>
+                <div class="hint">These carry into your CSV export.</div>
+            </div>
+        </div>
+        <textarea id="assumptions" style="
+            width:100%;
+            background:#0f172a;
+            border:1px solid var(--line);
+            border-radius:.75rem;
+            color:var(--text-main);
+            padding:.75rem;
+            font-size:.8rem;
+            min-height:120px;
+            box-sizing:border-box;
+            font-family:inherit;
+            line-height:1.4;
+            "
+        >- Labor is based on Anchorage mechanical ($/hr 92), electrical ($/hr 96), QC/testing ($/hr 96).
+- Labor hours per unit already include shutdown work and infection control barriers typical of live clinic/hospital work; remote factor (%) inflates further for Alaska access/phasing.
+- Freight % covers LTL + handling to Alaska; final freight may increase for barged or fly-in locations.
+- Zone valve boxes include trim, labeling, and final wall plate.
+- OR booms include med gas drops, anchorage, and alignment. Does not include structural steel if needed above deck.
+- Certification line includes cross-connection test, NFPA med gas paperwork for AHJ, and turnover documentation.</textarea>
+        <div style="height:1rem;"></div>
+    </section>
+</main>
+
+<script>
+(function(){
+
+    const itemBody = document.getElementById('itemBody');
+
+    function money(x){
+        const v = Number(x)||0;
+        return "$" + v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+
+    function hoursFmt(x){
+        const v = Number(x)||0;
+        return v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+
+    function getRates(){
+        return {
+            mech: Number(document.getElementById('mechRate').value)||0,
+            elec: Number(document.getElementById('elecRate').value)||0,
+            qc:   Number(document.getElementById('qcRate').value)||0,
+        };
+    }
+
+    function getFactors(){
+        const remoteFactor = Number(document.getElementById('remoteFactor').value)||0;
+        const freightPct   = Number(document.getElementById('freightPct').value)||0;
+        const opPct        = Number(document.getElementById('opPct').value)||0;
+        return { remoteFactor, freightPct, opPct };
+    }
+
+    function calc(){
+        const {mech,elec,qc} = getRates();
+        const {remoteFactor, freightPct, opPct} = getFactors();
+
+        let sumMat = 0;
+        let sumFreight = 0;
+        let sumLaborHrs = 0;
+        let sumLaborCost = 0;
+        let sumLineTotal = 0;
+
+        // loop through each row in the table body
+        itemBody.querySelectorAll('tr').forEach(row=>{
+            const qtyEl = row.querySelector('.qty');
+            const matEl = row.querySelector('.matUnit');
+            const hrsEl = row.querySelector('.hrsUnit');
+            const tradeEl = row.querySelector('.trade');
+
+            const qty = Number(qtyEl.value)||0;
+            const matUnit = Number(matEl.value)||0;
+            const hrsUnit = Number(hrsEl.value)||0;
+            const trade = tradeEl.value;
+
+            // calc material cost
+            const matCost = qty * matUnit;
+
+            // freight cost
+            const freightCost = matCost * (freightPct/100);
+
+            // labor hrs with remote bump
+            const baseLaborHrs = qty * hrsUnit;
+            const adjLaborHrs = baseLaborHrs * (1 + remoteFactor/100);
+
+            // pick rate
+            let rate = mech;
+            if(trade === 'elec') rate = elec;
+            if(trade === 'qc') rate = qc;
+
+            // labor cost
+            const laborCost = adjLaborHrs * rate;
+
+            // line total
+            const lineTotal = matCost + freightCost + laborCost;
+
+            // write to DOM
+            row.querySelector('.matTotal').textContent = money(matCost);
+            row.querySelector('.freightTotal').textContent = money(freightCost);
+            row.querySelector('.hrsAdj').textContent = hoursFmt(adjLaborHrs);
+            row.querySelector('.laborTotal').textContent = money(laborCost);
+            row.querySelector('.lineTotal').textContent = money(lineTotal);
+
+            // roll up
+            sumMat += matCost;
+            sumFreight += freightCost;
+            sumLaborHrs += adjLaborHrs;
+            sumLaborCost += laborCost;
+            sumLineTotal += lineTotal;
+        });
+
+        // subtotal pre O&P
+        const subtotalPreOP = sumLineTotal;
+
+        // add O&P
+        const grandTotal = subtotalPreOP * (1 + opPct/100);
+
+        // update footer boxes
+        document.getElementById('matSubtotal').textContent = money(sumMat);
+        document.getElementById('freightSubtotal').textContent = money(sumFreight);
+        document.getElementById('laborHrsSubtotal').textContent = hoursFmt(sumLaborHrs);
+        document.getElementById('laborCostSubtotal').textContent = money(sumLaborCost);
+        document.getElementById('subtotalPreOP').textContent = money(subtotalPreOP);
+        document.getElementById('grandTotal').textContent = money(grandTotal);
+
+        // pill at top
+        document.getElementById('runningTotal').textContent = money(subtotalPreOP);
+    }
+
+    // CSV EXPORT
+    function exportCSV(){
+        // headers
+        const headerData = {
+            Project: document.getElementById('projectName').value || "",
+            Location: document.getElementById('location').value || "",
+            Estimator: document.getElementById('estimatorInit').value || "",
+            Date: document.getElementById('dateField').value || "",
+            RemoteFactorPct: document.getElementById('remoteFactor').value || "",
+            FreightPct: document.getElementById('freightPct').value || "",
+            OPpct: document.getElementById('opPct').value || "",
+            MechRate: document.getElementById('mechRate').value || "",
+            ElecRate: document.getElementById('elecRate').value || "",
+            QCRate: document.getElementById('qcRate').value || "",
+            Assumptions: (document.getElementById('assumptions').value || "").replace(/\n/g," | ")
+        };
+
+        let csv = "";
+        csv += "Project,Location,Estimator,Date,RemoteFactorPct,FreightPct,OPpct,MechRate,ElecRate,QCRate,Assumptions\n";
+        csv += `"${headerData.Project}","${headerData.Location}","${headerData.Estimator}","${headerData.Date}",`+
+               `"${headerData.RemoteFactorPct}","${headerData.FreightPct}","${headerData.OPpct}",`+
+               `"${headerData.MechRate}","${headerData.ElecRate}","${headerData.QCRate}","${headerData.Assumptions}"\n\n`;
+
+        csv += "Line Item,Description,Qty,Unit,MatUnit$,LaborHrsUnit,Trade,Mat$,Freight$,AdjLaborHrs,Labor$,Total$\n";
+
+        const {remoteFactor, freightPct} = getFactors();
+        const {mech,elec,qc} = getRates();
+
+        itemBody.querySelectorAll('tr').forEach(row=>{
+            const itemName = row.querySelector('.item-name').textContent.trim();
+            const itemDesc = row.querySelector('.item-desc').textContent.trim();
+            const qty = (row.querySelector('.qty').value || "0");
+            const unit = row.children[2].textContent.trim();
+
+            const matUnit = (row.querySelector('.matUnit').value || "0");
+            const hrsUnit = (row.querySelector('.hrsUnit').value || "0");
+            const trade = row.querySelector('.trade').value;
+
+            // recalc in case
+            const matCost = Number(qty)*Number(matUnit);
+            const freightCost = matCost*(Number(freightPct)/100);
+
+            const baseLaborHrs = Number(qty)*Number(hrsUnit);
+            const adjLaborHrs = baseLaborHrs * (1 + Number(remoteFactor)/100);
+
+            // rate
+            let rate = mech;
+            if(trade === 'elec') rate = elec;
+            if(trade === 'qc') rate = qc;
+
+            const laborCost = adjLaborHrs * rate;
+            const totalCost = matCost + freightCost + laborCost;
+
+            csv += `"${itemName}","${itemDesc.replace(/"/g,'""')}",${qty},${unit},${matUnit},${hrsUnit},${trade},`+
+                   `${matCost.toFixed(2)},${freightCost.toFixed(2)},${adjLaborHrs.toFixed(2)},${laborCost.toFixed(2)},${totalCost.toFixed(2)}\n`;
+        });
+
+        // download
+        const blob = new Blob([csv], {type:"text/csv"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+
+        // filename: ProjectName_MedGasEstimate.csv
+        const proj = (document.getElementById('projectName').value || "MedGas").replace(/\s+/g,'_');
+        a.download = proj + "_MedGasEstimate.csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    // hook events
+    document.querySelectorAll('input, select, textarea').forEach(el=>{
+        el.addEventListener('input', calc);
+        el.addEventListener('change', calc);
+    });
+    document.getElementById('exportBtn').addEventListener('click', exportCSV);
+
+    // init date default to today (Anchorage timezone per project context)
+    const dateField = document.getElementById('dateField');
+    if(!dateField.value){
+        const now = new Date();
+        // format yyyy-mm-dd
+        const y = now.getFullYear();
+        const m = String(now.getMonth()+1).padStart(2,'0');
+        const d = String(now.getDate()).padStart(2,'0');
+        dateField.value = `${y}-${m}-${d}`;
+    }
+
+    // initial calc
+    calc();
+
+})();
+</script>
+
+</body>
+</html>

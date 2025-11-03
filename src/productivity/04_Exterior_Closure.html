@@ -1,2 +1,584 @@
-041 - Exterior Walls
-042 - Exterior Doors and Windows 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>04 – Exterior Closure Productivity Estimator</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  .card {@apply bg-white/80 backdrop-blur shadow-md rounded-2xl border border-slate-300 p-4 mb-6;}
+  .section-header {@apply text-lg font-semibold text-slate-800 flex items-baseline justify-between flex-wrap gap-2;}
+  .section-sub {@apply text-[10px] text-slate-500 font-mono;}
+  .label-sm {@apply text-xs font-medium text-slate-600;}
+  .number-input {@apply w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400;}
+  .result-box {@apply text-sm font-semibold text-slate-800 bg-slate-100 rounded-lg px-2 py-1 text-right;}
+  .chip {@apply text-[10px] leading-tight font-mono bg-slate-800 text-white rounded px-2 py-[2px] mr-1;}
+  .subgroup-header {@apply text-slate-900 text-base font-bold flex items-center gap-2 mb-2;}
+  .subchip {@apply bg-amber-600 text-white text-[10px] font-mono px-2 py-[2px] rounded;}
+  .assumption-note {@apply text-[10px] leading-snug text-slate-500 italic;}
+  table thead tr {@apply bg-slate-800 text-white;}
+  table tbody tr:nth-child(even) {@apply bg-slate-50/60;}
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 to-amber-100 text-slate-900 min-h-screen">
+
+<!-- HEADER -->
+<header class="px-4 py-4 border-b border-slate-300 bg-white/70 backdrop-blur sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">04 – Exterior Closure Productivity</h1>
+      <p class="text-xs text-slate-600">
+        041 Exterior Walls · 042 Exterior Doors & Windows
+      </p>
+      <p class="text-[10px] text-slate-500 font-mono">
+        Outputs crew-days & man-hours. Alaska factor included.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="exportSummary()">
+        Export Summary (.json)
+      </button>
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="resetAll()">
+        Reset
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- GLOBAL CREW / SHIFT SETTINGS -->
+  <section class="card">
+    <div class="section-header">
+      <span>Global Crew / Shift</span>
+      <span class="section-sub">Used in all productivity calcs</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Crew Size (people)</label>
+        <input id="crewSize" type="number" min="1" value="4" class="number-input" oninput="recalcAll()" />
+      </div>
+      <div>
+        <label class="label-sm">Hours / shift</label>
+        <input id="hoursPerShift" type="number" min="1" value="10" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">10 hr days typical remote Alaska</p>
+      </div>
+      <div>
+        <label class="label-sm">Productivity Factor</label>
+        <input id="prodFactorGlobal" type="number" step="0.01" value="1.25" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">1.00 = Lower 48 baseline, &gt;1.00 = slower (cold/wind/winter light)</p>
+      </div>
+      <div>
+        <label class="label-sm">Project Name / ID</label>
+        <input id="projectId" type="text" placeholder="Library Exterior Closure"
+          class="number-input" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ==================== 041 EXTERIOR WALLS ==================== -->
+  <section class="card" id="wallsBlock">
+    <div class="subgroup-header">
+      <span class="subchip">041</span>
+      <span>Exterior Walls</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Exterior wall assembly: framing (stud/CMU/backup), sheathing, WRB/air barrier, exterior insulation,
+      cladding / siding / panel systems. Assumes lift or scaffold access and typical height &lt; 30'.
+    </p>
+
+    <!-- 041.01 Wall Framing + Sheathing -->
+    <div class="section-header">
+      <span>041.01 Wall Framing + Sheathing</span>
+      <span class="section-sub">Studs/backup + sheathing install</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Wall Area (SF)</label>
+        <input id="wallFrameSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Exterior face area, rough opening to rough opening</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="wallFrameProdBase" type="number" step="1" value="1200" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Crew w/ telehandler, decent weather</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="wallFrameProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="wallFrameCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="wallFrameManHours" class="result-box">0</div>
+        <p class="assumption-note">= Crew-Days × Crew Size × Hrs/Shift</p>
+      </div>
+    </div>
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="wallFrameNotes" type="text"
+        placeholder="Exterior studs/CMU backup, sheathing, tie-in at floors. No WRB yet."
+        class="number-input" />
+    </div>
+
+    <!-- 041.02 WRB / Exterior Insulation / Cladding -->
+    <div class="section-header mt-8">
+      <span>041.02 WRB / Exterior Insulation / Cladding</span>
+      <span class="section-sub">Air barrier, rigid insulation, siding/panels</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Facade Area (SF)</label>
+        <input id="claddingSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Same wall face SF, minus big curtainwall zones</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="claddingProdBase" type="number" step="1" value="700" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Weather-resistive barrier + outboard insulation + siding system</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="claddingProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="claddingCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="claddingManHours" class="result-box">0</div>
+      </div>
+    </div>
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="claddingNotes" type="text"
+        placeholder="Includes WRB/air barrier taping, exterior rigid insulation, Z-girts, siding / panel hang"
+        class="number-input" />
+    </div>
+
+  </section>
+
+
+  <!-- ==================== 042 EXTERIOR DOORS & WINDOWS ==================== -->
+  <section class="card" id="openingsBlock">
+    <div class="subgroup-header">
+      <span class="subchip">042</span>
+      <span>Exterior Doors & Windows</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Includes storefront/curtainwall sections, punched windows, exterior HM/FRP/insulated doors & frames,
+      basic sealing and shimming. Complex vestibules or security hardware slow production.
+    </p>
+
+    <!-- 042.01 Storefront / Curtainwall Sections -->
+    <div class="section-header">
+      <span>042.01 Storefront / Curtainwall Install</span>
+      <span class="section-sub">Frames, mullions, glazing set</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Storefront Length (LF)</label>
+        <input id="storefrontLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Continuous run of glazing / mullions</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="storefrontProdBase" type="number" step="1" value="40" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Anchor frame, mullions, set glass, basic sealant</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="storefrontProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="storefrontCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="storefrontManHours" class="result-box">0</div>
+        <p class="assumption-note">= Crew-Days × Crew Size × Hrs/Shift</p>
+      </div>
+    </div>
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="storefrontNotes" type="text"
+        placeholder="Assumes pre-fab frames, site glazing. No blast/security rating."
+        class="number-input" />
+    </div>
+
+    <!-- 042.02 Punched Windows / Units -->
+    <div class="section-header mt-8">
+      <span>042.02 Window Units (Punched Openings)</span>
+      <span class="section-sub">Set, shim, flash, seal</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Window Count (EA)</label>
+        <input id="windowEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Typical commercial units, not curtainwall sticks</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="windowProdBase" type="number" step="1" value="12" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Includes shimming, fasteners, sealant, interior trim rough</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="windowProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="windowCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="windowManHours" class="result-box">0</div>
+      </div>
+    </div>
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="windowNotes" type="text"
+        placeholder="Standard commercial punched windows, lifts available for 2nd floor"
+        class="number-input" />
+    </div>
+
+    <!-- 042.03 Exterior Doors & Frames -->
+    <div class="section-header mt-8">
+      <span>042.03 Exterior Doors & Frames</span>
+      <span class="section-sub">Hang frame, set door leaf, hardware basic</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Door Sets (EA)</label>
+        <input id="doorEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">HM or FRP door + frame + threshold</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="doorProdBase" type="number" step="1" value="6" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Frame plumb/anchor, hang door, weatherstrip</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="doorProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="doorCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="doorManHours" class="result-box">0</div>
+        <p class="assumption-note">Does not include card readers / storefront hardware packages</p>
+      </div>
+    </div>
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="doorNotes" type="text"
+        placeholder="Weatherstrip, sill pan, threshold, closer/basic panic. No access control devices."
+        class="number-input" />
+    </div>
+
+  </section>
+
+
+  <!-- ==================== ROLLUP SUMMARY ==================== -->
+  <section class="card">
+    <div class="section-header">
+      <span>Rollup – Labor Demand</span>
+      <span class="section-sub">Crew-Days & Man-Hours by Subgroup (041 / 042) and Total</span>
+    </div>
+
+    <div class="overflow-x-auto mt-4">
+      <table class="min-w-full text-xs text-left border border-slate-300 rounded-xl overflow-hidden">
+        <thead>
+          <tr>
+            <th class="px-2 py-2 font-semibold">Activity</th>
+            <th class="px-2 py-2 font-semibold text-right">Crew-Days</th>
+            <th class="px-2 py-2 font-semibold text-right">Man-Hours</th>
+            <th class="px-2 py-2 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white/80">
+          <!-- 041 Exterior Walls -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">041.01</span>Wall Framing + Sheathing</td>
+            <td class="px-2 py-2 text-right" id="sumWallFrameDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumWallFrameMH">0</td>
+            <td class="px-2 py-2" id="sumWallFrameNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">041.02</span>WRB / Insulation / Cladding</td>
+            <td class="px-2 py-2 text-right" id="sumCladdingDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumCladdingMH">0</td>
+            <td class="px-2 py-2" id="sumCladdingNotes"></td>
+          </tr>
+
+          <!-- 042 Exterior Doors & Windows -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">042.01</span>Storefront / Curtainwall</td>
+            <td class="px-2 py-2 text-right" id="sumStorefrontDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumStorefrontMH">0</td>
+            <td class="px-2 py-2" id="sumStorefrontNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">042.02</span>Windows (Punched)</td>
+            <td class="px-2 py-2 text-right" id="sumWindowDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumWindowMH">0</td>
+            <td class="px-2 py-2" id="sumWindowNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">042.03</span>Exterior Doors & Frames</td>
+            <td class="px-2 py-2 text-right" id="sumDoorDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumDoorMH">0</td>
+            <td class="px-2 py-2" id="sumDoorNotes"></td>
+          </tr>
+
+          <!-- TOTAL -->
+          <tr class="bg-slate-800 text-white font-semibold text-right">
+            <td class="px-2 py-2 text-left">TOTAL</td>
+            <td class="px-2 py-2" id="sumTotalDays">0</td>
+            <td class="px-2 py-2" id="sumTotalMH">0</td>
+            <td class="px-2 py-2 text-left text-[10px] font-normal italic">
+              Sequential crew assumption. Weather and access drastically affect exterior work in Alaska.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-[10px] text-slate-500 leading-snug mt-3">
+      These baseline rates assume lift/scaffold access, manageable wind, and above 20°F.
+      Winter tarping/heat, night work, or coastal wind exposure will slow production.
+    </p>
+  </section>
+
+  <footer class="text-[10px] text-slate-400 text-center py-6">
+    © 2025 Poor Louis Labs · Alaska Productivity Toolkit · 04_Exterior_Closure.html
+  </footer>
+</main>
+
+<script>
+// helpers
+function safeNum(v){const n=parseFloat(v);return isNaN(n)?0:n;}
+
+function crewDaysNeeded(qty, prodAdjPerDay){
+  if(prodAdjPerDay<=0)return 0;
+  return qty/prodAdjPerDay;
+}
+
+function totalManHours(crewDays, crewSize, hrsPerShift){
+  return crewDays*crewSize*hrsPerShift;
+}
+
+// generic block calculator
+function recalcGeneric(qtyId, prodBaseId, prodAdjId, crewDaysId, mhId,
+                       notesId, sumDaysId, sumMhId, sumNotesId){
+  const qty = safeNum(document.getElementById(qtyId).value);
+  const prodBase = safeNum(document.getElementById(prodBaseId).value);
+
+  const pfGlobal = safeNum(document.getElementById('prodFactorGlobal').value);
+  const crewSize = safeNum(document.getElementById('crewSize').value);
+  const hrsPerShift = safeNum(document.getElementById('hoursPerShift').value);
+
+  const prodAdj = (pfGlobal>0)?(prodBase/pfGlobal):0;
+  document.getElementById(prodAdjId).textContent = prodAdj.toFixed(2);
+
+  const cDays = crewDaysNeeded(qty, prodAdj);
+  document.getElementById(crewDaysId).textContent = cDays.toFixed(2);
+
+  const mh = totalManHours(cDays, crewSize, hrsPerShift);
+  document.getElementById(mhId).textContent = mh.toFixed(1);
+
+  const notesVal = document.getElementById(notesId).value;
+  document.getElementById(sumDaysId).textContent = cDays.toFixed(2);
+  document.getElementById(sumMhId).textContent = mh.toFixed(1);
+  document.getElementById(sumNotesId).textContent = notesVal;
+
+  return {cDays, mh};
+}
+
+function recalcAll(){
+  // 041 Exterior Walls
+  const wallFrame = recalcGeneric(
+    'wallFrameSF','wallFrameProdBase','wallFrameProdAdj','wallFrameCrewDays','wallFrameManHours',
+    'wallFrameNotes','sumWallFrameDays','sumWallFrameMH','sumWallFrameNotes'
+  );
+
+  const cladding = recalcGeneric(
+    'claddingSF','claddingProdBase','claddingProdAdj','claddingCrewDays','claddingManHours',
+    'claddingNotes','sumCladdingDays','sumCladdingMH','sumCladdingNotes'
+  );
+
+  // 042 Doors & Windows
+  const storefront = recalcGeneric(
+    'storefrontLF','storefrontProdBase','storefrontProdAdj','storefrontCrewDays','storefrontManHours',
+    'storefrontNotes','sumStorefrontDays','sumStorefrontMH','sumStorefrontNotes'
+  );
+
+  const windowUnits = recalcGeneric(
+    'windowEA','windowProdBase','windowProdAdj','windowCrewDays','windowManHours',
+    'windowNotes','sumWindowDays','sumWindowMH','sumWindowNotes'
+  );
+
+  const doors = recalcGeneric(
+    'doorEA','doorProdBase','doorProdAdj','doorCrewDays','doorManHours',
+    'doorNotes','sumDoorDays','sumDoorMH','sumDoorNotes'
+  );
+
+  // totals
+  const totalDays =
+    wallFrame.cDays + cladding.cDays +
+    storefront.cDays + windowUnits.cDays + doors.cDays;
+
+  const totalMH =
+    wallFrame.mh + cladding.mh +
+    storefront.mh + windowUnits.mh + doors.mh;
+
+  document.getElementById('sumTotalDays').textContent = totalDays.toFixed(2);
+  document.getElementById('sumTotalMH').textContent = totalMH.toFixed(1);
+}
+
+function exportSummary(){
+  const data = {
+    project: document.getElementById('projectId').value,
+    timestamp_utc: new Date().toISOString(),
+    globals:{
+      crewSize: safeNum(document.getElementById('crewSize').value),
+      hoursPerShift: safeNum(document.getElementById('hoursPerShift').value),
+      productivityFactor: safeNum(document.getElementById('prodFactorGlobal').value)
+    },
+    "041_exterior_walls":{
+      wall_frame_sheathing:{
+        qty_sf: safeNum(document.getElementById('wallFrameSF').value),
+        crewDays: safeNum(document.getElementById('sumWallFrameDays').textContent),
+        manHours: safeNum(document.getElementById('sumWallFrameMH').textContent),
+        notes: document.getElementById('wallFrameNotes').value
+      },
+      wrb_insul_cladding:{
+        qty_sf: safeNum(document.getElementById('claddingSF').value),
+        crewDays: safeNum(document.getElementById('sumCladdingDays').textContent),
+        manHours: safeNum(document.getElementById('sumCladdingMH').textContent),
+        notes: document.getElementById('claddingNotes').value
+      }
+    },
+    "042_exterior_openings":{
+      storefront:{
+        qty_lf: safeNum(document.getElementById('storefrontLF').value),
+        crewDays: safeNum(document.getElementById('sumStorefrontDays').textContent),
+        manHours: safeNum(document.getElementById('sumStorefrontMH').textContent),
+        notes: document.getElementById('storefrontNotes').value
+      },
+      punched_windows:{
+        qty_each: safeNum(document.getElementById('windowEA').value),
+        crewDays: safeNum(document.getElementById('sumWindowDays').textContent),
+        manHours: safeNum(document.getElementById('sumWindowMH').textContent),
+        notes: document.getElementById('windowNotes').value
+      },
+      exterior_doors:{
+        qty_each: safeNum(document.getElementById('doorEA').value),
+        crewDays: safeNum(document.getElementById('sumDoorDays').textContent),
+        manHours: safeNum(document.getElementById('sumDoorMH').textContent),
+        notes: document.getElementById('doorNotes').value
+      }
+    },
+    totals:{
+      crewDays: safeNum(document.getElementById('sumTotalDays').textContent),
+      manHours: safeNum(document.getElementById('sumTotalMH').textContent)
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const projName=(data.project||'exterior_closure').replace(/\s+/g,'_');
+  a.download = projName + "_div04_productivity.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetAll(){
+  // globals
+  document.getElementById('crewSize').value = 4;
+  document.getElementById('hoursPerShift').value = 10;
+  document.getElementById('prodFactorGlobal').value = 1.25;
+  document.getElementById('projectId').value = "";
+
+  // 041 Exterior Walls
+  document.getElementById('wallFrameSF').value = 0;
+  document.getElementById('wallFrameProdBase').value = 1200;
+  document.getElementById('wallFrameNotes').value =
+    "Stud/backup framing + sheathing. Lift/scaffold access, <30' high.";
+
+  document.getElementById('claddingSF').value = 0;
+  document.getElementById('claddingProdBase').value = 700;
+  document.getElementById('claddingNotes').value =
+    "WRB/air barrier, rigid insulation, Z-girts, siding panels.";
+
+  // 042 Exterior Doors & Windows
+  document.getElementById('storefrontLF').value = 0;
+  document.getElementById('storefrontProdBase').value = 40;
+  document.getElementById('storefrontNotes').value =
+    "Storefront/curtainwall frame, mullions, glazing set, basic sealant.";
+
+  document.getElementById('windowEA').value = 0;
+  document.getElementById('windowProdBase').value = 12;
+  document.getElementById('windowNotes').value =
+    "Commercial punched windows; shim, fasten, flash, seal.";
+
+  document.getElementById('doorEA').value = 0;
+  document.getElementById('doorProdBase').value = 6;
+  document.getElementById('doorNotes').value =
+    "HM/FRP door+frame, weatherstrip, sill pan. No card reader hardware.";
+
+  recalcAll();
+}
+
+// init now
+recalcAll();
+</script>
+
+</body>
+</html>

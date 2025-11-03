@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Lead Remediation Estimator</title>
+<style>
+    :root {
+        --bg-dark: #0f172a;
+        --panel-dark: #1e2538;
+        --accent: #fb7185;
+        --text-light: #f8fafc;
+        --text-dim: #94a3b8;
+        --border-color: #2d344a;
+        --radius-lg: 1rem;
+        --radius-sm: .5rem;
+        --gap: 1rem;
+        --font-stack: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    }
+
+    body {
+        background: var(--bg-dark);
+        color: var(--text-light);
+        font-family: var(--font-stack);
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    header {
+        padding: 1rem 2rem;
+        border-bottom: 1px solid var(--border-color);
+        background: radial-gradient(circle at 10% 0%, rgba(251,113,133,.18) 0%, rgba(15,23,42,0) 60%);
+    }
+
+    header h1 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-light);
+        letter-spacing: -0.03em;
+        display: flex;
+        align-items: baseline;
+        gap: .75rem;
+        flex-wrap: wrap;
+    }
+
+    header h1 span.tag {
+        background: rgba(251,113,133,.12);
+        color: var(--accent);
+        border: 1px solid rgba(251,113,133,.4);
+        font-size: .7rem;
+        font-weight: 500;
+        padding: .25rem .5rem;
+        border-radius: var(--radius-sm);
+        line-height: 1.2;
+    }
+
+    header .sub {
+        color: var(--text-dim);
+        font-size: .8rem;
+        max-width: 900px;
+        line-height: 1.4;
+        margin-top: .4rem;
+    }
+
+    main {
+        flex: 1;
+        display: grid;
+        grid-template-columns: minmax(300px, 400px) 1fr 320px;
+        gap: var(--gap);
+        padding: var(--gap);
+    }
+    @media (max-width:1100px){
+        main { grid-template-columns:1fr; }
+    }
+
+    .panel {
+        background: var(--panel-dark);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 1rem 1rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 30px 80px -10px rgba(0,0,0,.8);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .panel h2 {
+        margin: 0 0 .5rem;
+        color: var(--text-light);
+        font-size: .9rem;
+        font-weight: 600;
+        letter-spacing:-0.03em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .panel h2 .mini {
+        font-size:.7rem;
+        font-weight:500;
+        color:var(--text-dim);
+    }
+
+    .panel-section {
+        border-top:1px solid var(--border-color);
+        margin-top:1rem;
+        padding-top:1rem;
+    }
+
+    .grid-2 {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:var(--gap);
+    }
+
+    .grid-3 {
+        display:grid;
+        grid-template-columns:repeat(3,1fr);
+        gap:var(--gap);
+    }
+
+    .field {
+        display:flex;
+        flex-direction:column;
+        gap:.4rem;
+        background:#11182733;
+        padding:.6rem .75rem .75rem;
+        border-radius:var(--radius-sm);
+        border:1px solid var(--border-color);
+    }
+
+    .field label {
+        font-size:.7rem;
+        font-weight:500;
+        color:var(--text-dim);
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:.5rem;
+        flex-wrap:wrap;
+    }
+
+    .field small {
+        font-size:.65rem;
+        font-weight:400;
+        color:var(--text-dim);
+        line-height:1.2;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+        background:rgba(15,23,42,.6);
+        color:var(--text-light);
+        border:1px solid var(--border-color);
+        border-radius:var(--radius-sm);
+        padding:.55rem .6rem;
+        font-size:.8rem;
+        width:100%;
+        font-family:var(--font-stack);
+    }
+
+    .toggle-row {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:.5rem;
+        font-size:.75rem;
+        font-weight:500;
+        color:var(--text-light);
+        background:#11182733;
+        border:1px solid var(--border-color);
+        border-radius:var(--radius-sm);
+        padding:.6rem .75rem;
+    }
+    .toggle-row span.sub {
+        color:var(--text-dim);
+        display:block;
+        font-size:.65rem;
+        font-weight:400;
+        line-height:1.2;
+    }
+    .toggle-row input[type="checkbox"] {
+        width:1.2rem;
+        height:1.2rem;
+        accent-color: var(--accent);
+    }
+
+    .results-block {
+        display:flex;
+        flex-direction:column;
+        gap:.5rem;
+        background:#0f172a;
+        border:1px solid var(--border-color);
+        border-radius:var(--radius-sm);
+        padding:.75rem .75rem 1rem;
+        font-size:.8rem;
+        position:relative;
+    }
+
+    .results-block h3 {
+        margin:0;
+        font-size:.75rem;
+        font-weight:600;
+        color:var(--text-dim);
+        letter-spacing:-0.03em;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+    }
+
+    .results-line {
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        flex-wrap:wrap;
+        gap:.5rem;
+        border-bottom:1px dashed rgba(148,163,184,.2);
+        padding:.4rem 0;
+    }
+
+    .results-line .label {
+        color:var(--text-light);
+        font-weight:500;
+        font-size:.8rem;
+        letter-spacing:-0.03em;
+    }
+    .results-line .calcdetail {
+        color:var(--text-dim);
+        font-size:.65rem;
+        font-weight:400;
+        line-height:1.2;
+    }
+    .results-line .value {
+        text-align:right;
+        min-width:5rem;
+        font-feature-settings:"tnum";
+    }
+
+    .results-total {
+        font-size:.9rem;
+        font-weight:600;
+        color:var(--accent);
+    }
+
+    .two-col-stats {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:.5rem;
+    }
+    .stat-card {
+        background:#0f172a;
+        border:1px solid var(--border-color);
+        border-radius:var(--radius-sm);
+        padding:.6rem .75rem .75rem;
+        font-size:.7rem;
+        line-height:1.4;
+    }
+    .stat-label {
+        color:var(--text-dim);
+        font-weight:500;
+        display:flex;
+        justify-content:space-between;
+    }
+    .stat-value {
+        color:var(--text-light);
+        font-size:1rem;
+        font-weight:600;
+        letter-spacing:-0.03em;
+    }
+
+    .notes-area { min-height:4rem; resize:vertical; }
+
+    .footer-hint {
+        padding:1rem 2rem 2rem;
+        color: var(--text-dim);
+        font-size:.7rem;
+        line-height:1.4;
+        text-align:center;
+        background: radial-gradient(circle at 90% 10%, rgba(251,113,133,.08) 0%, rgba(15,23,42,0) 60%);
+        border-top:1px solid var(--border-color);
+    }
+    .footer-hint b {
+        color:var(--text-light);
+        font-weight:600;
+    }
+</style>
+</head>
+<body>
+<header>
+    <h1>
+        Lead Remediation Estimator
+        <span class="tag">Lead Paint / Coatings / Dust Cleanup</span>
+        <span class="tag">Residential · School · Industrial</span>
+    </h1>
+    <div class="sub">
+        Budget-level estimator for lead-based paint removal, lead dust cleanup, industrial coating abatement,
+        and clearance testing. Designed for housing, schools, civic buildings, and heavy industrial steel.
+    </div>
+</header>
+
+<main>
+
+    <!-- LEFT PANEL: SCOPE -->
+    <section class="panel">
+        <h2>
+            Scope & Lead Condition
+            <span class="mini">Define the work area.</span>
+        </h2>
+
+        <div class="panel-section">
+            <div class="field">
+                <label>
+                    Lead Work Type
+                    <small>Changes unit basis and production difficulty.</small>
+                </label>
+                <select id="leadType">
+                    <option value="lbp_residential">Lead-Based Paint Stabilization / RRP (SF)</option>
+                    <option value="dust_cleanup">HEPA Dust Cleanup & Wipe Clearance (SF)</option>
+                    <option value="window_trim">Window / Trim Demo & Disposal (EA)</option>
+                    <option value="industrial_coating">Industrial Lead Coating Removal (Steel / Tank / Beam SF)</option>
+                    <option value="pipe_coating">Lead Coating Removal on Piping / Railings (LF)</option>
+                </select>
+            </div>
+
+            <div class="grid-2" style="margin-top:1rem;">
+                <div class="field">
+                    <label>
+                        Quantity
+                        <small>Total affected scope in SF, LF, or EA depending on type.</small>
+                    </label>
+                    <input type="number" id="qty" value="1000" min="0" step="1" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Occupancy / Sensitivity
+                        <small>Occupied daycare vs shutdown industrial bay.</small>
+                    </label>
+                    <select id="occupancyClass">
+                        <option value="daycare_school">Childcare / School / Residential Occupied</option>
+                        <option value="tenant_occ">Multifamily Unit Occupied (Night/Weekend Work)</option>
+                        <option value="vacant_unit">Vacant Unit / Empty Wing</option>
+                        <option value="industrial_shutdown">Industrial Bay / Outage Shutdown</option>
+                        <option value="industrial_active">Industrial Active / Live Production</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top:1rem;">
+                <div class="field">
+                    <label>
+                        Containment Level
+                        <small>Critical poly, negative air, full scaffold shroud, etc.</small>
+                    </label>
+                    <select id="containmentLevel">
+                        <option value="rrp_local">Local Poly / RRP Style Drop Containment</option>
+                        <option value="room_iso">Full Room Isolation + Negative Air</option>
+                        <option value="scaffold_shroud">Full Scaffold / Shrink-wrap Containment</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>
+                        Height / Access
+                        <small>Ladder height vs boom lift vs full scaffold.</small>
+                    </label>
+                    <select id="accessClass">
+                        <option value="low_wall">Low Wall / Trim / <10'</option>
+                        <option value="ladder">Ladder / Mid Elevation 10'-16'</option>
+                        <option value="lift">Boom / Scissor Lift Work</option>
+                        <option value="full_scaffold">Full Scaffold / Multi-story Steel</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="toggle-row" style="margin-top:1rem;">
+                <div>
+                    After-Hours / Off-Hours Work
+                    <span class="sub">Night shift, tenant avoidance, student safety window.</span>
+                </div>
+                <input type="checkbox" id="afterHours" />
+            </div>
+
+            <div class="field" style="margin-top:1rem;">
+                <label>
+                    Notes / Area Description
+                    <small>"Occupied daycare, peeling lead trim at windows" / "Bridge girder blasting & containment over water".</small>
+                </label>
+                <textarea id="notes" class="notes-area"></textarea>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h2>
+                Field Crew & Rate
+                <span class="mini">Adjust for your crew.</span>
+            </h2>
+
+            <div class="grid-3">
+                <div class="field">
+                    <label>
+                        Crew Size
+                        <small>Workers actually performing abatement.</small>
+                    </label>
+                    <input type="number" id="crewSize" value="3" min="1" step="1" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Production Rate (Unit/hr)
+                        <small>SF/hr, LF/hr, or EA/hr per crew.</small>
+                    </label>
+                    <input type="number" id="prodRate" value="80" min="1" step="1" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Labor Rate $/hr (Loaded)
+                        <small>Lead abatement tech / painter / carpenter blend.</small>
+                    </label>
+                    <input type="number" id="laborRate" value="105" min="1" step="1" />
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top:1rem;">
+                <div class="field">
+                    <label>
+                        Support / Containment / Supervisor $/shift
+                        <small>Poly, zipper doors, negative air, scaffold, QA per 8-hr shift.</small>
+                    </label>
+                    <input type="number" id="supportPerShift" value="3000" min="0" step="50" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Clearance Wipe / Lab / Report Allowance ($)
+                        <small>Final wipes, lab cert, owner report, HUD/EPA style clearance.</small>
+                    </label>
+                    <input type="number" id="clearanceAllowance" value="1500" min="0" step="50" />
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- MIDDLE PANEL: COST / LOGISTICS -->
+    <section class="panel">
+        <h2>
+            Waste & Logistics
+            <span class="mini">Disposal and remote factors.</span>
+        </h2>
+
+        <div class="panel-section">
+            <div class="grid-3">
+                <div class="field">
+                    <label>
+                        Waste Density (lb/unit)
+                        <small>Convert SF/LF/EA into lb for disposal. Windows/trim are heavier per EA.</small>
+                    </label>
+                    <input type="number" id="wasteDensity" value="2" min="0" step="0.1" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Disposal $/lb
+                        <small>Special waste handling, labeling, transport, tipping.</small>
+                    </label>
+                    <input type="number" id="disposalRate" value="1.25" min="0" step="0.05" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        PPE / Consumables $/shift
+                        <small>Tyvek, HEPA filters, tape, poly, wipes, zipper doors.</small>
+                    </label>
+                    <input type="number" id="ppePerShift" value="700" min="0" step="25" />
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top:1rem;">
+                <div class="field">
+                    <label>
+                        Remote / Access Multiplier
+                        <small>1.0 = local, 1.3 = rural village/barge only, 1.6+ = remote scaffold over water.</small>
+                    </label>
+                    <input type="number" id="remoteFactor" value="1.0" min="1" step="0.1" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Markup / OH&P (%)
+                        <small>Risk, admin, bonds, reporting, schedule juggling.</small>
+                    </label>
+                    <input type="number" id="markupPct" value="15" min="0" step="1" />
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="toggle-row">
+                    <div>
+                        Include Clearance / Wipe Testing Cost?
+                        <span class="sub">Usually required for schools, childcare, housing turnover.</span>
+                    </div>
+                    <input type="checkbox" id="includeClearance" checked />
+                </div>
+
+                <div class="toggle-row">
+                    <div>
+                        Include Mobilization / Demobilization Lot?
+                        <span class="sub">Scaffold delivery, negative air machines, permit paperwork.</span>
+                    </div>
+                    <input type="checkbox" id="includeMobDemob" checked />
+                </div>
+
+                <div class="field" style="margin-top:1rem;">
+                    <label>
+                        Mob / Demob Lot ($)
+                        <small>One-time. Includes setup of containment hardware, scaffold build, removal.</small>
+                    </label>
+                    <input type="number" id="mobDemobLot" value="4000" min="0" step="100" />
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h2>
+                Project Notes
+                <span class="mini">Owner-facing assumptions</span>
+            </h2>
+            <div class="field">
+                <label>
+                    Owner / AHJ Notes
+                    <small>"HUD clearance required" / "Bridge repaint Phase 2 only" / "No repaint, just stabilize".</small>
+                </label>
+                <textarea id="ownerNotes" class="notes-area"></textarea>
+            </div>
+        </div>
+    </section>
+
+    <!-- RIGHT PANEL: RESULTS -->
+    <section class="panel">
+        <h2>
+            Estimate Result
+            <span class="mini">Auto-calculated</span>
+        </h2>
+
+        <div class="results-block">
+            <h3>
+                Labor & Time
+                <span class="mini">Crew hours, containment difficulty</span>
+            </h3>
+
+            <div class="two-col-stats">
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <span>Shifts</span>
+                        <span id="out_shifts_detail" class="stat-label-sub"></span>
+                    </div>
+                    <div class="stat-value" id="out_shifts">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <span>Man-Hours</span>
+                        <span id="out_mh_detail" class="stat-label-sub"></span>
+                    </div>
+                    <div class="stat-value" id="out_manhours">0</div>
+                </div>
+            </div>
+
+            <div class="results-line">
+                <div class="label">
+                    Labor Cost
+                    <div class="calcdetail" id="out_labor_detail"></div>
+                </div>
+                <div class="value" id="out_labor_cost">$0</div>
+            </div>
+
+            <div class="results-line">
+                <div class="label">
+                    Support / Containment Cost
+                    <div class="calcdetail" id="out_support_detail"></div>
+                </div>
+                <div class="value" id="out_support_cost">$0</div>
+            </div>
+
+            <div class="results-line">
+                <div class="label">
+                    PPE / Consumables
+                    <div class="calcdetail" id="out_ppe_detail"></div>
+                </div>
+                <div class="value" id="out_ppe_cost">$0</div>
+            </div>
+        </div>
+
+        <div class="results-block">
+            <h3>
+                Waste & Disposal
+                <span class="mini">Bagged, labeled, manifested</span>
+            </h3>
+
+            <div class="results-line">
+                <div class="label">
+                    Est. Waste Weight
+                    <div class="calcdetail" id="out_waste_detail"></div>
+                </div>
+                <div class="value" id="out_waste_lbs">0 lb</div>
+            </div>
+
+            <div class="results-line">
+                <div class="label">
+                    Disposal Cost
+                    <div class="calcdetail" id="out_disposal_detail"></div>
+                </div>
+                <div class="value" id="out_disposal_cost">$0</div>
+            </div>
+        </div>
+
+        <div class="results-block">
+            <h3>
+                Adds / Allowances
+                <span class="mini">Clearance, reporting, mobilization</span>
+            </h3>
+
+            <div class="results-line">
+                <div class="label">
+                    Clearance / Wipe / Lab
+                    <div class="calcdetail" id="out_clearance_detail"></div>
+                </div>
+                <div class="value" id="out_clearance_cost">$0</div>
+            </div>
+
+            <div class="results-line">
+                <div class="label">
+                    Mobilization / Demobilization
+                    <div class="calcdetail" id="out_mob_detail"></div>
+                </div>
+                <div class="value" id="out_mob_cost">$0</div>
+            </div>
+        </div>
+
+        <div class="results-block">
+            <h3>
+                Summary
+                <span class="mini">Remote factor & markup</span>
+            </h3>
+
+            <div class="results-line">
+                <div class="label">
+                    Subtotal (Direct Cost)
+                </div>
+                <div class="value" id="out_subtotal">$0</div>
+            </div>
+
+            <div class="results-line">
+                <div class="label">
+                    Remote / Access Multiplier
+                    <div class="calcdetail" id="out_remote_detail"></div>
+                </div>
+                <div class="value" id="out_remote_cost">$0</div>
+            </div>
+
+            <div class="results-line">
+                <div class="label results-total">
+                    GRAND TOTAL (w/ OH&P)
+                    <div class="calcdetail" id="out_final_detail"></div>
+                </div>
+                <div class="value results-total" id="out_final">$0</div>
+            </div>
+        </div>
+
+    </section>
+</main>
+
+<div class="footer-hint">
+    Assumptions:
+    <br><b>Labor Rate</b> is a blended lead-abatement / RRP / industrial painter wage w/ Alaska burden.
+    <br><b>Support / Containment</b> covers poly, negative air machines, scaffold, supervisor, QA per shift.
+    <br><b>Waste Density</b> converts scope units into lb so we can price labeled, manifested disposal.
+    <br><b>Clearance Allowance</b> covers wipe tests and final clearance certs usually required for residential / school turnover.
+    <br>Remote multiplier is for rural/village/scaffold logistics in Alaska.
+</div>
+
+<script>
+(function(){
+    // INPUTS
+    const leadType             = document.getElementById('leadType');
+    const qty                  = document.getElementById('qty');
+    const occupancyClass       = document.getElementById('occupancyClass');
+    const containmentLevel     = document.getElementById('containmentLevel');
+    const accessClass          = document.getElementById('accessClass');
+    const afterHours           = document.getElementById('afterHours');
+    const notes                = document.getElementById('notes');
+
+    const crewSize             = document.getElementById('crewSize');
+    const prodRate             = document.getElementById('prodRate');
+    const laborRate            = document.getElementById('laborRate');
+    const supportPerShift      = document.getElementById('supportPerShift');
+    const clearanceAllowance   = document.getElementById('clearanceAllowance');
+
+    const wasteDensity         = document.getElementById('wasteDensity');
+    const disposalRate         = document.getElementById('disposalRate');
+    const ppePerShift          = document.getElementById('ppePerShift');
+    const remoteFactor         = document.getElementById('remoteFactor');
+    const markupPct            = document.getElementById('markupPct');
+
+    const includeClearance     = document.getElementById('includeClearance');
+    const includeMobDemob      = document.getElementById('includeMobDemob');
+    const mobDemobLot          = document.getElementById('mobDemobLot');
+    const ownerNotes           = document.getElementById('ownerNotes');
+
+    // OUTPUTS
+    const out_shifts           = document.getElementById('out_shifts');
+    const out_shifts_detail    = document.getElementById('out_shifts_detail');
+    const out_manhours         = document.getElementById('out_manhours');
+    const out_mh_detail        = document.getElementById('out_mh_detail');
+
+    const out_labor_cost       = document.getElementById('out_labor_cost');
+    const out_labor_detail     = document.getElementById('out_labor_detail');
+
+    const out_support_cost     = document.getElementById('out_support_cost');
+    const out_support_detail   = document.getElementById('out_support_detail');
+
+    const out_ppe_cost         = document.getElementById('out_ppe_cost');
+    const out_ppe_detail       = document.getElementById('out_ppe_detail');
+
+    const out_waste_lbs        = document.getElementById('out_waste_lbs');
+    const out_waste_detail     = document.getElementById('out_waste_detail');
+
+    const out_disposal_cost    = document.getElementById('out_disposal_cost');
+    const out_disposal_detail  = document.getElementById('out_disposal_detail');
+
+    const out_clearance_cost   = document.getElementById('out_clearance_cost');
+    const out_clearance_detail = document.getElementById('out_clearance_detail');
+
+    const out_mob_cost         = document.getElementById('out_mob_cost');
+    const out_mob_detail       = document.getElementById('out_mob_detail');
+
+    const out_subtotal         = document.getElementById('out_subtotal');
+    const out_remote_cost      = document.getElementById('out_remote_cost');
+    const out_remote_detail    = document.getElementById('out_remote_detail');
+    const out_final            = document.getElementById('out_final');
+    const out_final_detail     = document.getElementById('out_final_detail');
+
+    function fmtMoney(v){
+        return "$" + (Number(v).toLocaleString(undefined,{minimumFractionDigits:0, maximumFractionDigits:0}));
+    }
+
+    function recalc(){
+        const QTY                = parseFloat(qty.value)||0;
+        const PROD_RATE          = parseFloat(prodRate.value)||1;
+        const CREW               = parseFloat(crewSize.value)||1;
+        const LABOR_RATE         = parseFloat(laborRate.value)||0;
+        const SUPPORT_SHIFT      = parseFloat(supportPerShift.value)||0;
+        const CLEAR_ALLOW        = parseFloat(clearanceAllowance.value)||0;
+
+        const WASTE_DENS         = parseFloat(wasteDensity.value)||0; // lb per unit
+        const DISP_RATE          = parseFloat(disposalRate.value)||0; // $/lb
+        const PPE_SHIFT          = parseFloat(ppePerShift.value)||0;
+        const REMOTE_MULT        = parseFloat(remoteFactor.value)||1;
+        const MARKUP_PCT         = parseFloat(markupPct.value)||0;
+
+        const WITH_CLEAR         = includeClearance.checked ? 1 : 0;
+        const WITH_MOB           = includeMobDemob.checked ? 1 : 0;
+        const MOB_DEMOB          = parseFloat(mobDemobLot.value)||0;
+        const IS_AFTER           = afterHours.checked ? 1 : 0;
+
+        // Hours & shifts
+        // production rate = units/hr per crew
+        const hours_needed_raw   = QTY / PROD_RATE;
+        const shift_hours        = 8;
+        const shifts_needed      = hours_needed_raw / shift_hours;
+
+        // manhours
+        const manhours           = hours_needed_raw * CREW;
+
+        // multipliers
+        // occupancy adds complexity (kids present, tenants in place)
+        let occMult = 1.0;
+        switch(occupancyClass.value){
+            case "daycare_school":      occMult = 1.5; break;
+            case "tenant_occ":         occMult = 1.4; break;
+            case "vacant_unit":        occMult = 1.0; break;
+            case "industrial_shutdown":occMult = 1.1; break;
+            case "industrial_active":  occMult = 1.3; break;
+        }
+
+        // containment level: RRP poly vs full scaffold shrink-wrap containment w/ neg air
+        let containMult = 1.0;
+        switch(containmentLevel.value){
+            case "rrp_local":        containMult = 1.0; break;
+            case "room_iso":         containMult = 1.3; break;
+            case "scaffold_shroud":  containMult = 1.6; break;
+        }
+
+        // access class: ladders/lifts/scaffold time drag
+        let accessMult = 1.0;
+        switch(accessClass.value){
+            case "low_wall":      accessMult = 1.0; break;
+            case "ladder":        accessMult = 1.2; break;
+            case "lift":          accessMult = 1.3; break;
+            case "full_scaffold": accessMult = 1.6; break;
+        }
+
+        // after hours / off hours premium for night shift, student safety windows, tenant avoidance
+        const afterMult = IS_AFTER ? 1.3 : 1.0;
+
+        // composite difficulty multiplier
+        const laborMult = occMult * containMult * accessMult * afterMult;
+
+        // LABOR COST
+        const labor_cost = manhours * LABOR_RATE * laborMult;
+
+        // SUPPORT / CONTAINMENT COST:
+        // SupportPerShift is daily burn rate of containment materials, neg air machines, scaffold rental, supervisor QA.
+        // Scale by shifts and containMult (more intense containment is more burn), also occMult for QA burden in childcare/housing.
+        const support_cost = SUPPORT_SHIFT * shifts_needed * containMult * occMult;
+
+        // PPE / Consumables:
+        // Scale by shifts_needed and containMult (more containment -> more poly/zipper doors/filters)
+        const ppe_cost = PPE_SHIFT * shifts_needed * containMult;
+
+        // Waste mass and disposal:
+        const waste_lbs = QTY * WASTE_DENS;
+        // occupied daycare/school often requires extra double-bag / chain-of-custody → bump
+        const disposalOccBump = (occupancyClass.value === "daycare_school" ? 1.2 : 1.0);
+        const disposal_cost = waste_lbs * DISP_RATE * disposalOccBump;
+
+        // Clearance / Wipe testing
+        const clearance_cost = WITH_CLEAR ? CLEAR_ALLOW : 0;
+
+        // Mob/Demob
+        const mob_cost = WITH_MOB ? MOB_DEMOB : 0;
+
+        // subtotal direct
+        const subtotal_direct = labor_cost + support_cost + ppe_cost + disposal_cost + clearance_cost + mob_cost;
+
+        // remote/access multiplier for Alaska logistics, scaffold trucking, barge, etc.
+        const remote_cost_total = subtotal_direct * REMOTE_MULT;
+
+        // markup / OH&P
+        const final_total = remote_cost_total * (1 + MARKUP_PCT/100);
+
+        // OUTPUTS
+        out_shifts.textContent        = shifts_needed.toFixed(2);
+        out_shifts_detail.textContent = hours_needed_raw.toFixed(1)+" crew-hrs / "+shift_hours+"hr shift";
+
+        out_manhours.textContent      = manhours.toFixed(1);
+        out_mh_detail.textContent     = CREW+" crew × "+hours_needed_raw.toFixed(1)+" hr";
+
+        out_labor_cost.textContent    = fmtMoney(labor_cost.toFixed(0));
+        out_labor_detail.textContent  = manhours.toFixed(1)+" mh × $"+LABOR_RATE.toFixed(0)+"/hr × mult "+laborMult.toFixed(2);
+
+        out_support_cost.textContent  = fmtMoney(support_cost.toFixed(0));
+        out_support_detail.textContent= "$"+SUPPORT_SHIFT.toFixed(0)+"/shift × "+shifts_needed.toFixed(2)+" × contain "+containMult.toFixed(2);
+
+        out_ppe_cost.textContent      = fmtMoney(ppe_cost.toFixed(0));
+        out_ppe_detail.textContent    = "$"+PPE_SHIFT.toFixed(0)+"/shift × "+shifts_needed.toFixed(2)+" × contain "+containMult.toFixed(2);
+
+        out_waste_lbs.textContent     = waste_lbs.toFixed(0)+" lb";
+        out_waste_detail.textContent  = QTY.toFixed(0)+" units × "+WASTE_DENS.toFixed(2)+" lb/unit";
+
+        out_disposal_cost.textContent = fmtMoney(disposal_cost.toFixed(0));
+        out_disposal_detail.textContent = waste_lbs.toFixed(0)+" lb × $"+DISP_RATE.toFixed(2)+"/lb × occ "+disposalOccBump.toFixed(2);
+
+        out_clearance_cost.textContent= fmtMoney(clearance_cost.toFixed(0));
+        out_clearance_detail.textContent = WITH_CLEAR ? ("Included @ $"+CLEAR_ALLOW.toFixed(0)) : "Excluded";
+
+        out_mob_cost.textContent      = fmtMoney(mob_cost.toFixed(0));
+        out_mob_detail.textContent    = WITH_MOB ? ("Included @ $"+MOB_DEMOB.toFixed(0)) : "Excluded";
+
+        out_subtotal.textContent      = fmtMoney(subtotal_direct.toFixed(0));
+
+        out_remote_cost.textContent   = fmtMoney(remote_cost_total.toFixed(0));
+        out_remote_detail.textContent = "Subtotal × "+REMOTE_MULT.toFixed(2)+" remote/access factor";
+
+        out_final.textContent         = fmtMoney(final_total.toFixed(0));
+        out_final_detail.textContent  = "Remote total × (1 + "+MARKUP_PCT.toFixed(0)+"%)";
+    }
+
+    const inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach(el=>{
+        el.addEventListener('input', recalc);
+        el.addEventListener('change', recalc);
+    });
+
+    recalc();
+})();
+</script>
+</body>
+</html>

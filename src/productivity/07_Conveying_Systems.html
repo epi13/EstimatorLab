@@ -1,4 +1,574 @@
-Lifts
-Elevators
-Cranes
-Escalators 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>07 – Conveying Systems Productivity Estimator</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  .card {@apply bg-white/80 backdrop-blur shadow-md rounded-2xl border border-slate-300 p-4 mb-6;}
+  .section-header {@apply text-lg font-semibold text-slate-800 flex items-baseline justify-between flex-wrap gap-2;}
+  .section-sub {@apply text-[10px] text-slate-500 font-mono;}
+  .label-sm {@apply text-xs font-medium text-slate-600;}
+  .number-input {@apply w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400;}
+  .result-box {@apply text-sm font-semibold text-slate-800 bg-slate-100 rounded-lg px-2 py-1 text-right;}
+  .chip {@apply text-[10px] leading-tight font-mono bg-slate-800 text-white rounded px-2 py-[2px] mr-1;}
+  .subgroup-header {@apply text-slate-900 text-base font-bold flex items-center gap-2 mb-2;}
+  .subchip {@apply bg-emerald-600 text-white text-[10px] font-mono px-2 py-[2px] rounded;}
+  .assumption-note {@apply text-[10px] leading-snug text-slate-500 italic;}
+  table thead tr {@apply bg-slate-800 text-white;}
+  table tbody tr:nth-child(even) {@apply bg-slate-50/60;}
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 to-emerald-100 text-slate-900 min-h-screen">
+
+<!-- HEADER -->
+<header class="px-4 py-4 border-b border-slate-300 bg-white/70 backdrop-blur sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">07 – Conveying Systems Productivity</h1>
+      <p class="text-xs text-slate-600">
+        071 Lifts · 072 Elevators · 073 Cranes/Hoists · 074 Escalators
+      </p>
+      <p class="text-[10px] text-slate-500 font-mono">
+        Outputs crew-days & man-hours. Alaska factor included.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="exportSummary()">
+        Export Summary (.json)
+      </button>
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="resetAll()">
+        Reset
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- GLOBAL CREW / SHIFT SETTINGS -->
+  <section class="card">
+    <div class="section-header">
+      <span>Global Crew / Shift</span>
+      <span class="section-sub">Used in all productivity calcs</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Crew Size (people)</label>
+        <input id="crewSize" type="number" min="1" value="3" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Typical OEM install crew = 2-3 techs</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Hours / shift</label>
+        <input id="hoursPerShift" type="number" min="1" value="10" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">10 hr shifts common for remote mobilization</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Productivity Factor</label>
+        <input id="prodFactorGlobal" type="number" step="0.01" value="1.35" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">1.00 baseline shop-city install; &gt;1.00 for Alaska travel, staging, coordination</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Project Name / ID</label>
+        <input id="projectId" type="text" placeholder="Public Safety Building Conveying"
+          class="number-input" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ==================== 071 LIFTS ==================== -->
+  <section class="card" id="liftsBlock">
+    <div class="subgroup-header">
+      <span class="subchip">071</span>
+      <span>Lifts (Platform / Wheelchair / Material)</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Set and anchor lift rails/columns/platform, connect power/control, test for basic operation.
+      Includes vertical platform lifts, wheelchair lifts, short-rise material lifts.
+      Assumes hoistway or shaft structure is already framed and ready.
+    </p>
+
+    <!-- 071.01 Lift Install & Commission -->
+    <div class="section-header">
+      <span>071.01 Lift Install & Commission</span>
+      <span class="section-sub">Set lift structure, wire, test basic function</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Lift Units (EA)</label>
+        <input id="liftEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Each independent lift unit</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="liftProdBase" type="number" step="0.1" value="0.8" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">City environment, easy access</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="liftProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="liftCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="liftManHours" class="result-box">0</div>
+        <p class="assumption-note">= Crew-Days × Crew Size × Hrs/Shift</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="liftNotes" type="text"
+        placeholder="Platform/wheelchair lift install incl. rail, cab, controls, test run. Shaft/rough-in by others."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 072 ELEVATORS ==================== -->
+  <section class="card" id="elevatorsBlock">
+    <div class="subgroup-header">
+      <span class="subchip">072</span>
+      <span>Elevators</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Passenger / freight elevator installation, rail alignment, cab assembly, door operators,
+      controller hookup, run testing. Shaft, pit, overhead structure, and dedicated power
+      assumed in place.
+    </p>
+
+    <!-- 072.01 Elevator Install & Commission -->
+    <div class="section-header">
+      <span>072.01 Elevator Install & Commission</span>
+      <span class="section-sub">Rails, cab, doors, controller, safety tests</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Elevator Units (EA)</label>
+        <input id="elevEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Each passenger or freight elevator</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="elevProdBase" type="number" step="0.1" value="0.4" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Factory crew, all materials on site</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="elevProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="elevCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="elevManHours" class="result-box">0</div>
+        <p class="assumption-note">Includes install + commissioning/testing to turnover-ready</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="elevNotes" type="text"
+        placeholder="Rails, cab, doors, controller, safety run tests. Pit complete, overhead steel in place, power available."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 073 CRANES / HOISTS ==================== -->
+  <section class="card" id="cranesBlock">
+    <div class="subgroup-header">
+      <span class="subchip">073</span>
+      <span>Cranes / Hoists</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Overhead bridge cranes, monorail hoists, jib cranes, maintenance bay hoists.
+      Includes setting runway beams (if provided loose), mounting hoist/crane,
+      power feed, limit switches, and functional test.
+    </p>
+
+    <!-- 073.01 Overhead Crane / Hoist Install -->
+    <div class="section-header">
+      <span>073.01 Crane / Hoist Install & Hook-Up</span>
+      <span class="section-sub">Set/runway alignment, hoist rigging, power/feed</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Crane / Hoist Units (EA)</label>
+        <input id="craneEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Each bridge crane / jib / hoist point</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="craneProdBase" type="number" step="0.1" value="1.0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Assumes structure prepped for mounting and lift access available</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="craneProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="craneCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="craneManHours" class="result-box">0</div>
+        <p class="assumption-note">Includes align, bolt/weld brackets, power run, test lift</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="craneNotes" type="text"
+        placeholder="Bridge/jib crane set, align runway/rail, install hoist motor & controls, functional test."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 074 ESCALATORS / MOVING WALK ==================== -->
+  <section class="card" id="escalatorsBlock">
+    <div class="subgroup-header">
+      <span class="subchip">074</span>
+      <span>Escalators / Moving Walk Systems</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Delivery, rig-in, align escalator or moving walk sections, tie to building power,
+      guard/handrail install, run test. Assumes floor openings, steel support, and feed power are ready.
+    </p>
+
+    <!-- 074.01 Escalator / Moving Walk Install -->
+    <div class="section-header">
+      <span>074.01 Escalator / Moving Walk Install & Commission</span>
+      <span class="section-sub">Rig in sections, assemble, power, test</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Escalator Units (EA)</label>
+        <input id="escEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Each escalator or moving walk unit</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="escProdBase" type="number" step="0.1" value="0.5" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Mall/airport style conditions, crane access indoors</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="escProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="escCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="escManHours" class="result-box">0</div>
+        <p class="assumption-note">Includes rig, align, tie-in, guardrail/handrail</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="escNotes" type="text"
+        placeholder="Rig-in, set escalator, align, hook up power/controls, commission run. Shaft/opening ready."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== ROLLUP SUMMARY ==================== -->
+  <section class="card">
+    <div class="section-header">
+      <span>Rollup – Labor Demand</span>
+      <span class="section-sub">
+        Crew-Days & Man-Hours by Subgroup (071 / 072 / 073 / 074) and Total
+      </span>
+    </div>
+
+    <div class="overflow-x-auto mt-4">
+      <table class="min-w-full text-xs text-left border border-slate-300 rounded-xl overflow-hidden">
+        <thead>
+          <tr>
+            <th class="px-2 py-2 font-semibold">Activity</th>
+            <th class="px-2 py-2 font-semibold text-right">Crew-Days</th>
+            <th class="px-2 py-2 font-semibold text-right">Man-Hours</th>
+            <th class="px-2 py-2 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white/80">
+          <!-- 071 Lifts -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">071.01</span>Lift Install & Commission</td>
+            <td class="px-2 py-2 text-right" id="sumLiftDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumLiftMH">0</td>
+            <td class="px-2 py-2" id="sumLiftNotes"></td>
+          </tr>
+
+          <!-- 072 Elevators -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">072.01</span>Elevator Install & Commission</td>
+            <td class="px-2 py-2 text-right" id="sumElevDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumElevMH">0</td>
+            <td class="px-2 py-2" id="sumElevNotes"></td>
+          </tr>
+
+          <!-- 073 Cranes / Hoists -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">073.01</span>Crane / Hoist Install & Hook-Up</td>
+            <td class="px-2 py-2 text-right" id="sumCraneDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumCraneMH">0</td>
+            <td class="px-2 py-2" id="sumCraneNotes"></td>
+          </tr>
+
+          <!-- 074 Escalators -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">074.01</span>Escalator / Moving Walk Install</td>
+            <td class="px-2 py-2 text-right" id="sumEscDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumEscMH">0</td>
+            <td class="px-2 py-2" id="sumEscNotes"></td>
+          </tr>
+
+          <!-- TOTAL -->
+          <tr class="bg-slate-800 text-white font-semibold text-right">
+            <td class="px-2 py-2 text-left">TOTAL</td>
+            <td class="px-2 py-2" id="sumTotalDays">0</td>
+            <td class="px-2 py-2" id="sumTotalMH">0</td>
+            <td class="px-2 py-2 text-left text-[10px] font-normal italic">
+              Remote Alaska installs usually require OEM techs + local GC support crew.
+              This estimates total man-hours on site (both parties combined).
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-[10px] text-slate-500 leading-snug mt-3">
+      Baselines assume gear is on site, hoistways pre-built, structural steel ready,
+      and permanent power available. Any delay (freight slippage, late steel, temp power only)
+      should push Productivity Factor above 1.35.
+    </p>
+  </section>
+
+  <footer class="text-[10px] text-slate-400 text-center py-6">
+    © 2025 Poor Louis Labs · Alaska Productivity Toolkit · 07_Conveying_Systems.html
+  </footer>
+</main>
+
+<script>
+// --- helpers ---
+function safeNum(v){const n=parseFloat(v);return isNaN(n)?0:n;}
+
+function crewDaysNeeded(qty, prodAdjPerDay){
+  if(prodAdjPerDay<=0)return 0;
+  return qty/prodAdjPerDay;
+}
+
+function totalManHours(crewDays, crewSize, hrsPerShift){
+  return crewDays*crewSize*hrsPerShift;
+}
+
+// generic block calc
+function recalcGeneric(qtyId, prodBaseId, prodAdjId, crewDaysId, mhId,
+                       notesId, sumDaysId, sumMhId, sumNotesId){
+  const qty = safeNum(document.getElementById(qtyId).value);
+  const prodBase = safeNum(document.getElementById(prodBaseId).value);
+
+  const pfGlobal = safeNum(document.getElementById('prodFactorGlobal').value);
+  const crewSize = safeNum(document.getElementById('crewSize').value);
+  const hrsPerShift = safeNum(document.getElementById('hoursPerShift').value);
+
+  const prodAdj = (pfGlobal>0)?(prodBase/pfGlobal):0;
+  document.getElementById(prodAdjId).textContent = prodAdj.toFixed(2);
+
+  const cDays = crewDaysNeeded(qty, prodAdj);
+  document.getElementById(crewDaysId).textContent = cDays.toFixed(2);
+
+  const mh = totalManHours(cDays, crewSize, hrsPerShift);
+  document.getElementById(mhId).textContent = mh.toFixed(1);
+
+  const notesVal = document.getElementById(notesId).value;
+  document.getElementById(sumDaysId).textContent = cDays.toFixed(2);
+  document.getElementById(sumMhId).textContent = mh.toFixed(1);
+  document.getElementById(sumNotesId).textContent = notesVal;
+
+  return {cDays, mh};
+}
+
+function recalcAll(){
+  // 071 Lifts
+  const lift = recalcGeneric(
+    'liftEA','liftProdBase','liftProdAdj','liftCrewDays','liftManHours',
+    'liftNotes','sumLiftDays','sumLiftMH','sumLiftNotes'
+  );
+
+  // 072 Elevators
+  const elev = recalcGeneric(
+    'elevEA','elevProdBase','elevProdAdj','elevCrewDays','elevManHours',
+    'elevNotes','sumElevDays','sumElevMH','sumElevNotes'
+  );
+
+  // 073 Cranes / Hoists
+  const crane = recalcGeneric(
+    'craneEA','craneProdBase','craneProdAdj','craneCrewDays','craneManHours',
+    'craneNotes','sumCraneDays','sumCraneMH','sumCraneNotes'
+  );
+
+  // 074 Escalators
+  const esc = recalcGeneric(
+    'escEA','escProdBase','escProdAdj','escCrewDays','escManHours',
+    'escNotes','sumEscDays','sumEscMH','sumEscNotes'
+  );
+
+  // totals
+  const totalDays =
+    lift.cDays + elev.cDays + crane.cDays + esc.cDays;
+
+  const totalMH =
+    lift.mh + elev.mh + crane.mh + esc.mh;
+
+  document.getElementById('sumTotalDays').textContent = totalDays.toFixed(2);
+  document.getElementById('sumTotalMH').textContent   = totalMH.toFixed(1);
+}
+
+// export JSON snapshot
+function exportSummary(){
+  const data = {
+    project: document.getElementById('projectId').value,
+    timestamp_utc: new Date().toISOString(),
+    globals:{
+      crewSize: safeNum(document.getElementById('crewSize').value),
+      hoursPerShift: safeNum(document.getElementById('hoursPerShift').value),
+      productivityFactor: safeNum(document.getElementById('prodFactorGlobal').value)
+    },
+    "071_lifts":{
+      lift_install_commission:{
+        qty_each: safeNum(document.getElementById('liftEA').value),
+        crewDays: safeNum(document.getElementById('sumLiftDays').textContent),
+        manHours: safeNum(document.getElementById('sumLiftMH').textContent),
+        notes: document.getElementById('liftNotes').value
+      }
+    },
+    "072_elevators":{
+      elevator_install_commission:{
+        qty_each: safeNum(document.getElementById('elevEA').value),
+        crewDays: safeNum(document.getElementById('sumElevDays').textContent),
+        manHours: safeNum(document.getElementById('sumElevMH').textContent),
+        notes: document.getElementById('elevNotes').value
+      }
+    },
+    "073_cranes_hoists":{
+      crane_hoist_install:{
+        qty_each: safeNum(document.getElementById('craneEA').value),
+        crewDays: safeNum(document.getElementById('sumCraneDays').textContent),
+        manHours: safeNum(document.getElementById('sumCraneMH').textContent),
+        notes: document.getElementById('craneNotes').value
+      }
+    },
+    "074_escalators":{
+      escalator_install_commission:{
+        qty_each: safeNum(document.getElementById('escEA').value),
+        crewDays: safeNum(document.getElementById('sumEscDays').textContent),
+        manHours: safeNum(document.getElementById('sumEscMH').textContent),
+        notes: document.getElementById('escNotes').value
+      }
+    },
+    totals:{
+      crewDays: safeNum(document.getElementById('sumTotalDays').textContent),
+      manHours: safeNum(document.getElementById('sumTotalMH').textContent)
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const projName=(data.project||'conveying_systems').replace(/\s+/g,'_');
+  a.download = projName + "_div07_productivity.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetAll(){
+  // globals
+  document.getElementById('crewSize').value = 3;
+  document.getElementById('hoursPerShift').value = 10;
+  document.getElementById('prodFactorGlobal').value = 1.35;
+  document.getElementById('projectId').value = "";
+
+  // 071 Lifts
+  document.getElementById('liftEA').value = 0;
+  document.getElementById('liftProdBase').value = 0.8;
+  document.getElementById('liftNotes').value =
+    "Platform/wheelchair or small material lift. Shaft ready, power stubbed.";
+
+  // 072 Elevators
+  document.getElementById('elevEA').value = 0;
+  document.getElementById('elevProdBase').value = 0.4;
+  document.getElementById('elevNotes').value =
+    "Passenger/freight elevator install & commission. Pit/overhead steel done, power available.";
+
+  // 073 Cranes / Hoists
+  document.getElementById('craneEA').value = 0;
+  document.getElementById('craneProdBase').value = 1.0;
+  document.getElementById('craneNotes').value =
+    "Bridge/jib crane or hoist. Structure prepped, lift access on site.";
+
+  // 074 Escalators
+  document.getElementById('escEA').value = 0;
+  document.getElementById('escProdBase').value = 0.5;
+  document.getElementById('escNotes').value =
+    "Escalator/moving walk rig-in, align, wire, handrails, test. Floor opening/steel ready.";
+
+  recalcAll();
+}
+
+// init totals at load
+recalcAll();
+</script>
+
+</body>
+</html>

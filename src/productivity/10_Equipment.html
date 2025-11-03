@@ -1,2 +1,488 @@
-101 - Fixed and Movable Equipment 
-102 - Furnishings
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>10 – Equipment Productivity Estimator</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  .card {@apply bg-white/80 backdrop-blur shadow-md rounded-2xl border border-slate-300 p-4 mb-6;}
+  .section-header {@apply text-lg font-semibold text-slate-800 flex items-baseline justify-between flex-wrap gap-2;}
+  .section-sub {@apply text-[10px] text-slate-500 font-mono;}
+  .label-sm {@apply text-xs font-medium text-slate-600;}
+  .number-input {@apply w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-lime-400 focus:border-lime-400;}
+  .result-box {@apply text-sm font-semibold text-slate-800 bg-slate-100 rounded-lg px-2 py-1 text-right;}
+  .chip {@apply text-[10px] leading-tight font-mono bg-slate-800 text-white rounded px-2 py-[2px] mr-1;}
+  .subgroup-header {@apply text-slate-900 text-base font-bold flex items-center gap-2 mb-2;}
+  .subchip {@apply bg-lime-600 text-white text-[10px] font-mono px-2 py-[2px] rounded;}
+  .assumption-note {@apply text-[10px] leading-snug text-slate-500 italic;}
+  table thead tr {@apply bg-slate-800 text-white;}
+  table tbody tr:nth-child(even) {@apply bg-slate-50/60;}
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 to-lime-100 text-slate-900 min-h-screen">
+
+<!-- HEADER -->
+<header class="px-4 py-4 border-b border-slate-300 bg-white/70 backdrop-blur sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">10 – Equipment Productivity</h1>
+      <p class="text-xs text-slate-600">
+        101 Fixed / Movable Equipment · 102 Furnishings
+      </p>
+      <p class="text-[10px] text-slate-500 font-mono">
+        Outputs crew-days & man-hours. Alaska factor included.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="exportSummary()">
+        Export Summary (.json)
+      </button>
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="resetAll()">
+        Reset
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- GLOBAL CREW / SHIFT SETTINGS -->
+  <section class="card">
+    <div class="section-header">
+      <span>Global Crew / Shift</span>
+      <span class="section-sub">Used in all productivity calcs</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Crew Size (people)</label>
+        <input id="crewSize" type="number" min="1" value="3" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">3-person install crew is common for bulky gear</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Hours / shift</label>
+        <input id="hoursPerShift" type="number" min="1" value="10" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Long day to reduce handling/moves in remote work</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Productivity Factor</label>
+        <input id="prodFactorGlobal" type="number" step="0.01" value="1.25" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          1.00 = clean warehouse install. &gt;1.00 = real Alaska (freight delays, uneven floors, missing backing)
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Project Name / ID</label>
+        <input id="projectId" type="text" placeholder="Kitchen / Clinic Fit-out"
+          class="number-input" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ==================== 101 FIXED AND MOVABLE EQUIPMENT ==================== -->
+  <section class="card" id="equipmentBlock">
+    <div class="subgroup-header">
+      <span class="subchip">101</span>
+      <span>Fixed and Movable Equipment</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Receive, uncrate, move into final location, level, anchor, bolt, and rough connect to stubs
+      (power, water, gas, drains) for things like commercial kitchen equipment, walk-ins, lab benches,
+      lockers, shop benches, specialty owner-provided gear.
+      Does not include final calibration/programming.
+    </p>
+
+    <!-- 101.01 Equipment Set / Anchor / Rough Connect -->
+    <div class="section-header">
+      <span>101.01 Equipment Set / Anchor / Rough Connect</span>
+      <span class="section-sub">Uncrate, place, level, anchor, temp connect</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Equipment Units (EA)</label>
+        <input id="equipEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          Ranges, dish tables, walk-in boxes, fume hoods, lab benches, lockers, etc.
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="equipProdBase" type="number" step="1" value="12" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Assumes gear staged near install area</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="equipProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="equipCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="equipManHours" class="result-box">0</div>
+        <p class="assumption-note">
+          = Crew-Days × Crew Size × Hrs/Shift
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="equipNotes" type="text"
+        placeholder="Receive, uncrate, move in place, level, anchor/bolt, rough connect to stub-outs. No startup/program."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== 102 FURNISHINGS ==================== -->
+  <section class="card" id="furnishBlock">
+    <div class="subgroup-header">
+      <span class="subchip">102</span>
+      <span>Furnishings</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Furnishings that still consume field hours: reception desks, built-ins,
+      casework runs, shelving systems, cubicle systems, bleachers/benches,
+      locker room benches, specialty storage units, etc.
+      We treat these as LF when it's continuous millwork/shelving, or EA when it's standalone modules.
+    </p>
+
+    <!-- 102.01 Built-in / Casework / Shelving Install (LF) -->
+    <div class="section-header">
+      <span>102.01 Built-in / Casework / Shelving Install</span>
+      <span class="section-sub">Set, level, fasten, scribe/trim</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Furnishing Run (LF)</label>
+        <input id="furnLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Reception desks, continuous casework, shelving runs</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="furnProdBase" type="number" step="1" value="40" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Includes level/shim, scribe trim, fasten</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="furnProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="furnCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="furnManHours" class="result-box">0</div>
+        <p class="assumption-note">
+          Includes trim/scribe; not custom field-built mods
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="furnNotes" type="text"
+        placeholder="Set/level/fasten casework, built-ins, reception desk runs, shelving systems. Includes scribe and trim."
+        class="number-input" />
+    </div>
+
+    <!-- 102.02 Furniture / Benches / Bleachers (EA) -->
+    <div class="section-header mt-8">
+      <span>102.02 Furniture / Benches / Bleachers Install</span>
+      <span class="section-sub">Offload, place, bolt down / tie together</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Furniture Units (EA)</label>
+        <input id="furnEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          Bleachers, fixed benches, cubicle systems, storage racks
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="furnEABase" type="number" step="1" value="18" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">
+          Includes uncrate, assemble, bolt/anchor, final placement
+        </p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="furnEAProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="furnEACrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="furnEAManHours" class="result-box">0</div>
+        <p class="assumption-note">
+          = Crew-Days × Crew Size × Hrs/Shift
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="furnEANotes" type="text"
+        placeholder="Bleachers, benches, cubicle systems: uncrate, assemble, anchor. No MEP hook-ups."
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== ROLLUP SUMMARY ==================== -->
+  <section class="card">
+    <div class="section-header">
+      <span>Rollup – Labor Demand</span>
+      <span class="section-sub">
+        Crew-Days & Man-Hours by Subgroup (101–102) and Total
+      </span>
+    </div>
+
+    <div class="overflow-x-auto mt-4">
+      <table class="min-w-full text-xs text-left border border-slate-300 rounded-xl overflow-hidden">
+        <thead>
+          <tr>
+            <th class="px-2 py-2 font-semibold">Activity</th>
+            <th class="px-2 py-2 font-semibold text-right">Crew-Days</th>
+            <th class="px-2 py-2 font-semibold text-right">Man-Hours</th>
+            <th class="px-2 py-2 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white/80">
+          <!-- 101 Fixed / Movable Equip -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">101.01</span>Equipment Set / Anchor / Rough Connect</td>
+            <td class="px-2 py-2 text-right" id="sumEquipDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumEquipMH">0</td>
+            <td class="px-2 py-2" id="sumEquipNotes"></td>
+          </tr>
+
+          <!-- 102 Furnishings -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">102.01</span>Built-in / Casework / Shelving Install</td>
+            <td class="px-2 py-2 text-right" id="sumFurnDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumFurnMH">0</td>
+            <td class="px-2 py-2" id="sumFurnNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">102.02</span>Furniture / Benches / Bleachers Install</td>
+            <td class="px-2 py-2 text-right" id="sumFurnEADays">0</td>
+            <td class="px-2 py-2 text-right" id="sumFurnEA MH">0</td>
+            <td class="px-2 py-2" id="sumFurnEANotes"></td>
+          </tr>
+
+          <!-- TOTAL -->
+          <tr class="bg-slate-800 text-white font-semibold text-right">
+            <td class="px-2 py-2 text-left">TOTAL</td>
+            <td class="px-2 py-2" id="sumTotalDays">0</td>
+            <td class="px-2 py-2" id="sumTotalMH">0</td>
+            <td class="px-2 py-2 text-left text-[10px] font-normal italic">
+              This is field install labor only. Does not include freight receiving labor at dock,
+              missing parts/returns time, or vendor commissioning/calibration.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-[10px] text-slate-500 leading-snug mt-3">
+      Baselines assume gear arrived complete, correct voltage and rough-ins exist,
+      backing/blocking in walls or floors is present, and access is clear.
+      Remote Alaska usually means “nothing is where it’s supposed to be,” so increase Productivity Factor &gt; 1.25.
+    </p>
+  </section>
+
+  <footer class="text-[10px] text-slate-400 text-center py-6">
+    © 2025 Poor Louis Labs · Alaska Productivity Toolkit · 10_Equipment.html
+  </footer>
+</main>
+
+<script>
+// --- helpers ---
+function safeNum(v){const n=parseFloat(v);return isNaN(n)?0:n;}
+
+function crewDaysNeeded(qty, prodAdjPerDay){
+  if(prodAdjPerDay<=0)return 0;
+  return qty/prodAdjPerDay;
+}
+
+function totalManHours(crewDays, crewSize, hrsPerShift){
+  return crewDays*crewSize*hrsPerShift;
+}
+
+// block calc
+function recalcGeneric(qtyId, prodBaseId, prodAdjId, crewDaysId, mhId,
+                       notesId, sumDaysId, sumMhId, sumNotesId){
+  const qty = safeNum(document.getElementById(qtyId).value);
+  const prodBase = safeNum(document.getElementById(prodBaseId).value);
+
+  const pfGlobal = safeNum(document.getElementById('prodFactorGlobal').value);
+  const crewSize = safeNum(document.getElementById('crewSize').value);
+  const hrsPerShift = safeNum(document.getElementById('hoursPerShift').value);
+
+  const prodAdj = (pfGlobal>0)?(prodBase/pfGlobal):0;
+  document.getElementById(prodAdjId).textContent = prodAdj.toFixed(2);
+
+  const cDays = crewDaysNeeded(qty, prodAdj);
+  document.getElementById(crewDaysId).textContent = cDays.toFixed(2);
+
+  const mh = totalManHours(cDays, crewSize, hrsPerShift);
+  document.getElementById(mhId).textContent = mh.toFixed(1);
+
+  const notesVal = document.getElementById(notesId).value;
+  document.getElementById(sumDaysId).textContent = cDays.toFixed(2);
+  document.getElementById(sumMhId).textContent = mh.toFixed(1);
+  document.getElementById(sumNotesId).textContent = notesVal;
+
+  return {cDays, mh};
+}
+
+function recalcAll(){
+  // 101 Equipment
+  const equip = recalcGeneric(
+    'equipEA','equipProdBase','equipProdAdj','equipCrewDays','equipManHours',
+    'equipNotes','sumEquipDays','sumEquipMH','sumEquipNotes'
+  );
+
+  // 102 Furnishings LF
+  const furnLFblock = recalcGeneric(
+    'furnLF','furnProdBase','furnProdAdj','furnCrewDays','furnManHours',
+    'furnNotes','sumFurnDays','sumFurnMH','sumFurnNotes'
+  );
+
+  // 102 Furnishings EA
+  const furnEABlock = recalcGeneric(
+    'furnEA','furnEABase','furnEAProdAdj','furnEACrewDays','furnEAManHours',
+    'furnEANotes','sumFurnEADays','sumFurnEA MH','sumFurnEANotes'
+  );
+
+  // totals
+  const totalDays =
+    equip.cDays + furnLFblock.cDays + furnEABlock.cDays;
+
+  const totalMH =
+    equip.mh + furnLFblock.mh + furnEABlock.mh;
+
+  document.getElementById('sumTotalDays').textContent = totalDays.toFixed(2);
+  document.getElementById('sumTotalMH').textContent   = totalMH.toFixed(1);
+}
+
+// export snapshot
+function exportSummary(){
+  const data = {
+    project: document.getElementById('projectId').value,
+    timestamp_utc: new Date().toISOString(),
+    globals:{
+      crewSize: safeNum(document.getElementById('crewSize').value),
+      hoursPerShift: safeNum(document.getElementById('hoursPerShift').value),
+      productivityFactor: safeNum(document.getElementById('prodFactorGlobal').value)
+    },
+    "101_fixed_movable_equipment":{
+      equipment_set_anchor_connect:{
+        qty_each: safeNum(document.getElementById('equipEA').value),
+        crewDays: safeNum(document.getElementById('sumEquipDays').textContent),
+        manHours: safeNum(document.getElementById('sumEquipMH').textContent),
+        notes: document.getElementById('equipNotes').value
+      }
+    },
+    "102_furnishings":{
+      built_in_casework_shelving:{
+        qty_lf: safeNum(document.getElementById('furnLF').value),
+        crewDays: safeNum(document.getElementById('sumFurnDays').textContent),
+        manHours: safeNum(document.getElementById('sumFurnMH').textContent),
+        notes: document.getElementById('furnNotes').value
+      },
+      furniture_benches_bleachers:{
+        qty_each: safeNum(document.getElementById('furnEA').value),
+        crewDays: safeNum(document.getElementById('sumFurnEADays').textContent),
+        manHours: safeNum(document.getElementById('sumFurnEA MH').textContent),
+        notes: document.getElementById('furnEANotes').value
+      }
+    },
+    totals:{
+      crewDays: safeNum(document.getElementById('sumTotalDays').textContent),
+      manHours: safeNum(document.getElementById('sumTotalMH').textContent)
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const projName=(data.project||'equipment_install').replace(/\s+/g,'_');
+  a.download = projName + "_div10_productivity.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetAll(){
+  // globals
+  document.getElementById('crewSize').value = 3;
+  document.getElementById('hoursPerShift').value = 10;
+  document.getElementById('prodFactorGlobal').value = 1.25;
+  document.getElementById('projectId').value = "";
+
+  // 101 Equipment
+  document.getElementById('equipEA').value = 0;
+  document.getElementById('equipProdBase').value = 12;
+  document.getElementById('equipNotes').value =
+    "Receive, uncrate, move into location, level, anchor/bolt, rough connect to stubs. No final startup/program.";
+
+  // 102 Furnishings LF
+  document.getElementById('furnLF').value = 0;
+  document.getElementById('furnProdBase').value = 40;
+  document.getElementById('furnNotes').value =
+    "Set/level/fasten/scribe built-in casework, reception desks, continuous shelving.";
+
+  // 102 Furnishings EA
+  document.getElementById('furnEA').value = 0;
+  document.getElementById('furnEABase').value = 18;
+  document.getElementById('furnEANotes').value =
+    "Uncrate, assemble, anchor benches, bleachers, cubicle systems, storage racks.";
+
+  recalcAll();
+}
+
+// init
+recalcAll();
+</script>
+
+</body>
+</html>

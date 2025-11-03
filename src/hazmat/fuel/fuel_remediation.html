@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Fuel Spill / UST Remediation Estimator</title>
+<style>
+    :root {
+        --bg-dark: #0f172a;
+        --panel-dark: #1e2538;
+        --accent: #facc15;
+        --text-light: #f8fafc;
+        --text-dim: #94a3b8;
+        --border-color: #2d344a;
+        --radius-lg: 1rem;
+        --radius-sm: .5rem;
+        --gap: 1rem;
+        --font-stack: system-ui, -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    }
+
+    body {
+        background: var(--bg-dark);
+        color: var(--text-light);
+        font-family: var(--font-stack);
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    header {
+        padding: 1rem 2rem;
+        border-bottom: 1px solid var(--border-color);
+        background: radial-gradient(circle at 10% 0%, rgba(250,204,21,.18) 0%, rgba(15,23,42,0) 60%);
+    }
+
+    header h1 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-light);
+        letter-spacing: -0.03em;
+        display: flex;
+        align-items: baseline;
+        gap: .75rem;
+        flex-wrap: wrap;
+    }
+
+    header h1 span.tag {
+        background: rgba(250,204,21,.12);
+        color: var(--accent);
+        border: 1px solid rgba(250,204,21,.4);
+        font-size: .7rem;
+        font-weight: 500;
+        padding: .25rem .5rem;
+        border-radius: var(--radius-sm);
+        line-height: 1.2;
+    }
+
+    header .sub {
+        color: var(--text-dim);
+        font-size: .8rem;
+        max-width: 900px;
+        line-height: 1.4;
+        margin-top: .4rem;
+    }
+
+    main {
+        flex: 1;
+        display: grid;
+        grid-template-columns: minmax(300px, 400px) 1fr 320px;
+        gap: var(--gap);
+        padding: var(--gap);
+    }
+    @media (max-width:1100px){
+        main { grid-template-columns:1fr; }
+    }
+
+    .panel {
+        background: var(--panel-dark);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 1rem 1rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 30px 80px -10px rgba(0,0,0,.8);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .panel h2 {
+        margin: 0 0 .5rem;
+        color: var(--text-light);
+        font-size: .9rem;
+        font-weight: 600;
+        letter-spacing:-0.03em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .panel h2 .mini {
+        font-size:.7rem;
+        font-weight:500;
+        color:var(--text-dim);
+    }
+
+    .panel-section {
+        border-top:1px solid var(--border-color);
+        margin-top:1rem;
+        padding-top:1rem;
+    }
+
+    .grid-2 {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:var(--gap);
+    }
+
+    .grid-3 {
+        display:grid;
+        grid-template-columns:repeat(3,1fr);
+        gap:var(--gap);
+    }
+
+    .field {
+        display:flex;
+        flex-direction:column;
+        gap:.4rem;
+        background:#11182733;
+        padding:.6rem .75rem .75rem;
+        border-radius:var(--radius-sm);
+        border:1px solid var(--border-color);
+    }
+
+    .field label {
+        font-size:.7rem;
+        font-weight:500;
+        color:var(--text-dim);
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:.5rem;
+        flex-wrap:wrap;
+    }
+
+    .field small {
+        font-size:.65rem;
+        font-weight:400;
+        color:var(--text-dim);
+        line-height:1.2;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+        background:rgba(15,23,42,.6);
+        color:var(--text-light);
+        border:1px solid var(--border-color);
+        border-radius:var(--radius-sm);
+        padding:.55rem .6rem;
+        font-size:.8rem;
+        width:100%;
+        font-family:var(--font-stack);
+    }
+
+    .toggle-row {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:.5rem;
+        font-size:.75rem;
+        font-weight:500;
+        color:var(--text-light);
+        background:#11182733;
+        border:1px solid var(--border-color);
+        border-radius:var(--radius-sm);
+        padding:.6rem .75rem;
+    }
+
+    .toggle-row span.sub {
+        color:var(--text-dim);
+        display:block;
+        font-size:.65rem;
+        font-weight:400;
+        line-height:1.2;
+    }
+
+    .toggle-row input[type="checkbox"] {
+        width:1.2rem;
+        height:1.2rem;
+        accent-color: var(--accent);
+    }
+
+    .results-block {
+        display:flex;
+        flex-direction:column;
+        gap:.5rem;
+        background:#0f172a;
+        border:1px solid var(--border-color);
+        border-radius:var(--radius-sm);
+        padding:.75rem .75rem 1rem;
+        font-size:.8rem;
+        position:relative;
+    }
+
+    .results-block h3 {
+        margin:0;
+        font-size:.75rem;
+        font-weight:600;
+        color:var(--text-dim);
+        letter-spacing:-0.03em;
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+    }
+
+    .results-line {
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        flex-wrap:wrap;
+        gap:.5rem;
+        border-bottom:1px dashed rgba(148,163,184,.2);
+        padding:.4rem 0;
+    }
+
+    .results-line .label {
+        color:var(--text-light);
+        font-weight:500;
+        font-size:.8rem;
+        letter-spacing:-0.03em;
+    }
+
+    .results-line .calcdetail {
+        color:var(--text-dim);
+        font-size:.65rem;
+        font-weight:400;
+        line-height:1.2;
+    }
+
+    .results-line .value {
+        text-align:right;
+        min-width:5rem;
+        font-feature-settings:"tnum";
+    }
+
+    .results-total {
+        font-size:.9rem;
+        font-weight:600;
+        color:var(--accent);
+    }
+
+    .two-col-stats {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:.5rem;
+    }
+
+    .stat-card {
+        background:#0f172a;
+        border:1px solid var(--border-color);
+        border-radius:var(--radius-sm);
+        padding:.6rem .75rem .75rem;
+        font-size:.7rem;
+        line-height:1.4;
+    }
+
+    .stat-label {
+        color:var(--text-dim);
+        font-weight:500;
+        display:flex;
+        justify-content:space-between;
+    }
+
+    .stat-value {
+        color:var(--text-light);
+        font-size:1rem;
+        font-weight:600;
+        letter-spacing:-0.03em;
+    }
+
+    .notes-area { min-height:4rem; resize:vertical; }
+
+    .footer-hint {
+        padding:1rem 2rem 2rem;
+        color: var(--text-dim);
+        font-size:.7rem;
+        line-height:1.4;
+        text-align:center;
+        background: radial-gradient(circle at 90% 10%, rgba(250,204,21,.08) 0%, rgba(15,23,42,0) 60%);
+        border-top:1px solid var(--border-color);
+    }
+    .footer-hint b {
+        color:var(--text-light);
+        font-weight:600;
+    }
+
+</style>
+</head>
+<body>
+<header>
+    <h1>
+        Fuel Remediation Estimator
+        <span class="tag">UST / Day Tank / Diesel / Gasoline / Jet-A</span>
+        <span class="tag">Soil Excavation / Spill Cleanup</span>
+    </h1>
+    <div class="sub">
+        Budget-level estimator for petroleum spills and tank pulls in Alaska.
+        Covers excavation, free-product recovery, temp storage, transport, disposal, confirm sampling, and backfill/restore.
+    </div>
+</header>
+
+<main>
+
+    <!-- LEFT PANEL: SCOPE -->
+    <section class="panel">
+        <h2>
+            Spill / Release Scope
+            <span class="mini">What happened?</span>
+        </h2>
+
+        <div class="panel-section">
+            <div class="field">
+                <label>
+                    Release Type
+                    <small>Guides units and difficulty.</small>
+                </label>
+                <select id="releaseType">
+                    <option value="ust_pull">UST / Day Tank Removal & Impacted Soil (cubic yd)</option>
+                    <option value="surface_spill">Surface Spill / Pad Spill / Boathouse Spill (gallons)</option>
+                    <option value="line_leak">Fuel Line Leak / Trench Contamination (linear ft)</option>
+                    <option value="generated_spoils">Stockpiled Contaminated Soil / Excavated Spoils (cubic yd)</option>
+                    <option value="sheen_recovery">Sheen / Free Product Recovery (gallons)</option>
+                </select>
+            </div>
+
+            <div class="grid-2" style="margin-top:1rem;">
+                <div class="field">
+                    <label>
+                        Quantity
+                        <small>Total scope size in CY, gal, LF, etc.</small>
+                    </label>
+                    <input type="number" id="qty" value="50" min="0" step="1" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Fuel Type
+                        <small>Heavier fuels cling in soil; jet/gas volatilize faster.</small>
+                    </label>
+                    <select id="fuelType">
+                        <option value="diesel">Diesel / Heating Oil</option>
+                        <option value="gasoline">Gasoline</option>
+                        <option value="jetA">Jet-A / AvGas</option>
+                        <option value="lubeOil">Lube Oil / Waste Oil</option>
+                        <option value="other">Other Petroleum / Mixed</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top:1rem;">
+                <div class="field">
+                    <label>
+                        Access / Site Condition
+                        <small>Impacts crew rate and equipment logistics.</small>
+                    </label>
+                    <select id="siteClass">
+                        <option value="pavement">Parking lot / slab / paved apron</option>
+                        <option value="open_gravel">Open gravel / yard / laydown</option>
+                        <option value="tight_interior">Interior / Crawl / Utility Room</option>
+                        <option value="shoreline">Shoreline / Tidal / Marine</option>
+                        <option value="remote_village">Remote Village / Bush / No Road</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>
+                        Excavation / Handling Method
+                        <small>Drives production rate & disposal packaging.</small>
+                    </label>
+                    <select id="handlingMethod">
+                        <option value="excavate_load">Excavate → Load into Lined Dump Truck / Rolloff</option>
+                        <option value="stockpile_cover">Excavate → Stockpile & Poly Cover On Site</option>
+                        <option value="vac_truck">Vac Truck / Skid Steer Buckets / Hand Dig</option>
+                        <option value="sorbent_boom">Boom / Pads / Pump & Drum Free Product</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="toggle-row" style="margin-top:1rem;">
+                <div>
+                    Emergency Spill Response / After-hours
+                    <span class="sub">Call-out, immediate containment, reporting to owner.</span>
+                </div>
+                <input type="checkbox" id="afterHours" />
+            </div>
+
+            <div class="field" style="margin-top:1rem;">
+                <label>
+                    Notes / Site Description
+                    <small>"Day tank leaked in mechanical room, staining slab." / "AST overfill at dock, sheen on water, used boom."</small>
+                </label>
+                <textarea id="notes" class="notes-area"></textarea>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h2>
+                Field Crew & Rates
+                <span class="mini">Override if you have better numbers.</span>
+            </h2>
+
+            <div class="grid-3">
+                <div class="field">
+                    <label>
+                        Crew Size
+                        <small>Hands-on crew (excavator op, techs, etc.).</small>
+                    </label>
+                    <input type="number" id="crewSize" value="3" min="1" step="1" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Production Rate (Unit/hr)
+                        <small>CY/hr, gal/hr, LF/hr per crew.</small>
+                    </label>
+                    <input type="number" id="prodRate" value="5" min="1" step="1" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Labor Rate $/hr (Loaded)
+                        <small>Operator + laborer + environmental tech blended rate.</small>
+                    </label>
+                    <input type="number" id="laborRate" value="120" min="1" step="1" />
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top:1rem;">
+                <div class="field">
+                    <label>
+                        Equip / Oversight / Pump & Containment $/shift
+                        <small>Excavator, skid steer, vac truck, pumps, drums, liners, supervisor, reporting. Per 8-hr shift.</small>
+                    </label>
+                    <input type="number" id="supportPerShift" value="5500" min="0" step="50" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Sampling / Lab / Report Allowance ($)
+                        <small>Confirmation samples, chain of custody, ADEC-style summary.</small>
+                    </label>
+                    <input type="number" id="labAllowance" value="2500" min="0" step="50" />
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- MIDDLE PANEL: COST / LOGISTICS -->
+    <section class="panel">
+        <h2>
+            Disposal, Haul & Restoration
+            <span class="mini">Where is it going, and what goes back?</span>
+        </h2>
+
+        <div class="panel-section">
+            <div class="grid-3">
+                <div class="field">
+                    <label>
+                        Contaminated Media Density (lb/unit)
+                        <small>CY→lb for soil, gal→lb for recovered product, LF trench spoil average, etc.</small>
+                    </label>
+                    <input type="number" id="massDensity" value="2500" min="0" step="10" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Disposal $/lb
+                        <small>Transport + tipping at approved facility.</small>
+                    </label>
+                    <input type="number" id="disposalRate" value="0.50" min="0" step="0.01" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Backfill / Restore Allowance $/unit
+                        <small>Import clean fill, compact, rough grade, temp patch/slab.</small>
+                    </label>
+                    <input type="number" id="backfillPerUnit" value="150" min="0" step="5" />
+                </div>
+            </div>
+
+            <div class="grid-2" style="margin-top:1rem;">
+                <div class="field">
+                    <label>
+                        Remote / Access Multiplier
+                        <small>1.0 Anchorage road job, 1.3 barge/air village, 1.6+ marine/tide-limited.</small>
+                    </label>
+                    <input type="number" id="remoteFactor" value="1.0" min="1" step="0.1" />
+                </div>
+
+                <div class="field">
+                    <label>
+                        Markup / OH&P (%)
+                        <small>Risk, admin, permits, insurance, reporting.</small>
+                    </label>
+                    <input type="number" id="markupPct" value="20" min="0" step="1" />
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="toggle-row">
+                    <div>
+                        Include Sampling / Regulatory Report?
+                        <span class="sub">Owner deliverable, post-cleanup documentation.</span>
+                    </div>
+                    <input type="checkbox" id="includeLab" checked />
+                </div>
+
+                <div class="toggle-row">
+                    <div>
+                        Include Mobilization / Demobilization Lot?
+                        <span class="sub">Get gear + crew on site, vac truck mobilization, call-outs.</span>
+                    </div>
+                    <input type="checkbox" id="includeMobDemob" checked />
+                </div>
+
+                <div class="field" style="margin-top:1rem;">
+                    <label>
+                        Mob / Demob Lot ($)
+                        <small>One-time. Includes spill kit loadout, haul to site, final haul away.</small>
+                    </label>
+                    <input type="number" id="mobDemobLot" value="6500" min="0" step="100" />
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <h2>
+                Site Restoration Notes
+                <span class="mini">Owner expectations</span>
+            </h2>
+            <div class="field">
+                <label>
+                    Restoration Notes
+                    <small>"Cold patch asphalt and temp fence" / "Import pit run, rough grade only"</small>
+                </label>
+                <textarea id="restoreNotes" class="notes-area"></textarea>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- RIGHT PANEL: RESULTS -->
+    <section class="panel">
+        <h2>
+            Estimate Result
+            <span class="mini">Auto-calculated</span>
+        </h2>
+
+        <div class="results-block">
+            <h3>
+                Labor & Time
+                <span class="mini">Crew hours & spill conditions</span>
+            </h3>
+
+            <div class="two-col-stats">
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <span>Shifts</span>
+                        <span id="out_shifts_detail" class="stat-label-sub"></span>
+                    </div>
+                    <div class="stat-value" id="out_shifts">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">
+                        <span>Man-Hours</span>
+                        <span id="out_mh_detail" class="stat-label-sub"></span>
+                    </div>
+                    <div class="stat-value" id="out_manhours">0</div>
+                </div>
+            </div>
+
+            <div class="results-line">
+                <div class="label">
+                    Labor Cost
+                    <div class="calcdetail" id="out_labor_detail"></div>
+                </div>
+                <div class="value" id="out_labor_cost">$0</div>
+            </div>
+
+            <div class="results-line">
+                <div class="label">
+                    Equip / Oversight Cost
+                    <div class="calcdetail" id="out_support_detail"></div>
+                </div>
+                <div class="value" id="out_support_cost">$0</div>
+            </div>
+        </div>
+
+        <div class="results-block">
+            <h3>
+                Waste & Disposal
+                <span class="mini">Mass, haul, tipping</span>
+            </h3>
+
+            <div class="results-line">
+                <div class="label">
+                    Est. Contaminated Mass
+                    <div class="calcdetail" id="out_mass_detail"></div>
+                </div>
+                <div class="value" id="out_mass_lbs">0 lb</div>
+            </div>
+
+            <div class="results-line">
+                <div class="label">
+                    Disposal Cost
+                    <div class="calcdetail" id="out_disposal_detail"></div>
+                </div>
+                <div class="value" id="out_disposal_cost">$0</div>
+            </div>
+
+            <div class="results-line">
+                <div class="label">
+                    Backfill / Restore Allowance
+                    <div class="calcdetail" id="out_restore_detail"></div>
+                </div>
+                <div class="value" id="out_restore_cost">$0</div>
+            </div>
+        </div>
+
+        <div class="results-block">
+            <h3>
+                Adds / Allowances
+                <span class="mini">Sampling, reporting, mobilization</span>
+            </h3>
+
+            <div class="results-line">
+                <div class="label">
+                    Sampling / Lab / Report
+                    <div class="calcdetail" id="out_lab_detail"></div>
+                </div>
+                <div class="value" id="out_lab_cost">$0</div>
+            </div>
+
+            <div class="results-line">
+                <div class="label">
+                    Mobilization / Demobilization
+                    <div class="calcdetail" id="out_mob_detail"></div>
+                </div>
+                <div class="value" id="out_mob_cost">$0</div>
+            </div>
+        </div>
+
+        <div class="results-block">
+            <h3>
+                Summary
+                <span class="mini">Remote factor & markup</span>
+            </h3>
+
+            <div class="results-line">
+                <div class="label">
+                    Subtotal (Direct Cost)
+                </div>
+                <div class="value" id="out_subtotal">$0</div>
+            </div>
+
+            <div class="results-line">
+                <div class="label">
+                    Remote / Access Multiplier
+                    <div class="calcdetail" id="out_remote_detail"></div>
+                </div>
+                <div class="value" id="out_remote_cost">$0</div>
+            </div>
+
+            <div class="results-line">
+                <div class="label results-total">
+                    GRAND TOTAL (w/ OH&P)
+                    <div class="calcdetail" id="out_final_detail"></div>
+                </div>
+                <div class="value results-total" id="out_final">$0</div>
+            </div>
+        </div>
+
+    </section>
+</main>
+
+<div class="footer-hint">
+    Assumptions:
+    <br><b>Labor Rate</b> is a blended operator / laborer / environmental tech rate for fuel response in Alaska.
+    <br><b>Support / Shift</b> is a daily burn rate for equipment (excavator, vac truck, pumps, drums, liners), supervision, spill kit, and paperwork.
+    <br><b>Contaminated Media Density</b> turns CY or gal into lbs so we can price disposal.
+    <br><b>Backfill / Restore</b> assumes import of clean fill / patching slab / rough grade.
+    <br>Remote multiplier covers barge/air village logistics. After-hours toggle hits labor multiplier.
+</div>
+
+<script>
+(function(){
+    // INPUTS
+    const releaseType      = document.getElementById('releaseType');
+    const qty              = document.getElementById('qty');
+    const fuelType         = document.getElementById('fuelType');
+    const siteClass        = document.getElementById('siteClass');
+    const handlingMethod   = document.getElementById('handlingMethod');
+    const afterHours       = document.getElementById('afterHours');
+    const notes            = document.getElementById('notes');
+
+    const crewSize         = document.getElementById('crewSize');
+    const prodRate         = document.getElementById('prodRate');
+    const laborRate        = document.getElementById('laborRate');
+    const supportPerShift  = document.getElementById('supportPerShift');
+    const labAllowance     = document.getElementById('labAllowance');
+
+    const massDensity      = document.getElementById('massDensity');
+    const disposalRate     = document.getElementById('disposalRate');
+    const backfillPerUnit  = document.getElementById('backfillPerUnit');
+    const remoteFactor     = document.getElementById('remoteFactor');
+    const markupPct        = document.getElementById('markupPct');
+
+    const includeLab       = document.getElementById('includeLab');
+    const includeMobDemob  = document.getElementById('includeMobDemob');
+    const mobDemobLot      = document.getElementById('mobDemobLot');
+    const restoreNotes     = document.getElementById('restoreNotes');
+
+    // OUTPUTS
+    const out_shifts         = document.getElementById('out_shifts');
+    const out_shifts_detail  = document.getElementById('out_shifts_detail');
+    const out_manhours       = document.getElementById('out_manhours');
+    const out_mh_detail      = document.getElementById('out_mh_detail');
+
+    const out_labor_cost     = document.getElementById('out_labor_cost');
+    const out_labor_detail   = document.getElementById('out_labor_detail');
+
+    const out_support_cost   = document.getElementById('out_support_cost');
+    const out_support_detail = document.getElementById('out_support_detail');
+
+    const out_mass_lbs       = document.getElementById('out_mass_lbs');
+    const out_mass_detail    = document.getElementById('out_mass_detail');
+
+    const out_disposal_cost  = document.getElementById('out_disposal_cost');
+    const out_disposal_detail= document.getElementById('out_disposal_detail');
+
+    const out_restore_cost   = document.getElementById('out_restore_cost');
+    const out_restore_detail = document.getElementById('out_restore_detail');
+
+    const out_lab_cost       = document.getElementById('out_lab_cost');
+    const out_lab_detail     = document.getElementById('out_lab_detail');
+
+    const out_mob_cost       = document.getElementById('out_mob_cost');
+    const out_mob_detail     = document.getElementById('out_mob_detail');
+
+    const out_subtotal       = document.getElementById('out_subtotal');
+    const out_remote_cost    = document.getElementById('out_remote_cost');
+    const out_remote_detail  = document.getElementById('out_remote_detail');
+    const out_final          = document.getElementById('out_final');
+    const out_final_detail   = document.getElementById('out_final_detail');
+
+    function fmtMoney(v){
+        return "$" + (Number(v).toLocaleString(undefined,{minimumFractionDigits:0, maximumFractionDigits:0}));
+    }
+
+    function recalc(){
+        // INPUT VALUES
+        const QTY             = parseFloat(qty.value)||0;
+        const PROD_RATE       = parseFloat(prodRate.value)||1;
+        const CREW            = parseFloat(crewSize.value)||1;
+        const LABOR_RATE      = parseFloat(laborRate.value)||0;
+        const SUPPORT_SHIFT   = parseFloat(supportPerShift.value)||0;
+        const LAB_ALLOW       = parseFloat(labAllowance.value)||0;
+
+        const MASS_DENS       = parseFloat(massDensity.value)||0;   // lb per unit (CY, gal, etc.)
+        const DISP_RATE       = parseFloat(disposalRate.value)||0; // $/lb
+        const BACKFILL_PER    = parseFloat(backfillPerUnit.value)||0; // $/unit
+
+        const REMOTE_MULT     = parseFloat(remoteFactor.value)||1;
+        const MARKUP_PCT      = parseFloat(markupPct.value)||0;
+
+        const WITH_LAB        = includeLab.checked ? 1 : 0;
+        const WITH_MOB        = includeMobDemob.checked ? 1 : 0;
+        const MOB_DEMOB       = parseFloat(mobDemobLot.value)||0;
+        const IS_AFTER        = afterHours.checked ? 1 : 0;
+
+        // BASE PRODUCTION TIME
+        // hours needed for scope = total units / (units/hr per crew)
+        const hours_needed_raw = QTY / PROD_RATE;
+        const shift_hours = 8;
+        const shifts_needed = hours_needed_raw / shift_hours;
+
+        // manhours = crew * hours
+        const manhours = hours_needed_raw * CREW;
+
+        // difficulty multipliers
+        let siteMult = 1.0;
+        switch(siteClass.value){
+            case "pavement":       siteMult = 1.1; break;  // cutting slab, demo, haul off
+            case "open_gravel":    siteMult = 1.0; break;  // easiest
+            case "tight_interior": siteMult = 1.4; break;  // confined, hand-dig, cleanup, odor mgmt
+            case "shoreline":      siteMult = 1.6; break;  // tidal window, boom, sheen control
+            case "remote_village": siteMult = 1.8; break;  // logistics / village access
+        }
+
+        let methodMult = 1.0;
+        switch(handlingMethod.value){
+            case "excavate_load":   methodMult = 1.0; break;
+            case "stockpile_cover": methodMult = 1.15; break; // building lined/covered stockpile
+            case "vac_truck":       methodMult = 1.4; break;  // vac truck time, drums, pumps
+            case "sorbent_boom":    methodMult = 1.5; break;  // marine boom, pads, drum offload
+        }
+
+        // after-hours/emergency response multiplier (OT, spill kit burn rate, immediate mobilization)
+        const afterMult = IS_AFTER ? 1.4 : 1.0;
+
+        // total labor condition multiplier
+        const laborMult = siteMult * methodMult * afterMult;
+
+        // LABOR COST
+        const labor_cost = manhours * LABOR_RATE * laborMult;
+
+        // EQUIP / OVERSIGHT
+        // supportPerShift is daily burn for machines / vac truck / supervisor / spill kit consumption.
+        // scale by shifts and siteMult + afterMult (harder access, emergency response)
+        const support_cost = SUPPORT_SHIFT * shifts_needed * siteMult * afterMult;
+
+        // WASTE MASS + DISPOSAL
+        // lb = QTY * MASS_DENS
+        const total_mass_lbs = QTY * MASS_DENS;
+        // remote_village / shoreline can add extra special haul requirements -> disposal bump
+        const disposalRemoteBump = (siteClass.value === "remote_village" || siteClass.value === "shoreline") ? 1.3 : 1.0;
+        const disposal_cost = total_mass_lbs * DISP_RATE * disposalRemoteBump;
+
+        // RESTORATION / BACKFILL
+        // assume you have to replace volume you removed:
+        // cost = QTY * backfillPerUnit * siteMult
+        const restore_cost = QTY * BACKFILL_PER * siteMult;
+
+        // LAB / REPORT
+        const lab_cost = WITH_LAB ? LAB_ALLOW : 0;
+
+        // MOB / DEMOB
+        const mob_cost = WITH_MOB ? MOB_DEMOB : 0;
+
+        // subtotal direct
+        const subtotal_direct = labor_cost + support_cost + disposal_cost + restore_cost + lab_cost + mob_cost;
+
+        // remote factor (barges, air freight, camp costs, etc.)
+        const remote_cost_total = subtotal_direct * REMOTE_MULT;
+
+        // final with markup
+        const final_total = remote_cost_total * (1 + MARKUP_PCT/100);
+
+        // OUTPUT UI
+        out_shifts.textContent        = shifts_needed.toFixed(2);
+        out_shifts_detail.textContent = hours_needed_raw.toFixed(1)+" crew-hrs / "+shift_hours+"hr shift";
+
+        out_manhours.textContent      = manhours.toFixed(1);
+        out_mh_detail.textContent     = CREW+" crew × "+hours_needed_raw.toFixed(1)+" hr";
+
+        out_labor_cost.textContent    = fmtMoney(labor_cost.toFixed(0));
+        out_labor_detail.textContent  = manhours.toFixed(1)+" mh × $"+LABOR_RATE.toFixed(0)+"/hr × mult "+laborMult.toFixed(2);
+
+        out_support_cost.textContent  = fmtMoney(support_cost.toFixed(0));
+        out_support_detail.textContent= "$"+SUPPORT_SHIFT.toFixed(0)+"/shift × "+shifts_needed.toFixed(2)+" shifts × site "+siteMult.toFixed(2);
+
+        out_mass_lbs.textContent      = total_mass_lbs.toFixed(0)+" lb";
+        out_mass_detail.textContent   = QTY.toFixed(0)+" units × "+MASS_DENS.toFixed(0)+" lb/unit";
+
+        out_disposal_cost.textContent = fmtMoney(disposal_cost.toFixed(0));
+        out_disposal_detail.textContent = total_mass_lbs.toFixed(0)+" lb × $"+DISP_RATE.toFixed(2)+"/lb × remote bump "+disposalRemoteBump.toFixed(2);
+
+        out_restore_cost.textContent  = fmtMoney(restore_cost.toFixed(0));
+        out_restore_detail.textContent= QTY.toFixed(0)+" units × $"+BACKFILL_PER.toFixed(0)+"/unit × site "+siteMult.toFixed(2);
+
+        out_lab_cost.textContent      = fmtMoney(lab_cost.toFixed(0));
+        out_lab_detail.textContent    = WITH_LAB ? ("Included @ $"+LAB_ALLOW.toFixed(0)) : "Excluded";
+
+        out_mob_cost.textContent      = fmtMoney(mob_cost.toFixed(0));
+        out_mob_detail.textContent    = WITH_MOB ? ("Included @ $"+MOB_DEMOB.toFixed(0)) : "Excluded";
+
+        out_subtotal.textContent      = fmtMoney(subtotal_direct.toFixed(0));
+
+        out_remote_cost.textContent   = fmtMoney(remote_cost_total.toFixed(0));
+        out_remote_detail.textContent = "Subtotal × "+REMOTE_MULT.toFixed(2)+" remote/access factor";
+
+        out_final.textContent         = fmtMoney(final_total.toFixed(0));
+        out_final_detail.textContent  = "Remote total × (1 + "+MARKUP_PCT.toFixed(0)+"%)";
+    }
+
+    // wire events
+    const inputs = document.querySelectorAll('input, select, textarea');
+    inputs.forEach(el=>{
+        el.addEventListener('input', recalc);
+        el.addEventListener('change', recalc);
+    });
+
+    recalc();
+})();
+</script>
+</body>
+</html>

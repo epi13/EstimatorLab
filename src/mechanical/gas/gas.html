@@ -1,1 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Gas System Estimator - AK</title>
+<style>
+    :root {
+        --bg-main:#0f172a;
+        --bg-card:#1e253a;
+        --bg-section:#2a324d;
+        --accent:#34d399;
+        --text-main:#f8fafc;
+        --text-dim:#94a3b8;
+        --radius-xl:1rem;
+        --radius-lg:.75rem;
+        --radius-md:.5rem;
+        --pad-lg:1rem;
+        --pad-md:.75rem;
+        --pad-sm:.5rem;
+        --gap-lg:1.25rem;
+        --gap-md:.75rem;
+        --gap-sm:.5rem;
+        --font-stack: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+        --border-card:1px solid rgba(148,163,184,.18);
+    }
+    *{
+        box-sizing:border-box;
+    }
+    body{
+        background-color:var(--bg-main);
+        color:var(--text-main);
+        font-family:var(--font-stack);
+        line-height:1.4;
+        margin:0;
+        padding:var(--pad-lg);
+        display:flex;
+        flex-direction:column;
+        min-height:100vh;
+    }
+    header{
+        display:flex;
+        flex-wrap:wrap;
+        justify-content:space-between;
+        align-items:flex-start;
+        row-gap:var(--gap-sm);
+        margin-bottom:var(--gap-lg);
+    }
+    .title-block{
+        display:flex;
+        flex-direction:column;
+    }
+    h1{
+        margin:0;
+        font-size:1.1rem;
+        font-weight:600;
+        color:var(--text-main);
+        letter-spacing:-0.03em;
+    }
+    .subtitle{
+        font-size:.8rem;
+        color:var(--text-dim);
+        max-width:700px;
+    }
+    .badge-row{
+        display:flex;
+        flex-wrap:wrap;
+        gap:.4rem;
+        font-size:.7rem;
+    }
+    .badge{
+        background-color:rgba(52,211,153,.12);
+        color:var(--accent);
+        border:1px solid rgba(52,211,153,.4);
+        padding:.35rem .5rem;
+        border-radius:999px;
+        font-weight:500;
+        line-height:1.1;
+        white-space:nowrap;
+    }
+
+    /* layout */
+    .layout{
+        flex:1;
+        display:grid;
+        grid-template-columns:1fr 320px;
+        gap:var(--gap-lg);
+        width:100%;
+        max-width:1400px;
+        margin:0 auto;
+    }
+    @media(max-width:1100px){
+        .layout{
+            grid-template-columns:1fr;
+        }
+    }
+
+    /* cards */
+    .card{
+        background-color:var(--bg-card);
+        border:var(--border-card);
+        border-radius:var(--radius-xl);
+        padding:var(--pad-lg);
+        box-shadow:0 30px 80px rgba(0,0,0,.6);
+    }
+    .card + .card{
+        margin-top:var(--gap-lg);
+    }
+    .card-header{
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        flex-wrap:wrap;
+        row-gap:var(--gap-sm);
+        margin-bottom:var(--gap-md);
+    }
+    .card-title{
+        font-size:.9rem;
+        font-weight:600;
+        color:var(--text-main);
+        display:flex;
+        align-items:center;
+        gap:.5rem;
+    }
+    .card-hint{
+        font-size:.7rem;
+        color:var(--text-dim);
+        max-width:600px;
+        line-height:1.3;
+    }
+
+    /* form grid */
+    .form-grid{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));
+        gap:var(--gap-md);
+    }
+    label{
+        font-size:.7rem;
+        font-weight:500;
+        color:var(--text-main);
+        display:block;
+        margin-bottom:.4rem;
+        letter-spacing:-0.02em;
+    }
+    .hint{
+        font-size:.65rem;
+        line-height:1.3;
+        color:var(--text-dim);
+        margin-top:.25rem;
+    }
+    input,select{
+        width:100%;
+        background-color:var(--bg-section);
+        border:1px solid rgba(148,163,184,.3);
+        border-radius:var(--radius-md);
+        padding:.6rem .6rem .6rem .6rem;
+        font-size:.8rem;
+        line-height:1.2;
+        color:var(--text-main);
+        font-family:inherit;
+        font-weight:500;
+        outline:none;
+    }
+    input:focus,select:focus{
+        border-color:var(--accent);
+        box-shadow:0 0 0 3px rgba(52,211,153,.25);
+    }
+    .inline-suffix{
+        display:flex;
+        align-items:center;
+        background-color:var(--bg-section);
+        border:1px solid rgba(148,163,184,.3);
+        border-radius:var(--radius-md);
+        overflow:hidden;
+    }
+    .inline-suffix input{
+        border:0;
+        flex:1;
+        border-radius:0;
+        background:transparent;
+        padding-right:.4rem;
+    }
+    .suffix{
+        font-size:.7rem;
+        line-height:1;
+        padding:.6rem .6rem;
+        color:var(--text-dim);
+        background-color:rgba(15,23,42,.4);
+        border-left:1px solid rgba(148,163,184,.3);
+    }
+
+    .section-divider{
+        height:1px;
+        background:radial-gradient(circle at 50% 0%,rgba(148,163,184,.6) 0%,rgba(148,163,184,0) 70%);
+        margin:var(--gap-lg) 0 var(--gap-md) 0;
+    }
+
+    /* results table */
+    .results-card{
+        background-color:var(--bg-card);
+        border:var(--border-card);
+        border-radius:var(--radius-xl);
+        padding:var(--pad-lg);
+        box-shadow:0 30px 80px rgba(0,0,0,.6);
+        max-height:90vh;
+        overflow:auto;
+        position:sticky;
+        top:var(--pad-lg);
+    }
+    .results-title{
+        font-size:.8rem;
+        font-weight:600;
+        color:var(--text-main);
+        margin:0 0 .25rem 0;
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        flex-wrap:wrap;
+        row-gap:.5rem;
+    }
+    .results-sub{
+        font-size:.7rem;
+        color:var(--text-dim);
+        line-height:1.3;
+    }
+
+    table{
+        width:100%;
+        border-collapse:collapse;
+        font-size:.7rem;
+        line-height:1.3;
+        color:var(--text-main);
+        margin-top:var(--gap-md);
+    }
+    thead{
+        position:sticky;
+        top:0;
+        z-index:10;
+    }
+    th{
+        text-align:left;
+        font-weight:600;
+        font-size:.65rem;
+        text-transform:uppercase;
+        letter-spacing:.05em;
+        color:var(--text-dim);
+        padding:.5rem .5rem;
+        background-color:rgba(42,50,77,.7);
+        backdrop-filter:blur(6px);
+        white-space:nowrap;
+    }
+    td{
+        padding:.6rem .5rem;
+        border-bottom:1px solid rgba(148,163,184,.15);
+        vertical-align:top;
+    }
+    .num{
+        text-align:right;
+        font-feature-settings:"tnum";
+        font-variant-numeric:tabular-nums;
+        white-space:nowrap;
+    }
+    .totals-row{
+        background-color:rgba(52,211,153,.07);
+    }
+    .totals-label{
+        color:var(--accent);
+        font-weight:600;
+    }
+    .GrandTotal{
+        font-size:.9rem;
+        font-weight:700;
+        color:var(--accent);
+    }
+
+    .btn{
+        cursor:pointer;
+        user-select:none;
+        background:radial-gradient(circle at 0% 0%,rgba(52,211,153,.4) 0%,rgba(52,211,153,0) 60%),linear-gradient(to right,#1e293b 0%,#0f172a 100%);
+        color:var(--text-main);
+        border:1px solid rgba(52,211,153,.4);
+        border-radius:var(--radius-lg);
+        font-size:.75rem;
+        font-weight:600;
+        padding:.6rem .9rem;
+        line-height:1.2;
+        box-shadow:0 18px 40px rgba(52,211,153,.2);
+        min-width:110px;
+        text-align:center;
+    }
+    .btn:active{
+        transform:scale(.98);
+    }
+
+    .mini-note{
+        font-size:.6rem;
+        color:var(--text-dim);
+        line-height:1.4;
+        margin-top:.5rem;
+    }
+
+    .two-col-split{
+        display:flex;
+        flex-wrap:wrap;
+        gap:var(--gap-md);
+    }
+    .two-col-split > div{
+        flex:1 1 220px;
+        min-width:0;
+    }
+
+    .mono{
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size:.65rem;
+        color:var(--text-dim);
+        background-color:rgba(15,23,42,.6);
+        border-radius:var(--radius-md);
+        padding:.25rem .4rem;
+        line-height:1.2;
+        border:1px solid rgba(148,163,184,.3);
+        word-break:break-all;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="title-block">
+        <h1>Gas System Estimator — Alaska</h1>
+        <div class="subtitle">
+            Budgetary pricing for Natural Gas and Propane service, including tanks, regulators, buried exterior runs,
+            and interior branch piping to appliances, boilers, gensets, kitchens, etc.
+        </div>
+    </div>
+    <div class="badge-row">
+        <div class="badge">Civil $82/hr</div>
+        <div class="badge">Mechanical $92/hr</div>
+        <div class="badge">Electrical $96/hr</div>
+        <div class="badge">Rev Nov 2 2025</div>
+    </div>
+</header>
+
+<main class="layout">
+    <!-- INPUT SIDE -->
+    <section>
+
+        <!-- GAS TYPE / LOAD / RUNS -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>1. System & Service</span>
+                </div>
+                <button class="btn" id="calcBtn">Recalculate</button>
+            </div>
+            <div class="card-hint">
+                Pick Natural Gas or Propane, enter tank size (if propane), total connected load, and piping runs.
+            </div>
+
+            <div class="form-grid">
+                <div>
+                    <label for="gasType">Gas Type</label>
+                    <select id="gasType">
+                        <option value="NG">Natural Gas (utility service)</option>
+                        <option value="LPG">Propane (bulk tank w/ regulators)</option>
+                    </select>
+                    <div class="hint">
+                        Propane typically includes above-ground or buried tank, first & second stage regulators.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="tankSize">Propane Tank Size (Gallons)</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="tankSize" min="0" value="500" />
+                        <div class="suffix">gal</div>
+                    </div>
+                    <div class="hint">
+                        If Natural Gas, leave this as 0.
+                        If multiple tanks manifolded, enter total gallons.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="connectedLoad">Connected Load</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="connectedLoad" min="0" value="600" />
+                        <div class="suffix">MBH</div>
+                    </div>
+                    <div class="hint">
+                        Approximate total BTU/hr ÷ 1000.
+                        e.g. boiler + kitchen + genset.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="extBuriedLF">Exterior Buried Gas Line</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="extBuriedLF" min="0" value="100" />
+                        <div class="suffix">LF</div>
+                    </div>
+                    <div class="hint">
+                        Underground PE (or sleeved) run from tank/meter to building entry. Includes trench/backfill.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="intPipingLF">Interior Gas Piping</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="intPipingLF" min="0" value="150" />
+                        <div class="suffix">LF</div>
+                    </div>
+                    <div class="hint">
+                        Black iron / CSST routing to appliances, genset, boiler, makeup air unit, etc.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="applianceDrops">Appliance Drops / Tie-ins (Qty)</label>
+                    <input type="number" id="applianceDrops" min="0" value="5" />
+                    <div class="hint">
+                        Each final connection: regulator, shutoff valve, flex, drip leg, test, label.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="regulators">Regulator / Meter / Relief Assemblies (Qty)</label>
+                    <input type="number" id="regulators" min="0" value="2" />
+                    <div class="hint">
+                        First-stage/second-stage propane regs, building gas meter set, overpressure relief assemblies.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="elecDevices">Electrical / Heat Trace / Alarm Points</label>
+                    <input type="number" id="elecDevices" min="0" value="3" />
+                    <div class="hint">
+                        Solenoid shutoff, gas leak detector, heat-trace power, monitoring point for BMS/fire alarm.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALASKA FACTORS -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>2. Alaska Factors</span>
+                </div>
+            </div>
+
+            <div class="card-hint">
+                Buried gas work, snow management, tenting for hot work, propane tank freight — all get ugly fast in Alaska. These multipliers try to catch that.
+            </div>
+
+            <div class="form-grid">
+
+                <div>
+                    <label for="remoteFactor">Remote / Logistical Difficulty Factor</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="remoteFactor" min="1" step="0.05" value="1.15" />
+                        <div class="suffix">x</div>
+                    </div>
+                    <div class="hint">
+                        1.00 = Road system
+                        1.15 = Hub (Juneau/Bethel)
+                        1.30+ = Barge/Fly-in village
+                    </div>
+                </div>
+
+                <div>
+                    <label for="laborSlowdown">Cold Weather Labor Slowdown (%)</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="laborSlowdown" min="0" value="10" />
+                        <div class="suffix">%</div>
+                    </div>
+                    <div class="hint">
+                        Snow/ice removal, trench heating/thaw, hot-work containment.
+                    </div>
+                </div>
+
+                <div>
+                    <label for="freightPct">Freight / Handling (%)</label>
+                    <div class="inline-suffix">
+                        <input type="number" id="freightPct" min="0" value="12" />
+                        <div class="suffix">%</div>
+                    </div>
+                    <div class="hint">
+                        Tank/regulator skid shipping, trench box rental freight, PE coil delivery, etc.
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="two-col-split">
+                <div>
+                    <div class="card-title" style="font-size:.75rem;">Anchorage Base Labor Rates</div>
+                    <div class="mini-note">
+                        Civil: $82/hr
+                        Mechanical (gasfitters): $92/hr
+                        Electrical: $96/hr
+                    </div>
+                </div>
+                <div>
+                    <div class="card-title" style="font-size:.75rem;">Estimator Notes</div>
+                    <div class="mini-note">
+                        - Remote factor scales materials + hours.
+                        - Slowdown % scales hours only.
+                        - Freight % applies to adjusted material $.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LINE ITEM OUTPUT -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <span>3. Line Item Preview</span>
+                </div>
+                <button class="btn" id="copyLineItemBtn">Copy Line Item</button>
+            </div>
+            <div class="card-hint">
+                Estimator-ready description, following our naming syntax.
+            </div>
+
+            <div style="background-color:var(--bg-section);border:1px solid rgba(148,163,184,.3);border-radius:var(--radius-md);padding:var(--pad-md);font-size:.7rem;line-height:1.4;color:var(--text-main);min-height:4rem;" id="lineItemText">
+                <!-- filled by JS -->
+            </div>
+
+            <div class="mini-note">
+                Format: (Dimension)(Capacity)(Power)(Features) ITEM (Ancillaries)
+            </div>
+        </div>
+    </section>
+
+    <!-- RESULTS SIDE -->
+    <aside class="results-card">
+        <div class="results-title">
+            <div>Estimate Summary</div>
+            <div class="mono" id="estimatorStamp">est AK-GAS • 2025-11-02 • AC</div>
+        </div>
+        <div class="results-sub">
+            Outputs Material + Freight, Labor hours and dollars, and Total.
+            Labor includes trench, set tank/meter, run pipe, leak test, labeling, and device terminations.
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Scope Item</th>
+                    <th scope="col" class="num">Matl $</th>
+                    <th scope="col" class="num">Ship $</th>
+                    <th scope="col" class="num">Labor hrs</th>
+                    <th scope="col" class="num">Labor $</th>
+                    <th scope="col" class="num">Total $</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody">
+                <!-- rows injected -->
+            </tbody>
+            <tfoot>
+                <tr class="totals-row">
+                    <td class="totals-label">PROJECT TOTAL</td>
+                    <td class="num totals-label" id="grandMatl">$0</td>
+                    <td class="num totals-label" id="grandShip">$0</td>
+                    <td class="num totals-label" id="grandHrs">0</td>
+                    <td class="num totals-label" id="grandLabor">$0</td>
+                    <td class="num GrandTotal" id="grandTotal">$0</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="mini-note">
+            Assumptions:
+            <ul style="margin:.5rem 0 0 1rem;padding:0;font-size:.6rem;color:var(--text-dim);line-height:1.4;">
+                <li>Natural Gas assumes utility sets meter, you own downstream piping/regulators inside building.</li>
+                <li>Propane assumes tank provided/owned by owner or contractor (your call); includes first/second stage regs, buried PE run, appliance tie-ins.</li>
+                <li>Exterior trench assumes standard depth, no rock hammering, no dewatering, spoil remains on-site.</li>
+                <li>Electrical covers any powered solenoid shutoffs, leak detectors, and heat trace.</li>
+            </ul>
+        </div>
+    </aside>
+</main>
+
+<script>
+/*
+CONFIG SECTION
+Adjust baseline unit costs and production assumptions here.
+All dollars are base Anchorage-ish before remoteFactor & freight.
+*/
+
+const CONFIG = {
+    // Propane tank cost per gallon (material only). For NG, we'll treat main meter set as separate below.
+    propaneTankCostPerGal: 4.50, // $/gal for a bulk above-ground propane tank
+
+    // NG meter/regulator set material budget (if NG)
+    ngMeterSetMatl: 3500,      // typical meter/regulator/riser assembly as delivered & set
+    ngMeterSetMechHrs: 8,      // mount/regulator tie-in
+    ngMeterSetCivilHrs: 4,     // small pad/blocking, anchoring, guard posts
+
+    // First/second stage regulator assemblies for propane
+    lpgRegulatorMatl: 900,     // per assembly
+    lpgRegulatorMechHrs: 4,    // install, leak test, tag
+    lpgRegulatorCivilHrs: 1,   // mount / support / shield post
+
+    // Buried exterior gas line (PE sleeve or coated steel)
+    extLineMatlPerLF: 45,         // pipe, tracer wire, warning tape, isolation fittings
+    extLineCivilHrsPerLF: 0.12,   // trench, bedding, backfill
+    extLineMechHrsPerLF: 0.08,    // fusion / fittings / riser set
+
+    // Interior gas piping (black iron / CSST)
+    intLineMatlPerLF: 28,         // pipe, hangers, valves, labels
+    intLineMechHrsPerLF: 0.12,    // cut/thread/hang/test
+
+    // Appliance drops / tie-ins
+    dropMatl: 320,           // shutoff valve, flex, union, drip leg, tag
+    dropMechHrs: 2.0,        // hookup & leak test
+
+    // Regulator / meter / relief assemblies (generic count-based)
+    regAssemblyMatl: 750,
+    regAssemblyMechHrs: 2.5,
+
+    // Electrical devices: solenoid valve interlock, gas leak detector, alarm, heat trace feed
+    elecDeviceMatl: 400,
+    elecDeviceElecHrs: 1.5,
+
+    // Labor base rates Anchorage
+    rateCivil: 82,
+    rateMech: 92,
+    rateElec: 96,
+};
+
+
+function calcEstimate(){
+    // INPUTS
+    const gasType      = document.getElementById('gasType').value;
+    const tankSizeGal  = parseFloat(document.getElementById('tankSize').value || "0");
+    const connectedMBH = parseFloat(document.getElementById('connectedLoad').value || "0");
+    const extBuriedLF  = parseFloat(document.getElementById('extBuriedLF').value || "0");
+    const intPipingLF  = parseFloat(document.getElementById('intPipingLF').value || "0");
+    const drops        = parseFloat(document.getElementById('applianceDrops').value || "0");
+    const regulatorQty = parseFloat(document.getElementById('regulators').value || "0");
+    const elecDevices  = parseFloat(document.getElementById('elecDevices').value || "0");
+
+    const remoteFactor   = parseFloat(document.getElementById('remoteFactor').value || "1");
+    const slowdownPct    = parseFloat(document.getElementById('laborSlowdown').value || "0");
+    const freightPct     = parseFloat(document.getElementById('freightPct').value || "0");
+
+    const slowdownFactor = 1 + (slowdownPct/100);
+
+    let scopes = [];
+
+    // 1. Propane Tank OR NG Meter Set
+    if(gasType === "LPG" && tankSizeGal > 0){
+        // Propane bulk tank set
+        const matlBase = tankSizeGal * CONFIG.propaneTankCostPerGal;
+        const mechHrs = 10;    // set tank, anchor, connect first-stage reg
+        const civilHrs = 6;    // small pad/block/guards
+        const elecHrs = 0;     // assume mechanical only unless solenoids
+        scopes.push({
+            label: "Propane Tank Assembly ("+tankSizeGal+" gal)",
+            matlBase,
+            mechHrs,
+            civilHrs,
+            elecHrs
+        });
+    }
+    if(gasType === "NG"){
+        // NG meter/regulator station at building
+        const matlBase = CONFIG.ngMeterSetMatl;
+        const mechHrs  = CONFIG.ngMeterSetMechHrs;
+        const civilHrs = CONFIG.ngMeterSetCivilHrs;
+        const elecHrs  = 0;
+        scopes.push({
+            label: "Natural Gas Meter / Regulator Set",
+            matlBase,
+            mechHrs,
+            civilHrs,
+            elecHrs
+        });
+    }
+
+    // 2. First/Second Stage Regulator Sets (Propane distribution, also generic reg sets)
+    if(regulatorQty > 0){
+        const matlBase = regulatorQty * CONFIG.regAssemblyMatl;
+        const mechHrs  = regulatorQty * CONFIG.regAssemblyMechHrs;
+        const civilHrs = regulatorQty * 0.5;
+        const elecHrs  = 0;
+        scopes.push({
+            label: "Regulator / Relief Assemblies ("+regulatorQty+" ea)",
+            matlBase,
+            mechHrs,
+            civilHrs,
+            elecHrs
+        });
+    }
+
+    // 3. Buried Exterior Gas Line
+    if(extBuriedLF > 0){
+        const matlBase = extBuriedLF * CONFIG.extLineMatlPerLF;
+        const civilHrs = extBuriedLF * CONFIG.extLineCivilHrsPerLF;
+        const mechHrs  = extBuriedLF * CONFIG.extLineMechHrsPerLF;
+        const elecHrs  = 0.05 * extBuriedLF; // heat trace tie-in, tracer wire monitor points
+        scopes.push({
+            label: "Exterior Buried Gas Line ("+extBuriedLF+" LF)",
+            matlBase,
+            mechHrs,
+            civilHrs,
+            elecHrs
+        });
+    }
+
+    // 4. Interior Gas Distribution
+    if(intPipingLF > 0){
+        const matlBase = intPipingLF * CONFIG.intLineMatlPerLF;
+        const mechHrs  = intPipingLF * CONFIG.intLineMechHrsPerLF;
+        const civilHrs = 0;
+        const elecHrs  = 0;
+        scopes.push({
+            label: "Interior Gas Piping ("+intPipingLF+" LF)",
+            matlBase,
+            mechHrs,
+            civilHrs,
+            elecHrs
+        });
+    }
+
+    // 5. Appliance Drops
+    if(drops > 0){
+        const matlBase = drops * CONFIG.dropMatl;
+        const mechHrs  = drops * CONFIG.dropMechHrs;
+        const civilHrs = 0;
+        const elecHrs  = 0.25 * drops; // shutoff interlock / gas solenoid tie-in sometimes lands in panel
+        scopes.push({
+            label: "Appliance Tie-Ins ("+drops+" ea)",
+            matlBase,
+            mechHrs,
+            civilHrs,
+            elecHrs
+        });
+    }
+
+    // 6. Electrical / Heat Trace / Gas Shutoff
+    if(elecDevices > 0){
+        const matlBase = elecDevices * CONFIG.elecDeviceMatl;
+        const mechHrs  = 0.25 * elecDevices; // mech mounts valve body, etc.
+        const civilHrs = 0;
+        const elecHrs  = elecDevices * CONFIG.elecDeviceElecHrs;
+        scopes.push({
+            label: "Gas Safety / Heat Trace ("+elecDevices+" points)",
+            matlBase,
+            mechHrs,
+            civilHrs,
+            elecHrs
+        });
+    }
+
+    // 7. Connected Load note (not a cost driver by itself but useful)
+    // We'll store as meta-only for line item naming. No row added.
+
+    // ---- CALC TOTALS ----
+    const resultsBody = document.getElementById('resultsBody');
+    resultsBody.innerHTML = "";
+
+    let grandMatl = 0;
+    let grandShip = 0;
+    let grandHrs  = 0;
+    let grandLabor = 0;
+    let grandTotal = 0;
+
+    scopes.forEach(scope=>{
+        // Apply remote factor to materials
+        const matlAdj = scope.matlBase * remoteFactor;
+
+        // Freight is % of adjusted material
+        const shipCost = matlAdj * (freightPct/100);
+
+        // Labor hours by trade → remoteFactor & slowdownFactor
+        const mechHrsAdj  = scope.mechHrs  * remoteFactor * slowdownFactor;
+        const civilHrsAdj = scope.civilHrs * remoteFactor * slowdownFactor;
+        const elecHrsAdj  = scope.elecHrs  * remoteFactor * slowdownFactor;
+
+        const mechCost  = mechHrsAdj  * CONFIG.rateMech;
+        const civilCost = civilHrsAdj * CONFIG.rateCivil;
+        const elecCost  = elecHrsAdj  * CONFIG.rateElec;
+
+        const hrsScope = mechHrsAdj + civilHrsAdj + elecHrsAdj;
+        const laborCostScope = mechCost + civilCost + elecCost;
+        const totalScope = matlAdj + shipCost + laborCostScope;
+
+        grandMatl  += matlAdj;
+        grandShip  += shipCost;
+        grandHrs   += hrsScope;
+        grandLabor += laborCostScope;
+        grandTotal += totalScope;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${scope.label}</td>
+            <td class="num">$${matlAdj.toFixed(0)}</td>
+            <td class="num">$${shipCost.toFixed(0)}</td>
+            <td class="num">${hrsScope.toFixed(1)}</td>
+            <td class="num">$${laborCostScope.toFixed(0)}</td>
+            <td class="num">$${totalScope.toFixed(0)}</td>
+        `;
+        resultsBody.appendChild(tr);
+    });
+
+    document.getElementById('grandMatl').textContent  = "$"+grandMatl.toFixed(0);
+    document.getElementById('grandShip').textContent  = "$"+grandShip.toFixed(0);
+    document.getElementById('grandHrs').textContent   = grandHrs.toFixed(1);
+    document.getElementById('grandLabor').textContent = "$"+grandLabor.toFixed(0);
+    document.getElementById('grandTotal').textContent = "$"+grandTotal.toFixed(0);
+
+    // ---- LINE ITEM STRING (naming syntax) ----
+    // (Dimension)(Capacity)(Power)(Features) ITEM (Ancillaries)
+    // We'll generate based on propane vs NG.
+
+    // Capacity: use connected load MBH
+    const capStr = connectedMBH > 0 ? (connectedMBH.toString()+" MBH") : "Gas Load";
+
+    let powerStr = "";
+    let featuresStr = "";
+    let itemStr = "";
+    let ancStr = "";
+
+    if(gasType==="NG"){
+        // Natural gas
+        powerStr = "Utility Natural Gas";
+        featuresStr = "Black Iron Interior Distribution, Buried PE Service";
+        itemStr = "Gas Distribution System";
+        ancStr = "With Meter/Regulator Set, Appliance Tie-Ins, Solenoid Shutoff/Leak Detection";
+    } else {
+        // Propane
+        powerStr = "Propane, First/Second Stage Regulation";
+        featuresStr = "Buried PE Service, Interior Black Iron";
+        itemStr = "Propane Storage And Distribution System";
+        ancStr = "With " + tankSizeGal + " Gallon Tank, Regulators, Appliance Tie-Ins, Safety Shutoff";
+    }
+
+    // Dimension is not captured unless we want to reflect LF or tank size.
+    // We'll leave Dimension blank and rely on Capacity (MBH).
+    const lineItem =
+        "(" + capStr + ")"
+        + (powerStr ? "(" + powerStr + ")" : "")
+        + (featuresStr ? "(" + featuresStr + ")" : "")
+        + " " + itemStr.toUpperCase()
+        + (ancStr ? " (" + ancStr + ")" : "");
+
+    document.getElementById('lineItemText').textContent = lineItem;
+    return lineItem;
+}
+
+function copyLineItem() {
+    const txt = document.getElementById('lineItemText').textContent;
+    if (!navigator.clipboard) {
+        const ta = document.createElement('textarea');
+        ta.value = txt;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        alert('Line item copied');
+        return;
+    }
+    navigator.clipboard.writeText(txt).then(()=>{
+        alert('Line item copied:\n' + txt);
+    });
+}
+
+document.getElementById('calcBtn').addEventListener('click', calcEstimate);
+document.getElementById('copyLineItemBtn').addEventListener('click', copyLineItem);
+
+// initial run
+calcEstimate();
+</script>
+</body>
+</html>
 

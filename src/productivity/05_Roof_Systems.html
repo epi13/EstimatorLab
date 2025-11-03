@@ -1,2 +1,521 @@
-051 - Roofing
-052 - Skylights
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>05 – Roof Systems Productivity Estimator</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  .card {@apply bg-white/80 backdrop-blur shadow-md rounded-2xl border border-slate-300 p-4 mb-6;}
+  .section-header {@apply text-lg font-semibold text-slate-800 flex items-baseline justify-between flex-wrap gap-2;}
+  .section-sub {@apply text-[10px] text-slate-500 font-mono;}
+  .label-sm {@apply text-xs font-medium text-slate-600;}
+  .number-input {@apply w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400;}
+  .result-box {@apply text-sm font-semibold text-slate-800 bg-slate-100 rounded-lg px-2 py-1 text-right;}
+  .chip {@apply text-[10px] leading-tight font-mono bg-slate-800 text-white rounded px-2 py-[2px] mr-1;}
+  .subgroup-header {@apply text-slate-900 text-base font-bold flex items-center gap-2 mb-2;}
+  .subchip {@apply bg-cyan-700 text-white text-[10px] font-mono px-2 py-[2px] rounded;}
+  .assumption-note {@apply text-[10px] leading-snug text-slate-500 italic;}
+  table thead tr {@apply bg-slate-800 text-white;}
+  table tbody tr:nth-child(even) {@apply bg-slate-50/60;}
+</style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-100 to-cyan-100 text-slate-900 min-h-screen">
+
+<!-- HEADER -->
+<header class="px-4 py-4 border-b border-slate-300 bg-white/70 backdrop-blur sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900">05 – Roof Systems Productivity</h1>
+      <p class="text-xs text-slate-600">
+        051 Roofing · 052 Skylights
+      </p>
+      <p class="text-[10px] text-slate-500 font-mono">
+        Outputs crew-days & man-hours. Alaska factor included.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="exportSummary()">
+        Export Summary (.json)
+      </button>
+      <button
+        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
+        onclick="resetAll()">
+        Reset
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- GLOBAL CREW / SHIFT SETTINGS -->
+  <section class="card">
+    <div class="section-header">
+      <span>Global Crew / Shift</span>
+      <span class="section-sub">Used in all productivity calcs</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Crew Size (people)</label>
+        <input id="crewSize" type="number" min="1" value="4" class="number-input" oninput="recalcAll()" />
+      </div>
+
+      <div>
+        <label class="label-sm">Hours / shift</label>
+        <input id="hoursPerShift" type="number" min="1" value="10" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">10 hr days typical remote Alaska / summer daylight</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Productivity Factor</label>
+        <input id="prodFactorGlobal" type="number" step="0.01" value="1.25" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">1.00 = Lower 48 baseline, &gt;1.00 = slower (wind, ice, safety tie-off)</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Project Name / ID</label>
+        <input id="projectId" type="text" placeholder="Public Safety Bldg Roof"
+          class="number-input" />
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ==================== 051 ROOFING ==================== -->
+  <section class="card" id="roofingBlock">
+    <div class="subgroup-header">
+      <span class="subchip">051</span>
+      <span>Roofing</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Commercial low-slope membrane roof. Includes insulation laydown, coverboard,
+      membrane field sheets, seams/welds, flashings, edge metal / parapet cap,
+      curb/penetration boots. Does not include roof framing (handled in 032).
+    </p>
+
+    <!-- 051.01 Insulation & Coverboard Laydown -->
+    <div class="section-header">
+      <span>051.01 Insulation & Coverboard Laydown</span>
+      <span class="section-sub">Polyiso/tapered ISO + coverboard, fasten/adhere</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Roof Area (SF)</label>
+        <input id="isoSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Plan-view SF receiving insulation + coverboard</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="isoProdBase" type="number" step="1" value="4500" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Crew staging bundles with telehandler</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="isoProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="isoCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="isoManHours" class="result-box">0</div>
+        <p class="assumption-note">= Crew-Days × Crew Size × Hrs/Shift</p>
+      </div>
+    </div>
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="isoNotes" type="text"
+        placeholder="Includes polyiso / tapered, coverboard set & fasten/adhere. No snow/ice removal time."
+        class="number-input" />
+    </div>
+
+    <!-- 051.02 Membrane Field & Seams -->
+    <div class="section-header mt-8">
+      <span>051.02 Membrane Field & Seams</span>
+      <span class="section-sub">Roll out TPO/PVC/EPDM, weld seams, secure laps</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Membrane Area (SF)</label>
+        <input id="membraneSF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Low-slope field membrane area</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (SF/day)</label>
+        <input id="membraneProdBase" type="number" step="1" value="6000" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Good weather, seams welding smoothly</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (SF/day)</label>
+        <div id="membraneProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="membraneCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="membraneManHours" class="result-box">0</div>
+        <p class="assumption-note">Includes lap weld/heat-weld seams</p>
+      </div>
+    </div>
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="membraneNotes" type="text"
+        placeholder="Field membrane + seams. No edge metal, no curb flashing yet."
+        class="number-input" />
+    </div>
+
+    <!-- 051.03 Flashings / Penetrations / Edge Metal -->
+    <div class="section-header mt-8">
+      <span>051.03 Flashings / Penetrations / Edge Metal</span>
+      <span class="section-sub">Parapet cap, term bars, pipe boots, curb flash</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Edge / Flashing (LF)</label>
+        <input id="edgeLF" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Parapet cap, drip edge, fascia metal, scupper flashing</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (LF/day)</label>
+        <input id="edgeProdBase" type="number" step="1" value="180" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Includes cutting, fit-up, fasten, seal</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (LF/day)</label>
+        <div id="edgeProdAdj" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="edgeCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="edgeManHours" class="result-box">0</div>
+        <p class="assumption-note">Also includes pipe boots / curb flashings</p>
+      </div>
+    </div>
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="edgeNotes" type="text"
+        placeholder="Edge metal, parapet cap, curb/pipe boots, sealant at penetrations"
+        class="number-input" />
+    </div>
+
+  </section>
+
+
+  <!-- ==================== 052 SKYLIGHTS ==================== -->
+  <section class="card" id="skylightBlock">
+    <div class="subgroup-header">
+      <span class="subchip">052</span>
+      <span>Skylights</span>
+    </div>
+    <p class="text-[10px] text-slate-500 leading-snug mb-4">
+      Install and flash skylights / daylighting domes / curb-mounted units.
+      Includes fastening curb, sealing curb to deck, membrane boot, and cap.
+    </p>
+
+    <!-- 052.01 Skylight Install & Flash -->
+    <div class="section-header">
+      <span>052.01 Skylight Install & Flash</span>
+      <span class="section-sub">Set curb, fasten unit, flash into membrane</span>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 mt-4">
+      <div>
+        <label class="label-sm">Skylight Count (EA)</label>
+        <input id="skylightEA" type="number" min="0" value="0" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Factory curb or site-built curb + unit</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Baseline Prod (EA/day)</label>
+        <input id="skylightProdBase" type="number" step="1" value="5" class="number-input" oninput="recalcAll()" />
+        <p class="assumption-note">Includes fastening, counterflashing, sealant</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Adj Prod (EA/day)</label>
+        <div id="skylightProdAdj" class="result-box">0</div>
+        <p class="assumption-note">= Baseline ÷ Global Factor</p>
+      </div>
+
+      <div>
+        <label class="label-sm">Crew-Days</label>
+        <div id="skylightCrewDays" class="result-box">0</div>
+      </div>
+
+      <div>
+        <label class="label-sm">Man-Hours</label>
+        <div id="skylightManHours" class="result-box">0</div>
+        <p class="assumption-note">Includes tie-in to finished membrane</p>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <label class="label-sm">Notes / Assumptions</label>
+      <input id="skylightNotes" type="text"
+        placeholder="Includes curb, counterflashing, tie-in to finished membrane; no structural framing mods"
+        class="number-input" />
+    </div>
+  </section>
+
+
+  <!-- ==================== ROLLUP SUMMARY ==================== -->
+  <section class="card">
+    <div class="section-header">
+      <span>Rollup – Labor Demand</span>
+      <span class="section-sub">Crew-Days & Man-Hours by Subgroup (051 / 052) and Total</span>
+    </div>
+
+    <div class="overflow-x-auto mt-4">
+      <table class="min-w-full text-xs text-left border border-slate-300 rounded-xl overflow-hidden">
+        <thead>
+          <tr>
+            <th class="px-2 py-2 font-semibold">Activity</th>
+            <th class="px-2 py-2 font-semibold text-right">Crew-Days</th>
+            <th class="px-2 py-2 font-semibold text-right">Man-Hours</th>
+            <th class="px-2 py-2 font-semibold">Notes</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white/80">
+          <!-- 051 Roofing -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">051.01</span>Insulation & Coverboard</td>
+            <td class="px-2 py-2 text-right" id="sumIsoDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumIsoMH">0</td>
+            <td class="px-2 py-2" id="sumIsoNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">051.02</span>Membrane Field & Seams</td>
+            <td class="px-2 py-2 text-right" id="sumMembraneDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumMembraneMH">0</td>
+            <td class="px-2 py-2" id="sumMembraneNotes"></td>
+          </tr>
+
+          <tr>
+            <td class="px-2 py-2"><span class="chip">051.03</span>Flashing / Edge Metal / Penetrations</td>
+            <td class="px-2 py-2 text-right" id="sumEdgeDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumEdgeMH">0</td>
+            <td class="px-2 py-2" id="sumEdgeNotes"></td>
+          </tr>
+
+          <!-- 052 Skylights -->
+          <tr>
+            <td class="px-2 py-2"><span class="chip">052.01</span>Skylight Install & Flash</td>
+            <td class="px-2 py-2 text-right" id="sumSkylightDays">0</td>
+            <td class="px-2 py-2 text-right" id="sumSkylightMH">0</td>
+            <td class="px-2 py-2" id="sumSkylightNotes"></td>
+          </tr>
+
+          <!-- TOTAL -->
+          <tr class="bg-slate-800 text-white font-semibold text-right">
+            <td class="px-2 py-2 text-left">TOTAL</td>
+            <td class="px-2 py-2" id="sumTotalDays">0</td>
+            <td class="px-2 py-2" id="sumTotalMH">0</td>
+            <td class="px-2 py-2 text-left text-[10px] font-normal italic">
+              Sequential crew assumption. Wind, ice, temp, and tie-off requirements hit roofing productivity hard in Alaska.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="text-[10px] text-slate-500 leading-snug mt-3">
+      Baselines assume organized material staging, no snow removal, no emergency overnight dry-in.
+      Winter roofing or coastal wind exposure should increase the productivity factor (&gt;1.25).
+    </p>
+  </section>
+
+  <footer class="text-[10px] text-slate-400 text-center py-6">
+    © 2025 Poor Louis Labs · Alaska Productivity Toolkit · 05_Roof_Systems.html
+  </footer>
+</main>
+
+<script>
+// --- helpers ---
+function safeNum(v){const n=parseFloat(v);return isNaN(n)?0:n;}
+
+function crewDaysNeeded(qty, prodAdjPerDay){
+  if(prodAdjPerDay<=0)return 0;
+  return qty/prodAdjPerDay;
+}
+
+function totalManHours(crewDays, crewSize, hrsPerShift){
+  return crewDays*crewSize*hrsPerShift;
+}
+
+// generic calc for an activity
+function recalcGeneric(qtyId, prodBaseId, prodAdjId, crewDaysId, mhId,
+                       notesId, sumDaysId, sumMhId, sumNotesId){
+  const qty = safeNum(document.getElementById(qtyId).value);
+  const prodBase = safeNum(document.getElementById(prodBaseId).value);
+
+  const pfGlobal = safeNum(document.getElementById('prodFactorGlobal').value);
+  const crewSize = safeNum(document.getElementById('crewSize').value);
+  const hrsPerShift = safeNum(document.getElementById('hoursPerShift').value);
+
+  const prodAdj = (pfGlobal>0)?(prodBase/pfGlobal):0;
+  document.getElementById(prodAdjId).textContent = prodAdj.toFixed(2);
+
+  const cDays = crewDaysNeeded(qty, prodAdj);
+  document.getElementById(crewDaysId).textContent = cDays.toFixed(2);
+
+  const mh = totalManHours(cDays, crewSize, hrsPerShift);
+  document.getElementById(mhId).textContent = mh.toFixed(1);
+
+  const notesVal = document.getElementById(notesId).value;
+  document.getElementById(sumDaysId).textContent = cDays.toFixed(2);
+  document.getElementById(sumMhId).textContent = mh.toFixed(1);
+  document.getElementById(sumNotesId).textContent = notesVal;
+
+  return {cDays, mh};
+}
+
+function recalcAll(){
+  // 051 Roofing
+  const iso = recalcGeneric(
+    'isoSF','isoProdBase','isoProdAdj','isoCrewDays','isoManHours',
+    'isoNotes','sumIsoDays','sumIsoMH','sumIsoNotes'
+  );
+
+  const membrane = recalcGeneric(
+    'membraneSF','membraneProdBase','membraneProdAdj','membraneCrewDays','membraneManHours',
+    'membraneNotes','sumMembraneDays','sumMembraneMH','sumMembraneNotes'
+  );
+
+  const edge = recalcGeneric(
+    'edgeLF','edgeProdBase','edgeProdAdj','edgeCrewDays','edgeManHours',
+    'edgeNotes','sumEdgeDays','sumEdgeMH','sumEdgeNotes'
+  );
+
+  // 052 Skylights
+  const skylight = recalcGeneric(
+    'skylightEA','skylightProdBase','skylightProdAdj','skylightCrewDays','skylightManHours',
+    'skylightNotes','sumSkylightDays','sumSkylightMH','sumSkylightNotes'
+  );
+
+  // totals
+  const totalDays = iso.cDays + membrane.cDays + edge.cDays + skylight.cDays;
+  const totalMH   = iso.mh    + membrane.mh    + edge.mh    + skylight.mh;
+
+  document.getElementById('sumTotalDays').textContent = totalDays.toFixed(2);
+  document.getElementById('sumTotalMH').textContent   = totalMH.toFixed(1);
+}
+
+// export JSON snapshot
+function exportSummary(){
+  const data = {
+    project: document.getElementById('projectId').value,
+    timestamp_utc: new Date().toISOString(),
+    globals:{
+      crewSize: safeNum(document.getElementById('crewSize').value),
+      hoursPerShift: safeNum(document.getElementById('hoursPerShift').value),
+      productivityFactor: safeNum(document.getElementById('prodFactorGlobal').value)
+    },
+    "051_roofing":{
+      insulation_coverboard:{
+        qty_sf: safeNum(document.getElementById('isoSF').value),
+        crewDays: safeNum(document.getElementById('sumIsoDays').textContent),
+        manHours: safeNum(document.getElementById('sumIsoMH').textContent),
+        notes: document.getElementById('isoNotes').value
+      },
+      membrane_field_seams:{
+        qty_sf: safeNum(document.getElementById('membraneSF').value),
+        crewDays: safeNum(document.getElementById('sumMembraneDays').textContent),
+        manHours: safeNum(document.getElementById('sumMembraneMH').textContent),
+        notes: document.getElementById('membraneNotes').value
+      },
+      flashings_edge_metal:{
+        qty_lf: safeNum(document.getElementById('edgeLF').value),
+        crewDays: safeNum(document.getElementById('sumEdgeDays').textContent),
+        manHours: safeNum(document.getElementById('sumEdgeMH').textContent),
+        notes: document.getElementById('edgeNotes').value
+      }
+    },
+    "052_skylights":{
+      skylight_install_flash:{
+        qty_each: safeNum(document.getElementById('skylightEA').value),
+        crewDays: safeNum(document.getElementById('sumSkylightDays').textContent),
+        manHours: safeNum(document.getElementById('sumSkylightMH').textContent),
+        notes: document.getElementById('skylightNotes').value
+      }
+    },
+    totals:{
+      crewDays: safeNum(document.getElementById('sumTotalDays').textContent),
+      manHours: safeNum(document.getElementById('sumTotalMH').textContent)
+    }
+  };
+
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const projName=(data.project||'roof_systems').replace(/\s+/g,'_');
+  a.download = projName + "_div05_productivity.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetAll(){
+  // globals
+  document.getElementById('crewSize').value = 4;
+  document.getElementById('hoursPerShift').value = 10;
+  document.getElementById('prodFactorGlobal').value = 1.25;
+  document.getElementById('projectId').value = "";
+
+  // 051 Roofing
+  document.getElementById('isoSF').value = 0;
+  document.getElementById('isoProdBase').value = 4500;
+  document.getElementById('isoNotes').value =
+    "Polyiso/tapered ISO + coverboard set & fasten/adhere. No snow removal.";
+
+  document.getElementById('membraneSF').value = 0;
+  document.getElementById('membraneProdBase').value = 6000;
+  document.getElementById('membraneNotes').value =
+    "Roll membrane, weld seams. Good weather, no emergency dry-in.";
+
+  document.getElementById('edgeLF').value = 0;
+  document.getElementById('edgeProdBase').value = 180;
+  document.getElementById('edgeNotes').value =
+    "Edge metal, parapet cap, curb/pipe boots, sealant.";
+
+  // 052 Skylights
+  document.getElementById('skylightEA').value = 0;
+  document.getElementById('skylightProdBase').value = 5;
+  document.getElementById('skylightNotes').value =
+    "Set skylight, flash curb, tie into membrane. No structural framing mods.";
+
+  recalcAll();
+}
+
+// init totals on load
+recalcAll();
+</script>
+
+</body>
+</html>
