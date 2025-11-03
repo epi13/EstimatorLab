@@ -35,6 +35,7 @@ const navigationData = [
           { label: 'Volume from SF', href: 'src/volume/vFromSF/vFromSF.html', keywords: 'square footage depth' },
           { label: 'Volume from L×W×H', href: 'src/volume/wireframe-box/wireframe-box.html', keywords: 'length width height' },
           { label: 'Trench Excavation Calculator', href: 'src/volume/trenchV/trenchV.html', keywords: 'excavation earthwork' },
+          { label: 'Concrete Filled Decking', href: 'src/structural/pan_concrete/pan_concrete.html', keywords: 'pan decking slab' },
           { label: 'Composite Volume', href: 'src/volume/composite-volume/composite-volume.html', keywords: 'composite volume' }
         ]
       },
@@ -59,7 +60,6 @@ const navigationData = [
         title: 'Structural',
         icon: 'beam',
         calculators: [
-          { label: 'Concrete Filled Decking', href: 'src/structural/pan_concrete/pan_concrete.html', keywords: 'pan decking slab' },
           { label: 'Welding', href: 'src/structural/welding/welding.html', keywords: 'joinery fabrication' }
         ]
       },
@@ -87,10 +87,8 @@ const navigationData = [
         title: 'Mechanical',
         icon: 'fan',
         calculators: [
-          { label: 'Duct Calculator', href: 'src/mechanical/ducting/ducting.html', keywords: 'airflow hvac' },
           { label: 'Boilers', href: 'src/mechanical/boiler/boiler.html', keywords: 'heating systems' },
           { label: 'DDC', href: 'src/mechanical/ddc/ddc.html', keywords: 'controls automation' },
-          { label: 'Exhaust Fans', href: 'src/mechanical/exhaust/exhaust.html', keywords: 'ventilation fans' },
           { label: 'Fuel Systems', href: 'src/mechanical/fuel/fuel.html', keywords: 'storage piping' },
           { label: 'Gas Systems', href: 'src/mechanical/gas/gas.html', keywords: 'gas piping' },
           { label: 'Medical Gas', href: 'src/mechanical/medical_gas/medical_gas.html', keywords: 'medical gas systems' },
@@ -104,8 +102,9 @@ const navigationData = [
         calculators: [
           { label: 'HRV Calculator', href: 'src/ventilation/HRV/HRV.html', keywords: 'heat recovery ventilation' },
           { label: 'Vents and Diffuser', href: 'src/ventilation/diffuser/diffuser.html', keywords: 'air distribution' },
-          { label: 'Ducting', href: 'src/ventilation/ducting/ducting.html', keywords: 'airflow ductwork' }
-        ]
+          { label: 'Ducting', href: 'src/ventilation/ducting/ducting.html', keywords: 'airflow ductwork' },
+          { label: 'Exhaust Fans', href: 'src/mechanical/exhaust/exhaust.html', keywords: 'ventilation fans' }
+                  ]
       },
       {
         title: 'Fire',
