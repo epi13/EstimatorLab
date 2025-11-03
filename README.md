@@ -52,26 +52,29 @@ Clone the repository:
 ```bash
 git clone https://github.com/epi13/EstimatorLab.git
 cd EstimatorLab
+```
 
 Then simply open any estimator in your browser:
 
+```bash
 open 08_Mechanical.html
+```
 
 or drag the file directly into your browser window.
 
-Host Online
-
-EstimatorLab can be hosted directly via GitHub Pages or any static web host.
+### Host Online
+EstimatorLab can be hosted directly via **GitHub Pages** or any static web host.  
 To enable Pages:
 
-Go to your repository’s Settings → Pages
+1. Go to your repository’s **Settings → Pages**  
+2. Set source to `main` branch → `/ (root)`  
+3. Access your tools via `https://yourusername.github.io/EstimatorLab/`
 
-Set source to main branch → / (root)
+---
 
-Access your tools via https://yourusername.github.io/EstimatorLab/
+## 🧩 Repository Structure
 
-🧩 Repository Structure
-
+```
 EstimatorLab/
 ├── 01_General_Requirements.html
 ├── 02_Sitework.html
@@ -86,31 +89,30 @@ EstimatorLab/
 │   ├── contributing.md
 │   └── roadmap.md
 └── index.html  ← Main dashboard / navigation hub
+```
 
-🧠 Future Plans
+---
 
-Unified dashboard interface for selecting and managing estimators
+## 🧠 Future Plans
 
-Analytics panel to summarize material/labor distribution across trades
+- Unified **dashboard interface** for selecting and managing estimators  
+- **Analytics panel** to summarize material/labor distribution across trades  
+- Integration with **XLSX/CSV import/export** for bid packages  
+- **Offline mode (PWA)** for field deployment  
+- **Versioned cost data sets** (regional, remote, and rural Alaska factors)  
 
-Integration with XLSX/CSV import/export for bid packages
+---
 
-Offline mode (PWA) for field deployment
-
-Versioned cost data sets (regional, remote, and rural Alaska factors)
-
-🛠️ Development Notes
+## 🛠️ Development Notes
 
 EstimatorLab tools are built using:
-
-HTML5 for structure
-
-Vanilla JavaScript for logic
-
-CSS3 / Tailwind (optional) for styling
+- **HTML5** for structure  
+- **Vanilla JavaScript** for logic  
+- **CSS3 / Tailwind** (optional) for styling  
 
 Each estimator follows a consistent data schema:
 
+```json
 {
   "division": "08 - Mechanical",
   "section": "083 - HVAC",
@@ -124,26 +126,33 @@ Each estimator follows a consistent data schema:
     }
   ]
 }
-🤝 Contributing
+```
+
+---
+
+## 🤝 Contributing
 
 Contributions are welcome — whether it’s new estimators, data improvements, or UI tweaks.
 
-Fork the repo
-
-Create a new branch (feature/your-estimator)
-
-Submit a pull request with clear notes
+1. Fork the repo  
+2. Create a new branch (`feature/your-estimator`)  
+3. Submit a pull request with clear notes  
 
 For larger feature requests, please open an issue to discuss before starting work.
 
-📜 License
+---
 
-MIT License © 2025 Poor Louis Labs
+## 📜 License
 
+MIT License © 2025 [Poor Louis Labs](https://www.poorlouislabs.com)  
 Created and maintained by Alexander Collamore
 
-🌲 About Poor Louis Labs
+---
 
-Poor Louis Labs is the R&D branch of Poor Louis Farms, dedicated to engineering and software projects that combine practical craftsmanship, data transparency, and Alaskan resilience.
+## 🌲 About Poor Louis Labs
+
+**Poor Louis Labs** is the R&D branch of [Poor Louis Farms](https://www.poorlouisfarms.com), dedicated to engineering and software projects that combine practical craftsmanship, data transparency, and Alaskan resilience.
 
 EstimatorLab is part of our ongoing initiative to modernize construction workflows and make field-ready digital tools open and accessible.
+
+---
