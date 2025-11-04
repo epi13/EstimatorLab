@@ -4,7 +4,7 @@ const navigationData = [
         icon: 'sparkles',
         startOpen: true,
         calculators: [
-          { label: 'Home', href: 'src/home.html', keywords: 'landing overview start' },
+          { label: 'Home', href: 'src/homeCalc/homeCalc.html', keywords: 'generic calculator' },
           { label: 'JSON Search', href: 'src/search/fuzzy_search.html', keywords: 'data fuzzy finder' },
           { label: 'Unit Conversion', href: 'src/miscellaneous/unitConvert/units.html', keywords: 'measurements conversions' },
           { label: 'Description Translator', href: 'src/miscellaneous/translator/descriptionTranslator.html', keywords: 'translate descriptions' },
