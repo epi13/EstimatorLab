@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>EstimatorLab • QuickCalc</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Arbitrary precision math -->
+  <script src="https://unpkg.com/decimal.js@10.4.3/decimal.min.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="dot"></div>
+      <h1>EstimatorLab <span class="muted">QuickCalc</span></h1>
+    </div>
+    <div class="actions">
+      <button id="btn-export-text" class="ghost">Copy Tape (Text)</button>
+      <button id="btn-export-json" class="ghost">Copy Tape (JSON)</button>
+      <button id="btn-clear" class="danger">Clear</button>
+      <label class="precision">
+        Display Decimals
+        <input id="fmt-decimals" type="number" min="0" max="12" step="1" value="2" />
+      </label>
+      <label class="precision">
+        Precision (calc)
+        <input id="calc-precision" type="number" min="16" max="80" step="2" value="40" />
+      </label>
+      <label class="toggle">
+        <input id="toggle-dark" type="checkbox" />
+        <span>Dark</span>
+      </label>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Left: ticker tape -->
+    <section class="tape-panel">
+      <div class="tape-head">
+        <div>#</div><div>Expression</div><div class="r">Result</div><div class="note">Note</div><div></div>
+      </div>
+      <div id="tape" class="tape" aria-live="polite"></div>
+      <div class="tape-foot">
+        <div class="sum-label">Grand Total</div>
+        <div id="grand-total" class="sum-value">0</div>
+      </div>
+    </section>
+
+    <!-- Right: input & keypad -->
+    <aside class="side-panel">
+      <div class="input-box">
+        <input id="expr-input" type="text" placeholder="Type an expression (e.g., 1250*3 + 425)" autocomplete="off" />
+        <div class="input-row">
+          <input id="note-input" type="text" placeholder="Optional note (e.g., Shipping)" autocomplete="off" />
+          <button id="btn-enter" class="primary">Enter ⏎</button>
+        </div>
+        <div class="hint">
+          Enter: add line • Alt+= Subtotal • Ctrl+Z Undo • Ctrl+Y Redo • Click any cell to edit
+        </div>
+      </div>
+
+      <div class="keypad">
+        <div class="row">
+          <button data-key="(">(</button>
+          <button data-key=")">)</button>
+          <button data-key="%">%</button>
+          <button data-key="CE" class="warn">CE</button>
+        </div>
+        <div class="row">
+          <button data-key="7">7</button>
+          <button data-key="8">8</button>
+          <button data-key="9">9</button>
+          <button data-key="/" aria-label="divide">÷</button>
+        </div>
+        <div class="row">
+          <button data-key="4">4</button>
+          <button data-key="5">5</button>
+          <button data-key="6">6</button>
+          <button data-key="*" aria-label="multiply">×</button>
+        </div>
+        <div class="row">
+          <button data-key="1">1</button>
+          <button data-key="2">2</button>
+          <button data-key="3">3</button>
+          <button data-key="-" aria-label="minus">−</button>
+        </div>
+        <div class="row">
+          <button data-key="0">0</button>
+          <button data-key=".">.</button>
+          <button id="btn-subtotal" class="ghost">Subtotal</button>
+          <button data-key="+" aria-label="plus">+</button>
+        </div>
+        <div class="row">
+          <button id="btn-equals" class="primary wide">=</button>
+        </div>
+      </div>
+
+      <div class="constants">
+        <div class="constants-head">
+          Quick Constants
+          <button id="btn-insert-const" class="ghost small">Insert</button>
+        </div>
+        <div class="constants-grid">
+          <label>Markup (%)<input id="const-markup" type="number" step="0.1" value="10"></label>
+          <label>Waste (%)<input id="const-waste" type="number" step="0.1" value="5"></label>
+          <label>Anchorage Labor ($/hr)<input id="const-labor" type="number" step="1" value="92"></label>
+        </div>
+        <p class="constants-hint">Inserts a helper expression, e.g. <code>x * (1 + markup/100)</code>.</p>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="app-foot">
+    Built for speed, precision & usability • EstimatorLab
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
