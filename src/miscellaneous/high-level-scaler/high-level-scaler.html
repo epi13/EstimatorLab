@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scaling Calculator</title>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    background: #1e1e1e;
+    color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  .calculator {
+    background: #2b2b2b;
+    padding: 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    width: 320px;
+  }
+  .calculator h2 {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+  label {
+    display: block;
+    margin-top: 1rem;
+  }
+  input {
+    width: 100%;
+    padding: 0.6rem;
+    margin-top: 0.3rem;
+    border: none;
+    border-radius: 0.4rem;
+    background: #3a3a3a;
+    color: #f0f0f0;
+    font-size: 1rem;
+  }
+  .output {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 1.4rem;
+    background: #444;
+    padding: 0.8rem;
+    border-radius: 0.5rem;
+  }
+</style>
+</head>
+<body>
+  <div class="calculator">
+    <h2>Scaling Calculator</h2>
+    <label for="oldSF">Old Square Footage:</label>
+    <input type="number" id="oldSF" placeholder="e.g. 2500">
+
+    <label for="newSF">New Square Footage:</label>
+    <input type="number" id="newSF" placeholder="e.g. 4000">
+
+    <label for="value">Value to Scale:</label>
+    <input type="number" id="value" placeholder="e.g. 12000">
+
+    <div class="output" id="output">Scaled Value: 0</div>
+  </div>
+
+  <script>
+    const oldSF = document.getElementById('oldSF');
+    const newSF = document.getElementById('newSF');
+    const value = document.getElementById('value');
+    const output = document.getElementById('output');
+
+    function calculate() {
+      const oldVal = parseFloat(oldSF.value);
+      const newVal = parseFloat(newSF.value);
+      const inputVal = parseFloat(value.value);
+      if (oldVal > 0 && newVal > 0 && !isNaN(inputVal)) {
+        const scaled = inputVal * (newVal / oldVal);
+        output.textContent = "Scaled Value: " + scaled.toLocaleString(undefined, {maximumFractionDigits: 2});
+      } else {
+        output.textContent = "Scaled Value: 0";
+      }
+    }
+
+    [oldSF, newSF, value].forEach(el => el.addEventListener('input', calculate));
+  </script>
+</body>
+</html>
