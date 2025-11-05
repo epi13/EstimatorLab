@@ -14,7 +14,7 @@
 <body data-page="assemblies-oc-linear-ft">
 <main class="wrap wrap--compact">
 
-    <!-- Left column: inputs + results -->
+    <!-- Left column: inputs -->
     <div class="card">
         <h1>
             On-Center Linear Foot Calculator
@@ -78,47 +78,55 @@
             </div>
         </div>
 
-        <div class="results-card" id="resultsCard">
+        <div class="footer-note">
+            Assumptions: straight parallel runs, uniform spacing, rectangular-ish layout.<br/>
+            Good for budgeting radiant tubing, roof heat trace, slab snowmelt cable, etc.
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-card" id="resultsCard">
+        <div class="results-head">
+            <h2>Quick Summary</h2>
+            <p>Outputs update as you adjust spacing, area, and waste allowance.</p>
+        </div>
+
+        <div class="results-grid">
             <div>
-                <h2 class="results-title">Total Linear Feet</h2>
+                <h3 class="results-title">Total Linear Feet</h3>
                 <div class="results-value" id="totalLF">–</div>
                 <div class="results-sub" id="totalLFNote">Without waste. Continuous run length assumed.</div>
             </div>
 
             <div>
-                <h2 class="results-title">Total w/ Waste</h2>
+                <h3 class="results-title">Total w/ Waste</h3>
                 <div class="results-value" id="totalWithWaste">–</div>
                 <div class="results-sub"><span class="accent" id="wasteUsedPct">0%</span> extra added.</div>
             </div>
 
             <div>
-                <h2 class="results-title">LF / ft²</h2>
+                <h3 class="results-title">LF / ft²</h3>
                 <div class="results-value" id="lfPerSf">–</div>
                 <div class="results-sub">How many linear feet per square foot at this spacing.</div>
             </div>
 
             <div>
-                <h2 class="results-title">Coils Needed</h2>
+                <h3 class="results-title">Coils Needed</h3>
                 <div class="results-value" id="coilsNeeded">–</div>
                 <div class="results-sub">Based on <span class="accent" id="coilLenEcho">250</span> ft coil length.</div>
             </div>
 
             <div>
-                <h2 class="results-title">Runs / Rows</h2>
+                <h3 class="results-title">Runs / Rows</h3>
                 <div class="results-value" id="runCount">–</div>
                 <div class="results-sub" id="runCountNote">Approx parallel passes across the layout.</div>
             </div>
 
             <div>
-                <h2 class="results-title">Approx Run Length</h2>
+                <h3 class="results-title">Approx Run Length</h3>
                 <div class="results-value" id="runLength">–</div>
                 <div class="results-sub" id="runLengthNote">Length of each pass along the layout.</div>
             </div>
-        </div>
-
-        <div class="footer-note">
-            Assumptions: straight parallel runs, uniform spacing, rectangular-ish layout.<br/>
-            Good for budgeting radiant tubing, roof heat trace, slab snowmelt cable, etc.
         </div>
     </div>
 
