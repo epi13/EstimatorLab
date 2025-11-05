@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HedgeLite — Markdown Editor</title>
+  <link rel="stylesheet" href="styles.css" />
+
+  <!-- Markdown parser + sanitizer -->
+  <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+
+  <!-- PDF export (html2pdf bundles jsPDF + html2canvas) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18v2H3V6zm0 5h12v2H3v-2zm0 5h18v2H3v-2z"/></svg>
+      <span>HedgeLite</span>
+    </div>
+    <div class="toolbar" role="toolbar" aria-label="Formatting toolbar">
+      <button class="btn" data-act="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+      <button class="btn" data-act="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+      <button class="btn" data-act="h1" title="H1">H1</button>
+      <button class="btn" data-act="h2" title="H2">H2</button>
+      <button class="btn" data-act="ul" title="Bulleted List">• List</button>
+      <button class="btn" data-act="ol" title="Numbered List">1. List</button>
+      <button class="btn" data-act="code" title="Inline Code">`code`</button>
+      <button class="btn" data-act="codeblock" title="Code Block">{ }</button>
+      <button class="btn" data-act="link" title="Link">🔗</button>
+      <button class="btn" data-act="image" title="Image">🖼️</button>
+      <button class="btn" data-act="table" title="Table">▦</button>
+      <span class="divider"></span>
+      <button class="btn" id="togglePreview" title="Toggle Preview (F8)">Preview</button>
+      <button class="btn" id="toggleTheme" title="Toggle Dark/Light (F9)">Theme</button>
+      <span class="divider"></span>
+      <label class="btn file">
+        Import
+        <input id="fileInput" type="file" accept=".md,.markdown,.txt" hidden />
+      </label>
+      <button class="btn" id="downloadMd" title="Download .md">.md</button>
+      <button class="btn" id="downloadHtml" title="Download .html">.html</button>
+      <button class="btn" id="exportPdf" title="Export to PDF">PDF</button>
+      <button class="btn" id="printDoc" title="Print">Print</button>
+    </div>
+  </header>
+
+  <main class="split">
+    <section class="pane editor-pane">
+      <div class="pane-head">
+        <h2>Editor</h2>
+        <div class="stats" id="stats">0 words • 0 chars</div>
+      </div>
+      <textarea id="editor" spellcheck="true" aria-label="Markdown editor"
+        placeholder="Paste an image from your clipboard (Ctrl/Cmd+V) to embed it here..."></textarea>
+    </section>
+    <section class="pane preview-pane" aria-live="polite" aria-label="Preview">
+      <div class="pane-head">
+        <h2>Preview</h2>
+      </div>
+      <article id="preview" class="markdown-body"></article>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <span id="msg">Ready</span>
+  </footer>
+</body>
+</html>
