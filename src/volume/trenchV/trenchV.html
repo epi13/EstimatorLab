@@ -7,490 +7,275 @@
   <link rel="stylesheet" href="../../css/base/index.css">
   <link rel="stylesheet" href="../../css/components/index.css">
   <style>
-    body[data-page="volume-trench-cy"] {
-      font: 16px/1.4 var(--font-sans), sans-serif;
-      max-width: 1200px;
-      margin: 40px auto;
-      padding: 0 16px;
-      background: var(--background);
-      min-height: 100vh;
-    }
+    main.wrap.stack { gap: clamp(1.5rem, 2vw, 2.2rem); }
 
-    .calculator-container {
-      background: var(--surface);
-      border-radius: var(--radius-xl);
-      padding: 32px;
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow-soft);
-    }
+    .trench-card.stack { gap: clamp(1.1rem, 1.6vw, 1.6rem); }
 
-    .calculator-header {
-      text-align: center;
-      margin-bottom: 32px;
-      padding-bottom: 24px;
-      border-bottom: 2px solid var(--border);
-    }
-
-    .calculator-header h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--heading);
-      margin: 0 0 8px 0;
-    }
-
-    .calculator-header p {
-      font-size: 16px;
-      color: var(--text-muted);
-      margin: 0;
-    }
-
-    .input-section {
-      margin-bottom: 32px;
-    }
-
-    .section-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-title::before {
-      content: '';
-      width: 4px;
-      height: 18px;
-      background: var(--accent);
-      border-radius: 2px;
-    }
-
-    .input-grid {
+    .trench-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px;
-      margin-bottom: 24px;
+      gap: clamp(0.85rem, 1.4vw, 1.25rem);
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     }
 
-    .input-group {
-      display: flex;
-      flex-direction: column;
+    .field {
+      display: grid;
+      gap: 0.35rem;
     }
 
-    .input-group label {
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 6px;
-      font-size: 14px;
+    .field .row {
+      align-items: center;
+      gap: 0.6rem;
     }
 
-    .input-group .help-text {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 4px;
-      font-weight: 400;
-    }
-
-    .input-row {
-      display: flex;
-      gap: 8px;
-      align-items: stretch;
-    }
-
-    .input-field {
-      flex: 1;
-      padding: 12px 16px;
-      border: 2px solid var(--border);
-      border-radius: var(--radius-md);
-      font-size: 16px;
-      background: var(--input-bg);
-      color: var(--text);
-      transition: border-color 0.2s;
-    }
-
-    .input-field:focus {
-      outline: none;
-      border-color: var(--accent-strong);
-    }
-
-    .unit-select {
-      padding: 12px 16px;
-      border: 2px solid var(--border);
-      border-radius: var(--radius-md);
-      background: var(--input-bg);
-      color: var(--text);
-      font-size: 16px;
-      min-width: 80px;
+    .field .note {
+      margin: 0;
     }
 
     .calculate-btn {
-      background: var(--accent);
-      color: var(--button-text);
-      border: none;
-      padding: 16px 32px;
-      border-radius: var(--radius-md);
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
       width: 100%;
-      margin-top: 24px;
-    }
-
-    .calculate-btn:hover {
-      background: var(--accent-strong);
-      transform: translateY(-1px);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .calculate-btn:active {
-      transform: translateY(0);
-    }
-
-    .results-section {
-      margin-top: 32px;
-      display: none;
-    }
-
-    .results-header {
-      text-align: center;
-      margin-bottom: 24px;
-      padding: 20px;
-      background: var(--surface-muted);
       border-radius: var(--radius-lg);
-      border: 1px solid var(--border);
     }
 
-    .results-header h2 {
-      margin: 0 0 8px 0;
-      font-size: 24px;
-      color: var(--success);
+    #messageArea .panel {
+      margin-top: 0.85rem;
     }
 
-    .results-header p {
-      margin: 0;
-      color: var(--text-muted);
-      font-size: 14px;
+    #resultsSection {
+      gap: clamp(1rem, 1.4vw, 1.5rem);
     }
 
-    .results-grid {
+    #resultsGrid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 24px;
-      margin-bottom: 32px;
+      gap: clamp(0.9rem, 1.3vw, 1.4rem);
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     }
 
     .result-card {
-      background: var(--surface-muted);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      transition: all 0.2s ease;
+      position: relative;
+      display: grid;
+      gap: 0.35rem;
+      padding-left: 1.15rem;
     }
 
-    .result-card:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--shadow-sm);
-    }
-
-    .result-card.excavation {
-      border-left: 4px solid var(--accent);
-    }
-
-    .result-card.bedding {
-      border-left: 4px solid var(--success);
-    }
-
-    .result-card.backfill {
-      border-left: 4px solid var(--warn);
-    }
-
-    .result-card.totals {
-      border-left: 4px solid var(--danger);
-      grid-column: 1 / -1;
-    }
-
-    .result-card.tape {
-      border-left: 4px solid var(--text-muted);
-    }
-
-    .result-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .result-title::before {
+    .result-card::before {
       content: '';
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: currentColor;
+      position: absolute;
+      left: 0;
+      top: 0.5rem;
+      bottom: 0.5rem;
+      width: 4px;
+      border-radius: 8px;
+      background: var(--border);
     }
 
-    .result-value {
-      font-size: 28px;
+    .result-card[data-variant="excavation"]::before { background: var(--accent); }
+    .result-card[data-variant="bedding"]::before { background: var(--success); }
+    .result-card[data-variant="backfill"]::before { background: var(--warn); }
+    .result-card[data-variant="totals"]::before { background: var(--danger); }
+    .result-card[data-variant="tape"]::before { background: var(--text-muted); }
+
+    .result-card .label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .result-card .value {
+      font-size: 1.65rem;
       font-weight: 700;
       color: var(--heading);
-      margin-bottom: 8px;
     }
 
-    .result-secondary {
-      font-size: 14px;
+    .result-card .secondary {
+      font-size: 0.95rem;
       color: var(--text-muted);
-      margin-bottom: 4px;
     }
 
-    .assumptions-section {
-      background: var(--surface-muted);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      margin-top: 32px;
-    }
-
-    .assumptions-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--text);
-      margin-bottom: 16px;
-    }
-
-    .assumptions-list {
-      list-style: none;
-      padding: 0;
+    .assumptions-panel ul {
       margin: 0;
+      padding-left: 1.1rem;
+      display: grid;
+      gap: 0.5rem;
     }
 
-    .assumptions-list li {
-      padding: 8px 0;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
-      font-size: 14px;
-      line-height: 1.5;
+    .assumptions-panel li {
+      line-height: 1.45;
     }
 
-    .assumptions-list li:last-child {
-      border-bottom: none;
-    }
-
-    .safety-notice {
-      background: var(--warn);
-      color: #1a1500;
-      border: 1px solid var(--warn);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      margin-top: 24px;
-      font-weight: 500;
-    }
-
-    .safety-notice strong {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 16px;
-    }
-
-    .error-message {
-      background: var(--danger);
-      color: white;
-      padding: 16px;
-      border-radius: var(--radius-md);
-      margin-top: 16px;
-      text-align: center;
-      font-weight: 500;
-    }
-
-    @media (max-width: 768px) {
-      .input-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .results-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .result-card.totals {
-        grid-column: 1;
-      }
-
-      .calculator-header h1 {
-        font-size: 1.5rem;
+    @media (max-width: 720px) {
+      .calculate-btn {
+        justify-self: stretch;
       }
     }
   </style>
 </head>
 <body data-page="volume-trench-cy">
-  <div class="calculator-container">
-    <div class="calculator-header">
-      <h1>Trench Excavation & Bedding Calculator</h1>
-      <p>Calculate excavation volumes, bedding materials, and marking tape requirements for underground pipe installations</p>
-    </div>
+  <main class="wrap stack">
+    <section class="card stack trench-card" aria-labelledby="trenchTitle">
+      <header class="stack">
+        <h1 id="trenchTitle">Trench Excavation &amp; Bedding Calculator</h1>
+        <p class="small muted">Calculate excavation volumes, bedding materials, and marking tape requirements for underground pipe installations.</p>
+      </header>
 
-    <div class="input-section">
-      <h2 class="section-title">Excavation Parameters</h2>
-      <div class="input-grid">
-        <div class="input-group">
-          <label for="diameter">Pipe Diameter</label>
-          <div class="input-row">
-            <input type="number" id="diameter" class="input-field" placeholder="12" min="0.1" step="0.1">
-            <select id="diameterUnit" class="unit-select">
-              <option value="in">inches</option>
-              <option value="ft">feet</option>
-              <option value="mm">mm</option>
-              <option value="cm">cm</option>
+      <section class="stack" aria-labelledby="excavationHeading">
+        <h2 id="excavationHeading" class="section-title">Excavation Parameters</h2>
+        <div class="trench-grid">
+          <div class="field">
+            <label for="diameter">Pipe Diameter</label>
+            <div class="row">
+              <input type="number" id="diameter" placeholder="12" min="0.1" step="0.1">
+              <select id="diameterUnit" class="compact">
+                <option value="in">inches</option>
+                <option value="ft">feet</option>
+                <option value="mm">mm</option>
+                <option value="cm">cm</option>
+              </select>
+            </div>
+            <p class="small muted note">Outside diameter of the pipe</p>
+          </div>
+
+          <div class="field">
+            <label for="depth">Trench Depth</label>
+            <div class="row">
+              <input type="number" id="depth" placeholder="3.0" min="0.1" step="0.1">
+              <select id="depthUnit" class="compact">
+                <option value="ft">feet</option>
+                <option value="in">inches</option>
+                <option value="m">meters</option>
+                <option value="yd">yards</option>
+              </select>
+            </div>
+            <p class="small muted note">From finish grade to trench bottom</p>
+          </div>
+
+          <div class="field">
+            <label for="length">Trench Length</label>
+            <div class="row">
+              <input type="number" id="length" placeholder="100" min="0.1" step="0.1">
+              <select id="lengthUnit" class="compact">
+                <option value="ft">feet</option>
+                <option value="m">meters</option>
+                <option value="yd">yards</option>
+              </select>
+            </div>
+            <p class="small muted note">Total length of trench to excavate</p>
+          </div>
+
+          <div class="field">
+            <label for="method">Excavation Method</label>
+            <select id="method">
+              <option value="sloped">Sloped (2:1 standard &mdash; OSHA compliant)</option>
+              <option value="straight">Straight-walled (requires shoring)</option>
             </select>
+            <p class="small muted note">Affects excavation volume calculation</p>
           </div>
-          <div class="help-text">Outside diameter of the pipe</div>
         </div>
+      </section>
 
-        <div class="input-group">
-          <label for="depth">Trench Depth</label>
-          <div class="input-row">
-            <input type="number" id="depth" class="input-field" placeholder="3.0" min="0.1" step="0.1">
-            <select id="depthUnit" class="unit-select">
-              <option value="ft">feet</option>
-              <option value="in">inches</option>
-              <option value="m">meters</option>
-              <option value="yd">yards</option>
-            </select>
+      <section class="stack" aria-labelledby="materialsHeading">
+        <h2 id="materialsHeading" class="section-title">Bedding &amp; Materials (Optional)</h2>
+        <div class="trench-grid">
+          <div class="field">
+            <label for="beddingUnder">Bedding Under Pipe</label>
+            <div class="row">
+              <input type="number" id="beddingUnder" value="6" min="0" step="0.1">
+              <select id="beddingUnderUnit" class="compact">
+                <option value="in">inches</option>
+                <option value="ft">feet</option>
+                <option value="cm">cm</option>
+              </select>
+            </div>
+            <p class="small muted note">Depth of bedding material under pipe</p>
           </div>
-          <div class="help-text">From finish grade to trench bottom</div>
-        </div>
 
-        <div class="input-group">
-          <label for="length">Trench Length</label>
-          <div class="input-row">
-            <input type="number" id="length" class="input-field" placeholder="100" min="0.1" step="0.1">
-            <select id="lengthUnit" class="unit-select">
-              <option value="ft">feet</option>
-              <option value="m">meters</option>
-              <option value="yd">yards</option>
-            </select>
+          <div class="field">
+            <label for="sideClear">Side Clearance</label>
+            <div class="row">
+              <input type="number" id="sideClear" value="6" min="0" step="0.1">
+              <select id="sideClearUnit" class="compact">
+                <option value="in">inches</option>
+                <option value="ft">feet</option>
+                <option value="cm">cm</option>
+              </select>
+            </div>
+            <p class="small muted note">Clearance each side for bedding envelope</p>
           </div>
-          <div class="help-text">Total length of trench to excavate</div>
-        </div>
 
-        <div class="input-group">
-          <label for="method">Excavation Method</label>
-          <select id="method" class="input-field">
-            <option value="sloped">Sloped (2:1 standard - OSHA compliant)</option>
-            <option value="straight">Straight-walled (requires shoring)</option>
-          </select>
-          <div class="help-text">Affects excavation volume calculation</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="input-section">
-      <h2 class="section-title">Bedding & Materials (Optional)</h2>
-      <div class="input-grid">
-        <div class="input-group">
-          <label for="beddingUnder">Bedding Under Pipe</label>
-          <div class="input-row">
-            <input type="number" id="beddingUnder" class="input-field" value="6" min="0" step="0.1">
-            <select id="beddingUnderUnit" class="unit-select">
-              <option value="in">inches</option>
-              <option value="ft">feet</option>
-              <option value="cm">cm</option>
-            </select>
+          <div class="field">
+            <label for="initialCover">Initial Backfill Height</label>
+            <div class="row">
+              <input type="number" id="initialCover" value="12" min="0" step="0.1">
+              <select id="initialCoverUnit" class="compact">
+                <option value="in">inches</option>
+                <option value="ft">feet</option>
+                <option value="cm">cm</option>
+              </select>
+            </div>
+            <p class="small muted note">Above pipe crown for bedding material</p>
           </div>
-          <div class="help-text">Depth of bedding material under pipe</div>
-        </div>
 
-        <div class="input-group">
-          <label for="sideClear">Side Clearance</label>
-          <div class="input-row">
-            <input type="number" id="sideClear" class="input-field" value="6" min="0" step="0.1">
-            <select id="sideClearUnit" class="unit-select">
-              <option value="in">inches</option>
-              <option value="ft">feet</option>
-              <option value="cm">cm</option>
-            </select>
+          <div class="field">
+            <label for="aggregateDensity">Aggregate Density</label>
+            <div class="row">
+              <input type="number" id="aggregateDensity" value="1.50" min="0.1" step="0.01">
+              <select id="aggregateDensityUnit" class="compact">
+                <option value="tons/yd³">tons/yd³</option>
+                <option value="lb/ft³">lb/ft³</option>
+                <option value="kg/m³">kg/m³</option>
+              </select>
+            </div>
+            <p class="small muted note">Material density for weight calculations</p>
           </div>
-          <div class="help-text">Clearance each side for bedding envelope</div>
-        </div>
 
-        <div class="input-group">
-          <label for="initialCover">Initial Backfill Height</label>
-          <div class="input-row">
-            <input type="number" id="initialCover" class="input-field" value="12" min="0" step="0.1">
-            <select id="initialCoverUnit" class="unit-select">
-              <option value="in">inches</option>
-              <option value="ft">feet</option>
-              <option value="cm">cm</option>
-            </select>
+          <div class="field">
+            <label for="tapeRollLength">Marking Tape Roll Length</label>
+            <div class="row">
+              <input type="number" id="tapeRollLength" value="1000" min="1" step="1">
+              <select id="tapeRollLengthUnit" class="compact">
+                <option value="ft">feet</option>
+                <option value="m">meters</option>
+              </select>
+            </div>
+            <p class="small muted note">Length per roll for quantity calculation</p>
           </div>
-          <div class="help-text">Above pipe crown for bedding material</div>
-        </div>
 
-        <div class="input-group">
-          <label for="aggregateDensity">Aggregate Density</label>
-          <div class="input-row">
-            <input type="number" id="aggregateDensity" class="input-field" value="1.50" min="0.1" step="0.01">
-            <select id="aggregateDensityUnit" class="unit-select">
-              <option value="tons/yd³">tons/yd³</option>
-              <option value="lb/ft³">lb/ft³</option>
-              <option value="kg/m³">kg/m³</option>
-            </select>
+          <div class="field">
+            <label for="tapeWaste">Marking Tape Waste</label>
+            <div class="row">
+              <input type="number" id="tapeWaste" value="10" min="0" max="100" step="0.1">
+              <span class="small muted" aria-hidden="true">%</span>
+            </div>
+            <p class="small muted note">Additional waste factor percentage</p>
           </div>
-          <div class="help-text">Material density for weight calculations</div>
         </div>
+      </section>
 
-        <div class="input-group">
-          <label for="tapeRollLength">Marking Tape Roll Length</label>
-          <div class="input-row">
-            <input type="number" id="tapeRollLength" class="input-field" value="1000" min="1" step="1">
-            <select id="tapeRollLengthUnit" class="unit-select">
-              <option value="ft">feet</option>
-              <option value="m">meters</option>
-            </select>
-          </div>
-          <div class="help-text">Length per roll for quantity calculation</div>
-        </div>
+      <button class="calculate-btn" onclick="calculateTrench()">Calculate Trench Requirements</button>
 
-        <div class="input-group">
-          <label for="tapeWaste">Marking Tape Waste</label>
-          <div class="input-row">
-            <input type="number" id="tapeWaste" class="input-field" value="10" min="0" max="100" step="0.1">
-            <span class="unit-select" style="background: var(--surface-muted); border: none; cursor: default;">%</span>
-          </div>
-          <div class="help-text">Additional waste factor percentage</div>
-        </div>
-      </div>
-    </div>
+      <div id="messageArea" aria-live="polite"></div>
+    </section>
 
-    <button class="calculate-btn" onclick="calculateTrench()">Calculate Trench Requirements</button>
-
-    <div id="messageArea"></div>
-
-    <div class="results-section" id="resultsSection">
-      <div class="results-header">
+    <section class="card stack trench-card" id="resultsSection" hidden>
+      <header class="stack">
         <h2>Calculation Results</h2>
-        <p>All volumes in cubic yards, weights in tons (unless otherwise noted)</p>
-      </div>
+        <p class="small muted">All volumes in cubic yards, weights in tons (unless otherwise noted).</p>
+      </header>
 
-      <div class="results-grid" id="resultsGrid">
-        <!-- Results will be populated here -->
-      </div>
+      <div id="resultsGrid"></div>
 
-      <div class="assumptions-section">
-        <h3 class="assumptions-title">Calculation Assumptions & Methodology</h3>
-        <ul class="assumptions-list" id="assumptionsList">
-          <!-- Assumptions will be populated here -->
-        </ul>
+      <div class="panel assumptions-panel">
+        <h3>Calculation Assumptions &amp; Methodology</h3>
+        <ul id="assumptionsList"></ul>
       </div>
-    </div>
+    </section>
 
-    <div class="safety-notice">
+    <div class="panel warn" role="note">
       <strong>⚠️ OSHA Trench Safety Requirements</strong>
-      Trenches deeper than 5 feet require a protective system unless excavated entirely in stable rock. Sloped trenches at a 2:1 ratio (horizontal:vertical) are standard for Type C soils. Always consult OSHA 29 CFR 1926 Subpart P and local regulations for compliance requirements.
+      <p class="small" style="margin: 0.5rem 0 0;">Trenches deeper than 5 feet require a protective system unless excavated entirely in stable rock. Sloped trenches at a 2:1 ratio (horizontal:vertical) are standard for Type C soils. Always consult OSHA 29 CFR 1926 Subpart P and local regulations for compliance requirements.</p>
     </div>
-  </div>
+  </main>
 
   <script type="module">
     import { convert, formatSig } from '../../lib/units/index.js';
@@ -498,9 +283,13 @@
 
     function showMessage(message, type = 'error') {
       const messageArea = $('#messageArea');
+      const variant = type === 'success' ? 'success' : 'danger';
+      const title = type === 'success' ? 'Success' : 'Check your inputs';
+
       messageArea.innerHTML = `
-        <div class="${type}-message">
-          ${message}
+        <div class="panel ${variant}">
+          <strong>${title}</strong>
+          <p class="small" style="margin: 0.35rem 0 0;">${message}</p>
         </div>
       `;
 
@@ -518,110 +307,102 @@
         const depth = parseFloat($('#depth').value);
         const length = parseFloat($('#length').value);
         const method = $('#method').value;
-
-        // Optional parameters with defaults
-        const beddingUnder = parseFloat($('#beddingUnder').value) || 6;
-        const sideClear = parseFloat($('#sideClear').value) || 6;
-        const initialCover = parseFloat($('#initialCover').value) || 12;
-        const aggregateDensity = parseFloat($('#aggregateDensity').value) || 1.50;
-        const tapeRollLength = parseFloat($('#tapeRollLength').value) || 1000;
-        const tapeWaste = parseFloat($('#tapeWaste').value) || 10;
-
-        // Get units
         const diameterUnit = $('#diameterUnit').value;
         const depthUnit = $('#depthUnit').value;
         const lengthUnit = $('#lengthUnit').value;
+
+        const beddingUnder = parseFloat($('#beddingUnder').value);
         const beddingUnderUnit = $('#beddingUnderUnit').value;
+        const sideClear = parseFloat($('#sideClear').value);
         const sideClearUnit = $('#sideClearUnit').value;
+        const initialCover = parseFloat($('#initialCover').value);
         const initialCoverUnit = $('#initialCoverUnit').value;
+        const aggregateDensity = parseFloat($('#aggregateDensity').value);
         const aggregateDensityUnit = $('#aggregateDensityUnit').value;
+        const tapeRollLength = parseFloat($('#tapeRollLength').value);
         const tapeRollLengthUnit = $('#tapeRollLengthUnit').value;
+        const tapeWaste = parseFloat($('#tapeWaste').value);
 
-        // Validation
-        if (isNaN(diameter) || diameter <= 0) {
-          showMessage('Please enter a valid positive pipe diameter.');
-          return;
-        }
-        if (isNaN(depth) || depth <= 0) {
-          showMessage('Please enter a valid positive trench depth.');
-          return;
-        }
-        if (isNaN(length) || length <= 0) {
-          showMessage('Please enter a valid positive trench length.');
-          return;
+        if ([diameter, depth, length].some(v => isNaN(v) || v <= 0)) {
+          throw new Error('Pipe diameter, trench depth, and trench length must all be positive values.');
         }
 
-        // Convert everything to feet for calculations
+        if (isNaN(beddingUnder) || isNaN(sideClear) || isNaN(initialCover)) {
+          throw new Error('Bedding dimensions must be valid numbers.');
+        }
+
+        if (isNaN(aggregateDensity) || aggregateDensity <= 0) {
+          throw new Error('Aggregate density must be a positive number.');
+        }
+
+        if (isNaN(tapeRollLength) || tapeRollLength <= 0) {
+          throw new Error('Marking tape roll length must be a positive number.');
+        }
+
+        if (isNaN(tapeWaste) || tapeWaste < 0) {
+          throw new Error('Waste percentage cannot be negative.');
+        }
+
+        // Convert all units to consistent bases
         const diameterFt = convert(diameter, 'Length', diameterUnit, 'ft');
         const depthFt = convert(depth, 'Length', depthUnit, 'ft');
         const lengthFt = convert(length, 'Length', lengthUnit, 'ft');
+
         const beddingUnderFt = convert(beddingUnder, 'Length', beddingUnderUnit, 'ft');
         const sideClearFt = convert(sideClear, 'Length', sideClearUnit, 'ft');
         const initialCoverFt = convert(initialCover, 'Length', initialCoverUnit, 'ft');
-        const tapeRollLengthFt = convert(tapeRollLength, 'Length', tapeRollLengthUnit, 'ft');
 
         // Convert aggregate density to tons per cubic yard
         let aggTonsPerYd = aggregateDensity;
         if (aggregateDensityUnit === 'lb/ft³') {
-          // Convert lb/ft³ to tons/yd³ (1 ton = 2000 lb, 1 yd³ = 27 ft³)
           aggTonsPerYd = (aggregateDensity * 27) / 2000;
         } else if (aggregateDensityUnit === 'kg/m³') {
-          // Convert kg/m³ to tons/yd³
-          const kgPerM3 = aggregateDensity;
-          const kgPerFt3 = kgPerM3 / 35.3147; // 1 m³ = 35.3147 ft³
-          const lbPerFt3 = kgPerFt3 * 2.20462; // 1 kg = 2.20462 lb
-          aggTonsPerYd = (lbPerFt3 * 27) / 2000; // tons per yd³
+          const kgPerFt3 = aggregateDensity / 35.3147;
+          const lbPerFt3 = kgPerFt3 * 2.20462;
+          aggTonsPerYd = (lbPerFt3 * 27) / 2000;
         }
 
-        // Calculate excavation volume
-        let excavationFt3 = 0;
-        let excavationNotes = '';
-
+        // Calculate excavation dimensions
+        let excavationWidthFt;
         if (method === 'sloped') {
-          // Sloped trench: trapezoidal cross-section with 2:1 slope
-          const baseWidth = diameterFt;
-          const topWidth = baseWidth + 4 * depthFt; // 2:1 slope each side (horizontal:vertical)
-          const crossSectionArea = ((topWidth + baseWidth) / 2) * depthFt;
-          excavationFt3 = crossSectionArea * lengthFt;
-          excavationNotes = `Trapezoidal cross-section with 2:1 slopes`;
+          const slopeWidth = depthFt * 2 * 2; // 2:1 slope each side
+          excavationWidthFt = diameterFt + (2 * sideClearFt) + slopeWidth;
         } else {
-          // Straight-walled trench
-          const trenchWidth = diameterFt * 1.5; // Simple buffer around pipe
-          excavationFt3 = trenchWidth * depthFt * lengthFt;
-          excavationNotes = `Rectangular cross-section (${formatSig(trenchWidth, 3)} ft wide)`;
+          excavationWidthFt = diameterFt + (2 * sideClearFt) + 2; // Add 2 ft for working room
         }
 
-        const excavationYd3 = excavationFt3 / 27;
+        const excavationAreaFt2 = excavationWidthFt * depthFt;
+        const excavationVolumeFt3 = excavationAreaFt2 * lengthFt;
+        const excavationVolumeYd3 = excavationVolumeFt3 / 27;
 
-        // Calculate bedding envelope dimensions
-        const beddingEnvelopeWidthFt = diameterFt + 2 * sideClearFt;
-
-        // Bedding material (under-pipe bedding + haunch to springline)
+        // Bedding calculations
         const beddingHeightFt = beddingUnderFt + (diameterFt / 2);
-        const beddingFt3 = beddingEnvelopeWidthFt * beddingHeightFt * lengthFt;
+        const beddingEnvelopeWidthFt = diameterFt + (2 * sideClearFt);
+        const beddingEnvelopeAreaFt2 = beddingEnvelopeWidthFt * beddingHeightFt;
+        const beddingFt3 = beddingEnvelopeAreaFt2 * lengthFt;
         const beddingYd3 = beddingFt3 / 27;
         const beddingTons = beddingYd3 * aggTonsPerYd;
 
-        // Initial backfill (from springline to specified height above crown)
-        const initBackfillHeightFt = (diameterFt / 2) + initialCoverFt;
-        const initBackfillFt3 = beddingEnvelopeWidthFt * initBackfillHeightFt * lengthFt;
+        // Initial backfill calculations
+        const initBackfillHeightFt = initialCoverFt + (diameterFt / 2);
+        const initBackfillAreaFt2 = beddingEnvelopeWidthFt * initBackfillHeightFt;
+        const initBackfillFt3 = initBackfillAreaFt2 * lengthFt;
         const initBackfillYd3 = initBackfillFt3 / 27;
         const initBackfillTons = initBackfillYd3 * aggTonsPerYd;
 
-        // Totals for bedding-class material
         const beddingClassYd3 = beddingYd3 + initBackfillYd3;
         const beddingClassTons = beddingTons + initBackfillTons;
 
-        // Marking tape calculation
-        const tapeWithWasteFt = lengthFt * (1 + (tapeWaste / 100));
-        const tapeRolls = tapeRollLengthFt > 0 ? Math.ceil(tapeWithWasteFt / tapeRollLengthFt) : 0;
+        // Marking tape
+        const tapeLengthFt = convert(tapeRollLength, 'Length', tapeRollLengthUnit, 'ft');
+        const tapeWithWasteFt = lengthFt * (1 + tapeWaste / 100);
+        const tapeRolls = Math.ceil(tapeWithWasteFt / tapeLengthFt);
 
-        // Display results
         displayResults({
           excavation: {
-            volume: excavationYd3,
-            volumeFt3: excavationFt3,
-            notes: excavationNotes
+            volume: excavationVolumeYd3,
+            volumeFt3: excavationVolumeFt3,
+            notes: `Excavation width ≈ ${formatSig(excavationWidthFt, 3)} ft`
           },
           bedding: {
             volume: beddingYd3,
@@ -647,7 +428,6 @@
           }
         });
 
-        // Display assumptions
         displayAssumptions({
           beddingUnder: formatSig(convert(beddingUnder, 'Length', beddingUnderUnit, 'in'), 2),
           sideClear: formatSig(convert(sideClear, 'Length', sideClearUnit, 'in'), 2),
@@ -659,9 +439,8 @@
         });
 
         showMessage('Calculations completed successfully!', 'success');
-
       } catch (error) {
-        showMessage('Error in calculation: ' + error.message);
+        showMessage(error.message);
       }
     }
 
@@ -671,35 +450,35 @@
 
       const resultCards = [
         {
-          class: 'excavation',
+          variant: 'excavation',
           title: 'Excavation Volume',
           primary: `${formatSig(results.excavation.volume, 4)} yd³`,
           secondary: `${formatSig(results.excavation.volumeFt3, 0)} ft³`,
           notes: results.excavation.notes
         },
         {
-          class: 'bedding',
+          variant: 'bedding',
           title: 'Bedding Material',
           primary: `${formatSig(results.bedding.volume, 4)} yd³`,
           secondary: `${formatSig(results.bedding.tons, 3)} tons`,
           notes: `${formatSig(results.bedding.volumeFt3, 0)} ft³`
         },
         {
-          class: 'backfill',
+          variant: 'backfill',
           title: 'Initial Backfill',
           primary: `${formatSig(results.backfill.volume, 4)} yd³`,
           secondary: `${formatSig(results.backfill.tons, 3)} tons`,
           notes: `${formatSig(results.backfill.volumeFt3, 0)} ft³`
         },
         {
-          class: 'totals',
+          variant: 'totals',
           title: 'Total Bedding-Class Materials',
           primary: `${formatSig(results.totals.volume, 4)} yd³`,
           secondary: `${formatSig(results.totals.tons, 3)} tons`,
           notes: 'Combined bedding and initial backfill'
         },
         {
-          class: 'tape',
+          variant: 'tape',
           title: 'Marking Tape',
           primary: `${formatSig(results.tape.length, 0)} linear ft`,
           secondary: `${results.tape.rolls} roll(s)`,
@@ -708,15 +487,15 @@
       ];
 
       resultsGrid.innerHTML = resultCards.map(card => `
-        <div class="result-card ${card.class}">
-          <div class="result-title">${card.title}</div>
-          <div class="result-value">${card.primary}</div>
-          <div class="result-secondary">${card.secondary}</div>
-          ${card.notes ? `<div class="result-secondary">${card.notes}</div>` : ''}
-        </div>
+        <article class="panel result-card" data-variant="${card.variant}">
+          <div class="label">${card.title}</div>
+          <div class="value">${card.primary}</div>
+          <div class="secondary">${card.secondary}</div>
+          ${card.notes ? `<div class="secondary">${card.notes}</div>` : ''}
+        </article>
       `).join('');
 
-      resultsSection.style.display = 'block';
+      resultsSection.hidden = false;
     }
 
     function displayAssumptions(assumptions) {
