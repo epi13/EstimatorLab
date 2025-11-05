@@ -37,7 +37,7 @@ const navigationData = [
           { label: 'Volume from SF', href: 'src/volume/vFromSF/vFromSF.html', keywords: 'square footage depth' },
           { label: 'Volume from L×W×H', href: 'src/volume/wireframe-box/wireframe-box.html', keywords: 'length width height' },
           { label: 'Trench Excavation Calculator', href: 'src/volume/trenchV/trenchV.html', keywords: 'excavation earthwork' },
-          { label: 'Concrete Filled Decking', href: 'src/structural/pan_concrete/pan_concrete.html', keywords: 'pan decking slab' },
+          { label: 'Concrete Filled Decking', href: 'src/volume/pan_concrete/pan_concrete.html', keywords: 'pan decking slab' },
           { label: 'Composite Volume', href: 'src/volume/composite-volume/composite-volume.html', keywords: 'composite volume' }
         ]
       },
