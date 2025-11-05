@@ -121,7 +121,6 @@ const navigationData = [
         icon: 'layers',
         calculators: [
           { label: 'Door Calculator', href: 'src/assemblies/doors/doors.html', keywords: 'openings hardware' },
-          { label: 'Resilient Channel Calculator', href: 'src/assemblies/resilient_channel/resilient_channel.html', keywords: 'drywall acoustics' },
           { label: 'Insulation', href: 'src/assemblies/insulation/insulation.html', keywords: 'thermal envelope' },
           { label: 'PEMB', href: 'src/assemblies/pemb/pemb.html', keywords: 'pre engineered metal building' },
           { label: 'OC Linear Ft', href: 'src/assemblies/OC_linear_ft/OC_linear_ft.html', keywords: 'on center spacing' }
