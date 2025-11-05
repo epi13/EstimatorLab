@@ -9,7 +9,8 @@ const navigationData = [
           { label: 'Unit Conversion', href: 'src/miscellaneous/unitConvert/units.html', keywords: 'measurements conversions' },
           { label: 'Description Translator', href: 'src/miscellaneous/translator/descriptionTranslator.html', keywords: 'translate descriptions' },
           { label: 'XLSX to LLM', href: 'src/miscellaneous/xlsx-to-llm/xlsx-to-llm.html', keywords: 'llm token saver' },
-          { label: 'Scaler', href: 'src/miscellaneous/high-level-scaler/high-level-scaler.html', keywords: 'high level scaler' }    
+          { label: 'Scaler', href: 'src/miscellaneous/high-level-scaler/high-level-scaler.html', keywords: 'high level scaler' },
+          { label: 'MarkDown Editor', href: 'src/miscellaneous/MarkDownEditor/markdown.html', keywords: 'markdown editor' } 
         ]
       },
       {
@@ -26,8 +27,7 @@ const navigationData = [
         calculators: [
           { label: 'PDF Search', href: 'src/pdf/PDFsearch/PDFsearch.html', keywords: 'documents find text' },
           { label: 'PDF Extractor', href: 'src/pdf/extractor/extract.html', keywords: 'export data' },
-          { label: 'PDF Mark-Up', href: 'src/pdf/markUp/markUp.html', keywords: 'annotations notes' },
-          { label: 'PDF Maker', href: 'src/pdf/PDFmaker/PDFmaker.html', keywords: 'create PDF from text' }
+          { label: 'PDF Mark-Up', href: 'src/pdf/markUp/markUp.html', keywords: 'annotations notes' }
         ]
       },
       {
