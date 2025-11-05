@@ -24,6 +24,27 @@
         <div class="row-custom row-long">
             <div class="field">
                 <label>
+                    <span>Run Layout</span>
+                    <small class="field-small">choose calculation style</small>
+                </label>
+                <select id="runMode">
+                    <option value="continuous" selected>Continuous run (slab / snowmelt)</option>
+                    <option value="parallel">Parallel rows (wall / ceiling channels)</option>
+                </select>
+            </div>
+
+            <div class="field" id="wallHeightField" style="display:none;">
+                <label>
+                    <span>Wall / Rise Height</span>
+                    <small class="field-small">ft (parallel mode)</small>
+                </label>
+                <input type="number" id="wallHeight" value="8" min="0" step="0.01">
+            </div>
+        </div>
+
+        <div class="row-custom row-long">
+            <div class="field">
+                <label>
                     <span>Coverage Area</span>
                     <small class="field-small">ft²</small>
                 </label>
@@ -61,7 +82,7 @@
             <div>
                 <h2 class="results-title">Total Linear Feet</h2>
                 <div class="results-value" id="totalLF">–</div>
-                <div class="results-sub">Without waste. Continuous run length assumed.</div>
+                <div class="results-sub" id="totalLFNote">Without waste. Continuous run length assumed.</div>
             </div>
 
             <div>
@@ -81,6 +102,18 @@
                 <div class="results-value" id="coilsNeeded">–</div>
                 <div class="results-sub">Based on <span class="accent" id="coilLenEcho">250</span> ft coil length.</div>
             </div>
+
+            <div>
+                <h2 class="results-title">Runs / Rows</h2>
+                <div class="results-value" id="runCount">–</div>
+                <div class="results-sub" id="runCountNote">Approx parallel passes across the layout.</div>
+            </div>
+
+            <div>
+                <h2 class="results-title">Approx Run Length</h2>
+                <div class="results-value" id="runLength">–</div>
+                <div class="results-sub" id="runLengthNote">Length of each pass along the layout.</div>
+            </div>
         </div>
 
         <div class="footer-note">
@@ -96,7 +129,7 @@
                 <span>Layout Preview (Not to scale)</span>
                 <span id="previewDims" style="color:var(--accent);font-weight:500;font-size:.7rem;"></span>
             </div>
-            <div class="diagram-hint">
+            <div class="diagram-hint" id="diagramHint">
                 Parallel runs at fixed on-center spacing. Total LF is basically
                 <span class="accent">(Area ÷ Spacing_ft)</span>.
                 We approximate equivalent rectangle dimensions of your input area.
@@ -113,6 +146,7 @@
         <div class="legend">
             <div><span class="legend-line">▌</span> Heating / trace run</div>
             <div>OC spacing: <span class="accent" id="legendOC">6 in</span></div>
+            <div>Run orientation: <span class="accent" id="legendLayout">Lengthwise</span></div>
             <div>Approx dims: <span class="accent" id="legendDims">–</span></div>
         </div>
 
