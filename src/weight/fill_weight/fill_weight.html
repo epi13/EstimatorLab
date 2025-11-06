@@ -3,111 +3,647 @@
 <head>
   <meta charset="UTF-8">
   <link rel="stylesheet" href="../../css/base/index.css">
+  <title>Bulk Material Weight Calculator</title>
   <style>
-    /* weight/fill_weight.html */
-    body[data-page="weight-fill-weight"] { font-family: sans-serif; max-width: 700px; margin: auto; padding: 20px; }
-    body[data-page="weight-fill-weight"] label, body[data-page="weight-fill-weight"] select, body[data-page="weight-fill-weight"] input { display: block; margin-top: 10px; width: 100%; padding: 5px; }
-    body[data-page="weight-fill-weight"] .output { margin-top: 20px; font-size: 1.2em; }
-    body[data-page="weight-fill-weight"] .history { margin-top: 20px; background: var(--surface-muted); padding: 10px; border: 1px solid var(--border); font-size: 0.9em; }
-    body[data-page="weight-fill-weight"] .description { margin-top: 10px; font-style: italic; color: var(--text-muted); }
+    /* weight/fill_weight/fill_weight.html */
+    body[data-page="weight-fill-weight"] {
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      background: radial-gradient(circle at top left, #f9fbff 0%, #eef1f7 45%, #e2e8f0 100%);
+      color: #1f2933;
+      min-height: 100vh;
+      margin: 0;
+      padding: 48px 20px 72px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+
+    body[data-page="weight-fill-weight"] .page-wrapper {
+      width: min(960px, 100%);
+    }
+
+    body[data-page="weight-fill-weight"] h1,
+    body[data-page="weight-fill-weight"] h2,
+    body[data-page="weight-fill-weight"] h3 {
+      font-weight: 600;
+      color: #0f172a;
+      margin: 0 0 12px;
+    }
+
+    body[data-page="weight-fill-weight"] p.lead {
+      margin: 0 0 32px;
+      color: #475569;
+      line-height: 1.6;
+      max-width: 720px;
+    }
+
+    body[data-page="weight-fill-weight"] .card {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.88));
+      backdrop-filter: blur(6px);
+      border-radius: 20px;
+      padding: 28px;
+      margin-bottom: 28px;
+      box-shadow: 0 18px 35px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.08);
+      border: 1px solid rgba(148, 163, 184, 0.24);
+    }
+
+    body[data-page="weight-fill-weight"] .card h3 {
+      margin-bottom: 18px;
+      font-size: 1.15rem;
+      letter-spacing: -0.01em;
+    }
+
+    body[data-page="weight-fill-weight"] label {
+      font-weight: 500;
+      color: #1e293b;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    body[data-page="weight-fill-weight"] input,
+    body[data-page="weight-fill-weight"] select,
+    body[data-page="weight-fill-weight"] textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      background: rgba(248, 250, 252, 0.9);
+      color: #0f172a;
+      font-size: 0.95rem;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+    }
+
+    body[data-page="weight-fill-weight"] input:focus,
+    body[data-page="weight-fill-weight"] select:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+      background: #ffffff;
+    }
+
+    body[data-page="weight-fill-weight"] .two-column {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    body[data-page="weight-fill-weight"] .mode-toggle {
+      display: inline-grid;
+      grid-auto-flow: column;
+      gap: 10px;
+      padding: 6px;
+      background: rgba(15, 23, 42, 0.05);
+      border-radius: 999px;
+    }
+
+    body[data-page="weight-fill-weight"] .mode-toggle label {
+      margin: 0;
+      padding: 6px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      font-weight: 600;
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    body[data-page="weight-fill-weight"] .mode-toggle input {
+      display: none;
+    }
+
+    body[data-page="weight-fill-weight"] .mode-toggle label.active {
+      background: linear-gradient(135deg, #2563eb, #0ea5e9);
+      color: #ffffff;
+      box-shadow: 0 10px 18px rgba(37, 99, 235, 0.25);
+    }
+
+    body[data-page="weight-fill-weight"] .material-description {
+      margin-top: 16px;
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: rgba(37, 99, 235, 0.05);
+      border: 1px solid rgba(37, 99, 235, 0.15);
+      color: #1e3a8a;
+      box-shadow: inset 0 1px 3px rgba(37, 99, 235, 0.08);
+      line-height: 1.5;
+    }
+
+    body[data-page="weight-fill-weight"] .density-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    body[data-page="weight-fill-weight"] .density-chip {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: rgba(14, 165, 233, 0.16);
+      color: #0c4a6e;
+      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.12);
+    }
+
+    body[data-page="weight-fill-weight"] .note {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    body[data-page="weight-fill-weight"] .result-highlight {
+      border-radius: 18px;
+      padding: 18px 20px;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(14, 165, 233, 0.12));
+      border: 1px solid rgba(37, 99, 235, 0.2);
+      box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.08);
+      margin-bottom: 18px;
+    }
+
+    body[data-page="weight-fill-weight"] .result-highlight .result-weight {
+      font-size: 2.25rem;
+      font-weight: 700;
+      color: #1e3a8a;
+      margin-bottom: 6px;
+    }
+
+    body[data-page="weight-fill-weight"] .result-highlight .result-sub {
+      color: #1d4ed8;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
+
+    body[data-page="weight-fill-weight"] .result-breakdown {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    body[data-page="weight-fill-weight"] .result-breakdown div {
+      background: rgba(15, 23, 42, 0.04);
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.08);
+    }
+
+    body[data-page="weight-fill-weight"] .result-breakdown .metric-label {
+      display: block;
+      font-weight: 600;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+
+    body[data-page="weight-fill-weight"] .result-breakdown .metric-value {
+      display: block;
+      color: #475569;
+      font-size: 0.95rem;
+    }
+
+    body[data-page="weight-fill-weight"] .history-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    body[data-page="weight-fill-weight"] .history-item {
+      background: rgba(15, 23, 42, 0.05);
+      border-radius: 16px;
+      padding: 14px 16px;
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      display: grid;
+      gap: 4px;
+    }
+
+    body[data-page="weight-fill-weight"] .history-item .title {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    body[data-page="weight-fill-weight"] .history-item .meta {
+      font-size: 0.9rem;
+      color: #475569;
+    }
+
+    body[data-page="weight-fill-weight"] .history-item .weight {
+      font-weight: 600;
+      color: #1d4ed8;
+    }
+
+    body[data-page="weight-fill-weight"] .placeholder {
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    body[data-page="weight-fill-weight"] .hidden {
+      display: none;
+    }
+
+    @media (max-width: 640px) {
+      body[data-page="weight-fill-weight"] {
+        padding: 32px 16px;
+      }
+
+      body[data-page="weight-fill-weight"] .card {
+        padding: 22px;
+      }
+
+      body[data-page="weight-fill-weight"] .result-highlight .result-weight {
+        font-size: 1.8rem;
+      }
+    }
   </style>
-  <title>Material Weight Calculator</title>
 </head>
 <body data-page="weight-fill-weight">
-  <h2>Bulk Material Weight Calculator</h2>
+  <div class="page-wrapper">
+    <header>
+      <h1>Bulk Material Weight Calculator</h1>
+      <p class="lead">Estimate haul weights for bulk materials using preset density libraries or custom entries. Adjust the moisture
+        condition, volume units, and obtain results with tonnage, pound, and kilogram conversions to keep crews informed.</p>
+    </header>
 
-  <label for="material">Select Material:</label>
-  <select id="material" onchange="updateDescription(); calculate()">
-    <option value="topsoil">Topsoil</option>
-    <option value="nfs">NFS Fill</option>
-    <option value="d1">D1</option>
-    <option value="e1">E1</option>
-    <option value="pea_gravel">Pea Gravel</option>
-    <option value="sand">Sand</option>
-    <option value="septic_rock">Septic Rock</option>
-    <option value="unclassified">Unclassified Fill</option>
-    <option value="mulch">Mulch</option>
-    <option value="concrete">Concrete</option>
-    <option value="asphalt">Asphalt</option>
-    <option value="riprap">Riprap</option>
-  </select>
+    <section class="card">
+      <h3>Material Source</h3>
+      <div class="mode-toggle" role="group" aria-label="Material entry mode">
+        <label id="modePresetLabel">
+          <input type="radio" name="materialMode" value="preset" checked>
+          Preset Library
+        </label>
+        <label id="modeCustomLabel">
+          <input type="radio" name="materialMode" value="custom">
+          Custom Material
+        </label>
+      </div>
 
-  <div class="description" id="description"></div>
+      <div class="two-column">
+        <div id="presetControls">
+          <label for="material">Preset Material</label>
+          <select id="material">
+            <option value="topsoil">Topsoil</option>
+            <option value="loam">Loam</option>
+            <option value="fill_dirt">Fill Dirt</option>
+            <option value="clay">Clay</option>
+            <option value="sand">Concrete Sand</option>
+            <option value="pea_gravel">Pea Gravel</option>
+            <option value="crushed_stone">Crushed Stone (3/4")</option>
+            <option value="limestone">Dense Grade Limestone</option>
+            <option value="granite">Granite Base Course</option>
+            <option value="recycled_concrete">Recycled Concrete</option>
+            <option value="asphalt_millings">Asphalt Millings</option>
+            <option value="riprap">Riprap</option>
+            <option value="compost">Screened Compost</option>
+            <option value="bark_mulch">Bark Mulch</option>
+          </select>
+          <div class="material-description" id="description"></div>
+        </div>
 
-  <label for="moisture">Condition:</label>
-  <select id="moisture" onchange="calculate()">
-    <option value="dry">Dry</option>
-    <option value="moist">Moist</option>
-  </select>
+        <div id="customControls" class="hidden">
+          <label for="customName">Material Name</label>
+          <input type="text" id="customName" placeholder="e.g. Project Excavation Spoils">
 
-  <label for="unit">Volume Unit:</label>
-  <select id="unit" onchange="calculate()">
-    <option value="yd3">Cubic Yards (yd³)</option>
-    <option value="ft3">Cubic Feet (ft³)</option>
-    <option value="m3">Cubic Meters (m³)</option>
-  </select>
+          <div class="two-column" style="margin-top: 16px;">
+            <div>
+              <label for="customDry">Dry Density (tons / yd³)</label>
+              <input type="number" id="customDry" min="0" step="0.01" data-custom-density>
+            </div>
+            <div>
+              <label for="customDamp">Damp Density (tons / yd³)</label>
+              <input type="number" id="customDamp" min="0" step="0.01" data-custom-density>
+            </div>
+            <div>
+              <label for="customSaturated">Saturated Density (tons / yd³)</label>
+              <input type="number" id="customSaturated" min="0" step="0.01" data-custom-density>
+            </div>
+          </div>
+          <p class="note">Enter densities for the relevant moisture conditions. When a field is left blank, the calculator will reuse the
+            closest available value so that results stay continuous.</p>
+        </div>
+      </div>
+    </section>
 
-  <label for="volume">Enter Volume:</label>
-  <input type="number" id="volume" step="any" oninput="calculate()">
+    <section class="card">
+      <h3>Measurement Inputs</h3>
+      <div class="two-column">
+        <div>
+          <label for="moisture">Moisture Condition</label>
+          <select id="moisture">
+            <option value="dry">Dry</option>
+            <option value="damp">Damp</option>
+            <option value="saturated">Saturated</option>
+          </select>
+        </div>
+        <div>
+          <label for="unit">Volume Unit</label>
+          <select id="unit">
+            <option value="yd3">Cubic Yards (yd³)</option>
+            <option value="ft3">Cubic Feet (ft³)</option>
+            <option value="m3">Cubic Meters (m³)</option>
+          </select>
+        </div>
+      </div>
 
-  <div class="output">
-    <h3 id="result">Weight: —</h3>
+      <div style="margin-top: 20px;">
+        <label for="volume">Volume</label>
+        <input type="number" id="volume" step="any" min="0" placeholder="Enter quantity to evaluate">
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Results</h3>
+      <div class="output" id="result">Weight: —</div>
+    </section>
+
+    <section class="card">
+      <h3>History</h3>
+      <div class="history-list" id="history">
+        <div class="placeholder">No calculations yet.</div>
+      </div>
+    </section>
   </div>
-
-  <div class="history" id="history">History:<br></div>
 
   <script>
     const materials = {
-      topsoil:        { dry: 1.2, moist: 1.4, desc: "Nutrient-rich soil often used for landscaping and gardens." },
-      nfs:            { dry: 1.4, moist: 1.6, desc: "Non-Frost Susceptible - compactable soil used for backfill and grading." },
-      d1:             { dry: 1.6, moist: 1.7, desc: "Gravel with fines used for base layers in roads and pads." },
-      e1:             { dry: 1.55, moist: 1.65, desc: "Engineered fill often used for structural backfill." },
-      pea_gravel:     { dry: 1.5, moist: 1.55, desc: "Small rounded stones used for drainage or landscaping." },
-      sand:           { dry: 1.5, moist: 1.6, desc: "Fine granular material used in concrete and leveling." },
-      septic_rock:    { dry: 1.7, moist: 1.75, desc: "Washed gravel used in septic systems for drainage." },
-      unclassified:   { dry: 1.6, moist: 1.7, desc: "General purpose fill with unknown composition." },
-      mulch:          { dry: 0.5, moist: 0.6, desc: "Organic ground cover used in landscaping." },
-      concrete:       { dry: 2.4, moist: 2.5, desc: "Hardened concrete broken for recycling or as fill." },
-      asphalt:        { dry: 2.2, moist: 2.3, desc: "Recycled or broken asphalt used for road base or patch." },
-      riprap:         { dry: 1.8, moist: 1.85, desc: "Large angular stone used for erosion control." }
+      topsoil: {
+        name: "Topsoil",
+        desc: "Nutrient rich soil used for lawn capping, planting beds, and finish grading.",
+        densities: { dry: 1.10, damp: 1.20, saturated: 1.30 }
+      },
+      loam: {
+        name: "Loam",
+        desc: "Balanced soil blend ideal for landscaping projects and sod preparation.",
+        densities: { dry: 1.15, damp: 1.25, saturated: 1.35 }
+      },
+      fill_dirt: {
+        name: "Fill Dirt",
+        desc: "General purpose subgrade or backfill material produced from site stripping.",
+        densities: { dry: 1.30, damp: 1.45, saturated: 1.60 }
+      },
+      clay: {
+        name: "Clay",
+        desc: "Plastic fine-grained soil frequently used for low permeability berms and liners.",
+        densities: { dry: 1.35, damp: 1.50, saturated: 1.70 }
+      },
+      sand: {
+        name: "Concrete Sand",
+        desc: "Washed sand for concrete and bedding applications with excellent drainage.",
+        densities: { dry: 1.50, damp: 1.60, saturated: 1.70 }
+      },
+      pea_gravel: {
+        name: "Pea Gravel",
+        desc: "Rounded stone used for drainage blankets, playgrounds, and landscape beds.",
+        densities: { dry: 1.45, damp: 1.55, saturated: 1.65 }
+      },
+      crushed_stone: {
+        name: "Crushed Stone (3/4\")",
+        desc: "Angular aggregate for roadway bases, structural fills, and drainage layers.",
+        densities: { dry: 1.60, damp: 1.70, saturated: 1.85 }
+      },
+      limestone: {
+        name: "Dense Grade Limestone",
+        desc: "Well graded limestone blend used for compacted base courses and shoulders.",
+        densities: { dry: 1.60, damp: 1.75, saturated: 1.90 }
+      },
+      granite: {
+        name: "Granite Base Course",
+        desc: "Hard rock aggregate suited for heavy-duty haul roads and crane pads.",
+        densities: { dry: 1.65, damp: 1.80, saturated: 1.95 }
+      },
+      recycled_concrete: {
+        name: "Recycled Concrete",
+        desc: "Crushed concrete suitable for value engineering of base and backfill sections.",
+        densities: { dry: 1.50, damp: 1.60, saturated: 1.75 }
+      },
+      asphalt_millings: {
+        name: "Asphalt Millings",
+        desc: "Planed asphalt surface material reused for temporary roads and trench backfill.",
+        densities: { dry: 1.45, damp: 1.55, saturated: 1.65 }
+      },
+      riprap: {
+        name: "Riprap",
+        desc: "Large angular rock armor for slope protection and scour control.",
+        densities: { dry: 1.70, damp: 1.80, saturated: 1.95 }
+      },
+      compost: {
+        name: "Screened Compost",
+        desc: "Organic soil amendment for soil conditioning and erosion control blankets.",
+        densities: { dry: 0.60, damp: 0.70, saturated: 0.80 }
+      },
+      bark_mulch: {
+        name: "Bark Mulch",
+        desc: "Lightweight bark cover material used for moisture retention and weed suppression.",
+        densities: { dry: 0.45, damp: 0.55, saturated: 0.65 }
+      }
     };
 
-    function updateDescription() {
-      const mat = document.getElementById("material").value;
-      document.getElementById("description").innerText = materials[mat].desc;
+    const conditionLabels = { dry: "Dry", damp: "Damp", saturated: "Saturated" };
+    const unitLabels = { yd3: "yd³", ft3: "ft³", m3: "m³" };
+
+    const materialSelect = document.getElementById("material");
+    const moistureSelect = document.getElementById("moisture");
+    const unitSelect = document.getElementById("unit");
+    const volumeInput = document.getElementById("volume");
+    const descriptionDiv = document.getElementById("description");
+    const resultDiv = document.getElementById("result");
+    const historyDiv = document.getElementById("history");
+    const customControls = document.getElementById("customControls");
+    const presetControls = document.getElementById("presetControls");
+    const modeLabels = {
+      preset: document.getElementById("modePresetLabel"),
+      custom: document.getElementById("modeCustomLabel")
+    };
+
+    const customNameInput = document.getElementById("customName");
+    const customDryInput = document.getElementById("customDry");
+    const customDampInput = document.getElementById("customDamp");
+    const customSaturatedInput = document.getElementById("customSaturated");
+
+    const modeInputs = document.querySelectorAll('input[name="materialMode"]');
+
+    function formatNumber(value, digits = 2) {
+      if (!isFinite(value)) return "—";
+      return Number(value).toLocaleString(undefined, {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      });
+    }
+
+    function getMaterialMode() {
+      const checked = document.querySelector('input[name="materialMode"]:checked');
+      return checked ? checked.value : "preset";
+    }
+
+    function getMaterialData() {
+      const mode = getMaterialMode();
+      if (mode === "preset") {
+        const key = materialSelect.value;
+        return materials[key];
+      }
+
+      const dry = parseFloat(customDryInput.value);
+      const damp = parseFloat(customDampInput.value);
+      const saturated = parseFloat(customSaturatedInput.value);
+
+      const densities = { dry, damp, saturated };
+      // Carry forward values when blanks exist
+      if (!isFinite(densities.damp) && isFinite(densities.dry)) densities.damp = densities.dry;
+      if (!isFinite(densities.damp) && isFinite(densities.saturated)) densities.damp = densities.saturated;
+      if (!isFinite(densities.dry) && isFinite(densities.damp)) densities.dry = densities.damp;
+      if (!isFinite(densities.saturated) && isFinite(densities.damp)) densities.saturated = densities.damp;
+      if (!isFinite(densities.dry) && isFinite(densities.saturated)) densities.dry = densities.saturated;
+      if (!isFinite(densities.saturated) && isFinite(densities.dry)) densities.saturated = densities.dry;
+
+      return {
+        name: customNameInput.value.trim() || "Custom Material",
+        desc: "User-specified densities applied for this project scope.",
+        densities
+      };
+    }
+
+    function renderDescription() {
+      const mode = getMaterialMode();
+      if (mode === "preset") {
+        const data = getMaterialData();
+        const chips = Object.entries(data.densities)
+          .map(([condition, value]) => `<span class="density-chip">${conditionLabels[condition]} · ${formatNumber(value)} t/yd³</span>`)
+          .join("");
+        descriptionDiv.innerHTML = `<strong>${data.name}</strong><br>${data.desc}<div class="density-chips">${chips}</div>`;
+      } else {
+        descriptionDiv.innerHTML = "<strong>Custom Material</strong><br>Provide densities for the moisture conditions being evaluated. The calculator will reuse existing entries if any field is left blank.";
+      }
+    }
+
+    function highlightMode() {
+      const mode = getMaterialMode();
+      modeLabels.preset.classList.toggle("active", mode === "preset");
+      modeLabels.custom.classList.toggle("active", mode === "custom");
+    }
+
+    function toggleMaterialMode() {
+      const mode = getMaterialMode();
+      if (mode === "preset") {
+        presetControls.classList.remove("hidden");
+        customControls.classList.add("hidden");
+      } else {
+        customControls.classList.remove("hidden");
+        presetControls.classList.add("hidden");
+      }
+      highlightMode();
+      renderDescription();
+      calculate();
+    }
+
+    function convertToCubicYards(volume, unit) {
+      if (!isFinite(volume)) return NaN;
+      if (unit === "yd3") return volume;
+      if (unit === "ft3") return volume / 27;
+      if (unit === "m3") return volume * 1.30795;
+      return NaN;
     }
 
     function calculate() {
-      const mat = document.getElementById("material").value;
-      const volume = parseFloat(document.getElementById("volume").value);
-      const unit = document.getElementById("unit").value;
-      const condition = document.getElementById("moisture").value;
-      const resultDiv = document.getElementById("result");
-      if (isNaN(volume) || volume <= 0) {
+      const volume = parseFloat(volumeInput.value);
+      const unit = unitSelect.value;
+      const condition = moistureSelect.value;
+      const material = getMaterialData();
+
+      if (!material || !material.densities) {
         resultDiv.innerText = "Weight: —";
         return;
       }
-      let yd3 = volume;
-      if (unit === "ft3") yd3 = volume / 27;
-      if (unit === "m3") yd3 = volume * 1.30795;
-      const tons = yd3 * materials[mat][condition];
-      resultDiv.innerText = `Weight: ${tons.toFixed(2)} tons`;
-      addToHistory(mat, volume, unit, tons, condition);
+
+      const density = material.densities[condition];
+      if (!isFinite(density) || density <= 0) {
+        resultDiv.innerHTML = "<em>Please enter a positive density for the selected condition.</em>";
+        return;
+      }
+
+      if (!isFinite(volume) || volume <= 0) {
+        resultDiv.innerHTML = "<em>Enter a volume greater than zero to evaluate the weight.</em>";
+        return;
+      }
+
+      const cubicYards = convertToCubicYards(volume, unit);
+      if (!isFinite(cubicYards)) {
+        resultDiv.innerHTML = "<em>Unable to convert the specified volume.</em>";
+        return;
+      }
+
+      const weightTons = cubicYards * density;
+      const weightPounds = weightTons * 2000;
+      const weightKilograms = weightTons * 907.18474;
+      const cubicFeet = cubicYards * 27;
+      const cubicMeters = cubicYards / 1.30795;
+
+      resultDiv.innerHTML = `
+        <div class="result-highlight">
+          <div class="result-weight">${formatNumber(weightTons, 2)} tons</div>
+          <div class="result-sub">${material.name} · ${conditionLabels[condition]} · ${formatNumber(density, 2)} t/yd³</div>
+        </div>
+        <div class="result-breakdown">
+          <div><span class="metric-label">Weight (lb)</span><span class="metric-value">${formatNumber(weightPounds, 0)}</span></div>
+          <div><span class="metric-label">Weight (kg)</span><span class="metric-value">${formatNumber(weightKilograms, 0)}</span></div>
+          <div><span class="metric-label">Volume (yd³)</span><span class="metric-value">${formatNumber(cubicYards, 2)}</span></div>
+          <div><span class="metric-label">Volume (ft³)</span><span class="metric-value">${formatNumber(cubicFeet, 1)}</span></div>
+          <div><span class="metric-label">Volume (m³)</span><span class="metric-value">${formatNumber(cubicMeters, 2)}</span></div>
+        </div>
+      `;
+
+      addToHistory({
+        name: material.name,
+        condition,
+        density,
+        volume,
+        unit,
+        weightTons
+      });
     }
 
-    function addToHistory(material, volume, unit, weight, condition) {
-      const names = {
-        topsoil: "Topsoil", nsf: "NSF Fill", d1: "D1", e1: "E1", pea_gravel: "Pea Gravel",
-        sand: "Sand", septic_rock: "Septic Rock", unclassified: "Unclassified Fill",
-        mulch: "Mulch", concrete: "Concrete", asphalt: "Asphalt", riprap: "Riprap"
-      };
-      const line = document.createElement("div");
-      line.innerText = `${names[material]} (${condition}) — ${volume} ${unit} = ${weight.toFixed(2)} tons`;
-      document.getElementById("history").appendChild(line);
+    function addToHistory(entry) {
+      if (!historyDiv) return;
+      const placeholder = historyDiv.querySelector(".placeholder");
+      if (placeholder) {
+        placeholder.remove();
+      }
+
+      const historyItem = document.createElement("div");
+      historyItem.className = "history-item";
+      historyItem.innerHTML = `
+        <div class="title">${entry.name}</div>
+        <div class="meta">${formatNumber(entry.volume, 2)} ${unitLabels[entry.unit] || entry.unit} · ${conditionLabels[entry.condition]} (${formatNumber(entry.density, 2)} t/yd³)</div>
+        <div class="weight">${formatNumber(entry.weightTons, 2)} tons</div>
+      `;
+
+      historyDiv.prepend(historyItem);
     }
+
+    // Event listeners
+    materialSelect.addEventListener("change", () => {
+      renderDescription();
+      calculate();
+    });
+
+    [moistureSelect, unitSelect].forEach(select => {
+      select.addEventListener("change", calculate);
+    });
+
+    volumeInput.addEventListener("input", calculate);
+    customNameInput.addEventListener("input", calculate);
+
+    document.querySelectorAll('[data-custom-density]').forEach(input => {
+      input.addEventListener("input", calculate);
+    });
+
+    modeInputs.forEach(input => {
+      input.addEventListener("change", toggleMaterialMode);
+    });
 
     // Initialize
-    updateDescription();
+    toggleMaterialMode();
   </script>
 </body>
 </html>
