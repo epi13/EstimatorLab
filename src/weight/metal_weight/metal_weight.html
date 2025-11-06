@@ -5,106 +5,510 @@
   <link rel="stylesheet" href="../../css/base/index.css">
   <style>
     /* weight/metal_weight.html */
-    body[data-page="weight-metal-weight"] { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
-    body[data-page="weight-metal-weight"] label, body[data-page="weight-metal-weight"] select, body[data-page="weight-metal-weight"] input { display: block; margin-top: 10px; width: 100%; padding: 5px; }
-    body[data-page="weight-metal-weight"] .output { margin-top: 20px; font-size: 1.2em; }
-    body[data-page="weight-metal-weight"] .history { margin-top: 20px; background: var(--surface-muted); padding: 10px; border: 1px solid var(--border); font-size: 0.9em; }
-    body[data-page="weight-metal-weight"] .description { margin-top: 10px; font-style: italic; color: var(--text-muted); }
+    body[data-page="weight-metal-weight"] {
+      font-family: "Segoe UI", sans-serif;
+      max-width: 960px;
+      margin: auto;
+      padding: 24px;
+      background: #101820;
+      color: #f2f2f2;
+      line-height: 1.5;
+    }
+
+    body[data-page="weight-metal-weight"] h2 {
+      color: #f4c95d;
+      text-align: center;
+      margin-bottom: 1.25rem;
+      letter-spacing: 0.03em;
+    }
+
+    body[data-page="weight-metal-weight"] label {
+      font-weight: 600;
+      margin-top: 16px;
+      display: block;
+    }
+
+    body[data-page="weight-metal-weight"] select,
+    body[data-page="weight-metal-weight"] input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 6px;
+      border-radius: 6px;
+      border: 1px solid #3a4b63;
+      background: #1a2634;
+      color: #f2f2f2;
+    }
+
+    body[data-page="weight-metal-weight"] select:focus,
+    body[data-page="weight-metal-weight"] input:focus {
+      outline: 3px solid #f4c95d;
+      outline-offset: 2px;
+    }
+
+    body[data-page="weight-metal-weight"] .description {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 6px;
+      background: #1f2d3d;
+      border: 1px solid #415872;
+      color: #dbe7ff;
+      font-style: italic;
+    }
+
+    body[data-page="weight-metal-weight"] .inputs-grid {
+      display: grid;
+      gap: 12px 18px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-top: 16px;
+    }
+
+    body[data-page="weight-metal-weight"] .inputs-grid .field {
+      background: #15202c;
+      border-radius: 6px;
+      padding: 12px;
+      border: 1px solid #35465a;
+    }
+
+    body[data-page="weight-metal-weight"] .inputs-grid .field label {
+      margin-top: 0;
+      font-weight: 600;
+      color: #fbd489;
+    }
+
+    body[data-page="weight-metal-weight"] .inputs-grid .field small {
+      color: #b4c9ee;
+      display: block;
+      margin-top: 4px;
+    }
+
+    body[data-page="weight-metal-weight"] .output {
+      margin-top: 24px;
+      background: #1f2d3d;
+      border-radius: 8px;
+      padding: 18px;
+      border: 1px solid #4c637d;
+    }
+
+    body[data-page="weight-metal-weight"] .output h3 {
+      margin: 0 0 12px;
+      color: #7ad0ff;
+    }
+
+    body[data-page="weight-metal-weight"] .output dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px 18px;
+    }
+
+    body[data-page="weight-metal-weight"] .output dt {
+      font-weight: 700;
+      color: #fbd489;
+    }
+
+    body[data-page="weight-metal-weight"] .output dd {
+      margin: 0;
+      color: #e8f1ff;
+    }
+
+    body[data-page="weight-metal-weight"] .history {
+      margin-top: 24px;
+      background: #131d29;
+      border-radius: 6px;
+      padding: 14px;
+      border: 1px solid #2f4054;
+      font-size: 0.9em;
+    }
+
+    body[data-page="weight-metal-weight"] .history h4 {
+      margin-top: 0;
+      color: #9bd0ff;
+    }
+
+    body[data-page="weight-metal-weight"] .history-entry {
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #243042;
+    }
+
+    body[data-page="weight-metal-weight"] .history-entry:last-child {
+      border-bottom: none;
+    }
+
+    body[data-page="weight-metal-weight"] .helper-text {
+      margin-top: 8px;
+      color: #b4c9ee;
+      font-size: 0.95em;
+    }
   </style>
   <title>Metal Weight Calculator</title>
 </head>
 <body data-page="weight-metal-weight">
-  <h2>Structural Steel Weight Calculator</h2>
+  <h2>Metal Weight &amp; Material Takeoff Helper</h2>
 
-  <label for="type">Select Metal Type:</label>
-  <select id="type" onchange="updateDescription(); calculate()">
-    <option value="hss_column">HSS Column</option>
-    <option value="hss_bracing">HSS Bracing</option>
-    <option value="w_beam">W-Beam</option>
-    <option value="angle">L-Angle Steel</option>
-    <option value="plate">Plate Steel</option>
-    <option value="piling">Steel Piling</option>
-  </select>
+  <label for="type">Select Metal Shape:</label>
+  <select id="type"></select>
 
   <div class="description" id="description"></div>
 
-  <label for="length">Enter Length (in feet):</label>
-  <input type="number" id="length" step="any" oninput="calculate()">
+  <div id="presetWrapper" class="helper-text"></div>
 
-  <label for="size">Size (e.g. W12x26 or 3/8"):</label>
-  <input type="text" id="size" oninput="calculate()">
+  <div class="inputs-grid" id="inputFields"></div>
 
-  <div class="output">
-    <h3 id="result">Total Weight: —</h3>
-    <div id="miscResult"></div>
+  <div class="helper-text">
+    Tip: Carbon steel density defaults to 490 lb/ft³. Adjust density for aluminum (169 lb/ft³), stainless (499 lb/ft³), or custom alloys.
   </div>
 
-  <div class="history" id="history">History:<br></div>
+  <div class="output" id="output" hidden>
+    <h3 id="result">Total Weight</h3>
+    <dl>
+      <div>
+        <dt>Weight per Foot</dt>
+        <dd id="weightPerFoot">—</dd>
+      </div>
+      <div>
+        <dt>Volume</dt>
+        <dd id="volume">—</dd>
+      </div>
+      <div>
+        <dt>Material Weight</dt>
+        <dd id="metalWeight">—</dd>
+      </div>
+      <div>
+        <dt>Misc &amp; Connection Allowance</dt>
+        <dd id="miscWeight">—</dd>
+      </div>
+      <div>
+        <dt>Total Takeoff Weight</dt>
+        <dd id="totalWeight">—</dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="history" id="history">
+    <h4>History</h4>
+    <div id="historyEntries"></div>
+  </div>
 
   <script>
-    const steelData = {
-      hss_column:    { desc: "Hollow Structural Steel used for columns", lbsPerFt: 40, miscRatio: 0.05 },
-      hss_bracing:   { desc: "HSS used for bracing elements in structural frames", lbsPerFt: 28, miscRatio: 0.05 },
-      w_beam:        { desc: "Wide flange beams used in primary load bearing", lbsPerFt: 50, miscRatio: 0.07 },
-      angle:         { desc: "L-angle steel used in supports and connections", lbsPerFt: 12, miscRatio: 0.1 },
-      plate:         { desc: "Flat steel plate by thickness (default = 3/8\")", lbsPerFt: 15, miscRatio: 0.15 },
-      piling:        { desc: "Steel pipe or H-pile used in foundation work", lbsPerFt: 75, miscRatio: 0.08 }
+    const densityDefaults = {
+      steel: 490,
+      stainless: 499,
+      aluminum: 169
     };
 
-    const wSectionMap = {
-      "W12x26": 26,
-      "W10x33": 33,
-      "W8x18": 18,
-      "W6x15": 15,
-      "W18x35": 35,
-      "W24x62": 62
+    const shapeConfigs = {
+      w_beam: {
+        name: "Wide Flange (W) Beam",
+        description: "Standard wide flange sections commonly used for primary framing. Use presets or custom weight per foot values.",
+        miscRatio: 0.07,
+        presets: [
+          { label: "Select preset", value: "" },
+          { label: "W6×15", value: "15" },
+          { label: "W8×18", value: "18" },
+          { label: "W10×33", value: "33" },
+          { label: "W12×26", value: "26" },
+          { label: "W18×35", value: "35" },
+          { label: "W24×62", value: "62" }
+        ],
+        fields: [
+          { id: "length_ft", label: "Member Length", type: "number", min: 0, step: "any", suffix: "ft" },
+          { id: "weight_per_ft", label: "Weight per Foot", type: "number", min: 0, step: "any", suffix: "lb/ft", placeholder: "Auto from preset or enter manually" },
+          { id: "density", label: "Material Density", type: "number", min: 0, step: "any", suffix: "lb/ft³", value: densityDefaults.steel }
+        ],
+        compute: inputs => {
+          const length = inputs.length_ft;
+          const weightPerFoot = inputs.weight_per_ft;
+          const volume = (weightPerFoot / inputs.density) * length; // ft^3
+          return { weightPerFoot, length, volume };
+        }
+      },
+      hss_rect: {
+        name: "HSS Rectangular/Box",
+        description: "Hollow structural steel rectangular sections. Provide outside dimensions and wall thickness in inches.",
+        miscRatio: 0.05,
+        fields: [
+          { id: "length_ft", label: "Member Length", type: "number", min: 0, step: "any", suffix: "ft" },
+          { id: "outside_width_in", label: "Outside Width", type: "number", min: 0, step: "any", suffix: "in" },
+          { id: "outside_height_in", label: "Outside Height", type: "number", min: 0, step: "any", suffix: "in" },
+          { id: "wall_thickness_in", label: "Wall Thickness", type: "number", min: 0, step: "any", suffix: "in" },
+          { id: "density", label: "Material Density", type: "number", min: 0, step: "any", suffix: "lb/ft³", value: densityDefaults.steel }
+        ],
+        compute: inputs => {
+          const B = inputs.outside_width_in / 12;
+          const H = inputs.outside_height_in / 12;
+          const t = inputs.wall_thickness_in / 12;
+          const area = Math.max((B * H) - (Math.max(B - 2 * t, 0) * Math.max(H - 2 * t, 0)), 0);
+          const volume = area * inputs.length_ft;
+          const weightPerFoot = area * inputs.density;
+          return { weightPerFoot, length: inputs.length_ft, volume };
+        }
+      },
+      hss_round: {
+        name: "HSS Round / Pipe",
+        description: "Round hollow structural sections. Provide outer diameter and wall thickness.",
+        miscRatio: 0.05,
+        fields: [
+          { id: "length_ft", label: "Member Length", type: "number", min: 0, step: "any", suffix: "ft" },
+          { id: "outside_diameter_in", label: "Outside Diameter", type: "number", min: 0, step: "any", suffix: "in" },
+          { id: "wall_thickness_in", label: "Wall Thickness", type: "number", min: 0, step: "any", suffix: "in" },
+          { id: "density", label: "Material Density", type: "number", min: 0, step: "any", suffix: "lb/ft³", value: densityDefaults.steel }
+        ],
+        compute: inputs => {
+          const D = inputs.outside_diameter_in / 12;
+          const t = inputs.wall_thickness_in / 12;
+          const innerD = Math.max(D - 2 * t, 0);
+          const area = (Math.PI / 4) * (Math.pow(D, 2) - Math.pow(innerD, 2));
+          const volume = area * inputs.length_ft;
+          const weightPerFoot = area * inputs.density;
+          return { weightPerFoot, length: inputs.length_ft, volume };
+        }
+      },
+      angle: {
+        name: "L-Angle",
+        description: "Equal or unequal leg L-angle. Dimensions in inches; thickness equals leg thickness.",
+        miscRatio: 0.1,
+        fields: [
+          { id: "length_ft", label: "Member Length", type: "number", min: 0, step: "any", suffix: "ft" },
+          { id: "leg_a_in", label: "Leg A", type: "number", min: 0, step: "any", suffix: "in" },
+          { id: "leg_b_in", label: "Leg B", type: "number", min: 0, step: "any", suffix: "in" },
+          { id: "thickness_in", label: "Thickness", type: "number", min: 0, step: "any", suffix: "in" },
+          { id: "density", label: "Material Density", type: "number", min: 0, step: "any", suffix: "lb/ft³", value: densityDefaults.steel }
+        ],
+        compute: inputs => {
+          const legA = inputs.leg_a_in / 12;
+          const legB = inputs.leg_b_in / 12;
+          const t = inputs.thickness_in / 12;
+          const area = (legA + legB - t) * t;
+          const volume = area * inputs.length_ft;
+          const weightPerFoot = area * inputs.density;
+          return { weightPerFoot, length: inputs.length_ft, volume };
+        }
+      },
+      plate: {
+        name: "Plate / Flat Bar",
+        description: "Solid rectangular plate or flat bar stock. Provide thickness in inches, width in inches, length in feet.",
+        miscRatio: 0.12,
+        fields: [
+          { id: "length_ft", label: "Length", type: "number", min: 0, step: "any", suffix: "ft" },
+          { id: "width_in", label: "Width", type: "number", min: 0, step: "any", suffix: "in" },
+          { id: "thickness_in", label: "Thickness", type: "number", min: 0, step: "any", suffix: "in" },
+          { id: "density", label: "Material Density", type: "number", min: 0, step: "any", suffix: "lb/ft³", value: densityDefaults.steel }
+        ],
+        compute: inputs => {
+          const width = inputs.width_in / 12;
+          const thickness = inputs.thickness_in / 12;
+          const area = width * thickness;
+          const volume = area * inputs.length_ft;
+          const weightPerFoot = area * inputs.density;
+          return { weightPerFoot, length: inputs.length_ft, volume };
+        }
+      },
+      sheet: {
+        name: "Sheet / Plate by Area",
+        description: "Sheet goods estimated by area. Provide overall length and width in feet along with thickness.",
+        miscRatio: 0.12,
+        fields: [
+          { id: "length_ft", label: "Length", type: "number", min: 0, step: "any", suffix: "ft" },
+          { id: "width_ft", label: "Width", type: "number", min: 0, step: "any", suffix: "ft" },
+          { id: "thickness_in", label: "Thickness", type: "number", min: 0, step: "any", suffix: "in" },
+          { id: "density", label: "Material Density", type: "number", min: 0, step: "any", suffix: "lb/ft³", value: densityDefaults.steel }
+        ],
+        compute: inputs => {
+          const thickness = inputs.thickness_in / 12;
+          const area = inputs.length_ft * inputs.width_ft;
+          const volume = area * thickness;
+          const weightPerFoot = (volume / inputs.length_ft) * inputs.density;
+          return { weightPerFoot, length: inputs.length_ft, volume };
+        }
+      },
+      solid_round: {
+        name: "Solid Round Bar",
+        description: "Solid round bar or rod stock.",
+        miscRatio: 0.04,
+        fields: [
+          { id: "length_ft", label: "Length", type: "number", min: 0, step: "any", suffix: "ft" },
+          { id: "diameter_in", label: "Diameter", type: "number", min: 0, step: "any", suffix: "in" },
+          { id: "density", label: "Material Density", type: "number", min: 0, step: "any", suffix: "lb/ft³", value: densityDefaults.steel }
+        ],
+        compute: inputs => {
+          const d = inputs.diameter_in / 12;
+          const area = (Math.PI / 4) * Math.pow(d, 2);
+          const volume = area * inputs.length_ft;
+          const weightPerFoot = area * inputs.density;
+          return { weightPerFoot, length: inputs.length_ft, volume };
+        }
+      },
+      custom: {
+        name: "Custom Weight per Foot",
+        description: "Use when a supplier provides a weight-per-foot value. No geometry needed.",
+        miscRatio: 0.06,
+        fields: [
+          { id: "length_ft", label: "Length", type: "number", min: 0, step: "any", suffix: "ft" },
+          { id: "weight_per_ft", label: "Weight per Foot", type: "number", min: 0, step: "any", suffix: "lb/ft" }
+        ],
+        compute: inputs => {
+          const length = inputs.length_ft;
+          const weightPerFoot = inputs.weight_per_ft;
+          const volume = 0;
+          return { weightPerFoot, length, volume };
+        }
+      }
     };
 
-    function updateDescription() {
+    function populateTypeOptions() {
+      const typeSelect = document.getElementById("type");
+      Object.entries(shapeConfigs).forEach(([value, config]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = config.name;
+        typeSelect.appendChild(option);
+      });
+      typeSelect.value = "w_beam";
+    }
+
+    function renderFields() {
       const type = document.getElementById("type").value;
-      document.getElementById("description").innerText = steelData[type].desc;
+      const config = shapeConfigs[type];
+      document.getElementById("description").innerText = config.description;
+      renderPreset(config);
+
+      const container = document.getElementById("inputFields");
+      container.innerHTML = "";
+
+      config.fields.forEach(field => {
+        const fieldEl = document.createElement("div");
+        fieldEl.className = "field";
+
+        const label = document.createElement("label");
+        label.setAttribute("for", field.id);
+        label.textContent = field.label + (field.suffix ? ` (${field.suffix})` : "");
+        fieldEl.appendChild(label);
+
+        const input = document.createElement("input");
+        input.type = field.type || "number";
+        input.id = field.id;
+        input.min = field.min;
+        input.step = field.step || "any";
+        if (field.placeholder) input.placeholder = field.placeholder;
+        if (field.value !== undefined) input.value = field.value;
+        input.addEventListener("input", calculate);
+        fieldEl.appendChild(input);
+
+        container.appendChild(fieldEl);
+      });
+
+      calculate();
+    }
+
+    function renderPreset(config) {
+      const wrapper = document.getElementById("presetWrapper");
+      wrapper.innerHTML = "";
+      if (!config.presets) {
+        wrapper.hidden = true;
+        return;
+      }
+      wrapper.hidden = false;
+
+      const select = document.createElement("select");
+      select.id = "presetSelect";
+      config.presets.forEach(({ label, value }) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        select.appendChild(option);
+      });
+      select.addEventListener("change", () => {
+        const presetValue = parseFloat(select.value);
+        const field = document.getElementById("weight_per_ft");
+        if (!isNaN(presetValue)) {
+          field.value = presetValue;
+        }
+        calculate();
+      });
+
+      wrapper.textContent = "Presets:";
+      wrapper.appendChild(select);
+    }
+
+    function gatherInputs(config) {
+      const values = {};
+      for (const field of config.fields) {
+        const el = document.getElementById(field.id);
+        const value = parseFloat(el.value);
+        if (isNaN(value) || value <= 0) {
+          return null;
+        }
+        values[field.id] = value;
+      }
+      if (!values.density && config.fields.every(f => f.id !== "density")) {
+        values.density = densityDefaults.steel;
+      }
+      return values;
     }
 
     function calculate() {
       const type = document.getElementById("type").value;
-      const length = parseFloat(document.getElementById("length").value);
-      const size = document.getElementById("size").value.trim();
-      const result = document.getElementById("result");
-      const miscResult = document.getElementById("miscResult");
+      const config = shapeConfigs[type];
+      const inputs = gatherInputs(config);
+      const outputCard = document.getElementById("output");
 
-      if (isNaN(length) || length <= 0) {
-        result.innerText = "Total Weight: —";
-        miscResult.innerText = "";
+      if (!inputs) {
+        outputCard.hidden = true;
         return;
       }
 
-      let lbsPerFt = steelData[type].lbsPerFt;
-      if (type === "w_beam" && wSectionMap[size]) {
-        lbsPerFt = wSectionMap[size];
-      }
-
-      const miscRatio = steelData[type].miscRatio;
-      const metalWeight = length * lbsPerFt;
+      const { weightPerFoot, length, volume } = config.compute(inputs);
+      const miscRatio = config.miscRatio ?? 0.05;
+      const metalWeight = weightPerFoot * length;
       const miscWeight = metalWeight * miscRatio;
       const totalWeight = metalWeight + miscWeight;
 
-      result.innerText = `Total Weight: ${totalWeight.toFixed(2)} lbs`;
-      miscResult.innerText = `  (Metal: ${metalWeight.toFixed(2)} lbs, Misc/Connectors: ${miscWeight.toFixed(2)} lbs)`;
+      document.getElementById("weightPerFoot").innerText = `${weightPerFoot.toFixed(2)} lb/ft`;
+      document.getElementById("volume").innerText = `${volume.toFixed(3)} ft³`;
+      document.getElementById("metalWeight").innerText = `${metalWeight.toFixed(2)} lb`;
+      document.getElementById("miscWeight").innerText = `${miscWeight.toFixed(2)} lb`;
+      document.getElementById("totalWeight").innerText = `${totalWeight.toFixed(2)} lb`;
+      document.getElementById("result").innerText = `${config.name} Estimate`;
 
-      addToHistory(type, size, length, totalWeight, miscWeight);
+      outputCard.hidden = false;
+      addToHistory(config, inputs, weightPerFoot, totalWeight, miscWeight);
     }
 
-    function addToHistory(type, size, length, totalWeight, miscWeight) {
-      const names = {
-        hss_column: "HSS Column", hss_bracing: "HSS Bracing", w_beam: "W-Beam",
-        angle: "L-Angle Steel", plate: "Plate Steel", piling: "Steel Piling"
-      };
-      const line = document.createElement("div");
-      line.innerText = `${names[type]} ${size} — ${length} ft = ${totalWeight.toFixed(2)} lbs (misc: ${miscWeight.toFixed(2)} lbs)`;
-      document.getElementById("history").appendChild(line);
+    function formatNumber(value, precision = 3) {
+      if (!isFinite(value)) return "—";
+      return Number(value.toFixed(precision)).toString();
     }
 
-    window.onload = updateDescription;
+    function formatInputs(config, inputs) {
+      const fieldLookup = Object.fromEntries(config.fields.map(field => [field.id, field]));
+      return Object.entries(inputs)
+        .map(([key, value]) => {
+          if (!fieldLookup[key]) return `${key}: ${value}`;
+          const label = fieldLookup[key].label;
+          const suffix = fieldLookup[key].suffix ? ` ${fieldLookup[key].suffix}` : "";
+          return `${label}: ${formatNumber(value)}${suffix}`;
+        })
+        .join(", ");
+    }
+
+    function addToHistory(config, inputs, weightPerFoot, totalWeight, miscWeight) {
+      const history = document.getElementById("historyEntries");
+      const entry = document.createElement("div");
+      entry.className = "history-entry";
+      entry.innerHTML = `<strong>${config.name}</strong><br>` +
+        `<span>${formatInputs(config, inputs)}</span><br>` +
+        `<span>Weight/ft: ${weightPerFoot.toFixed(2)} lb, Total: ${totalWeight.toFixed(2)} lb (Misc: ${miscWeight.toFixed(2)} lb)</span>`;
+      history.prepend(entry);
+      while (history.children.length > 10) {
+        history.removeChild(history.lastChild);
+      }
+    }
+
+    document.getElementById("type").addEventListener("change", renderFields);
+
+    populateTypeOptions();
+    renderFields();
   </script>
 </body>
 </html>
