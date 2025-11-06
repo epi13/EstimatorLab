@@ -1,0 +1,246 @@
+body[data-page="weight-rebar-calculator"] {
+  --panel-border: rgba(var(--accent-rgb), 0.22);
+  --panel-background: rgba(13, 19, 36, 0.92);
+  --panel-muted: rgba(22, 31, 52, 0.95);
+  padding: clamp(1.5rem, 3vw, 2.75rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(var(--accent-rgb), 0.32), transparent 55%),
+    radial-gradient(circle at 88% 16%, rgba(167, 139, 250, 0.18), transparent 62%),
+    linear-gradient(180deg, #050816 0%, #020617 55%, #040513 100%);
+  color: var(--text);
+}
+
+body[data-page="weight-rebar-calculator"] > *:not(script):not(style) {
+  max-width: none;
+}
+
+.rebar-shell {
+  width: min(1180px, 100%);
+  max-height: calc(100vh - clamp(2rem, 4vw, 5rem));
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--spacing-lg);
+  background: linear-gradient(155deg, rgba(12, 18, 34, 0.95), rgba(17, 24, 43, 0.96));
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow-lg);
+  padding: clamp(1.25rem, 2.5vw, 2.25rem);
+  overflow: hidden;
+}
+
+.shell-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.shell-header .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.shell-header h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 3vw, 2.3rem);
+  color: var(--heading);
+}
+
+.shell-header .lead {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--text-muted);
+  font-size: 1rem;
+}
+
+.shell-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-lg);
+  min-height: 0;
+}
+
+.shell-content.results-visible {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+}
+
+.panel {
+  background: var(--panel-muted);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--panel-border);
+  padding: clamp(1rem, 2vw, 1.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  min-height: 0;
+}
+
+.panel-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  padding-right: 0.35rem;
+}
+
+.panel-actions {
+  margin-top: auto;
+  padding-top: var(--spacing-md);
+  border-top: 1px solid rgba(var(--accent-rgb), 0.12);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.section-title {
+  margin: 0 0 var(--spacing-sm);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.field-group label {
+  margin-top: 0;
+  font-weight: 600;
+  color: var(--heading);
+}
+
+.helper-text {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.checkbox-group {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-lg);
+  border: 1px dashed rgba(var(--accent-rgb), 0.25);
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
+.checkbox-group label {
+  margin: 0;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.checkbox-group.disabled,
+.field-group.disabled {
+  opacity: 0.45;
+}
+
+.checkbox-group.disabled input,
+.checkbox-group.disabled select,
+.field-group.disabled input,
+.field-group.disabled select {
+  cursor: not-allowed;
+}
+
+.design-description {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-lg);
+  border-left: 3px solid var(--accent);
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--accent-strong);
+  font-size: 0.9rem;
+}
+
+button.calculate {
+  border: none;
+  border-radius: var(--radius-xl);
+  padding: 0.85rem 1.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #020617;
+  box-shadow: 0 18px 32px -18px rgba(var(--accent-rgb), 0.85);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+button.calculate:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 40px -18px rgba(var(--accent-rgb), 0.9);
+}
+
+button.calculate:active {
+  transform: translateY(0);
+}
+
+.results-panel {
+  background: linear-gradient(165deg, rgba(16, 24, 44, 0.96), rgba(12, 18, 34, 0.94));
+  overflow-y: auto;
+  gap: var(--spacing-md);
+}
+
+.results-panel h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.total-weight {
+  margin: 0;
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.contingency {
+  margin: 0;
+  color: rgba(var(--accent-rgb), 0.85);
+  font-weight: 500;
+}
+
+.result-note {
+  margin-top: auto;
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 960px) {
+  body[data-page="weight-rebar-calculator"] {
+    padding: clamp(1rem, 4vw, 2rem);
+  }
+
+  .rebar-shell {
+    max-height: none;
+    height: auto;
+  }
+
+  .shell-content.results-visible {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel-scroll {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .panel-actions {
+    justify-content: stretch;
+  }
+
+  button.calculate {
+    width: 100%;
+    justify-content: center;
+  }
+}

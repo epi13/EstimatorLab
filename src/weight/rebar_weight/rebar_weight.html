@@ -5,292 +5,65 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rebar Design Calculator</title>
   <link rel="stylesheet" href="../../css/base/index.css">
-  <style>
-    body[data-page="weight-rebar-calculator"] {
-      font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-      background: linear-gradient(135deg, #f4f6fb 0%, #e9eef7 100%);
-      color: #1f2933;
-      min-height: 100vh;
-      margin: 0;
-      padding: 3rem 1rem;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-    }
-
-    .calculator-shell {
-      width: min(960px, 100%);
-      background: #ffffffee;
-      border-radius: 18px;
-      box-shadow: 0 24px 48px -24px rgba(15, 23, 42, 0.45);
-      border: 1px solid rgba(99, 102, 241, 0.12);
-      padding: 2.25rem clamp(1.5rem, 3vw, 2.75rem);
-      backdrop-filter: blur(4px);
-    }
-
-    .calculator-shell h1 {
-      font-size: clamp(1.75rem, 3vw, 2.35rem);
-      font-weight: 700;
-      margin-bottom: 0.75rem;
-      color: #111827;
-    }
-
-    .calculator-shell p.lead {
-      margin-top: 0;
-      margin-bottom: 2rem;
-      font-size: 1rem;
-      color: #4b5563;
-      max-width: 62ch;
-    }
-
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1.25rem;
-      margin-bottom: 2rem;
-    }
-
-    .field-group {
-      display: flex;
-      flex-direction: column;
-    }
-
-    label {
-      font-weight: 600;
-      font-size: 0.95rem;
-      margin-bottom: 0.35rem;
-      color: #1f2937;
-    }
-
-    input[type="number"],
-    select,
-    textarea {
-      appearance: none;
-      border: 1px solid rgba(148, 163, 184, 0.65);
-      border-radius: 10px;
-      padding: 0.65rem 0.75rem;
-      font-size: 0.95rem;
-      background: rgba(255, 255, 255, 0.9);
-      color: inherit;
-      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04) inset;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    input[type="number"]:focus,
-    select:focus,
-    textarea:focus {
-      outline: none;
-      border-color: #4f46e5;
-      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-    }
-
-    input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      border-radius: 6px;
-      border: 1px solid rgba(148, 163, 184, 0.65);
-      accent-color: #4f46e5;
-    }
-
-    .checkbox-group {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.65rem 0.75rem;
-      border-radius: 12px;
-      border: 1px dashed rgba(99, 102, 241, 0.25);
-      background: rgba(99, 102, 241, 0.05);
-    }
-
-    .checkbox-group label {
-      margin: 0;
-      font-weight: 500;
-    }
-
-    .helper-text {
-      font-size: 0.8rem;
-      color: #6b7280;
-      margin-top: 0.35rem;
-    }
-
-    .field-group.disabled,
-    .checkbox-group.disabled {
-      opacity: 0.55;
-    }
-
-    .field-group.disabled input,
-    .field-group.disabled select,
-    .checkbox-group.disabled input,
-    .checkbox-group.disabled select {
-      cursor: not-allowed;
-    }
-
-    button.calculate {
-      background: linear-gradient(135deg, #4f46e5, #6366f1);
-      color: #fff;
-      font-weight: 600;
-      border: none;
-      border-radius: 14px;
-      padding: 0.85rem 1.75rem;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.2s ease;
-      box-shadow: 0 18px 28px -18px rgba(79, 70, 229, 0.9);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    button.calculate:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 20px 38px -18px rgba(79, 70, 229, 0.75);
-    }
-
-    button.calculate:active {
-      transform: translateY(0);
-    }
-
-    .results-card {
-      margin-top: 2.5rem;
-      border-radius: 16px;
-      border: 1px solid rgba(99, 102, 241, 0.12);
-      background: linear-gradient(135deg, rgba(248, 250, 255, 0.95), rgba(238, 242, 255, 0.92));
-      box-shadow: 0 20px 36px -24px rgba(79, 70, 229, 0.6);
-      padding: 1.75rem;
-    }
-
-    .results-card h2 {
-      margin-top: 0;
-      margin-bottom: 0.75rem;
-      color: #1e1b4b;
-      font-size: 1.35rem;
-    }
-
-    .results-card .total-weight {
-      font-size: clamp(1.5rem, 3vw, 1.95rem);
-      font-weight: 700;
-      color: #312e81;
-      margin: 0.25rem 0 0.75rem;
-    }
-
-    .results-card .contingency {
-      color: #4338ca;
-      font-weight: 500;
-      margin-bottom: 1.5rem;
-    }
-
-    table.breakdown {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1.25rem;
-      background: rgba(255, 255, 255, 0.92);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 1px 0 rgba(79, 70, 229, 0.08) inset;
-    }
-
-    table.breakdown thead {
-      background: rgba(79, 70, 229, 0.08);
-    }
-
-    table.breakdown th,
-    table.breakdown td {
-      padding: 0.75rem 0.85rem;
-      text-align: left;
-      font-size: 0.9rem;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.25);
-    }
-
-    table.breakdown th {
-      font-weight: 600;
-      color: #312e81;
-      text-transform: uppercase;
-      letter-spacing: 0.025em;
-    }
-
-    table.breakdown tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    .result-note {
-      margin-top: 1.5rem;
-      font-size: 0.9rem;
-      color: #4338ca;
-    }
-
-    .design-description {
-      margin: 1rem 0 1.5rem;
-      padding: 1rem 1.25rem;
-      border-left: 4px solid rgba(79, 70, 229, 0.4);
-      background: rgba(129, 140, 248, 0.08);
-      border-radius: 12px;
-      color: #4338ca;
-    }
-
-    .section-label {
-      font-size: 0.8rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      color: #4f46e5;
-      margin-bottom: 0.75rem;
-      text-transform: uppercase;
-    }
-
-    @media (max-width: 720px) {
-      .calculator-shell {
-        padding: 1.75rem 1.25rem;
-      }
-
-      .results-card {
-        padding: 1.5rem 1.25rem;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="../../css/pages/weight/rebar-calculator.css">
 </head>
-<body data-page="weight-rebar-calculator">
-  <main class="calculator-shell">
-    <h1>Rebar Design Calculator</h1>
-    <p class="lead">Quickly estimate rebar tonnage across common structural elements. Choose a preset layout, adjust the geometric
-      inputs, and see a detailed weight breakdown with contingency in seconds.</p>
+<body data-page="weight-rebar-calculator" data-accent="purple">
+  <main class="rebar-shell">
+    <header class="shell-header">
+      <span class="eyebrow">Structural Weight Toolkit</span>
+      <h1>Rebar Design Calculator</h1>
+      <p class="lead">Quickly estimate rebar tonnage across common structural elements. Choose a preset layout, adjust the geometric inputs, and see a detailed weight breakdown with contingency in seconds.</p>
+    </header>
 
-    <div class="section-label">Design Preset</div>
-    <div class="form-grid" id="design-selector">
-      <div class="field-group">
-        <label for="designType">Standard Element</label>
-        <select id="designType"></select>
-        <p class="helper-text">Pick a template to auto-configure bar layouts for typical assemblies such as footings, slabs, walls,
-          columns, beams, piers, and pilasters.</p>
-      </div>
+    <div class="shell-content">
+      <section class="panel form-panel">
+        <div class="panel-scroll">
+          <section class="panel-section">
+            <h2 class="section-title">Design Preset</h2>
+            <div class="form-grid" id="design-selector">
+              <div class="field-group">
+                <label for="designType">Standard Element</label>
+                <select id="designType"></select>
+                <p class="helper-text">Pick a template to auto-configure bar layouts for typical assemblies such as footings, slabs, walls, columns, beams, piers, and pilasters.</p>
+              </div>
+            </div>
+            <p id="designDescription" class="design-description" hidden></p>
+          </section>
+
+          <section class="panel-section">
+            <h2 class="section-title">Geometry &amp; Layout</h2>
+            <div class="form-grid" id="dynamicFields"></div>
+          </section>
+        </div>
+
+        <div class="panel-actions">
+          <button class="calculate" id="calculateButton" type="button">
+            <span>Calculate Rebar Weight</span>
+          </button>
+        </div>
+      </section>
+
+      <section id="results" class="panel results-panel" hidden>
+        <div>
+          <h2>Results</h2>
+          <p class="contingency" id="contingencyNote"></p>
+        </div>
+        <p class="total-weight" id="totalWeight"></p>
+        <table class="breakdown" id="breakdownTable">
+          <thead>
+            <tr>
+              <th scope="col">Component</th>
+              <th scope="col">Quantity</th>
+              <th scope="col">Length (ft)</th>
+              <th scope="col">Wt./ft (lb)</th>
+              <th scope="col">Weight (lb)</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p class="result-note" id="resultNote"></p>
+      </section>
     </div>
-
-    <div id="designDescription" class="design-description" hidden></div>
-
-    <div class="section-label">Geometry &amp; Layout</div>
-    <div class="form-grid" id="dynamicFields"></div>
-
-    <button class="calculate" id="calculateButton" type="button">
-      <span>Calculate Rebar Weight</span>
-    </button>
-
-    <section id="results" class="results-card" hidden>
-      <h2>Results</h2>
-      <p class="total-weight" id="totalWeight"></p>
-      <p class="contingency" id="contingencyNote"></p>
-      <table class="breakdown" id="breakdownTable">
-        <thead>
-          <tr>
-            <th scope="col">Component</th>
-            <th scope="col">Quantity</th>
-            <th scope="col">Length (ft)</th>
-            <th scope="col">Wt./ft (lb)</th>
-            <th scope="col">Weight (lb)</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-      <p class="result-note" id="resultNote"></p>
-    </section>
   </main>
 
   <script>
@@ -669,6 +442,7 @@
     };
 
     const designSelect = document.getElementById('designType');
+    const shellContent = document.querySelector('.shell-content');
     const dynamicFields = document.getElementById('dynamicFields');
     const descriptionEl = document.getElementById('designDescription');
     const resultsSection = document.getElementById('results');
@@ -870,6 +644,7 @@
 
       resultNoteEl.textContent = result.note || '';
       resultsSection.hidden = false;
+      shellContent.classList.add('results-visible');
     }
 
     populateDesignOptions();
@@ -880,6 +655,7 @@
       descriptionEl.textContent = preset.description;
       descriptionEl.hidden = false;
       resultsSection.hidden = true;
+      shellContent.classList.remove('results-visible');
     });
 
     designSelect.value = Object.keys(designPresets)[0];
@@ -892,6 +668,7 @@
       const result = preset.calculate(values);
       displayResult(result);
     });
+  
   </script>
 </body>
 </html>
