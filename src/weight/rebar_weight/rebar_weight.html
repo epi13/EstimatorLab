@@ -1,88 +1,897 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rebar Design Calculator</title>
   <link rel="stylesheet" href="../../css/base/index.css">
   <style>
-    /* weight/rebar_calculator.html */
     body[data-page="weight-rebar-calculator"] {
-          font-family: Arial, sans-serif;
-          max-width: 450px;
-          margin: 50px auto;
-          padding: 20px;
-          border: 1px solid var(--border);
-          border-radius: 10px;
-        }
-    body[data-page="weight-rebar-calculator"] label, body[data-page="weight-rebar-calculator"] select, body[data-page="weight-rebar-calculator"] input, body[data-page="weight-rebar-calculator"] button {
-          display: block;
-          width: 100%;
-          margin-bottom: 10px;
-        }
-    body[data-page="weight-rebar-calculator"] input, body[data-page="weight-rebar-calculator"] select {
-          padding: 8px;
-          box-sizing: border-box;
-        }
-    body[data-page="weight-rebar-calculator"] button {
-          padding: 10px;
-        }
-    body[data-page="weight-rebar-calculator"] #result {
-          margin-top: 15px;
-          font-weight: bold;
-        }
-  </style>
-  <title>Rebar Weight Calculator</title>
-</head>
-<body data-page="weight-rebar-calculator">
-  <h2>Rebar Weight Calculator</h2>
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      background: linear-gradient(135deg, #f4f6fb 0%, #e9eef7 100%);
+      color: #1f2933;
+      min-height: 100vh;
+      margin: 0;
+      padding: 3rem 1rem;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
 
-  <label for="area">Area (in Square Feet):</label>
-  <input type="number" id="area" placeholder="Enter area in SF">
+    .calculator-shell {
+      width: min(960px, 100%);
+      background: #ffffffee;
+      border-radius: 18px;
+      box-shadow: 0 24px 48px -24px rgba(15, 23, 42, 0.45);
+      border: 1px solid rgba(99, 102, 241, 0.12);
+      padding: 2.25rem clamp(1.5rem, 3vw, 2.75rem);
+      backdrop-filter: blur(4px);
+    }
 
-  <label for="rebarSize">Rebar Size:</label>
-  <select id="rebarSize">
-    <option value="0.167">#3 (0.167 lb/ft)</option>
-    <option value="0.376">#4 (0.376 lb/ft)</option>
-    <option value="0.668">#5 (0.668 lb/ft)</option>
-    <option value="1.043">#6 (1.043 lb/ft)</option>
-    <option value="1.502">#7 (1.502 lb/ft)</option>
-    <option value="2.044">#8 (2.044 lb/ft)</option>
-  </select>
+    .calculator-shell h1 {
+      font-size: clamp(1.75rem, 3vw, 2.35rem);
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: #111827;
+    }
 
-  <label for="spacing">Spacing (in inches):</label>
-  <input type="number" id="spacing" placeholder="e.g., 12 for 12&quot; O.C.">
+    .calculator-shell p.lead {
+      margin-top: 0;
+      margin-bottom: 2rem;
+      font-size: 1rem;
+      color: #4b5563;
+      max-width: 62ch;
+    }
 
-  <label for="layout">Layout:</label>
-  <select id="layout">
-    <option value="1">One-Way</option>
-    <option value="2">Two-Way (Each Way)</option>
-  </select>
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
 
-  <button onclick="calculateRebarWeight()">Calculate</button>
+    .field-group {
+      display: flex;
+      flex-direction: column;
+    }
 
-  <div id="result"></div>
+    label {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.35rem;
+      color: #1f2937;
+    }
 
-  <script>
-    function calculateRebarWeight() {
-      const areaSF = parseFloat(document.getElementById('area').value);
-      const rebarWeightPerFt = parseFloat(document.getElementById('rebarSize').value);
-      const spacingInches = parseFloat(document.getElementById('spacing').value);
-      const layoutFactor = parseInt(document.getElementById('layout').value);
-      const resultDiv = document.getElementById('result');
+    input[type="number"],
+    select,
+    textarea {
+      appearance: none;
+      border: 1px solid rgba(148, 163, 184, 0.65);
+      border-radius: 10px;
+      padding: 0.65rem 0.75rem;
+      font-size: 0.95rem;
+      background: rgba(255, 255, 255, 0.9);
+      color: inherit;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04) inset;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
 
-      if (isNaN(areaSF) || isNaN(rebarWeightPerFt) || isNaN(spacingInches)) {
-        resultDiv.textContent = "Please enter valid values for all inputs.";
-        return;
+    input[type="number"]:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.65);
+      accent-color: #4f46e5;
+    }
+
+    .checkbox-group {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: 12px;
+      border: 1px dashed rgba(99, 102, 241, 0.25);
+      background: rgba(99, 102, 241, 0.05);
+    }
+
+    .checkbox-group label {
+      margin: 0;
+      font-weight: 500;
+    }
+
+    .helper-text {
+      font-size: 0.8rem;
+      color: #6b7280;
+      margin-top: 0.35rem;
+    }
+
+    .field-group.disabled,
+    .checkbox-group.disabled {
+      opacity: 0.55;
+    }
+
+    .field-group.disabled input,
+    .field-group.disabled select,
+    .checkbox-group.disabled input,
+    .checkbox-group.disabled select {
+      cursor: not-allowed;
+    }
+
+    button.calculate {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: #fff;
+      font-weight: 600;
+      border: none;
+      border-radius: 14px;
+      padding: 0.85rem 1.75rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+      box-shadow: 0 18px 28px -18px rgba(79, 70, 229, 0.9);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    button.calculate:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 20px 38px -18px rgba(79, 70, 229, 0.75);
+    }
+
+    button.calculate:active {
+      transform: translateY(0);
+    }
+
+    .results-card {
+      margin-top: 2.5rem;
+      border-radius: 16px;
+      border: 1px solid rgba(99, 102, 241, 0.12);
+      background: linear-gradient(135deg, rgba(248, 250, 255, 0.95), rgba(238, 242, 255, 0.92));
+      box-shadow: 0 20px 36px -24px rgba(79, 70, 229, 0.6);
+      padding: 1.75rem;
+    }
+
+    .results-card h2 {
+      margin-top: 0;
+      margin-bottom: 0.75rem;
+      color: #1e1b4b;
+      font-size: 1.35rem;
+    }
+
+    .results-card .total-weight {
+      font-size: clamp(1.5rem, 3vw, 1.95rem);
+      font-weight: 700;
+      color: #312e81;
+      margin: 0.25rem 0 0.75rem;
+    }
+
+    .results-card .contingency {
+      color: #4338ca;
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+    }
+
+    table.breakdown {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.25rem;
+      background: rgba(255, 255, 255, 0.92);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 0 rgba(79, 70, 229, 0.08) inset;
+    }
+
+    table.breakdown thead {
+      background: rgba(79, 70, 229, 0.08);
+    }
+
+    table.breakdown th,
+    table.breakdown td {
+      padding: 0.75rem 0.85rem;
+      text-align: left;
+      font-size: 0.9rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    table.breakdown th {
+      font-weight: 600;
+      color: #312e81;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+
+    table.breakdown tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .result-note {
+      margin-top: 1.5rem;
+      font-size: 0.9rem;
+      color: #4338ca;
+    }
+
+    .design-description {
+      margin: 1rem 0 1.5rem;
+      padding: 1rem 1.25rem;
+      border-left: 4px solid rgba(79, 70, 229, 0.4);
+      background: rgba(129, 140, 248, 0.08);
+      border-radius: 12px;
+      color: #4338ca;
+    }
+
+    .section-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #4f46e5;
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 720px) {
+      .calculator-shell {
+        padding: 1.75rem 1.25rem;
       }
 
-      const spacingFeet = spacingInches / 12;
-      const sideLength = Math.sqrt(areaSF); // assuming square pad
-      const numBarsPerDirection = Math.floor(sideLength / spacingFeet) + 1;
-      const totalBars = numBarsPerDirection * layoutFactor;
-      const totalLengthFt = totalBars * sideLength;
-      const baseWeight = totalLengthFt * rebarWeightPerFt;
-      const totalWeight = baseWeight * 1.2; // add 20% contingency
-
-      resultDiv.textContent = `Estimated Rebar Weight (with 20% contingency): ${totalWeight.toFixed(2)} lbs`;
+      .results-card {
+        padding: 1.5rem 1.25rem;
+      }
     }
+  </style>
+</head>
+<body data-page="weight-rebar-calculator">
+  <main class="calculator-shell">
+    <h1>Rebar Design Calculator</h1>
+    <p class="lead">Quickly estimate rebar tonnage across common structural elements. Choose a preset layout, adjust the geometric
+      inputs, and see a detailed weight breakdown with contingency in seconds.</p>
+
+    <div class="section-label">Design Preset</div>
+    <div class="form-grid" id="design-selector">
+      <div class="field-group">
+        <label for="designType">Standard Element</label>
+        <select id="designType"></select>
+        <p class="helper-text">Pick a template to auto-configure bar layouts for typical assemblies such as footings, slabs, walls,
+          columns, beams, piers, and pilasters.</p>
+      </div>
+    </div>
+
+    <div id="designDescription" class="design-description" hidden></div>
+
+    <div class="section-label">Geometry &amp; Layout</div>
+    <div class="form-grid" id="dynamicFields"></div>
+
+    <button class="calculate" id="calculateButton" type="button">
+      <span>Calculate Rebar Weight</span>
+    </button>
+
+    <section id="results" class="results-card" hidden>
+      <h2>Results</h2>
+      <p class="total-weight" id="totalWeight"></p>
+      <p class="contingency" id="contingencyNote"></p>
+      <table class="breakdown" id="breakdownTable">
+        <thead>
+          <tr>
+            <th scope="col">Component</th>
+            <th scope="col">Quantity</th>
+            <th scope="col">Length (ft)</th>
+            <th scope="col">Wt./ft (lb)</th>
+            <th scope="col">Weight (lb)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p class="result-note" id="resultNote"></p>
+    </section>
+  </main>
+
+  <script>
+    const REBAR_SIZES = [
+      { label: '#3 — 0.167 lb/ft', value: 0.167 },
+      { label: '#4 — 0.376 lb/ft', value: 0.376 },
+      { label: '#5 — 0.668 lb/ft', value: 0.668 },
+      { label: '#6 — 1.043 lb/ft', value: 1.043 },
+      { label: '#7 — 1.502 lb/ft', value: 1.502 },
+      { label: '#8 — 2.044 lb/ft', value: 2.044 },
+      { label: '#9 — 2.907 lb/ft', value: 2.907 },
+      { label: '#10 — 3.400 lb/ft', value: 3.400 },
+      { label: '#11 — 4.303 lb/ft', value: 4.303 }
+    ];
+
+    const CONTINGENCY_PERCENT = 0.15;
+
+    const designPresets = {
+      footing: {
+        label: 'Continuous Footing / Stem Wall',
+        description: 'Bottom mat reinforcing with optional matching top mat. Bar counts are derived from the clear width and length with user-defined spacing and lap allowances.',
+        fields: [
+          { id: 'lengthFt', label: 'Footing Length (ft)', type: 'number', default: 20, step: '0.1' },
+          { id: 'widthFt', label: 'Footing Width (ft)', type: 'number', default: 3, step: '0.1' },
+          { id: 'coverIn', label: 'Concrete Cover (in)', type: 'number', default: 3, step: '0.1' },
+          { id: 'longSpacingIn', label: 'Longitudinal Bar Spacing (in)', type: 'number', default: 12 },
+          { id: 'transSpacingIn', label: 'Transverse Bar Spacing (in)', type: 'number', default: 12 },
+          { id: 'lapLengthFt', label: 'Lap/Development Allowance per Bar (ft)', type: 'number', default: 2, step: '0.1' },
+          { id: 'longBarSize', label: 'Longitudinal Bar Size', type: 'select', options: 'rebar', default: 0.376 },
+          { id: 'transBarSize', label: 'Transverse Bar Size', type: 'select', options: 'rebar', default: 0.376 },
+          { id: 'topMat', label: 'Include Top Mat (matches bottom layout)', type: 'checkbox', default: false }
+        ],
+        calculate(values) {
+          const lengthFt = numberFromInput(values.lengthFt);
+          const widthFt = numberFromInput(values.widthFt);
+          const coverIn = numberFromInput(values.coverIn, 3);
+          const longSpacingIn = numberFromInput(values.longSpacingIn, 12);
+          const transSpacingIn = numberFromInput(values.transSpacingIn, 12);
+          const lapFt = numberFromInput(values.lapLengthFt, 0);
+          const longBarWt = numberFromInput(values.longBarSize, 0.376);
+          const transBarWt = numberFromInput(values.transBarSize, 0.376);
+          const includeTop = Boolean(values.topMat);
+
+          const longBarLengthFt = Math.max(lengthFt * 12 - 2 * coverIn, 0) / 12 + lapFt;
+          const transBarLengthFt = Math.max(widthFt * 12 - 2 * coverIn, 0) / 12 + lapFt;
+
+          const longBarCount = barsRequired(widthFt, longSpacingIn, coverIn);
+          const transBarCount = barsRequired(lengthFt, transSpacingIn, coverIn);
+
+          let longWeight = longBarCount * longBarLengthFt * longBarWt;
+          let transWeight = transBarCount * transBarLengthFt * transBarWt;
+
+          if (includeTop) {
+            longWeight *= 2;
+            transWeight *= 2;
+          }
+
+          const breakdown = [
+            createBreakdownRow('Longitudinal Bars', includeTop ? longBarCount * 2 : longBarCount, longBarLengthFt, longBarWt, longWeight),
+            createBreakdownRow('Transverse Bars', includeTop ? transBarCount * 2 : transBarCount, transBarLengthFt, transBarWt, transWeight)
+          ];
+
+          const base = longWeight + transWeight;
+          return finalizeResult(base, breakdown, 'Includes matching top mat if selected.');
+        }
+      },
+      slab: {
+        label: 'Slab on Grade / Elevated Slab',
+        description: 'Two-way bar mat with optional top reinforcing layer. Adjust spacing, covers, and lap lengths for each direction.',
+        fields: [
+          { id: 'lengthFt', label: 'Slab Length (ft)', type: 'number', default: 40, step: '0.1' },
+          { id: 'widthFt', label: 'Slab Width (ft)', type: 'number', default: 40, step: '0.1' },
+          { id: 'bottomCoverIn', label: 'Bottom Cover (in)', type: 'number', default: 2, step: '0.1' },
+          { id: 'topCoverIn', label: 'Top Cover (in)', type: 'number', default: 2, step: '0.1', enableWhen: { field: 'includeTopMat', value: true } },
+          { id: 'spacingLongIn', label: 'Bottom Longitudinal Spacing (in)', type: 'number', default: 12 },
+          { id: 'spacingTransIn', label: 'Bottom Transverse Spacing (in)', type: 'number', default: 12 },
+          { id: 'lapLengthFt', label: 'Lap/Development Allowance per Bar (ft)', type: 'number', default: 2, step: '0.1' },
+          { id: 'bottomLongBarSize', label: 'Bottom Longitudinal Bar Size', type: 'select', options: 'rebar', default: 0.376 },
+          { id: 'bottomTransBarSize', label: 'Bottom Transverse Bar Size', type: 'select', options: 'rebar', default: 0.376 },
+          { id: 'includeTopMat', label: 'Include Top Mat', type: 'checkbox', default: false },
+          { id: 'topSpacingLongIn', label: 'Top Longitudinal Spacing (in)', type: 'number', default: 12, enableWhen: { field: 'includeTopMat', value: true } },
+          { id: 'topSpacingTransIn', label: 'Top Transverse Spacing (in)', type: 'number', default: 12, enableWhen: { field: 'includeTopMat', value: true } },
+          { id: 'topLongBarSize', label: 'Top Longitudinal Bar Size', type: 'select', options: 'rebar', default: 0.376, enableWhen: { field: 'includeTopMat', value: true } },
+          { id: 'topTransBarSize', label: 'Top Transverse Bar Size', type: 'select', options: 'rebar', default: 0.376, enableWhen: { field: 'includeTopMat', value: true } }
+        ],
+        calculate(values) {
+          const lengthFt = numberFromInput(values.lengthFt);
+          const widthFt = numberFromInput(values.widthFt);
+          const bottomCoverIn = numberFromInput(values.bottomCoverIn, 2);
+          const lapFt = numberFromInput(values.lapLengthFt, 0);
+          const spacingLong = numberFromInput(values.spacingLongIn, 12);
+          const spacingTrans = numberFromInput(values.spacingTransIn, 12);
+          const bottomLongWt = numberFromInput(values.bottomLongBarSize, 0.376);
+          const bottomTransWt = numberFromInput(values.bottomTransBarSize, 0.376);
+
+          const bottomLongBarLength = Math.max(lengthFt * 12 - 2 * bottomCoverIn, 0) / 12 + lapFt;
+          const bottomTransBarLength = Math.max(widthFt * 12 - 2 * bottomCoverIn, 0) / 12 + lapFt;
+
+          const bottomLongCount = barsRequired(widthFt, spacingLong, bottomCoverIn);
+          const bottomTransCount = barsRequired(lengthFt, spacingTrans, bottomCoverIn);
+
+          const bottomLongWeight = bottomLongCount * bottomLongBarLength * bottomLongWt;
+          const bottomTransWeight = bottomTransCount * bottomTransBarLength * bottomTransWt;
+
+          const breakdown = [
+            createBreakdownRow('Bottom Longitudinal Bars', bottomLongCount, bottomLongBarLength, bottomLongWt, bottomLongWeight),
+            createBreakdownRow('Bottom Transverse Bars', bottomTransCount, bottomTransBarLength, bottomTransWt, bottomTransWeight)
+          ];
+
+          const includeTop = Boolean(values.includeTopMat);
+          let topWeight = 0;
+          if (includeTop) {
+            const topCoverIn = numberFromInput(values.topCoverIn, 2);
+            const topSpacingLong = numberFromInput(values.topSpacingLongIn, spacingLong);
+            const topSpacingTrans = numberFromInput(values.topSpacingTransIn, spacingTrans);
+            const topLongWt = numberFromInput(values.topLongBarSize, bottomLongWt);
+            const topTransWt = numberFromInput(values.topTransBarSize, bottomTransWt);
+
+            const topLongLength = Math.max(lengthFt * 12 - 2 * topCoverIn, 0) / 12 + lapFt;
+            const topTransLength = Math.max(widthFt * 12 - 2 * topCoverIn, 0) / 12 + lapFt;
+
+            const topLongCount = barsRequired(widthFt, topSpacingLong, topCoverIn);
+            const topTransCount = barsRequired(lengthFt, topSpacingTrans, topCoverIn);
+
+            const topLongWeight = topLongCount * topLongLength * topLongWt;
+            const topTransWeight = topTransCount * topTransLength * topTransWt;
+
+            topWeight = topLongWeight + topTransWeight;
+
+            breakdown.push(createBreakdownRow('Top Longitudinal Bars', topLongCount, topLongLength, topLongWt, topLongWeight));
+            breakdown.push(createBreakdownRow('Top Transverse Bars', topTransCount, topTransLength, topTransWt, topTransWeight));
+          }
+
+          const base = bottomLongWeight + bottomTransWeight + topWeight;
+          return finalizeResult(base, breakdown, includeTop ? 'Includes top reinforcing mat.' : 'Single-mat reinforcing.');
+        }
+      },
+      wall: {
+        label: 'Concrete Wall',
+        description: 'Vertical and horizontal reinforcing on one or both faces of a cast-in-place wall. Spacing drives bar counts while laps extend the bar length.',
+        fields: [
+          { id: 'lengthFt', label: 'Wall Length (ft)', type: 'number', default: 40, step: '0.1' },
+          { id: 'heightFt', label: 'Wall Height (ft)', type: 'number', default: 12, step: '0.1' },
+          { id: 'thicknessIn', label: 'Wall Thickness (in)', type: 'number', default: 12 },
+          { id: 'horizontalCoverIn', label: 'Edge Cover (in)', type: 'number', default: 2, step: '0.1' },
+          { id: 'verticalCoverIn', label: 'Top/Bottom Cover (in)', type: 'number', default: 2, step: '0.1' },
+          { id: 'verticalSpacingIn', label: 'Vertical Bar Spacing (in)', type: 'number', default: 12 },
+          { id: 'horizontalSpacingIn', label: 'Horizontal Bar Spacing (in)', type: 'number', default: 18 },
+          { id: 'lapLengthFt', label: 'Lap/Development per Bar (ft)', type: 'number', default: 2, step: '0.1' },
+          { id: 'verticalBarSize', label: 'Vertical Bar Size', type: 'select', options: 'rebar', default: 0.668 },
+          { id: 'horizontalBarSize', label: 'Horizontal Bar Size', type: 'select', options: 'rebar', default: 0.376 },
+          {
+            id: 'faces',
+            label: 'Curtain Count',
+            type: 'select',
+            default: 2,
+            options: [
+              { label: 'Single Face', value: 1 },
+              { label: 'Double Curtain (both faces)', value: 2 }
+            ]
+          }
+        ],
+        calculate(values) {
+          const lengthFt = numberFromInput(values.lengthFt);
+          const heightFt = numberFromInput(values.heightFt);
+          const thicknessIn = numberFromInput(values.thicknessIn, 12);
+          const horizontalCoverIn = numberFromInput(values.horizontalCoverIn, 2);
+          const verticalCoverIn = numberFromInput(values.verticalCoverIn, 2);
+          const verticalSpacing = numberFromInput(values.verticalSpacingIn, 12);
+          const horizontalSpacing = numberFromInput(values.horizontalSpacingIn, 18);
+          const lapFt = numberFromInput(values.lapLengthFt, 0);
+          const verticalWt = numberFromInput(values.verticalBarSize, 0.668);
+          const horizontalWt = numberFromInput(values.horizontalBarSize, 0.376);
+          const faces = Math.max(1, numberFromInput(values.faces, 1));
+
+          const clearLengthFt = Math.max(lengthFt * 12 - 2 * horizontalCoverIn, 0) / 12;
+          const clearHeightFt = Math.max(heightFt * 12 - 2 * verticalCoverIn, 0) / 12;
+
+          const verticalBarsPerFace = barsRequired(lengthFt, verticalSpacing, horizontalCoverIn);
+          const horizontalBarsPerFace = barsRequired(heightFt, horizontalSpacing, verticalCoverIn);
+
+          const verticalBarLength = clearHeightFt + lapFt;
+          const horizontalBarLength = Math.max(thicknessIn - 2 * horizontalCoverIn, 0) / 12 * 2 + clearLengthFt + lapFt;
+
+          const verticalWeight = verticalBarsPerFace * faces * verticalBarLength * verticalWt;
+          const horizontalWeight = horizontalBarsPerFace * faces * horizontalBarLength * horizontalWt;
+
+          const breakdown = [
+            createBreakdownRow('Vertical Bars', verticalBarsPerFace * faces, verticalBarLength, verticalWt, verticalWeight),
+            createBreakdownRow('Horizontal Bars', horizontalBarsPerFace * faces, horizontalBarLength, horizontalWt, horizontalWeight)
+          ];
+
+          const base = verticalWeight + horizontalWeight;
+          const note = faces > 1 ? 'Double curtain reinforcing.' : 'Single face reinforcing.';
+          return finalizeResult(base, breakdown, note);
+        }
+      },
+      column: {
+        label: 'Rectangular Column',
+        description: 'Vertical column reinforcing with ties or stirrups. Includes lap allowance on vertical bars and cover offsets for tie lengths.',
+        fields: [
+          { id: 'heightFt', label: 'Column Height (ft)', type: 'number', default: 14, step: '0.1' },
+          { id: 'widthIn', label: 'Column Width (in)', type: 'number', default: 18 },
+          { id: 'depthIn', label: 'Column Depth (in)', type: 'number', default: 18 },
+          { id: 'coverIn', label: 'Clear Cover (in)', type: 'number', default: 1.5, step: '0.1' },
+          { id: 'verticalBarCount', label: 'Vertical Bar Count', type: 'number', default: 8 },
+          { id: 'verticalBarSize', label: 'Vertical Bar Size', type: 'select', options: 'rebar', default: 1.043 },
+          { id: 'lapLengthFt', label: 'Lap/Development per Vertical Bar (ft)', type: 'number', default: 2, step: '0.1' },
+          { id: 'tieBarSize', label: 'Tie/Stirrup Bar Size', type: 'select', options: 'rebar', default: 0.167 },
+          { id: 'tieSpacingIn', label: 'Tie/Stirrup Spacing (in)', type: 'number', default: 12 }
+        ],
+        calculate(values) {
+          const heightFt = numberFromInput(values.heightFt);
+          const widthIn = numberFromInput(values.widthIn, 18);
+          const depthIn = numberFromInput(values.depthIn, 18);
+          const coverIn = numberFromInput(values.coverIn, 1.5);
+          const verticalBarCount = Math.max(4, numberFromInput(values.verticalBarCount, 4));
+          const verticalWt = numberFromInput(values.verticalBarSize, 1.043);
+          const lapFt = numberFromInput(values.lapLengthFt, 0);
+          const tieWt = numberFromInput(values.tieBarSize, 0.167);
+          const tieSpacing = numberFromInput(values.tieSpacingIn, 12);
+
+          const verticalLength = heightFt + lapFt;
+          const verticalWeight = verticalBarCount * verticalLength * verticalWt;
+
+          const tieClearWidthIn = Math.max(widthIn - 2 * coverIn, 0);
+          const tieClearDepthIn = Math.max(depthIn - 2 * coverIn, 0);
+          const tieLengthFt = (2 * tieClearWidthIn + 2 * tieClearDepthIn) / 12 + 2 * 0.5;
+          const tieCount = Math.max(1, Math.floor((heightFt * 12 - coverIn * 2) / tieSpacing) + 1);
+          const tieWeight = tieCount * tieLengthFt * tieWt;
+
+          const breakdown = [
+            createBreakdownRow('Vertical Bars', verticalBarCount, verticalLength, verticalWt, verticalWeight),
+            createBreakdownRow('Ties/Stirrups', tieCount, tieLengthFt, tieWt, tieWeight)
+          ];
+
+          const base = verticalWeight + tieWeight;
+          return finalizeResult(base, breakdown, 'Tie length includes nominal hook extensions.');
+        }
+      },
+      beam: {
+        label: 'Concrete Beam',
+        description: 'Longitudinal top and bottom bars with closed stirrups. Adjust clear cover and spacing to match beam detailing.',
+        fields: [
+          { id: 'lengthFt', label: 'Beam Length (ft)', type: 'number', default: 32, step: '0.1' },
+          { id: 'widthIn', label: 'Beam Width (in)', type: 'number', default: 12 },
+          { id: 'depthIn', label: 'Beam Depth (in)', type: 'number', default: 24 },
+          { id: 'coverIn', label: 'Clear Cover (in)', type: 'number', default: 1.5, step: '0.1' },
+          { id: 'topBars', label: 'Top Bar Count', type: 'number', default: 2 },
+          { id: 'topBarSize', label: 'Top Bar Size', type: 'select', options: 'rebar', default: 0.668 },
+          { id: 'bottomBars', label: 'Bottom Bar Count', type: 'number', default: 2 },
+          { id: 'bottomBarSize', label: 'Bottom Bar Size', type: 'select', options: 'rebar', default: 1.043 },
+          { id: 'lapLengthFt', label: 'Lap/Development per Longitudinal Bar (ft)', type: 'number', default: 1.5, step: '0.1' },
+          { id: 'stirrupBarSize', label: 'Stirrup Bar Size', type: 'select', options: 'rebar', default: 0.167 },
+          { id: 'stirrupSpacingIn', label: 'Stirrup Spacing (in)', type: 'number', default: 12 }
+        ],
+        calculate(values) {
+          const lengthFt = numberFromInput(values.lengthFt);
+          const widthIn = numberFromInput(values.widthIn, 12);
+          const depthIn = numberFromInput(values.depthIn, 24);
+          const coverIn = numberFromInput(values.coverIn, 1.5);
+          const topBars = Math.max(0, numberFromInput(values.topBars, 0));
+          const bottomBars = Math.max(0, numberFromInput(values.bottomBars, 0));
+          const topWt = numberFromInput(values.topBarSize, 0.668);
+          const bottomWt = numberFromInput(values.bottomBarSize, 1.043);
+          const lapFt = numberFromInput(values.lapLengthFt, 0);
+          const stirrupWt = numberFromInput(values.stirrupBarSize, 0.167);
+          const stirrupSpacing = numberFromInput(values.stirrupSpacingIn, 12);
+
+          const clearLengthFt = Math.max(lengthFt * 12 - 2 * coverIn, 0) / 12 + lapFt;
+          const topWeight = topBars * clearLengthFt * topWt;
+          const bottomWeight = bottomBars * clearLengthFt * bottomWt;
+
+          const stirrupClearWidthIn = Math.max(widthIn - 2 * coverIn, 0);
+          const stirrupClearDepthIn = Math.max(depthIn - 2 * coverIn, 0);
+          const stirrupLengthFt = (2 * stirrupClearWidthIn + 2 * stirrupClearDepthIn) / 12 + 2 * 0.5;
+          const stirrupCount = Math.max(1, Math.floor((lengthFt * 12 - 2 * coverIn) / stirrupSpacing) + 1);
+          const stirrupWeight = stirrupCount * stirrupLengthFt * stirrupWt;
+
+          const breakdown = [];
+          if (topBars > 0) {
+            breakdown.push(createBreakdownRow('Top Bars', topBars, clearLengthFt, topWt, topWeight));
+          }
+          if (bottomBars > 0) {
+            breakdown.push(createBreakdownRow('Bottom Bars', bottomBars, clearLengthFt, bottomWt, bottomWeight));
+          }
+          breakdown.push(createBreakdownRow('Stirrups', stirrupCount, stirrupLengthFt, stirrupWt, stirrupWeight));
+
+          const base = topWeight + bottomWeight + stirrupWeight;
+          return finalizeResult(base, breakdown, 'Stirrups include hook legs at both ends.');
+        }
+      },
+      pier: {
+        label: 'Round Pier / Drilled Shaft',
+        description: 'Vertical reinforcement with circular ties or spirals in a round pier. Tie count is derived from clear height and spacing.',
+        fields: [
+          { id: 'heightFt', label: 'Pier Height (ft)', type: 'number', default: 18, step: '0.1' },
+          { id: 'diameterIn', label: 'Pier Diameter (in)', type: 'number', default: 30 },
+          { id: 'coverIn', label: 'Clear Cover (in)', type: 'number', default: 2, step: '0.1' },
+          { id: 'verticalBarCount', label: 'Vertical Bar Count', type: 'number', default: 12 },
+          { id: 'verticalBarSize', label: 'Vertical Bar Size', type: 'select', options: 'rebar', default: 1.043 },
+          { id: 'lapLengthFt', label: 'Lap/Development per Vertical Bar (ft)', type: 'number', default: 2, step: '0.1' },
+          { id: 'tieBarSize', label: 'Tie/Spiral Bar Size', type: 'select', options: 'rebar', default: 0.167 },
+          { id: 'tieSpacingIn', label: 'Tie/Spiral Spacing (in)', type: 'number', default: 6 }
+        ],
+        calculate(values) {
+          const heightFt = numberFromInput(values.heightFt);
+          const diameterIn = numberFromInput(values.diameterIn, 30);
+          const coverIn = numberFromInput(values.coverIn, 2);
+          const verticalCount = Math.max(4, numberFromInput(values.verticalBarCount, 4));
+          const verticalWt = numberFromInput(values.verticalBarSize, 1.043);
+          const lapFt = numberFromInput(values.lapLengthFt, 0);
+          const tieWt = numberFromInput(values.tieBarSize, 0.167);
+          const tieSpacing = numberFromInput(values.tieSpacingIn, 6);
+
+          const verticalLength = heightFt + lapFt;
+          const verticalWeight = verticalCount * verticalLength * verticalWt;
+
+          const clearDiameterIn = Math.max(diameterIn - 2 * coverIn, 0);
+          const tieLengthFt = Math.PI * clearDiameterIn / 12 + 2 * 0.5;
+          const tieCount = Math.max(1, Math.floor((heightFt * 12 - 2 * coverIn) / tieSpacing) + 1);
+          const tieWeight = tieCount * tieLengthFt * tieWt;
+
+          const breakdown = [
+            createBreakdownRow('Vertical Bars', verticalCount, verticalLength, verticalWt, verticalWeight),
+            createBreakdownRow('Ties/Spiral', tieCount, tieLengthFt, tieWt, tieWeight)
+          ];
+
+          const base = verticalWeight + tieWeight;
+          return finalizeResult(base, breakdown, 'Spiral/tie length includes hook overlap allowance.');
+        }
+      },
+      pilaster: {
+        label: 'Pilaster / Wall Column',
+        description: 'Rectangular pilaster built into a wall with dedicated vertical bars and closed ties.',
+        fields: [
+          { id: 'heightFt', label: 'Pilaster Height (ft)', type: 'number', default: 14, step: '0.1' },
+          { id: 'widthIn', label: 'Pilaster Width (in)', type: 'number', default: 18 },
+          { id: 'projectionIn', label: 'Pilaster Projection (in)', type: 'number', default: 12 },
+          { id: 'coverIn', label: 'Clear Cover (in)', type: 'number', default: 1.5, step: '0.1' },
+          { id: 'verticalBarCount', label: 'Vertical Bar Count', type: 'number', default: 6 },
+          { id: 'verticalBarSize', label: 'Vertical Bar Size', type: 'select', options: 'rebar', default: 0.668 },
+          { id: 'lapLengthFt', label: 'Lap/Development per Vertical Bar (ft)', type: 'number', default: 2, step: '0.1' },
+          { id: 'tieBarSize', label: 'Tie Bar Size', type: 'select', options: 'rebar', default: 0.167 },
+          { id: 'tieSpacingIn', label: 'Tie Spacing (in)', type: 'number', default: 12 }
+        ],
+        calculate(values) {
+          const heightFt = numberFromInput(values.heightFt);
+          const widthIn = numberFromInput(values.widthIn, 18);
+          const projectionIn = numberFromInput(values.projectionIn, 12);
+          const coverIn = numberFromInput(values.coverIn, 1.5);
+          const verticalCount = Math.max(4, numberFromInput(values.verticalBarCount, 4));
+          const verticalWt = numberFromInput(values.verticalBarSize, 0.668);
+          const lapFt = numberFromInput(values.lapLengthFt, 0);
+          const tieWt = numberFromInput(values.tieBarSize, 0.167);
+          const tieSpacing = numberFromInput(values.tieSpacingIn, 12);
+
+          const verticalLength = heightFt + lapFt;
+          const verticalWeight = verticalCount * verticalLength * verticalWt;
+
+          const tieClearWidthIn = Math.max(widthIn - 2 * coverIn, 0);
+          const tieClearDepthIn = Math.max(projectionIn - coverIn, 0);
+          const tieLengthFt = (tieClearWidthIn + 2 * tieClearDepthIn) / 12 + 2 * 0.5;
+          const tieCount = Math.max(1, Math.floor((heightFt * 12 - 2 * coverIn) / tieSpacing) + 1);
+          const tieWeight = tieCount * tieLengthFt * tieWt;
+
+          const breakdown = [
+            createBreakdownRow('Vertical Bars', verticalCount, verticalLength, verticalWt, verticalWeight),
+            createBreakdownRow('Ties', tieCount, tieLengthFt, tieWt, tieWeight)
+          ];
+
+          const base = verticalWeight + tieWeight;
+          return finalizeResult(base, breakdown, 'Projection assumes one face is flush with the supporting wall.');
+        }
+      }
+    };
+
+    const designSelect = document.getElementById('designType');
+    const dynamicFields = document.getElementById('dynamicFields');
+    const descriptionEl = document.getElementById('designDescription');
+    const resultsSection = document.getElementById('results');
+    const totalWeightEl = document.getElementById('totalWeight');
+    const contingencyNoteEl = document.getElementById('contingencyNote');
+    const breakdownBody = document.querySelector('#breakdownTable tbody');
+    const resultNoteEl = document.getElementById('resultNote');
+
+    function numberFromInput(value, fallback = 0) {
+      const parsed = typeof value === 'number' ? value : parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    function barsRequired(spanFt, spacingIn, coverIn) {
+      const clearInches = Math.max(spanFt * 12 - 2 * coverIn, 0);
+      if (clearInches <= 0) return 0;
+      if (spacingIn <= 0) return 0;
+      return Math.max(2, Math.floor(clearInches / spacingIn) + 1);
+    }
+
+    function createBreakdownRow(label, quantity, lengthFt, weightPerFt, weight) {
+      return {
+        label,
+        quantity: Number.isFinite(quantity) ? quantity : 0,
+        lengthFt: Number.isFinite(lengthFt) ? lengthFt : 0,
+        weightPerFt: Number.isFinite(weightPerFt) ? weightPerFt : 0,
+        weight: Number.isFinite(weight) ? weight : 0
+      };
+    }
+
+    function finalizeResult(baseWeight, breakdown, note) {
+      const total = baseWeight * (1 + CONTINGENCY_PERCENT);
+      return {
+        rawWeight: baseWeight,
+        totalWeight: total,
+        contingencyPercent: CONTINGENCY_PERCENT,
+        breakdown,
+        note
+      };
+    }
+
+    function formatNumber(value, digits = 2) {
+      return Number(value).toLocaleString(undefined, {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      });
+    }
+
+    function formatInteger(value) {
+      return Number(value).toLocaleString(undefined, {
+        maximumFractionDigits: 0
+      });
+    }
+
+    function populateDesignOptions() {
+      Object.entries(designPresets).forEach(([key, preset]) => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = preset.label;
+        designSelect.append(option);
+      });
+    }
+
+    function renderFields(preset) {
+      dynamicFields.innerHTML = '';
+      preset.fields.forEach(field => {
+        const wrapper = document.createElement('div');
+        wrapper.className = field.type === 'checkbox' ? 'checkbox-group' : 'field-group';
+
+        if (field.type === 'checkbox') {
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.id = field.id;
+          input.checked = Boolean(field.default);
+          input.dataset.fieldId = field.id;
+
+          const label = document.createElement('label');
+          label.setAttribute('for', field.id);
+          label.textContent = field.label;
+
+          wrapper.append(input, label);
+        } else {
+          const label = document.createElement('label');
+          label.setAttribute('for', field.id);
+          label.textContent = field.label;
+
+          let input;
+          if (field.type === 'select') {
+            input = document.createElement('select');
+            const options = field.options === 'rebar' ? REBAR_SIZES : field.options;
+            options.forEach(optionValue => {
+              const option = document.createElement('option');
+              if (typeof optionValue === 'object') {
+                option.value = optionValue.value;
+                option.textContent = optionValue.label;
+              } else {
+                option.value = optionValue;
+                option.textContent = optionValue;
+              }
+              input.append(option);
+            });
+            if (field.default !== undefined) {
+              input.value = String(field.default);
+            }
+          } else {
+            input = document.createElement('input');
+            input.type = field.type;
+            if (field.step) input.step = field.step;
+            if (field.placeholder) input.placeholder = field.placeholder;
+            if (field.default !== undefined) {
+              input.value = field.default;
+            } else {
+              input.value = '';
+            }
+          }
+
+          input.id = field.id;
+          input.dataset.fieldId = field.id;
+
+          wrapper.append(label, input);
+        }
+
+        if (field.helper) {
+          const helper = document.createElement('p');
+          helper.className = 'helper-text';
+          helper.textContent = field.helper;
+          wrapper.append(helper);
+        }
+
+        if (field.enableWhen) {
+          wrapper.dataset.enableWhenField = field.enableWhen.field;
+          wrapper.dataset.enableWhenValue = String(field.enableWhen.value);
+        }
+
+        dynamicFields.append(wrapper);
+
+        const fieldInput = wrapper.querySelector('[data-field-id]');
+        if (fieldInput) {
+          const eventName = fieldInput.type === 'checkbox' || fieldInput.tagName === 'SELECT' ? 'change' : 'input';
+          fieldInput.addEventListener(eventName, updateConditionalFields);
+        }
+      });
+      updateConditionalFields();
+    }
+
+    function gatherValues(preset) {
+      const values = {};
+      preset.fields.forEach(field => {
+        const el = dynamicFields.querySelector(`[data-field-id="${field.id}"]`);
+        if (!el) return;
+        if (field.type === 'checkbox') {
+          values[field.id] = el.checked;
+        } else if (field.type === 'select') {
+          values[field.id] = el.value;
+        } else {
+          values[field.id] = el.value;
+        }
+      });
+      return values;
+    }
+
+    function updateConditionalFields() {
+      const conditionalWrappers = dynamicFields.querySelectorAll('[data-enable-when-field]');
+      conditionalWrappers.forEach(wrapper => {
+        const controllerId = wrapper.dataset.enableWhenField;
+        const expectedValue = wrapper.dataset.enableWhenValue;
+        const controller = dynamicFields.querySelector(`[data-field-id="${controllerId}"]`);
+        if (!controller) return;
+        let currentValue;
+        if (controller.type === 'checkbox') {
+          currentValue = String(controller.checked);
+        } else {
+          currentValue = controller.value;
+        }
+        const enabled = currentValue === expectedValue;
+        wrapper.classList.toggle('disabled', !enabled);
+        wrapper.querySelectorAll('input, select, textarea').forEach(el => {
+          el.disabled = !enabled;
+        });
+      });
+    }
+
+    function displayResult(result) {
+      totalWeightEl.textContent = `${formatNumber(result.totalWeight)} lbs`;
+      contingencyNoteEl.textContent = `Base weight ${formatNumber(result.rawWeight)} lbs with ${(result.contingencyPercent * 100).toFixed(0)}% contingency.`;
+
+      breakdownBody.innerHTML = '';
+      result.breakdown.forEach(item => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${item.label}</td>
+          <td>${formatInteger(item.quantity)}</td>
+          <td>${formatNumber(item.lengthFt)}</td>
+          <td>${formatNumber(item.weightPerFt)}</td>
+          <td>${formatNumber(item.weight)}</td>
+        `;
+        breakdownBody.append(row);
+      });
+
+      resultNoteEl.textContent = result.note || '';
+      resultsSection.hidden = false;
+    }
+
+    populateDesignOptions();
+    designSelect.addEventListener('change', () => {
+      const preset = designPresets[designSelect.value];
+      if (!preset) return;
+      renderFields(preset);
+      descriptionEl.textContent = preset.description;
+      descriptionEl.hidden = false;
+      resultsSection.hidden = true;
+    });
+
+    designSelect.value = Object.keys(designPresets)[0];
+    designSelect.dispatchEvent(new Event('change'));
+
+    document.getElementById('calculateButton').addEventListener('click', () => {
+      const preset = designPresets[designSelect.value];
+      if (!preset) return;
+      const values = gatherValues(preset);
+      const result = preset.calculate(values);
+      displayResult(result);
+    });
   </script>
 </body>
 </html>
