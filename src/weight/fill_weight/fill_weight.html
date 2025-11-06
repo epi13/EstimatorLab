@@ -2,369 +2,429 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="../../css/base/index.css">
   <title>Bulk Material Weight Calculator</title>
   <style>
     /* weight/fill_weight/fill_weight.html */
     body[data-page="weight-fill-weight"] {
-      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
-      background: radial-gradient(circle at top left, #f9fbff 0%, #eef1f7 45%, #e2e8f0 100%);
-      color: #1f2933;
-      min-height: 100vh;
-      margin: 0;
-      padding: 48px 20px 72px;
       display: flex;
-      align-items: flex-start;
+      align-items: stretch;
       justify-content: center;
     }
 
-    body[data-page="weight-fill-weight"] .page-wrapper {
-      width: min(960px, 100%);
-    }
-
-    body[data-page="weight-fill-weight"] h1,
-    body[data-page="weight-fill-weight"] h2,
-    body[data-page="weight-fill-weight"] h3 {
-      font-weight: 600;
-      color: #0f172a;
-      margin: 0 0 12px;
-    }
-
-    body[data-page="weight-fill-weight"] p.lead {
-      margin: 0 0 32px;
-      color: #475569;
-      line-height: 1.6;
-      max-width: 720px;
-    }
-
-    body[data-page="weight-fill-weight"] .card {
-      background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.88));
-      backdrop-filter: blur(6px);
-      border-radius: 20px;
-      padding: 28px;
-      margin-bottom: 28px;
-      box-shadow: 0 18px 35px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.08);
-      border: 1px solid rgba(148, 163, 184, 0.24);
-    }
-
-    body[data-page="weight-fill-weight"] .card h3 {
-      margin-bottom: 18px;
-      font-size: 1.15rem;
-      letter-spacing: -0.01em;
-    }
-
-    body[data-page="weight-fill-weight"] label {
-      font-weight: 500;
-      color: #1e293b;
-      display: block;
-      margin-bottom: 6px;
-    }
-
-    body[data-page="weight-fill-weight"] input,
-    body[data-page="weight-fill-weight"] select,
-    body[data-page="weight-fill-weight"] textarea {
-      width: 100%;
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: 1px solid rgba(148, 163, 184, 0.45);
-      background: rgba(248, 250, 252, 0.9);
-      color: #0f172a;
-      font-size: 0.95rem;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
-    }
-
-    body[data-page="weight-fill-weight"] input:focus,
-    body[data-page="weight-fill-weight"] select:focus {
-      outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
-      background: #ffffff;
-    }
-
-    body[data-page="weight-fill-weight"] .two-column {
+    body[data-page="weight-fill-weight"] main.page-shell {
       display: grid;
-      gap: 24px;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-areas:
+        "hero hero"
+        "inputs outputs";
+      grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: var(--spacing-md);
+      width: min(1120px, 100%);
+      padding: clamp(1.1rem, 2.4vw, 1.85rem);
+      border-radius: var(--radius-2xl);
+      border: 1px solid var(--border);
+      background: linear-gradient(155deg, rgba(14, 22, 42, 0.94), rgba(8, 15, 28, 0.88));
+      box-shadow: var(--shadow-lg);
+      height: calc(100vh - (clamp(0.5rem, 1.2vw, 1.25rem) * 2));
+      max-height: calc(100vh - (clamp(0.5rem, 1.2vw, 1.25rem) * 2));
+      overflow: hidden;
+    }
+
+    body[data-page="weight-fill-weight"] main.page-shell > * {
+      min-width: 0;
+      min-height: 0;
+    }
+
+    body[data-page="weight-fill-weight"] .hero {
+      grid-area: hero;
+      display: grid;
+      gap: clamp(0.65rem, 1.5vw, 1rem);
+    }
+
+    body[data-page="weight-fill-weight"] .hero h1 {
+      margin: 0;
+      font-size: clamp(1.75rem, 3vw, 2.4rem);
+    }
+
+    body[data-page="weight-fill-weight"] .hero .lead {
+      margin: 0;
+      color: var(--text-muted);
+      max-width: 68ch;
+    }
+
+    body[data-page="weight-fill-weight"] .page-column {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      min-width: 0;
+      min-height: 0;
+    }
+
+    body[data-page="weight-fill-weight"] .page-column--inputs {
+      grid-area: inputs;
+    }
+
+    body[data-page="weight-fill-weight"] .page-column--outputs {
+      grid-area: outputs;
+    }
+
+    body[data-page="weight-fill-weight"] .page-column .card {
+      display: grid;
+      gap: clamp(0.65rem, 1.4vw, 1rem);
     }
 
     body[data-page="weight-fill-weight"] .mode-toggle {
-      display: inline-grid;
-      grid-auto-flow: column;
-      gap: 10px;
-      padding: 6px;
-      background: rgba(15, 23, 42, 0.05);
-      border-radius: 999px;
-    }
-
-    body[data-page="weight-fill-weight"] .mode-toggle label {
-      margin: 0;
-      padding: 6px 18px;
-      border-radius: 999px;
-      cursor: pointer;
-      background: transparent;
-      border: none;
-      font-weight: 600;
-      color: #475569;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      transition: all 0.2s ease;
+      gap: 0.35rem;
+      padding: 0.35rem;
+      border-radius: 999px;
+      border: 1px solid var(--accent-border);
+      background: rgba(var(--accent-rgb), 0.12);
+      box-shadow: inset 0 1px 0 rgba(var(--accent-rgb), 0.15);
     }
 
     body[data-page="weight-fill-weight"] .mode-toggle input {
       display: none;
     }
 
+    body[data-page="weight-fill-weight"] .mode-toggle label {
+      margin: 0;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+
     body[data-page="weight-fill-weight"] .mode-toggle label.active {
-      background: linear-gradient(135deg, #2563eb, #0ea5e9);
-      color: #ffffff;
-      box-shadow: 0 10px 18px rgba(37, 99, 235, 0.25);
+      background: linear-gradient(145deg, var(--accent), var(--accent-strong));
+      color: var(--button-text);
+      box-shadow: 0 16px 30px rgba(var(--accent-rgb), 0.35);
+    }
+
+    body[data-page="weight-fill-weight"] .two-column {
+      display: grid;
+      gap: var(--spacing-sm);
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     }
 
     body[data-page="weight-fill-weight"] .material-description {
-      margin-top: 16px;
-      padding: 16px 18px;
-      border-radius: 16px;
-      background: rgba(37, 99, 235, 0.05);
-      border: 1px solid rgba(37, 99, 235, 0.15);
-      color: #1e3a8a;
-      box-shadow: inset 0 1px 3px rgba(37, 99, 235, 0.08);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--accent-border);
+      background: rgba(var(--accent-rgb), 0.1);
+      padding: clamp(0.75rem, 1.2vw, 1rem);
       line-height: 1.5;
+      color: var(--text);
+    }
+
+    body[data-page="weight-fill-weight"] .material-description strong {
+      color: var(--heading);
     }
 
     body[data-page="weight-fill-weight"] .density-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
+      gap: 0.5rem;
+      margin-top: var(--spacing-sm);
     }
 
     body[data-page="weight-fill-weight"] .density-chip {
-      padding: 6px 12px;
+      padding: 0.35rem 0.75rem;
       border-radius: 999px;
       font-size: 0.85rem;
       font-weight: 600;
-      background: rgba(14, 165, 233, 0.16);
-      color: #0c4a6e;
-      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.12);
+      background: rgba(var(--accent-rgb), 0.18);
+      color: var(--heading);
+      border: 1px solid rgba(var(--accent-rgb), 0.35);
+      box-shadow: 0 12px 24px rgba(var(--accent-rgb), 0.18);
     }
 
     body[data-page="weight-fill-weight"] .note {
-      margin-top: 12px;
-      font-size: 0.9rem;
-      color: #64748b;
+      font-size: 0.85rem;
+      color: var(--text-muted);
       line-height: 1.5;
     }
 
-    body[data-page="weight-fill-weight"] .result-highlight {
-      border-radius: 18px;
-      padding: 18px 20px;
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(14, 165, 233, 0.12));
-      border: 1px solid rgba(37, 99, 235, 0.2);
-      box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.08);
-      margin-bottom: 18px;
+    body[data-page="weight-fill-weight"] .result-card {
+      min-height: 0;
     }
 
-    body[data-page="weight-fill-weight"] .result-highlight .result-weight {
-      font-size: 2.25rem;
+    body[data-page="weight-fill-weight"] .result-card .result-highlight {
+      border-radius: var(--radius-xl);
+      padding: clamp(0.75rem, 1.4vw, 1.2rem);
+      background: rgba(var(--accent-rgb), 0.16);
+      border: 1px solid var(--accent-border);
+      box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.12);
+      display: grid;
+      gap: 0.35rem;
+    }
+
+    body[data-page="weight-fill-weight"] .result-card .result-weight {
+      font-size: clamp(1.9rem, 3.2vw, 2.4rem);
       font-weight: 700;
-      color: #1e3a8a;
-      margin-bottom: 6px;
+      color: var(--accent-strong);
     }
 
-    body[data-page="weight-fill-weight"] .result-highlight .result-sub {
-      color: #1d4ed8;
+    body[data-page="weight-fill-weight"] .result-card .result-sub {
+      color: var(--text-muted);
       font-weight: 500;
       letter-spacing: 0.01em;
     }
 
-    body[data-page="weight-fill-weight"] .result-breakdown {
+    body[data-page="weight-fill-weight"] .result-card .result-breakdown {
       display: grid;
-      gap: 14px;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: var(--spacing-sm);
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     }
 
-    body[data-page="weight-fill-weight"] .result-breakdown div {
-      background: rgba(15, 23, 42, 0.04);
-      border-radius: 14px;
-      padding: 12px 14px;
-      box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.08);
+    body[data-page="weight-fill-weight"] .result-card .result-breakdown div {
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: rgba(12, 19, 36, 0.85);
+      padding: 0.65rem 0.75rem;
+      display: grid;
+      gap: 0.25rem;
     }
 
-    body[data-page="weight-fill-weight"] .result-breakdown .metric-label {
-      display: block;
+    body[data-page="weight-fill-weight"] .result-card .metric-label {
       font-weight: 600;
-      color: #0f172a;
-      margin-bottom: 4px;
-    }
-
-    body[data-page="weight-fill-weight"] .result-breakdown .metric-value {
-      display: block;
-      color: #475569;
+      color: var(--heading);
       font-size: 0.95rem;
     }
 
+    body[data-page="weight-fill-weight"] .result-card .metric-value {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    body[data-page="weight-fill-weight"] .history-card {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+      flex: 1;
+      min-height: 0;
+    }
+
+    body[data-page="weight-fill-weight"] .history-card header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--spacing-sm);
+    }
+
     body[data-page="weight-fill-weight"] .history-list {
+      flex: 1;
+      overflow-y: auto;
       display: grid;
-      gap: 14px;
+      gap: var(--spacing-sm);
+      padding-right: 0.25rem;
     }
 
     body[data-page="weight-fill-weight"] .history-item {
-      background: rgba(15, 23, 42, 0.05);
-      border-radius: 16px;
-      padding: 14px 16px;
-      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
-      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: var(--surface-muted);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: clamp(0.65rem, 1.2vw, 0.85rem);
       display: grid;
-      gap: 4px;
+      gap: 0.35rem;
     }
 
     body[data-page="weight-fill-weight"] .history-item .title {
       font-weight: 600;
-      color: #0f172a;
+      color: var(--heading);
     }
 
     body[data-page="weight-fill-weight"] .history-item .meta {
-      font-size: 0.9rem;
-      color: #475569;
+      font-size: 0.85rem;
+      color: var(--text-muted);
     }
 
     body[data-page="weight-fill-weight"] .history-item .weight {
       font-weight: 600;
-      color: #1d4ed8;
+      color: var(--accent);
     }
 
     body[data-page="weight-fill-weight"] .placeholder {
-      color: #94a3b8;
+      color: var(--text-muted);
       font-style: italic;
     }
 
-    body[data-page="weight-fill-weight"] .hidden {
-      display: none;
+    body[data-page="weight-fill-weight"] .custom-grid {
+      display: grid;
+      gap: var(--spacing-sm);
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    @media (max-width: 1080px) {
+      body[data-page="weight-fill-weight"] main.page-shell {
+        grid-template-areas:
+          "hero"
+          "inputs"
+          "outputs";
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
+        height: auto;
+        max-height: none;
+      }
+
+      body[data-page="weight-fill-weight"] .history-card {
+        max-height: none;
+      }
+
+      body[data-page="weight-fill-weight"] .history-list {
+        max-height: 260px;
+      }
     }
 
     @media (max-width: 640px) {
-      body[data-page="weight-fill-weight"] {
-        padding: 32px 16px;
+      body[data-page="weight-fill-weight"] main.page-shell {
+        padding: var(--spacing-md);
       }
 
-      body[data-page="weight-fill-weight"] .card {
-        padding: 22px;
+      body[data-page="weight-fill-weight"] .two-column {
+        grid-template-columns: minmax(0, 1fr);
       }
 
-      body[data-page="weight-fill-weight"] .result-highlight .result-weight {
-        font-size: 1.8rem;
+      body[data-page="weight-fill-weight"] .mode-toggle {
+        width: 100%;
+        justify-content: space-between;
       }
     }
   </style>
 </head>
-<body data-page="weight-fill-weight">
-  <div class="page-wrapper">
-    <header>
-      <h1>Bulk Material Weight Calculator</h1>
-      <p class="lead">Estimate haul weights for bulk materials using preset density libraries or custom entries. Adjust the moisture
-        condition, volume units, and obtain results with tonnage, pound, and kilogram conversions to keep crews informed.</p>
-    </header>
-
-    <section class="card">
-      <h3>Material Source</h3>
-      <div class="mode-toggle" role="group" aria-label="Material entry mode">
-        <label id="modePresetLabel">
-          <input type="radio" name="materialMode" value="preset" checked>
-          Preset Library
-        </label>
-        <label id="modeCustomLabel">
-          <input type="radio" name="materialMode" value="custom">
-          Custom Material
-        </label>
+<body data-page="weight-fill-weight" data-accent="sky">
+  <main class="page-shell">
+    <section class="card hero">
+      <div>
+        <h1>Bulk Material Weight Calculator</h1>
+        <p class="lead">Estimate haul weights for bulk materials using preset density libraries or custom entries. Adjust the moisture
+          condition, volume units, and obtain results with tonnage, pound, and kilogram conversions to keep crews informed.</p>
       </div>
+    </section>
 
-      <div class="two-column">
-        <div id="presetControls">
-          <label for="material">Preset Material</label>
-          <select id="material">
-            <option value="topsoil">Topsoil</option>
-            <option value="loam">Loam</option>
-            <option value="fill_dirt">Fill Dirt</option>
-            <option value="clay">Clay</option>
-            <option value="sand">Concrete Sand</option>
-            <option value="pea_gravel">Pea Gravel</option>
-            <option value="crushed_stone">Crushed Stone (3/4")</option>
-            <option value="limestone">Dense Grade Limestone</option>
-            <option value="granite">Granite Base Course</option>
-            <option value="recycled_concrete">Recycled Concrete</option>
-            <option value="asphalt_millings">Asphalt Millings</option>
-            <option value="riprap">Riprap</option>
-            <option value="compost">Screened Compost</option>
-            <option value="bark_mulch">Bark Mulch</option>
-          </select>
-          <div class="material-description" id="description"></div>
-        </div>
-
-        <div id="customControls" class="hidden">
-          <label for="customName">Material Name</label>
-          <input type="text" id="customName" placeholder="e.g. Project Excavation Spoils">
-
-          <div class="two-column" style="margin-top: 16px;">
-            <div>
-              <label for="customDry">Dry Density (tons / yd³)</label>
-              <input type="number" id="customDry" min="0" step="0.01" data-custom-density>
-            </div>
-            <div>
-              <label for="customDamp">Damp Density (tons / yd³)</label>
-              <input type="number" id="customDamp" min="0" step="0.01" data-custom-density>
-            </div>
-            <div>
-              <label for="customSaturated">Saturated Density (tons / yd³)</label>
-              <input type="number" id="customSaturated" min="0" step="0.01" data-custom-density>
+    <div class="page-column page-column--inputs">
+      <section class="card">
+        <header class="stack">
+          <div class="row-between">
+            <h3>Material Source</h3>
+            <div class="mode-toggle" role="group" aria-label="Material entry mode">
+              <label id="modePresetLabel">
+                <input type="radio" name="materialMode" value="preset" checked>
+                Preset Library
+              </label>
+              <label id="modeCustomLabel">
+                <input type="radio" name="materialMode" value="custom">
+                Custom Material
+              </label>
             </div>
           </div>
-          <p class="note">Enter densities for the relevant moisture conditions. When a field is left blank, the calculator will reuse the
-            closest available value so that results stay continuous.</p>
+          <p class="small muted">Toggle between curated density presets or project-specific entries.</p>
+        </header>
+
+        <div class="two-column">
+          <div id="presetControls" class="stack">
+            <label for="material">Preset Material</label>
+            <select id="material">
+              <option value="topsoil">Topsoil</option>
+              <option value="loam">Loam</option>
+              <option value="fill_dirt">Fill Dirt</option>
+              <option value="clay">Clay</option>
+              <option value="sand">Concrete Sand</option>
+              <option value="pea_gravel">Pea Gravel</option>
+              <option value="crushed_stone">Crushed Stone (3/4")</option>
+              <option value="limestone">Dense Grade Limestone</option>
+              <option value="granite">Granite Base Course</option>
+              <option value="recycled_concrete">Recycled Concrete</option>
+              <option value="asphalt_millings">Asphalt Millings</option>
+              <option value="riprap">Riprap</option>
+              <option value="compost">Screened Compost</option>
+              <option value="bark_mulch">Bark Mulch</option>
+            </select>
+            <div class="material-description" id="description"></div>
+          </div>
+
+          <div id="customControls" class="stack hidden">
+            <label for="customName">Material Name</label>
+            <input type="text" id="customName" placeholder="e.g. Project Excavation Spoils">
+
+            <div class="custom-grid">
+              <div>
+                <label for="customDry">Dry Density (tons / yd³)</label>
+                <input type="number" id="customDry" min="0" step="0.01" data-custom-density>
+              </div>
+              <div>
+                <label for="customDamp">Damp Density (tons / yd³)</label>
+                <input type="number" id="customDamp" min="0" step="0.01" data-custom-density>
+              </div>
+              <div>
+                <label for="customSaturated">Saturated Density (tons / yd³)</label>
+                <input type="number" id="customSaturated" min="0" step="0.01" data-custom-density>
+              </div>
+            </div>
+            <p class="note">Enter densities for the relevant moisture conditions. When a field is left blank, the calculator will reuse the
+              closest available value so that results stay continuous.</p>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="card">
-      <h3>Measurement Inputs</h3>
-      <div class="two-column">
-        <div>
-          <label for="moisture">Moisture Condition</label>
-          <select id="moisture">
-            <option value="dry">Dry</option>
-            <option value="damp">Damp</option>
-            <option value="saturated">Saturated</option>
-          </select>
+      <section class="card">
+        <header class="stack">
+          <h3>Measurement Inputs</h3>
+          <p class="small muted">Switch between moisture and volume units to reflect the haul configuration.</p>
+        </header>
+        <div class="two-column">
+          <div class="stack">
+            <label for="moisture">Moisture Condition</label>
+            <select id="moisture">
+              <option value="dry">Dry</option>
+              <option value="damp">Damp</option>
+              <option value="saturated">Saturated</option>
+            </select>
+          </div>
+          <div class="stack">
+            <label for="unit">Volume Unit</label>
+            <select id="unit">
+              <option value="yd3">Cubic Yards (yd³)</option>
+              <option value="ft3">Cubic Feet (ft³)</option>
+              <option value="m3">Cubic Meters (m³)</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label for="unit">Volume Unit</label>
-          <select id="unit">
-            <option value="yd3">Cubic Yards (yd³)</option>
-            <option value="ft3">Cubic Feet (ft³)</option>
-            <option value="m3">Cubic Meters (m³)</option>
-          </select>
+
+        <div class="stack">
+          <label for="volume">Volume</label>
+          <input type="number" id="volume" step="any" min="0" placeholder="Enter quantity to evaluate">
         </div>
-      </div>
+      </section>
+    </div>
 
-      <div style="margin-top: 20px;">
-        <label for="volume">Volume</label>
-        <input type="number" id="volume" step="any" min="0" placeholder="Enter quantity to evaluate">
-      </div>
-    </section>
+    <div class="page-column page-column--outputs">
+      <section class="card result-card">
+        <header class="stack">
+          <h3>Results</h3>
+          <p class="small muted">Summary tonnage plus detailed mass and volume conversions.</p>
+        </header>
+        <div class="stack" id="result">Weight: —</div>
+      </section>
 
-    <section class="card">
-      <h3>Results</h3>
-      <div class="output" id="result">Weight: —</div>
-    </section>
-
-    <section class="card">
-      <h3>History</h3>
-      <div class="history-list" id="history">
-        <div class="placeholder">No calculations yet.</div>
-      </div>
-    </section>
-  </div>
+      <section class="card history-card">
+        <header>
+          <h3>History</h3>
+          <span class="small muted">Newest first</span>
+        </header>
+        <div class="history-list" id="history">
+          <div class="placeholder">No calculations yet.</div>
+        </div>
+      </section>
+    </div>
+  </main>
 
   <script>
     const materials = {
