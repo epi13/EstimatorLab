@@ -141,7 +141,13 @@ function calculate(){
 function addToHistory(methodLabel, area, unit, summary){
   const line = document.createElement('div');
   line.className = 'history-entry';
-  line.innerHTML = `<strong>${area} ${unit}</strong> · ${methodLabel}<br><span style="font-weight:500; color: rgba(15,23,42,0.72)">${summary}</span>`;
+  line.innerHTML = `
+    <div class="history-entry__header">
+      <span class="history-entry__area">${area} ${unit}</span>
+      <span class="history-entry__method">${methodLabel}</span>
+    </div>
+    <div class="history-entry__summary">${summary}</div>
+  `;
   historyEl.appendChild(line);
 }
 
