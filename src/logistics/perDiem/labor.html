@@ -84,9 +84,16 @@
     <!-- PER DIEM -->
     <div class="card">
       <h2>2) Per-Diem & Lodging</h2>
-      <label>Upload Per-Diem JSON (DoD OCONUS incl. Alaska)</label>
-      <input type="file" id="file_input" accept=".json">
-      <div id="file_status" class="small muted">No file loaded</div>
+      <div class="row">
+        <div class="span-8">
+          <label>Per-Diem Rate Sheet</label>
+          <div id="file_status" class="small muted">Loading official DoD Alaska/OCONUS rates…</div>
+        </div>
+        <div class="span-4" style="text-align: right;">
+          <button id="load_custom" type="button">Load Custom JSON</button>
+          <input type="file" id="file_input" accept=".json" style="display:none;">
+        </div>
+      </div>
       <hr>
       <div id="perdiem_section" class="hidden">
         <div class="row">
