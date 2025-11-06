@@ -8,7 +8,7 @@ const els = {
   headcount: q('headcount'), man_days: q('man_days'), man_hours: q('man_hours'),
 
   // Per-diem
-  file_input: q('file_input'), file_status: q('file_status'), perdiem_section: q('perdiem_section'),
+  file_input: q('file_input'), load_custom: q('load_custom'), file_status: q('file_status'), perdiem_section: q('perdiem_section'),
   locality_search: q('locality_search'), season: q('season'), effective: q('effective'),
   mie: q('mie'), lodging_cap: q('lodging_cap'), lodging_rate: q('lodging_rate'),
   proportional_meals: q('proportional_meals'),
@@ -19,6 +19,7 @@ function currency(n){return isNaN(n)?'—':n.toLocaleString(undefined,{style:'cu
 function num(n,dec=0){return isNaN(n)?'—':Number(n).toLocaleString(undefined,{maximumFractionDigits:dec});}
 
 let RATES=[], localityIndex={};
+const DEFAULT_RATES_URL = new URL('../../../assets/per_diem_rates.json', import.meta.url);
 
 function clamp(v,min,max){return Math.min(max,Math.max(min,v));}
 
@@ -89,27 +90,62 @@ function toggleOverride(checkbox, inputEl){
 }
 
 // === Per-diem loading & selection ===
+function applyRates(data, sourceLabel){
+  if(!Array.isArray(data)){
+    throw new Error('Expected an array of rate records.');
+  }
+
+  RATES = data;
+  localityIndex = {};
+  for (const r of RATES){
+    const key = (r.Locality || '').toUpperCase().trim();
+    if(!key) continue;
+    if(!localityIndex[key]) localityIndex[key] = [];
+    localityIndex[key].push(r);
+  }
+
+  const count = RATES.length;
+  if(count){
+    els.perdiem_section.classList.remove('hidden');
+    els.file_status.textContent = `${sourceLabel} — ${count.toLocaleString()} records available.`;
+  }else{
+    els.perdiem_section.classList.add('hidden');
+    els.file_status.textContent = `${sourceLabel} — No records found.`;
+  }
+
+  els.locality_search.value = '';
+  els.season.innerHTML = '';
+  fillRates(null);
+}
+
+async function loadDefaultRates(){
+  try{
+    const resp = await fetch(DEFAULT_RATES_URL);
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    applyRates(data, 'Official DoD rate sheet loaded');
+  }catch(err){
+    console.error('Failed to load default per-diem rates', err);
+    els.file_status.textContent = 'Unable to load the default rate sheet. Use “Load Custom JSON” to provide your own file.';
+    els.perdiem_section.classList.add('hidden');
+  }
+}
+
 function loadFile(e){
   const file=e.target.files[0];
-  if(!file){els.file_status.textContent="No file loaded";return;}
+  if(!file){return;}
   const reader=new FileReader();
   reader.onload=function(ev){
     try{
-      RATES=JSON.parse(ev.target.result);
-      localityIndex={};
-      for(const r of RATES){
-        const key=(r.Locality||'').toUpperCase().trim();
-        if(!localityIndex[key]) localityIndex[key]=[];
-        localityIndex[key].push(r);
-      }
-      els.file_status.textContent=`Loaded ${RATES.length} records`;
-      els.perdiem_section.classList.remove('hidden');
+      const parsed = JSON.parse(ev.target.result);
+      applyRates(parsed, `Custom sheet “${file.name}” loaded`);
     }catch(err){
-      els.file_status.textContent="Invalid JSON";
+      els.file_status.textContent="Invalid JSON file. Expected the DoD per-diem array format.";
       console.error(err);
     }
   };
   reader.readAsText(file);
+  e.target.value='';
 }
 
 function onLocality(){
@@ -173,6 +209,7 @@ els.nights_override.addEventListener('change',()=>toggleOverride(els.nights_over
 ['crew','subs','rooms','nights','lodging_rate'].forEach(id=>q(id).addEventListener('input',()=>{recalcManpower();recalcPerDiem();}));
 
 // Per-diem file + locality
+els.load_custom.addEventListener('click',()=>els.file_input.click());
 els.file_input.addEventListener('change',loadFile);
 els.locality_search.addEventListener('input',onLocality);
 els.season.addEventListener('change',pickSeason);
@@ -181,3 +218,4 @@ els.season.addEventListener('change',pickSeason);
 // Start with all override inputs disabled (auto mode)
 els.crew.disabled = true; els.subs.disabled = true; els.rooms.disabled = true; els.nights.disabled = true;
 recalcManpower();
+loadDefaultRates();
