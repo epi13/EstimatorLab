@@ -80,9 +80,7 @@ const navigationData = [
           { label: 'Electrical Calculator', href: 'src/electrical/electrical_calculator/electrical_calculator.html', keywords: 'power circuits' },
           { label: 'Network Devices', href: 'src/electrical/telecom/telecom.html', keywords: 'telecom communications' },
           { label: 'Panelboard Pricing', href: 'src/electrical/panelboard/panelboard.html', keywords: 'panel schedules' },
-          { label: 'Service Calculator', href: 'src/electrical/service/service.html', keywords: 'distribution load' },
-          { label: 'Lighting Fixtures', href: 'src/electrical/light_fixtures/light_fixtures.html', keywords: 'illumination lumens' },
-          { label: 'Conduit Fill and Bend', href: 'src/electrical/fill_and_bend/fill_and_bend.html', keywords: 'raceway bending' }
+          { label: 'Service Calculator', href: 'src/electrical/service/service.html', keywords: 'distribution load' }
         ]
       },
       {
@@ -122,7 +120,6 @@ const navigationData = [
         calculators: [
           { label: 'Door Calculator', href: 'src/assemblies/doors/doors.html', keywords: 'openings hardware' },
           { label: 'Insulation', href: 'src/assemblies/insulation/insulation.html', keywords: 'thermal envelope' },
-          { label: 'PEMB', href: 'src/assemblies/pemb/pemb.html', keywords: 'pre engineered metal building' },
           { label: 'OC Linear Ft', href: 'src/assemblies/OC_linear_ft/OC_linear_ft.html', keywords: 'on center spacing' }
         ]
       },
@@ -131,7 +128,6 @@ const navigationData = [
         icon: 'route',
         calculators: [
           { label: 'Freight', href: 'src/logistics/freight/freight.html', keywords: 'shipping transport' },
-          { label: 'General Requirements', href: 'src/logistics/general_req/gen_req.html', keywords: 'project administration' },
           { label: 'Labor', href: 'src/logistics/perDiem/labor.html', keywords: 'workforce staffing' }
         ]
       },
