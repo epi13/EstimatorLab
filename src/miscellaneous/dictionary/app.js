@@ -2,6 +2,7 @@
 let state = {
   dataset: null,
   fileHandle: null,
+  selectedCategoryIndex: 0,
 };
 
 const el = sel => document.querySelector(sel);
@@ -14,6 +15,7 @@ window.addEventListener('DOMContentLoaded', () => {
   el('#btn-fs-open').addEventListener('click', onFsOpen);
   el('#btn-fs-save').addEventListener('click', onFsSave);
   el('#btn-add-category').addEventListener('click', () => addCategoryUI());
+  el('#category-select').addEventListener('change', onCategorySelected);
 
   el('#btn-apply-json').addEventListener('click', applyJsonFromEditor);
   el('#btn-run-test').addEventListener('click', onRunTest);
@@ -34,6 +36,12 @@ function makeEmptyDataset() {
 
 function setDataset(ds) {
   state.dataset = ds;
+  state.selectedCategoryIndex = ds.categories?.length
+    ? Math.min(state.selectedCategoryIndex, ds.categories.length - 1)
+    : -1;
+  if (state.selectedCategoryIndex < 0 && (ds.categories?.length || 0) > 0) {
+    state.selectedCategoryIndex = 0;
+  }
   el('#dataset-version').value = ds.version || '';
   el('#dataset-uoms').value = (ds.globals?.uoms || []).join(',');
   renderCategories();
@@ -95,14 +103,72 @@ async function onFsSave() {
 
 // ---------- Categories UI ----------
 function renderCategories() {
-  const wrap = el('#categories');
-  wrap.innerHTML = '';
-  (state.dataset.categories || []).forEach((cat, idx) => {
-    wrap.appendChild(renderCategory(cat, idx));
+  renderCategoryOptions();
+  renderCategoryEditor();
+}
+
+function renderCategoryOptions() {
+  const ds = state.dataset || makeEmptyDataset();
+  const select = el('#category-select');
+  select.innerHTML = '';
+
+  (ds.categories || []).forEach((cat, idx) => {
+    const opt = document.createElement('option');
+    opt.value = idx;
+    opt.textContent = `${cat.code || '(no code)'} — ${cat.name || '(unnamed)'}`;
+    select.appendChild(opt);
   });
+
+  if (!ds.categories || ds.categories.length === 0) {
+    state.selectedCategoryIndex = -1;
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No divisions available';
+    select.appendChild(opt);
+    select.value = '';
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+  if (state.selectedCategoryIndex == null || state.selectedCategoryIndex < 0 || state.selectedCategoryIndex >= ds.categories.length) {
+    state.selectedCategoryIndex = 0;
+  }
+
+  select.value = String(state.selectedCategoryIndex);
+}
+
+function renderCategoryEditor() {
+  const wrap = el('#category-editor');
+  wrap.innerHTML = '';
+  const ds = state.dataset || makeEmptyDataset();
+  const idx = state.selectedCategoryIndex;
+  const cat = ds.categories?.[idx];
+
+  if (!cat) {
+    const msg = document.createElement('p');
+    msg.className = 'muted';
+    msg.textContent = 'No divisions available. Add one to begin editing.';
+    wrap.appendChild(msg);
+    return;
+  }
+
+  wrap.appendChild(renderCategory(cat, idx));
+}
+
+function onCategorySelected(e) {
+  collectDatasetFromUI();
+  const value = parseInt(e.target.value, 10);
+  if (!Number.isNaN(value)) {
+    state.selectedCategoryIndex = value;
+    renderCategoryEditor();
+    refreshTesterSelectors();
+    refreshJsonView();
+  }
 }
 
 function renderCategory(cat, idx) {
+  state.dataset.categories = state.dataset.categories || [];
   const tpl = document.getElementById('tpl-category');
   const node = tpl.content.cloneNode(true);
 
@@ -127,17 +193,25 @@ function renderCategory(cat, idx) {
   (cat.patterns || []).forEach((p, pidx) => list.appendChild(renderPattern(p, idx, pidx)));
 
   btnDel.addEventListener('click', () => {
+    collectDatasetFromUI();
     state.dataset.categories.splice(idx,1);
+    if (state.selectedCategoryIndex >= state.dataset.categories.length) {
+      state.selectedCategoryIndex = state.dataset.categories.length - 1;
+    }
+    if (state.selectedCategoryIndex < 0) {
+      state.selectedCategoryIndex = -1;
+    }
     renderCategories();
     refreshTesterSelectors();
     refreshJsonView();
   });
 
   btnAddPattern.addEventListener('click', () => {
+    collectDatasetFromUI();
     const pat = { name:'pattern_'+Date.now(), desc:'', regex:'', flags:'gi', fields:'dimension:dim' };
     state.dataset.categories[idx].patterns = state.dataset.categories[idx].patterns || [];
     state.dataset.categories[idx].patterns.push(pat);
-    renderCategories();
+    renderCategoryEditor();
     refreshTesterSelectors();
     refreshJsonView();
   });
@@ -145,6 +219,7 @@ function renderCategory(cat, idx) {
   // store back on change
   [code,name,keywords,synonyms,uoms,dims].forEach(inp => inp.addEventListener('input', () => {
     collectDatasetFromUI();
+    renderCategoryOptions();
     refreshJsonView();
     refreshTesterSelectors();
   }));
@@ -172,8 +247,9 @@ function renderPattern(pat, catIdx, patIdx) {
   const onAny = () => { collectDatasetFromUI(); refreshJsonView(); refreshTesterSelectors(); };
   [name,desc,regex,flags,fields].forEach(inp => inp.addEventListener('input', onAny));
   btnDel.addEventListener('click', () => {
+    collectDatasetFromUI();
     state.dataset.categories[catIdx].patterns.splice(patIdx,1);
-    renderCategories();
+    renderCategoryEditor();
     refreshTesterSelectors();
     refreshJsonView();
   });
@@ -182,9 +258,12 @@ function renderPattern(pat, catIdx, patIdx) {
 }
 
 function addCategoryUI() {
+  collectDatasetFromUI();
+  state.dataset.categories = state.dataset.categories || [];
   state.dataset.categories.push({
     code:'', name:'', keywords:[], synonyms:{}, uom_hints:[], dimensions:[], patterns:[]
   });
+  state.selectedCategoryIndex = state.dataset.categories.length - 1;
   renderCategories();
   refreshTesterSelectors();
   refreshJsonView();
@@ -197,9 +276,10 @@ function collectDatasetFromUI() {
   ds.globals = ds.globals || {};
   ds.globals.uoms = (el('#dataset-uoms').value || '').split(',').map(s => s.trim()).filter(Boolean);
 
-  const catNodes = els('#categories > .category');
-  const cats = [];
-  catNodes.forEach((catNode) => {
+  ds.categories = ds.categories || [];
+  const idx = state.selectedCategoryIndex;
+  const catNode = el('#category-editor .category');
+  if (catNode && idx != null && idx >= 0 && idx < ds.categories.length) {
     const code = catNode.querySelector('.cat-code').value.trim();
     const name = catNode.querySelector('.cat-name').value.trim();
     const keywords = (catNode.querySelector('.cat-keywords').value || '').split(',').map(x => x.trim()).filter(Boolean);
@@ -222,10 +302,9 @@ function collectDatasetFromUI() {
       patterns.push({ name, desc, regex, flags, fields });
     });
 
-    cats.push({ code, name, keywords, synonyms, uom_hints:uoms, dimensions:dims, patterns });
-  });
+    ds.categories[idx] = { code, name, keywords, synonyms, uom_hints:uoms, dimensions:dims, patterns };
+  }
 
-  ds.categories = cats;
   state.dataset = ds;
   return ds;
 }
@@ -243,7 +322,11 @@ function refreshTesterSelectors() {
   });
   patSel.innerHTML = '';
   if (ds.categories.length) {
-    const pats = ds.categories[0].patterns || [];
+    const selectedIdx = (state.selectedCategoryIndex != null && state.selectedCategoryIndex >= 0 && state.selectedCategoryIndex < ds.categories.length)
+      ? state.selectedCategoryIndex
+      : 0;
+    catSel.value = String(selectedIdx);
+    const pats = ds.categories[selectedIdx]?.patterns || [];
     pats.forEach((p, i) => {
       const o = document.createElement('option'); o.value = i; o.textContent = p.name || '(unnamed)';
       patSel.appendChild(o);
