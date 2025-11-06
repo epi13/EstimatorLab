@@ -1,0 +1,119 @@
+/* Shared styles for productivity calculators (uses global tokens and base components)
+   Applies when body[data-page="productivity"] is present. */
+
+/* Layout helpers to replace minimal Tailwind utilities used by these pages */
+.grid { display: grid; }
+.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sm\:grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sm\:grid-cols-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 640px) {
+  .sm\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .sm\:grid-cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+.gap-4 { gap: var(--spacing-md); }
+.mt-4 { margin-top: var(--spacing-md); }
+.overflow-x-auto { overflow-x: auto; }
+.min-w-full { min-width: 100%; }
+.text-right { text-align: right; }
+.text-xs { font-size: 0.82rem; }
+.text-\[10px\] { font-size: 10px; }
+.font-mono { font-family: var(--font-mono); }
+
+/* Page chrome */
+body[data-page="productivity"] {
+  background: radial-gradient(1200px 600px at 10% -10%, rgba(var(--accent-rgb), 0.14), transparent 50%),
+              radial-gradient(1000px 500px at 110% 20%, rgba(148,163,184,0.1), transparent 50%),
+              var(--background);
+  color: var(--text);
+}
+
+body[data-page="productivity"] header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  padding: clamp(0.6rem, 1.4vw, 1rem);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  background:
+    linear-gradient(180deg, rgba(2, 8, 23, 0.8), rgba(2, 8, 23, 0.65));
+}
+
+/* Header inner container layout */
+body[data-page="productivity"] header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  max-width: 1100px;
+  margin-inline: auto;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  body[data-page="productivity"] header > div {
+    flex-direction: row;
+    align-items: baseline;
+  }
+}
+
+body[data-page="productivity"] main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(0.8rem, 2vw, 1.25rem);
+}
+
+/* Card tweaks (base .card exists in ui.css) */
+.card { margin-bottom: var(--spacing-lg); }
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: var(--heading);
+}
+.section-sub { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+.label-sm { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
+
+/* Inputs */
+.number-input { font-size: 0.95rem; }
+.result-box {
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: right;
+  color: var(--heading);
+  background: var(--surface-muted);
+  padding: 0.4rem 0.55rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.assumption-note { font-size: 10px; color: var(--text-muted); font-style: italic; line-height: 1.25; }
+
+/* Subgroup headers */
+.subgroup-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; font-weight: 800; color: var(--heading); }
+.subchip { display: inline-block; font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: 999px; background: var(--accent-bg-soft); color: var(--heading); border: 1px solid var(--accent-border); }
+
+/* Chips (base .chip exists in ui.css) */
+.chip { font-size: 10px; font-family: var(--font-mono); padding: 2px 6px; }
+
+/* Tables */
+table { border: 1px solid var(--border); background: var(--surface); }
+table thead tr { background: rgba(var(--accent-rgb), 0.10); color: var(--heading); }
+table tbody tr:nth-child(even) { background: rgba(148,163,184,0.06); }
+
+/* Footer */
+body[data-page="productivity"] footer { color: var(--text-muted); text-align: center; padding: 1.5rem 0; font-size: 10px; }
+
+/* Header controls */
+.header-controls { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; align-items: center; }
+.header-controls .control { display: inline-flex; align-items: center; gap: 0.4rem; }
+.header-controls label { font-size: 0.85rem; color: var(--text-muted); }
+
+/* Dropdowns */
+select { background: var(--input-bg); color: var(--text); border: 1px solid var(--border); padding: 0.45rem 0.6rem; border-radius: 12px; }
+
+/* Buttons minor variant for header */
+button.secondary { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+button.secondary:hover { border-color: var(--accent); color: var(--text); }

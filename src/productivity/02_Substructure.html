@@ -4,26 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>02 – Substructure Productivity Estimator</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-  .card {@apply bg-white/80 backdrop-blur shadow-md rounded-2xl border border-slate-300 p-4 mb-6;}
-  .section-header {@apply text-lg font-semibold text-slate-800 flex items-baseline justify-between flex-wrap gap-2;}
-  .section-sub {@apply text-[10px] text-slate-500 font-mono;}
-  .label-sm {@apply text-xs font-medium text-slate-600;}
-  .number-input {@apply w-full rounded-lg border border-slate-300 px-2 py-1 text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400;}
-  .result-box {@apply text-sm font-semibold text-slate-800 bg-slate-100 rounded-lg px-2 py-1 text-right;}
-  .chip {@apply text-[10px] leading-tight font-mono bg-slate-800 text-white rounded px-2 py-[2px] mr-1;}
-  .subgroup-header {@apply text-slate-900 text-base font-bold flex items-center gap-2 mb-2;}
-  .subchip {@apply bg-emerald-800 text-white text-[10px] font-mono px-2 py-[2px] rounded;}
-  .assumption-note {@apply text-[10px] leading-snug text-slate-500 italic;}
-  table thead tr {@apply bg-slate-800 text-white;}
-  table tbody tr:nth-child(even) {@apply bg-slate-50/60;}
-</style>
+<link rel="stylesheet" href="../css/base/index.css">
+<link rel="stylesheet" href="../css/components/index.css">
+<link rel="stylesheet" href="../css/pages/productivity/productivity.css">
 </head>
 
-<body class="bg-gradient-to-br from-slate-100 to-emerald-100 text-slate-900 min-h-screen">
+<body data-page="productivity" data-accent="emerald">
 
 <!-- HEADER -->
 <header class="px-4 py-4 border-b border-slate-300 bg-white/70 backdrop-blur sticky top-0 z-50">
@@ -38,17 +24,38 @@
       </p>
     </div>
 
-    <div class="flex flex-wrap gap-2">
-      <button
-        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
-        onclick="exportSummary()">
-        Export Summary (.json)
-      </button>
-      <button
-        class="rounded-xl border border-slate-400 bg-white text-slate-700 text-xs font-semibold px-3 py-1 hover:bg-slate-50"
-        onclick="resetAll()">
-        Reset
-      </button>
+    <div class="header-controls">
+      <label class="control" for="divisionSelect">
+        <span>Division</span>
+        <select id="divisionSelect">
+          <option value="01">01 – Site / Early Package</option>
+          <option value="02">02 – Substructure</option>
+          <option value="03">03 – Superstructure</option>
+          <option value="04">04 – Exterior Closure</option>
+          <option value="05">05 – Roof Systems</option>
+          <option value="06">06 – Interior Construction</option>
+          <option value="07">07 – Conveying Systems</option>
+          <option value="08">08 – Mechanical</option>
+          <option value="09">09 – Electrical</option>
+          <option value="10">10 – Equipment</option>
+          <option value="11">11 – Special Construction</option>
+        </select>
+      </label>
+      <label class="control" for="presetSelect">
+        <span>Preset</span>
+        <select id="presetSelect">
+          <option value="">Select preset…</option>
+          <option value="lower48">Lower 48 baseline</option>
+          <option value="ak-summer">Alaska remote (summer)</option>
+          <option value="ak-winter">Alaska remote (winter)</option>
+          <option value="urban">Dense urban (traffic control)</option>
+          <option value="fast-track">Fast-track large crew</option>
+        </select>
+      </label>
+      <div class="control">
+        <button class="secondary btn-sm" onclick="exportSummary()">Export Summary (.json)</button>
+        <button class="secondary btn-sm" onclick="resetAll()">Reset</button>
+      </div>
     </div>
   </div>
 </header>
@@ -636,6 +643,58 @@
 // --- helpers ---
 function safeNum(v){const n=parseFloat(v);return isNaN(n)?0:n;}
 
+// navigation & presets controls
+const DIVISION_PAGES = {
+  '01':'01_Site_Work.html',
+  '02':'02_Substructure.html',
+  '03':'03_Superstructure.html',
+  '04':'04_Exterior_Closure.html',
+  '05':'05_Roof_Systems.html',
+  '06':'06_Interior_Construction.html',
+  '07':'07_Conveying_Systems.html',
+  '08':'08_Mechanical.html',
+  '09':'09_Electrical.html',
+  '10':'10_Equipment.html',
+  '11':'11_Special_Construction.html'
+};
+
+function navigateDivision(code){
+  const file = DIVISION_PAGES[code];
+  if(file){ window.location.href = file; }
+}
+
+const PRESETS = {
+  lower48:   { crewSize: 4, hoursPerShift: 8,  pf: 1.00 },
+  'ak-summer':{ crewSize: 4, hoursPerShift: 10, pf: 1.25 },
+  'ak-winter':{ crewSize: 4, hoursPerShift: 10, pf: 1.50 },
+  urban:     { crewSize: 4, hoursPerShift: 8,  pf: 1.30 },
+  'fast-track':{ crewSize: 6, hoursPerShift: 10, pf: 1.20 }
+};
+
+function applyPreset(key){
+  const p = PRESETS[key];
+  if(!p) return;
+  document.getElementById('crewSize').value = p.crewSize;
+  document.getElementById('hoursPerShift').value = p.hoursPerShift;
+  document.getElementById('prodFactorGlobal').value = p.pf;
+  recalcAll();
+}
+
+function setupHeaderControls(currentCode){
+  const dSel = document.getElementById('divisionSelect');
+  if(dSel){
+    dSel.value = currentCode;
+    dSel.addEventListener('change', e=> navigateDivision(e.target.value));
+  }
+  const pSel = document.getElementById('presetSelect');
+  if(pSel){
+    pSel.addEventListener('change', e=>{
+      applyPreset(e.target.value);
+      pSel.selectedIndex = 0;
+    });
+  }
+}
+
 function crewDaysNeeded(qty, prodAdjPerDay){
   if(prodAdjPerDay<=0)return 0;
   return qty/prodAdjPerDay;
@@ -888,6 +947,7 @@ function resetAll(){
 }
 
 // init totals on load
+setupHeaderControls("02");
 recalcAll();
 </script>
 

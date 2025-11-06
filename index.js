@@ -91,11 +91,9 @@ const navigationData = [
         title: 'Ventilation',
         icon: 'wind',
         calculators: [
-          { label: 'HRV Calculator', href: 'src/ventilation/HRV/HRV.html', keywords: 'heat recovery ventilation' },
           { label: 'Vents and Diffuser', href: 'src/ventilation/diffuser/diffuser.html', keywords: 'air distribution' },
-          { label: 'Ducting', href: 'src/ventilation/ducting/ducting.html', keywords: 'airflow ductwork' },
-          { label: 'Exhaust Fans', href: 'src/mechanical/exhaust/exhaust.html', keywords: 'ventilation fans' }
-                  ]
+          { label: 'Ducting', href: 'src/ventilation/ducting/ducting.html', keywords: 'airflow ductwork' }
+                 ]
       },
       {
         title: 'Fire',
@@ -120,23 +118,6 @@ const navigationData = [
         calculators: [
           { label: 'Freight', href: 'src/logistics/freight/freight.html', keywords: 'shipping transport' },
           { label: 'Labor', href: 'src/logistics/perDiem/labor.html', keywords: 'workforce staffing' }
-        ]
-      },
-      {
-        title: 'Productivity',
-        icon: 'chart',
-        calculators: [
-          { label: 'Site Work', href: 'src/productivity/01_Site_Work.html', keywords: 'site work excavation earthwork' },
-          { label: 'Substructure', href: 'src/productivity/02_Substructure.html', keywords: 'foundation concrete footings' },
-          { label: 'Superstructure', href: 'src/productivity/03_Superstructure.html', keywords: 'structural frame steel concrete' },
-          { label: 'Exterior Closure', href: 'src/productivity/04_Exterior_Closure.html', keywords: 'exterior walls envelope' },
-          { label: 'Roof Systems', href: 'src/productivity/05_Roof_Systems.html', keywords: 'roofing waterproofing' },
-          { label: 'Interior Construction', href: 'src/productivity/06_Interior_Construction.html', keywords: 'drywall partitions finishes' },
-          { label: 'Conveying Systems', href: 'src/productivity/07_Conveying_Systems.html', keywords: 'elevators escalators lifts' },
-          { label: 'Mechanical Productivity', href: 'src/productivity/08_Mechanical.html', keywords: 'hvac plumbing mechanical systems' },
-          { label: 'Electrical Productivity', href: 'src/productivity/09_Electrical.html', keywords: 'electrical wiring systems' },
-          { label: 'Equipment Productivity', href: 'src/productivity/10_Equipment.html', keywords: 'heavy machinery equipment' },
-          { label: 'Special Construction', href: 'src/productivity/11_Special_Construction.html', keywords: 'specialty construction systems' }
         ]
       },
       {
