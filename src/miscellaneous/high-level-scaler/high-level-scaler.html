@@ -1,89 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scaling Calculator</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Scaling Calculator (with Log/Pow Control)</title>
 <style>
-  body {
+  :root{
+    --bg:#1e1e1e; --panel:#2b2b2b; --field:#3a3a3a; --ink:#f0f0f0; --muted:#cfcfcf; --accent:#72e0a8;
+  }
+  *{box-sizing:border-box}
+  body{
     font-family: system-ui, sans-serif;
-    background: #1e1e1e;
-    color: #f0f0f0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    display:flex; justify-content:center; align-items:center;
+    min-height:100vh; padding: 2rem;
   }
-  .calculator {
-    background: #2b2b2b;
-    padding: 2rem;
+  .calculator{
+    background: var(--panel);
+    padding: 1.5rem;
     border-radius: 1rem;
-    box-shadow: 0 0 20px rgba(0,0,0,0.4);
-    width: 320px;
+    box-shadow: 0 0 20px rgba(0,0,0,.4);
+    width: min(720px, 95vw);
   }
-  .calculator h2 {
-    text-align: center;
-    margin-bottom: 1rem;
+  .header{
+    display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom: .5rem;
   }
-  label {
-    display: block;
+  .header h2{ margin:0 }
+  .grid{
+    display:grid; grid-template-columns: repeat(2,1fr); gap:1rem;
+  }
+  label{ display:block; font-size:.95rem; color:var(--muted) }
+  input[type="number"]{
+    width:100%; padding:.6rem; margin-top:.35rem;
+    border:none; border-radius:.5rem; background:var(--field); color:var(--ink); font-size:1rem;
+  }
+  .row{ margin-top: .75rem; }
+  .krow{
+    display:grid; grid-template-columns: 1fr 110px; gap: .75rem; align-items:center;
+  }
+  input[type="range"]{ width:100% }
+  .help{ font-size:.85rem; color:#c9c9c9; margin-top:.2rem }
+  .output{
     margin-top: 1rem;
+    display:grid; gap:.6rem;
+    grid-template-columns: 1fr 1fr;
   }
-  input {
-    width: 100%;
-    padding: 0.6rem;
-    margin-top: 0.3rem;
-    border: none;
-    border-radius: 0.4rem;
-    background: #3a3a3a;
-    color: #f0f0f0;
-    font-size: 1rem;
+  .card{
+    background:#3b3b3b; border-radius:.6rem; padding: .9rem;
   }
-  .output {
-    margin-top: 1.5rem;
-    text-align: center;
-    font-size: 1.4rem;
-    background: #444;
-    padding: 0.8rem;
-    border-radius: 0.5rem;
+  .card h3{ margin:.1rem 0 .4rem 0; font-weight:600; font-size:1.05rem }
+  .num{ font-variant-numeric: tabular-nums; font-size:1.35rem }
+  .sub{ color:var(--muted); font-size:.9rem; margin-top:.25rem }
+  .row.buttons{ display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.5rem }
+  button{
+    background:#454545; color:var(--ink); border:none; border-radius:.5rem; padding:.5rem .75rem;
+    cursor:pointer; font-weight:600;
   }
+  button.pill{ background:#2f2f2f; }
+  button.accent{ background:var(--accent); color:#103b2a; }
+  .footnote{ margin-top:.75rem; font-size:.8rem; color:#bbbbbb }
+  .flex-2{ grid-column: span 2 }
+  .switch{
+    display:flex; gap:.5rem; align-items:center; margin-top:.5rem;
+  }
+  .switch input{ width:auto; }
 </style>
 </head>
 <body>
   <div class="calculator">
-    <h2>Scaling Calculator</h2>
-    <label for="oldSF">Old Scale:</label>
-    <input type="number" id="oldSF" placeholder="e.g. 2500">
+    <div class="header">
+      <h2>Scaling Calculator</h2>
+      <div class="buttons">
+        <button class="pill" data-k="0.8">k = 0.80</button>
+        <button class="pill accent" data-k="1.0">k = 1.00</button>
+        <button class="pill" data-k="1.2">k = 1.20</button>
+      </div>
+    </div>
 
-    <label for="newSF">New Scale:</label>
-    <input type="number" id="newSF" placeholder="e.g. 4000">
+    <div class="grid">
+      <div class="row">
+        <label for="oldSF">Old Scale</label>
+        <input type="number" id="oldSF" placeholder="e.g. 2500" min="0" step="any">
+      </div>
 
-    <label for="value">Value to Scale:</label>
-    <input type="number" id="value" placeholder="e.g. 12000">
+      <div class="row">
+        <label for="newSF">New Scale</label>
+        <input type="number" id="newSF" placeholder="e.g. 4000" min="0" step="any">
+      </div>
 
-    <div class="output" id="output">Scaled Value: 0</div>
+      <div class="row">
+        <label for="value">Value to Scale (at Old Scale)</label>
+        <input type="number" id="value" placeholder="e.g. 12000" step="any">
+      </div>
+
+      <div class="row flex-2">
+        <label>Scale Exponent (k)</label>
+        <div class="krow">
+          <input type="range" id="kSlider" min="0.4" max="1.6" step="0.01" value="1.00">
+          <input type="number" id="kInput" step="0.01" value="1.00">
+        </div>
+        <div class="help">
+          k = 1 gives linear scaling. k &lt; 1 dampens growth (economies of scale). k &gt; 1 amplifies growth (diseconomies).
+        </div>
+        <div class="switch">
+          <input type="checkbox" id="clamp">
+          <label for="clamp">Clamp extreme ratios (0.1× to 10×) to avoid blow-ups</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="output">
+      <div class="card">
+        <h3>Linear (k = 1.00)</h3>
+        <div class="num" id="linearOut">Scaled Value: 0</div>
+        <div class="sub" id="linearDetail"></div>
+      </div>
+
+      <div class="card">
+        <h3>Power-Law (logarithmic control)</h3>
+        <div class="num" id="powerOut">Scaled Value: 0</div>
+        <div class="sub" id="powerDetail"></div>
+      </div>
+    </div>
+
+    <div class="footnote">
+      Formula (power-law): <code>scaled = value × (new/old)<sup>k</sup></code>. This is a log-space linear model: <code>log(scaled) = log(value) + k·log(new/old)</code>.
+    </div>
   </div>
 
   <script>
-    const oldSF = document.getElementById('oldSF');
-    const newSF = document.getElementById('newSF');
-    const value = document.getElementById('value');
-    const output = document.getElementById('output');
+    const els = {
+      oldSF: document.getElementById('oldSF'),
+      newSF: document.getElementById('newSF'),
+      value: document.getElementById('value'),
+      kSlider: document.getElementById('kSlider'),
+      kInput: document.getElementById('kInput'),
+      clamp: document.getElementById('clamp'),
+      linearOut: document.getElementById('linearOut'),
+      powerOut: document.getElementById('powerOut'),
+      linearDetail: document.getElementById('linearDetail'),
+      powerDetail: document.getElementById('powerDetail'),
+      presetButtons: [...document.querySelectorAll('button[data-k]')],
+    };
 
-    function calculate() {
-      const oldVal = parseFloat(oldSF.value);
-      const newVal = parseFloat(newSF.value);
-      const inputVal = parseFloat(value.value);
-      if (oldVal > 0 && newVal > 0 && !isNaN(inputVal)) {
-        const scaled = inputVal * (newVal / oldVal);
-        output.textContent = "Scaled Value: " + scaled.toLocaleString(undefined, {maximumFractionDigits: 2});
+    function toNum(v){ const x = parseFloat(v); return Number.isFinite(x) ? x : NaN; }
+    function fmt(n){ return Number.isFinite(n) ? n.toLocaleString(undefined,{maximumFractionDigits: 4}) : '—'; }
+
+    function safeRatio(newVal, oldVal, clampOn){
+      if (!(newVal>0) || !(oldVal>0)) return NaN;
+      let r = newVal/oldVal;
+      if (clampOn){
+        const lo = 0.1, hi = 10; // adjustable clamp
+        r = Math.min(hi, Math.max(lo, r));
+      }
+      return r;
+    }
+
+    function calc(){
+      const oldVal = toNum(els.oldSF.value);
+      const newVal = toNum(els.newSF.value);
+      const baseVal = toNum(els.value.value);
+      const k = toNum(els.kInput.value);
+
+      const r = safeRatio(newVal, oldVal, els.clamp.checked);
+
+      // Linear
+      let linear = NaN;
+      if (Number.isFinite(r) && Number.isFinite(baseVal)){
+        linear = baseVal * r;
+      }
+
+      // Power-law with exponent k
+      let power = NaN;
+      if (Number.isFinite(r) && Number.isFinite(baseVal) && Number.isFinite(k)){
+        power = baseVal * Math.pow(r, k);
+      }
+
+      // Output
+      els.linearOut.textContent = `Scaled Value: ${fmt(linear)}`;
+      els.powerOut.textContent  = `Scaled Value: ${fmt(power)}`;
+
+      // Details
+      if (Number.isFinite(r)){
+        els.linearDetail.textContent = `linear = value × (new/old) = ${fmt(baseVal)} × ${fmt(r)}`;
+        els.powerDetail.textContent  = `power = value × (new/old)^k = ${fmt(baseVal)} × ${fmt(r)}^${fmt(k)}`;
       } else {
-        output.textContent = "Scaled Value: 0";
+        els.linearDetail.textContent = '';
+        els.powerDetail.textContent = '';
       }
     }
 
-    [oldSF, newSF, value].forEach(el => el.addEventListener('input', calculate));
+    // Sync slider <-> input
+    function syncK(from, to){
+      to.value = from.value;
+      calc();
+    }
+    els.kSlider.addEventListener('input', ()=>syncK(els.kSlider, els.kInput));
+    els.kInput.addEventListener('input',  ()=>syncK(els.kInput,  els.kSlider));
+
+    // Presets
+    els.presetButtons.forEach(b=>{
+      b.addEventListener('click', ()=>{
+        els.kInput.value = b.dataset.k;
+        els.kSlider.value = b.dataset.k;
+        calc();
+      });
+    });
+
+    // Live update for all inputs
+    [els.oldSF, els.newSF, els.value, els.clamp].forEach(el => el.addEventListener('input', calc));
+
+    // Initialize
+    calc();
   </script>
 </body>
 </html>
-

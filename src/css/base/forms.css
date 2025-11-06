@@ -22,7 +22,7 @@ select:focus,
 textarea:focus {
   border-color: var(--accent-strong);
   outline: none;
-  box-shadow: none;
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.25);
 }
 
 input[type="checkbox"],
@@ -35,12 +35,14 @@ input[type="radio"] {
 button {
   padding: 0.55rem 0.9rem;
   border: 1px solid var(--accent);
-  background: var(--accent);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(var(--accent-rgb), 0.30) 0%, rgba(0,0,0,0) 60%),
+    var(--accent);
   color: var(--button-text);
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-  box-shadow: none;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.06s ease;
+  box-shadow: 0 24px 40px rgba(var(--accent-rgb), 0.25), 0 0 30px rgba(var(--accent-rgb), 0.35);
 }
 
 button.btn-sm { padding: 0.38rem 0.6rem; font-size: 0.9rem; border-radius: 10px; }
@@ -48,7 +50,10 @@ button.btn-sm { padding: 0.38rem 0.6rem; font-size: 0.9rem; border-radius: 10px;
 button:hover {
   background: var(--accent-strong);
   border-color: var(--accent-strong);
+  box-shadow: 0 16px 32px rgba(var(--accent-rgb), 0.30), 0 0 24px rgba(var(--accent-rgb), 0.45);
 }
+
+button:active { transform: scale(0.99); }
 
 button:disabled {
   opacity: 0.6;
@@ -66,6 +71,7 @@ button.secondary {
 button.secondary:hover {
   color: var(--text);
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.2) inset;
 }
 
 button.ghost {

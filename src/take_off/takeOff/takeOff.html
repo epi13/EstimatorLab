@@ -13,6 +13,10 @@
     #dropzone .hint { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; position: static !important; left: auto !important; top: auto !important; transform: none !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
     #dropzone .actions { margin-top: 0.6rem; display: flex; gap: 0.5rem; justify-content: center; }
     #dropzone.drag { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2) inset; }
+    .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; max-height: 40vh; overflow: auto; padding: 4px; }
+    .thumb { border: 2px solid var(--border); border-radius: 8px; cursor: pointer; background: var(--surface-1, var(--surface)); transition: border-color .15s ease, box-shadow .15s ease; }
+    .thumb.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(96,165,250,0.3); }
+    .thumb img { display: block; width: 100%; height: auto; border-radius: 6px; }
   </style>
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -38,7 +42,9 @@
             </div>
             <div class="pill pill--nav" aria-label="Page navigation">
               <button class="tool" id="prev" type="button" title="Previous page">◀</button>
-              <span class="small">Page <span id="pageNum" class="num">–</span>/<span id="pageCount" class="num">–</span></span>
+              <span class="small">Page</span>
+              <select id="pageSelect" class="num" title="Select page"></select>
+              <span class="small">/ <span id="pageCount" class="num">–</span></span>
               <button class="tool" id="next" type="button" title="Next page">▶</button>
             </div>
             <div class="pill pill--zoom" aria-label="Zoom controls">
@@ -89,6 +95,11 @@
             <button class="secondary" id="toggleSnaps">Snap</button>
           </div>
           <div class="note muted-note">Snapping: end‑points & last point, useful for closing shapes cleanly.</div>
+        </section>
+
+        <section class="panel-section">
+          <h3>Pages</h3>
+          <div id="thumbs" class="thumbs" aria-label="Page thumbnails"></div>
         </section>
 
         <section class="panel-section grow">

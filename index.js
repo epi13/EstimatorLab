@@ -9,6 +9,7 @@ const navigationData = [
           { label: 'Unit Conversion', href: 'src/miscellaneous/unitConvert/units.html', keywords: 'measurements conversions' },
           { label: 'XLSX to LLM', href: 'src/miscellaneous/xlsx-to-llm/xlsx-to-llm.html', keywords: 'llm token saver' },
           { label: 'Scaler', href: 'src/miscellaneous/high-level-scaler/high-level-scaler.html', keywords: 'high level scaler' },
+          { label: 'PDF Extractor', href: 'src/pdf/extractor/extract.html', keywords: 'export data' },
           { label: 'MarkDown Editor', href: 'src/miscellaneous/MarkDownEditor/markdown.html', keywords: 'markdown editor' } 
         ]
       },
@@ -18,15 +19,6 @@ const navigationData = [
         calculators: [
           { label: 'Take Off', href: 'src/take_off/takeOff/takeOff.html', keywords: 'quantity estimator' },
           { label: 'Tables', href: 'src/take_off/gridTO/gridTO.html', keywords: 'grid reference' }
-        ]
-      },
-      {
-        title: 'PDF Tools',
-        icon: 'document',
-        calculators: [
-          { label: 'PDF Search', href: 'src/pdf/PDFsearch/PDFsearch.html', keywords: 'documents find text' },
-          { label: 'PDF Extractor', href: 'src/pdf/extractor/extract.html', keywords: 'export data' },
-          { label: 'PDF Mark-Up', href: 'src/pdf/markUp/markUp.html', keywords: 'annotations notes' }
         ]
       },
       {

@@ -5,17 +5,23 @@
 
 .chip,
 .tag,
-.badge,
 .pill {
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
-  background: var(--surface-muted);
+  background: rgba(15, 23, 42, 0.7);
   border: 1px solid var(--border);
   color: var(--heading);
   font-weight: 600;
   font-size: 0.85rem;
+}
+
+.badge {
+  background: var(--accent-bg-soft);
+  border-color: var(--accent-border);
+  color: var(--accent);
+  box-shadow: 0 18px 40px rgba(var(--accent-rgb), 0.25);
 }
 
 code,
@@ -27,15 +33,25 @@ pre {
 }
 
 .viewer {
-  position: relative; border-radius: var(--radius-lg); overflow: auto; border: 1px solid rgba(148, 163, 184, 0.18);
-  background: var(--surface); box-shadow: var(--shadow-lg); min-height: 0; display: flex; align-items: flex-start; justify-content: flex-start;
+  position: relative; 
+  border-radius: var(--radius-lg); 
+  overflow: auto; 
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background:
+      radial-gradient(circle at 50% 30%, rgba(var(--accent-rgb), 0.12), transparent 58%),
+      rgba(5, 11, 22, 0.92);
+  box-shadow: var(--shadow-lg); 
+  min-height: 0; 
+  display: flex; 
+  align-items: flex-start; 
+  justify-content: flex-start;
   padding: clamp(0.85rem, 2.2vw, 1.5rem);
 }
 
 @media (prefers-color-scheme: dark) {
   .viewer {
     background:
-      radial-gradient(circle at 50% 30%, rgba(56, 189, 248, 0.12), transparent 58%),
+      radial-gradient(circle at 50% 30%, rgba(var(--accent-rgb), 0.12), transparent 58%),
       rgba(5, 11, 22, 0.92);
   }
 }
@@ -54,10 +70,11 @@ pre {
   border: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
   backdrop-filter: blur(18px);
+  background: linear-gradient(165deg, rgba(11, 18, 32, 0.94), rgba(8, 15, 28, 0.88));
 }
 
 .card {
-  background: var(--surface);
+  background: linear-gradient(165deg, rgba(11, 18, 32, 0.94), rgba(8, 15, 28, 0.88));
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   padding: var(--spacing-md);
@@ -65,7 +82,7 @@ pre {
 }
 
 .panel {
-  background: var(--surface);
+  background: linear-gradient(165deg, rgba(11, 18, 32, 0.94), rgba(8, 15, 28, 0.88));
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);

@@ -64,6 +64,8 @@ const els = {
   dropBrowse: document.getElementById('dropBrowse'),
   toggleLabels: document.getElementById('toggleLabels'),
   toggleSnaps: document.getElementById('toggleSnaps'),
+  pageSelect: document.getElementById('pageSelect'),
+  thumbs: document.getElementById('thumbs'),
   // Modal
   calModal: document.getElementById('calModal'),
   pxDist: document.getElementById('pxDist'),
@@ -177,6 +179,7 @@ function setStatus(txt){ els.session.status.textContent = txt; }
 function setTool(name){
   state.tool = name; els.session.tool.textContent = name.charAt(0).toUpperCase()+name.slice(1);
   for(const b of els.toolGroup.querySelectorAll('.tool[data-tool]')) b.classList.toggle('active', b.dataset.tool===name);
+  persistPageState();
 }
 function updateScaleLabel(){
   if(!state.calibrated || !state.unitsPerPixel){ els.scaleLbl.textContent = 'not set'; return; }
@@ -189,16 +192,133 @@ function updateScaleLabel(){
   els.session.cal.textContent = 'Yes';
 }
 
+function docKey(){
+  return state.pdf && (state.pdf.fingerprint || null);
+}
+function readStore(){
+  const k = docKey(); if(!k) return null;
+  try{ const raw = localStorage.getItem('takeoff:'+k); if(!raw) return null; return JSON.parse(raw); }catch{ return null; }
+}
+function writeStore(store){
+  const k = docKey(); if(!k) return; try{ localStorage.setItem('takeoff:'+k, JSON.stringify(store)); }catch{}
+}
+function ensureStore(){
+  const s = readStore(); if(s) return s; return {version:1, units: state.units, showLabels: state.showLabels, snap: state.snap, tool: state.tool, lastPage: 1, pages:{}};
+}
+function persistPageState(){
+  const s = ensureStore();
+  s.units = state.units;
+  s.showLabels = state.showLabels;
+  s.snap = state.snap;
+  s.tool = state.tool;
+  s.lastPage = state.pageNum;
+  const pn = String(state.pageNum);
+  s.pages[pn] = {
+    measures: state.measures,
+    unitsPerPixel: state.unitsPerPixel,
+    calibrated: state.calibrated,
+    zoom: state.zoom
+  };
+  writeStore(s);
+}
+function restoreDocState(){
+  const s = readStore(); if(!s) return;
+  if(s.units){ state.units = s.units; if(els.units) els.units.value = state.units; }
+  if(typeof s.showLabels==='boolean'){ state.showLabels = s.showLabels; }
+  if(typeof s.snap==='boolean'){ state.snap = s.snap; if(els.toggleSnaps) els.toggleSnaps.classList.toggle('ghost', !state.snap); }
+  if(typeof s.tool==='string'){ setTool(s.tool); }
+  let pn = s.lastPage || 1; pn = Math.max(1, Math.min(state.pageCount, pn));
+  state.pageNum = pn; if(els.pageNum) els.pageNum.textContent = String(state.pageNum);
+}
+function restorePageState(pn){
+  const s = readStore();
+  const data = s && s.pages && s.pages[String(pn)];
+  state.measures = data && data.measures ? data.measures : [];
+  state.unitsPerPixel = (data && typeof data.unitsPerPixel==='number') ? data.unitsPerPixel : null;
+  state.calibrated = !!(data && data.calibrated);
+  state.zoom = (data && typeof data.zoom==='number') ? Math.max(state.minZoom, Math.min(state.maxZoom, data.zoom)) : 1;
+  refreshSnapPoints(); updateScaleLabel(); refreshList();
+}
+
+function buildPageSelect(){
+  if(!els.pageSelect) return;
+  els.pageSelect.innerHTML = '';
+  for(let i=1;i<=state.pageCount;i++){
+    const opt = document.createElement('option');
+    opt.value = String(i); opt.textContent = String(i);
+    els.pageSelect.appendChild(opt);
+  }
+  els.pageSelect.value = String(state.pageNum);
+}
+
+async function buildThumbnails(){
+  if(!els.thumbs || !state.pdf) return;
+  els.thumbs.innerHTML = '';
+  const items = [];
+  for(let i=1;i<=state.pageCount;i++){
+    const div = document.createElement('div');
+    div.className = 'thumb';
+    div.dataset.page = String(i);
+    const img = document.createElement('img');
+    img.alt = 'Page '+i;
+    div.appendChild(img);
+    div.addEventListener('click', ()=>{ goToPage(i); });
+    els.thumbs.appendChild(div);
+    items.push({i, div, img});
+  }
+  for(const it of items){
+    try{
+      const page = await state.pdf.getPage(it.i);
+      const v1 = page.getViewport({ scale: 1 });
+      const targetW = 160;
+      const scale = Math.max(0.1, targetW / v1.width);
+      const viewport = page.getViewport({ scale });
+      const cnv = document.createElement('canvas');
+      cnv.width = Math.ceil(viewport.width);
+      cnv.height = Math.ceil(viewport.height);
+      const ctx = cnv.getContext('2d');
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      it.img.src = cnv.toDataURL('image/png');
+    }catch{}
+  }
+  updateThumbActive();
+}
+
+function updateThumbActive(){
+  if(!els.thumbs) return;
+  const kids = els.thumbs.querySelectorAll('.thumb');
+  kids.forEach(k=> k.classList.toggle('active', Number(k.dataset.page)===state.pageNum));
+}
+
+function goToPage(n){
+  if(!state.pdf) return;
+  const newN = Math.max(1, Math.min(state.pageCount, n));
+  if(newN===state.pageNum) return;
+  persistPageState();
+  state.pageNum = newN;
+  if(els.pageNum) els.pageNum.textContent = String(state.pageNum);
+  if(els.pageSelect) els.pageSelect.value = String(state.pageNum);
+  updateThumbActive();
+  restorePageState(state.pageNum);
+  renderPage();
+}
+
 // ====== PDF Rendering ======
 let renderTask = null;
 async function loadPDF(data){
   try{
     state.pdf = await getDocument(data).promise;
     state.pageCount = state.pdf.numPages; els.pageCount.textContent = state.pageCount;
-    state.pageNum = 1; els.pageNum.textContent = 1;
+    state.pageNum = 1; if(els.pageNum) els.pageNum.textContent = 1;
+    buildPageSelect();
+    restoreDocState();
+    restorePageState(state.pageNum);
     setStatus('PDF loaded');
     if(els.dropzone) els.dropzone.style.display = 'none';
+    await buildThumbnails();
+    if(els.pageSelect) els.pageSelect.value = String(state.pageNum);
     await renderPage();
+    updateThumbActive();
   }catch(e){
     console.error(e); setStatus('Failed to load PDF');
     if(els.fileName) els.fileName.textContent = 'No document loaded';
@@ -257,6 +377,7 @@ function setZoom(z, around){
   }
 
   state.zoom = z;
+  persistPageState();
   renderPage().then(()=>{
     if(around){
       const rect = els.pdf.getBoundingClientRect();
@@ -436,8 +557,9 @@ window.addEventListener('dragover', (e)=>{ e.preventDefault(); });
 window.addEventListener('drop', (e)=>{ e.preventDefault(); });
 
 // Paging
-els.prev.addEventListener('click', ()=>{ if(!state.pdf) return; state.pageNum=Math.max(1,state.pageNum-1); els.pageNum.textContent=state.pageNum; renderPage(); });
-els.next.addEventListener('click', ()=>{ if(!state.pdf) return; state.pageNum=Math.min(state.pageCount,state.pageNum+1); els.pageNum.textContent=state.pageNum; renderPage(); });
+els.prev.addEventListener('click', ()=>{ if(!state.pdf) return; goToPage(state.pageNum-1); });
+els.next.addEventListener('click', ()=>{ if(!state.pdf) return; goToPage(state.pageNum+1); });
+if(els.pageSelect){ els.pageSelect.addEventListener('change', ()=>{ if(!state.pdf) return; const n=parseInt(els.pageSelect.value,10)||1; goToPage(n); }); }
 
 // Zoom
 els.zoomIn.addEventListener('click', ()=> setZoom(state.zoom*1.2));
@@ -457,11 +579,11 @@ els.toolGroup.addEventListener('click', (e)=>{
 });
 
 // Units
-els.units.addEventListener('change', ()=>{ state.units = els.units.value; updateScaleLabel(); drawOverlay(); });
+els.units.addEventListener('change', ()=>{ state.units = els.units.value; updateScaleLabel(); drawOverlay(); persistPageState(); });
 
 // Toggle labels/snaps
-els.toggleLabels.addEventListener('click', ()=>{ state.showLabels=!state.showLabels; drawOverlay(); });
-els.toggleSnaps.addEventListener('click', ()=>{ state.snap=!state.snap; els.toggleSnaps.classList.toggle('ghost', !state.snap); });
+els.toggleLabels.addEventListener('click', ()=>{ state.showLabels=!state.showLabels; drawOverlay(); persistPageState(); });
+els.toggleSnaps.addEventListener('click', ()=>{ state.snap=!state.snap; els.toggleSnaps.classList.toggle('ghost', !state.snap); persistPageState(); });
 
 // Overlay pointer events
 let isPanning=false; let panStart={x:0,y:0,sl:0,st:0}; let spaceHeld=false;
@@ -506,7 +628,7 @@ function finishPolygon(){
 els.finish.addEventListener('click', finishPolygon);
 
 els.clear.addEventListener('click', ()=>{
-  state.measures = []; state.drawing=null; state.lastLen=null; state.lastArea=null; els.session.len.textContent='–'; els.session.area.textContent='–'; refreshSnapPoints(); drawOverlay(); refreshList();
+  state.measures = []; state.drawing=null; state.lastLen=null; state.lastArea=null; els.session.len.textContent='–'; els.session.area.textContent='–'; refreshSnapPoints(); drawOverlay(); refreshList(); persistPageState();
 });
 
 // Export
@@ -556,7 +678,7 @@ function applyCalibration(px){
   const inFeet = value * unitsToBaseFactor(u); // feet
   state.unitsPerPixel = inFeet / px; // feet per pixel
   state.calibrated = true; closeCalModal();
-  updateScaleLabel(); setStatus('Calibration set'); drawOverlay();
+  updateScaleLabel(); setStatus('Calibration set'); drawOverlay(); persistPageState();
 }
 
 // Line measurement
@@ -585,6 +707,7 @@ function addMeasure(measure){
   refreshSnapPoints();
   drawOverlay();
   refreshList();
+  persistPageState();
 }
 
 function refreshList(){

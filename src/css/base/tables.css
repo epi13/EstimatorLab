@@ -15,7 +15,11 @@ table td {
 }
 
 table thead {
-  background: var(--surface-muted);
+  background: rgba(var(--accent-rgb), 0.08);
   color: var(--heading);
   font-weight: 600;
+}
+
+table tfoot td {
+  border-top: 1px solid var(--accent);
 }

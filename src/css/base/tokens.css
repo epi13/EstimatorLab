@@ -1,27 +1,31 @@
+
 :root {
-  color-scheme: light dark;
-  
-  /* Core colors */
-  --surface: #ffffff;
-  --surface-muted: #f1f5f9;
-  --background: #eef2ff;
-  --text: #111827;
-  --text-muted: #4b5563;
-  --heading: #0f172a;
-  --border: rgba(15, 23, 42, 0.12);
+  color-scheme: dark;
+
+  /* Core dark colors */
+  --surface: #0f172a;
+  --surface-muted: #17213a;
+  --background: #020817;
+  --text: #e2e8f0;
+  --text-muted: #9fb1d3;
+  --heading: #f8fafc;
+  --border: rgba(148, 163, 184, 0.22);
+
+  /* Default accent (sky/blue) */
   --accent: #60a5fa;
   --accent-strong: #38bdf8;
-  --shadow-soft: 0 28px 55px -35px rgba(15, 23, 42, 0.45);
-  --button-text: #ffffff;
-  --input-bg: rgba(255, 255, 255, 0.92);
-  
+  --accent-rgb: 96, 165, 250;
+  --button-text: #020817;
+  --input-bg: rgba(15, 23, 42, 0.85);
+
   /* Extended theme colors */
   --warn: #facc15;
   --danger: #f87171;
   --success: #34d399;
   --shadow-lg: 0 28px 60px -35px rgba(5, 16, 32, 0.82);
   --shadow-sm: 0 16px 36px -32px rgba(8, 25, 56, 0.8);
-  
+  --shadow-soft: 0 28px 55px -35px rgba(5, 16, 32, 0.55);
+
   /* Spacing and sizing */
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -35,51 +39,27 @@
   --spacing-xl: 2rem;
   --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Derived accent helpers */
+  --accent-bg-soft: rgba(var(--accent-rgb), 0.12);
+  --accent-border: rgba(var(--accent-rgb), 0.50);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Core dark colors */
-    --surface: #0f172a;
-    --surface-muted: #17213a;
-    --background: #020817;
-    --text: #e2e8f0;
-    --text-muted: #9fb1d3;
-    --heading: #f8fafc;
-    --border: rgba(148, 163, 184, 0.22);
-    --accent: #60a5fa;
-    --accent-strong: #38bdf8;
-    --shadow-soft: 0 38px 70px -40px rgba(15, 118, 110, 0.5);
-    --button-text: #020817;
-    --input-bg: rgba(15, 23, 42, 0.85);
-    
-    /* Extended dark theme colors */
-    --warn: #facc15;
-    --danger: #f87171;
-    --success: #34d399;
-    --shadow-lg: 0 28px 60px -35px rgba(5, 16, 32, 0.82);
-    --shadow-sm: 0 16px 36px -32px rgba(8, 25, 56, 0.8);
-  }
-  body {
-    background:
-      radial-gradient(circle at 12% 8%, rgba(37, 99, 235, 0.28), transparent 55%),
-      radial-gradient(circle at 88% 16%, rgba(16, 185, 129, 0.22), transparent 62%),
-      linear-gradient(180deg, #01030c 0%, #020617 55%, #01030c 100%);
-    background-attachment: fixed;
-  }
-  .card,
-  .panel,
-  .topbar {
-    background: linear-gradient(165deg, rgba(11, 18, 32, 0.94), rgba(8, 15, 28, 0.88));
-    border-color: rgba(148, 163, 184, 0.2);
-  }
-  .badge {
-    background: rgba(148, 163, 184, 0.16);
-    color: #e2e8f0;
-  }
-  .pill {
-    background: rgba(13, 22, 38, 0.92);
-    border-color: rgba(148, 163, 184, 0.18);
-    box-shadow: var(--shadow-sm);
-  }
+/* Accent palette options for per-page variety */
+:root {
+  --accent-gold: #facc15;      --accent-gold-strong: #fde047;      --accent-gold-rgb: 250, 204, 21;
+  --accent-sky: #38bdf8;       --accent-sky-strong: #7dd3fc;       --accent-sky-rgb: 56, 189, 248;
+  --accent-emerald: #34d399;   --accent-emerald-strong: #6ee7b7;   --accent-emerald-rgb: 52, 211, 153;
+  --accent-purple: #a78bfa;    --accent-purple-strong: #c4b5fd;    --accent-purple-rgb: 167, 139, 250;
+  --accent-rose: #fb7185;      --accent-rose-strong: #fda4af;      --accent-rose-rgb: 251, 113, 133;
+  --accent-orange: #fb923c;    --accent-orange-strong: #fdba74;    --accent-orange-rgb: 251, 146, 60;
 }
+
+/* Use body[data-accent] to switch accents per page */
+body[data-accent="gold"]    { --accent: var(--accent-gold);    --accent-strong: var(--accent-gold-strong);    --accent-rgb: var(--accent-gold-rgb); }
+body[data-accent="sky"]     { --accent: var(--accent-sky);     --accent-strong: var(--accent-sky-strong);     --accent-rgb: var(--accent-sky-rgb); }
+body[data-accent="emerald"] { --accent: var(--accent-emerald); --accent-strong: var(--accent-emerald-strong); --accent-rgb: var(--accent-emerald-rgb); }
+body[data-accent="purple"]  { --accent: var(--accent-purple);  --accent-strong: var(--accent-purple-strong);  --accent-rgb: var(--accent-purple-rgb); }
+body[data-accent="rose"]    { --accent: var(--accent-rose);    --accent-strong: var(--accent-rose-strong);    --accent-rgb: var(--accent-rose-rgb); }
+body[data-accent="orange"]  { --accent: var(--accent-orange);  --accent-strong: var(--accent-orange-strong);  --accent-rgb: var(--accent-orange-rgb); }
+
