@@ -10,6 +10,7 @@ const navigationData = [
           { label: 'XLSX to LLM', href: 'src/miscellaneous/xlsx-to-llm/xlsx-to-llm.html', keywords: 'llm token saver' },
           { label: 'Scaler', href: 'src/miscellaneous/high-level-scaler/high-level-scaler.html', keywords: 'high level scaler' },
           { label: 'PDF Extractor', href: 'src/pdf/extractor/extract.html', keywords: 'export data' },
+          { label: 'Dictionary', href: 'src/miscellaneous/dictionary/index.html', keywords: 'dictionary' },    
           { label: 'MarkDown Editor', href: 'src/miscellaneous/MarkDownEditor/markdown.html', keywords: 'markdown editor' } 
         ]
       },
