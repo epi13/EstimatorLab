@@ -1,0 +1,2739 @@
+{
+  "version": "0.1.0",
+  "globals": {
+    "uoms": [
+      "LF",
+      "SF",
+      "EA",
+      "HR",
+      "FT",
+      "GAL",
+      "LB"
+    ]
+  },
+  "categories": [
+    {
+      "code": "08 30 00",
+      "name": "HVAC — VRF Copper Piping",
+      "keywords": [
+        "VRF",
+        "refrigerant",
+        "copper",
+        "Type L",
+        "piping",
+        "pipe"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter"
+      },
+      "uom_hints": [
+        "LF",
+        "EA"
+      ],
+      "dimensions": [
+        "1/4\"",
+        "3/8\"",
+        "1/2\"",
+        "5/8\"",
+        "3/4\"",
+        "7/8\"",
+        "1-1/8\"",
+        "1-3/8\""
+      ],
+      "patterns": [
+        {
+          "name": "dim_mat_uom_line",
+          "desc": "Capture dimension, material and UOM on a single line",
+          "regex": "(?<dim>\\b\\d+(?:-\\d+/\\d+|/\\d+|\\.\\d+)?\\s?\")\\s*(?<mat>copper|cu|type\\s*L\\s*copper)\\b[\\s\\-,:]*.*?\\b(?<uom>LF|EA|FT)\\b",
+          "flags": "gim",
+          "fields": "dimension:dim, material:mat, uom:uom"
+        },
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|EA|FT)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        }
+      ]
+    },
+    {
+      "code": "09 30 00",
+      "name": "Electrical — Conduit & Wire",
+      "keywords": [
+        "conduit",
+        "EMT",
+        "RMC",
+        "wire",
+        "THHN",
+        "cable"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "al": "aluminum",
+        "awg": "AWG"
+      },
+      "uom_hints": [
+        "LF",
+        "EA"
+      ],
+      "dimensions": [
+        "1/2\"",
+        "3/4\"",
+        "1\"",
+        "1-1/4\"",
+        "1-1/2\"",
+        "2\""
+      ],
+      "patterns": [
+        {
+          "name": "conduit_dim_uom",
+          "desc": "Conduit size and UOM",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+/\\d+|/\\d+|\\.\\d+)?\\s?\")\\s*(?<type>EMT|RMC|PVC)\\b.*?\\b(?<uom>LF|EA)\\b",
+          "flags": "gim",
+          "fields": "dimension:dim, conduit_type:type, uom:uom"
+        }
+      ]
+    },
+    {
+      "code": "00 00 00",
+      "name": "Division 00 — Procurement and Contracting Requirements",
+      "keywords": [
+        "procurement",
+        "contract",
+        "bidding",
+        "submittal",
+        "closeout"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "01 00 00",
+      "name": "Division 01 — General Requirements",
+      "keywords": [
+        "general requirements",
+        "admin",
+        "temporary",
+        "mobilization",
+        "allowance"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "02 00 00",
+      "name": "Division 02 — Existing Conditions",
+      "keywords": [
+        "demo",
+        "existing",
+        "survey",
+        "hazmat",
+        "abatement"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "03 00 00",
+      "name": "Division 03 — Concrete",
+      "keywords": [
+        "concrete",
+        "rebar",
+        "formwork",
+        "slab",
+        "cure"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "04 00 00",
+      "name": "Division 04 — Masonry",
+      "keywords": [
+        "masonry",
+        "cmu",
+        "brick",
+        "block",
+        "mortar"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "05 00 00",
+      "name": "Division 05 — Metals",
+      "keywords": [
+        "steel",
+        "misc metals",
+        "stainless",
+        "aluminum",
+        "fabrication"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "06 00 00",
+      "name": "Division 06 — Wood, Plastics, and Composites",
+      "keywords": [
+        "lumber",
+        "wood",
+        "carpentry",
+        "millwork",
+        "casework"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "07 00 00",
+      "name": "Division 07 — Thermal and Moisture Protection",
+      "keywords": [
+        "insulation",
+        "membrane",
+        "roofing",
+        "waterproofing",
+        "vapor"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "08 00 00",
+      "name": "Division 08 — Openings",
+      "keywords": [
+        "door",
+        "frame",
+        "hardware",
+        "window",
+        "glazing",
+        "overhead door"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "09 00 00",
+      "name": "Division 09 — Finishes",
+      "keywords": [
+        "gypsum",
+        "tile",
+        "ceilings",
+        "paint",
+        "flooring",
+        "carpet",
+        "vinyl"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "10 00 00",
+      "name": "Division 10 — Specialties",
+      "keywords": [
+        "toilet partition",
+        "locker",
+        "signage",
+        "projection",
+        "fire extinguisher"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "11 00 00",
+      "name": "Division 11 — Equipment",
+      "keywords": [
+        "equipment",
+        "appliance",
+        "food service",
+        "lab"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "12 00 00",
+      "name": "Division 12 — Furnishings",
+      "keywords": [
+        "furnishings",
+        "blinds",
+        "drapery",
+        "casegoods"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "13 00 00",
+      "name": "Division 13 — Special Construction",
+      "keywords": [
+        "special construction",
+        "preengineered",
+        "modular",
+        "clean room"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "14 00 00",
+      "name": "Division 14 — Conveying Equipment",
+      "keywords": [
+        "elevator",
+        "lift",
+        "conveyor",
+        "dumbwaiter"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "15 00 00",
+      "name": "Division 15 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "16 00 00",
+      "name": "Division 16 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "17 00 00",
+      "name": "Division 17 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "18 00 00",
+      "name": "Division 18 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "19 00 00",
+      "name": "Division 19 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "20 00 00",
+      "name": "Division 20 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "21 00 00",
+      "name": "Division 21 — Fire Suppression",
+      "keywords": [
+        "sprinkler",
+        "fire suppression",
+        "standpipe",
+        "foam"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "22 00 00",
+      "name": "Division 22 — Plumbing",
+      "keywords": [
+        "plumbing",
+        "pipe",
+        "valve",
+        "fixture",
+        "water heater"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "23 00 00",
+      "name": "Division 23 — Heating, Ventilating, and Air Conditioning (HVAC)",
+      "keywords": [
+        "hvac",
+        "duct",
+        "vav",
+        "chiller",
+        "boiler",
+        "vrf",
+        "piping"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "24 00 00",
+      "name": "Division 24 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "25 00 00",
+      "name": "Division 25 — Integrated Automation",
+      "keywords": [
+        "bms",
+        "building automation",
+        "controls",
+        "bacnet"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "26 00 00",
+      "name": "Division 26 — Electrical",
+      "keywords": [
+        "electrical",
+        "conduit",
+        "wire",
+        "panelboard",
+        "transformer",
+        "lighting"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "27 00 00",
+      "name": "Division 27 — Communications",
+      "keywords": [
+        "telecom",
+        "data",
+        "cat6",
+        "fiber",
+        "racks"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "28 00 00",
+      "name": "Division 28 — Electronic Safety and Security",
+      "keywords": [
+        "fire alarm",
+        "security",
+        "cctv",
+        "access control"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "29 00 00",
+      "name": "Division 29 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "30 00 00",
+      "name": "Division 30 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "31 00 00",
+      "name": "Division 31 — Earthwork",
+      "keywords": [
+        "earthwork",
+        "excavate",
+        "backfill",
+        "grading",
+        "trenching"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "32 00 00",
+      "name": "Division 32 — Exterior Improvements",
+      "keywords": [
+        "site improvements",
+        "paving",
+        "striping",
+        "fencing",
+        "landscape"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "33 00 00",
+      "name": "Division 33 — Utilities",
+      "keywords": [
+        "utilities",
+        "water main",
+        "sanitary",
+        "storm",
+        "gas",
+        "power"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "34 00 00",
+      "name": "Division 34 — Transportation",
+      "keywords": [
+        "transportation",
+        "guideway",
+        "track",
+        "signals"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "35 00 00",
+      "name": "Division 35 — Waterway and Marine",
+      "keywords": [
+        "marine",
+        "coastal",
+        "dredge",
+        "bulkhead",
+        "dock"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "36 00 00",
+      "name": "Division 36 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "37 00 00",
+      "name": "Division 37 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "38 00 00",
+      "name": "Division 38 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "39 00 00",
+      "name": "Division 39 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "40 00 00",
+      "name": "Division 40 — Process Integration",
+      "keywords": [
+        "process",
+        "integration",
+        "skids",
+        "piping"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "41 00 00",
+      "name": "Division 41 — Material Processing and Handling Equipment",
+      "keywords": [
+        "material processing",
+        "conveyor",
+        "hopper",
+        "crusher"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "42 00 00",
+      "name": "Division 42 — Process Heating, Cooling, and Drying Equipment",
+      "keywords": [
+        "kiln",
+        "furnace",
+        "oven",
+        "cooling"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "43 00 00",
+      "name": "Division 43 — Process Gas and Liquid Handling, Purification and Storage Equipment",
+      "keywords": [
+        "pump",
+        "compressor",
+        "tank",
+        "separator"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "44 00 00",
+      "name": "Division 44 — Pollution and Waste Control Equipment",
+      "keywords": [
+        "pollution",
+        "waste",
+        "scrubber",
+        "filter"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "45 00 00",
+      "name": "Division 45 — Industry-Specific Manufacturing Equipment",
+      "keywords": [
+        "industry equipment",
+        "manufacturing",
+        "process line"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "46 00 00",
+      "name": "Division 46 — Water and Wastewater Equipment",
+      "keywords": [
+        "water treatment",
+        "wastewater",
+        "clarifier",
+        "aeration"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "47 00 00",
+      "name": "Division 47 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "48 00 00",
+      "name": "Division 48 — Electrical Power Generation",
+      "keywords": [
+        "generation",
+        "genset",
+        "turbine",
+        "solar",
+        "battery"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    },
+    {
+      "code": "49 00 00",
+      "name": "Division 49 — Reserved",
+      "keywords": [
+        "reserved"
+      ],
+      "synonyms": {
+        "cu": "copper",
+        "Ø": "diameter",
+        "awg": "AWG",
+        "al": "aluminum",
+        "ss": "stainless steel"
+      },
+      "uom_hints": [
+        "LF",
+        "SF",
+        "EA",
+        "HR",
+        "FT",
+        "GAL",
+        "LB",
+        "CY",
+        "SY",
+        "LS"
+      ],
+      "dimensions": [],
+      "patterns": [
+        {
+          "name": "price_cols_simple",
+          "desc": "Price table row with Material and Labor as $ amounts on one line",
+          "regex": "^(?<desc>[^\\|\\t]+?)\\s+\\b(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b.*?\\$\\s*(?<mat>[0-9,]+(?:\\.\\d+)?).*?\\$\\s*(?<lab>[0-9,]+(?:\\.\\d+)?)",
+          "flags": "gim",
+          "fields": "desc:desc, uom:uom, material_rate:mat, labor_rate:lab"
+        },
+        {
+          "name": "qty_uom_desc",
+          "desc": "Capture quantity, UOM, and description regardless of price columns",
+          "regex": "\\b(?<qty>\\d+(?:\\.\\d+)?)\\s*(?<uom>LF|SF|SY|EA|FT|CY|LS|HR|GAL|LB)\\b[\\s\\-\\:]+(?<desc>.+)",
+          "flags": "gim",
+          "fields": "quantity:qty, uom:uom, desc:desc"
+        },
+        {
+          "name": "dim_inch_token",
+          "desc": "Capture a nominal inch dimension token (e.g., 1-1/2\", 3/4\")",
+          "regex": "\\b(?<dim>\\d+(?:-\\d+\\/\\d+|\\/\\d+|\\.\\d+)?\\s?\\\")\\b",
+          "flags": "gim",
+          "fields": "dimension:dim"
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "generated": "2025-11-06T20:09:16.956336",
+    "notes": [
+      "Scaffold includes ALL CSI 2020 Divisions 00–49 as one category per division using the 'XX 00 00' code.",
+      "Existing user-defined categories were preserved unmodified for backward compatibility.",
+      "You can add finer-grained sections later (e.g., '23 21 13 Hydronic Piping') by cloning a scaffold entry and specializing keywords/patterns."
+    ]
+  }
+}

@@ -1,0 +1,43 @@
+/* Minimal modern styling */ 
+:root {
+  --bg:#0f1115; --panel:#161a22; --muted:#a4acc4; --text:#e8ecf1; --accent:#82aaff; --danger:#ff757f; --ok:#7ee787;
+  --border:#252b36;
+}
+* { box-sizing: border-box; }
+html,body { height:100%; }
+body {
+  margin:0; font-family: ui-sans-serif, system-ui, Segoe UI, Roboto, Arial;
+  color:var(--text); background:linear-gradient(180deg,#0b0d12,#0f1115);
+}
+header { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid var(--border); }
+h1 { margin:0; font-size:1.15rem; }
+.muted { color: var(--muted); font-weight:400; }
+.actions button { margin-left:8px; }
+main { display:grid; grid-template-columns: 520px 1fr; gap:16px; padding:16px; }
+section .card {
+  background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom:16px;
+  box-shadow: 0 10px 24px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.03);
+}
+.row { display:flex; align-items:center; gap:8px; margin:8px 0; }
+.row label { width:240px; color:var(--muted); font-size:.9rem; }
+input, textarea, select, button {
+  background:#0f131a; color:var(--text); border:1px solid var(--border); border-radius:10px;
+  padding:8px 10px; font-size:.95rem; outline:none;
+}
+textarea { min-height:84px; width:100%; }
+input, select { width:100%; }
+button { background:#10141b; cursor:pointer; }
+button:hover { border-color:#2c3443; }
+button.danger { color:var(--danger); }
+.flex-between { display:flex; justify-content:space-between; align-items:center; }
+.grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+#categories { display:flex; flex-direction:column; gap:8px; }
+.category summary, .pattern summary { list-style:none; display:flex; align-items:center; gap:8px; cursor:pointer; }
+.category summary::-webkit-details-marker, .pattern summary::-webkit-details-marker { display:none; }
+.category, .pattern { border:1px solid var(--border); border-radius:12px; padding:8px; }
+.pattern { margin:8px 0; }
+.left .card h2, .right .card h2 { margin-top:4px; }
+#json-view { min-height:200px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+#tester-text { min-height:140px; }
+#test-results { background:#0e1218; border:1px dashed #2b3140; border-radius:10px; padding:10px; min-height:80px; overflow:auto; }
+#match-count { color: var(--ok); margin-left:10px; }

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Regex & Dictionary Lab — CSI-aware</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>Regex & Dictionary Lab <span class="muted">— CSI-aware</span></h1>
+    <div class="actions">
+      <button id="btn-load">Load JSON</button>
+      <button id="btn-save">Download JSON</button>
+      <button id="btn-fs-open" title="Chromium-only">Open (FS Access)</button>
+      <button id="btn-fs-save" title="Chromium-only">Save (FS Access)</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="left">
+      <div class="card">
+        <h2>Dataset</h2>
+        <div class="row">
+          <label>Version</label>
+          <input id="dataset-version" placeholder="e.g., 0.1.0" />
+        </div>
+        <div class="row">
+          <label>Globals / UOMs (comma-separated)</label>
+          <input id="dataset-uoms" placeholder="LF,SF,EA,HR,FT,GAL,LB" />
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex-between">
+          <h2>CSI Categories</h2>
+          <button id="btn-add-category">+ Add Category</button>
+        </div>
+        <div id="categories"></div>
+      </div>
+    </section>
+
+    <section class="right">
+      <div class="card">
+        <h2>Live Regex Tester</h2>
+        <div class="row">
+          <label>Category</label>
+          <select id="tester-category"></select>
+        </div>
+        <div class="row">
+          <label>Pattern</label>
+          <select id="tester-pattern"></select>
+        </div>
+        <div class="row">
+          <label>Test Text</label>
+          <textarea id="tester-text" placeholder="Paste spec/submittal lines here..."></textarea>
+        </div>
+        <div class="row">
+          <button id="btn-run-test">Run</button>
+          <span id="match-count"></span>
+        </div>
+        <pre id="test-results"></pre>
+      </div>
+
+      <div class="card">
+        <h2>JSON Source</h2>
+        <textarea id="json-view" spellcheck="false"></textarea>
+        <div class="row">
+          <button id="btn-apply-json">Apply JSON to Editor</button>
+          <span class="muted">Tip: this view is editable — paste external JSON and Apply.</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <input type="file" id="file-input" accept="application/json" hidden />
+
+  <template id="tpl-category">
+    <details class="category" open>
+      <summary>
+        <input class="cat-code" placeholder="e.g., 08 30 00" />
+        <input class="cat-name" placeholder="e.g., HVAC (VRF, copper piping)" />
+        <button class="danger btn-del-cat" title="Delete category">Delete</button>
+      </summary>
+
+      <div class="grid-2">
+        <div>
+          <h3>Keywords</h3>
+          <textarea class="cat-keywords" placeholder="Comma-separated keywords (e.g., VRF,refrigerant,copper,Type L)"></textarea>
+          <h3>Synonyms (key:value per line)</h3>
+          <textarea class="cat-synonyms" placeholder="Examples:
+cu:copper
+1 1/8:1-1/8"></textarea>
+        </div>
+        <div>
+          <h3>UOM Hints</h3>
+          <input class="cat-uoms" placeholder="LF,EA,SF,HR" />
+          <h3>Dimension Presets</h3>
+          <textarea class="cat-dimensions" placeholder='E.g., 1/4",3/8",1/2",5/8",3/4",7/8",1-1/8",1-3/8"'></textarea>
+        </div>
+      </div>
+
+      <div class="patterns">
+        <div class="flex-between">
+          <h3>Patterns</h3>
+          <button class="btn-add-pattern">+ Add Pattern</button>
+        </div>
+        <div class="pattern-list"></div>
+      </div>
+    </details>
+  </template>
+
+  <template id="tpl-pattern">
+    <details class="pattern" open>
+      <summary>
+        <input class="pat-name" placeholder="pattern name (unique)" />
+        <input class="pat-desc" placeholder="description" />
+        <button class="danger btn-del-pattern" title="Delete pattern">Delete</button>
+      </summary>
+      <div class="row">
+        <label>Regex (JS)</label>
+        <input class="pat-regex" placeholder="e.g., (?<dim>\b\d+(?:-\d+/\d+|\.\d+)?\s?")\s*(?<mat>copper|cu)" />
+      </div>
+      <div class="row">
+        <label>Flags</label>
+        <input class="pat-flags" placeholder="gi" />
+      </div>
+      <div class="row">
+        <label>Fields map (key:groupName, comma-separated)</label>
+        <input class="pat-fields" placeholder="dimension:dim, material:mat, uom:uom" />
+      </div>
+    </details>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
