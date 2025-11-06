@@ -7,7 +7,6 @@ const navigationData = [
           { label: 'Home', href: 'src/homeCalc/homeCalc.html', keywords: 'generic calculator' },
           { label: 'JSON Search', href: 'src/search/fuzzy_search.html', keywords: 'data fuzzy finder' },
           { label: 'Unit Conversion', href: 'src/miscellaneous/unitConvert/units.html', keywords: 'measurements conversions' },
-          { label: 'Description Translator', href: 'src/miscellaneous/translator/descriptionTranslator.html', keywords: 'translate descriptions' },
           { label: 'XLSX to LLM', href: 'src/miscellaneous/xlsx-to-llm/xlsx-to-llm.html', keywords: 'llm token saver' },
           { label: 'Scaler', href: 'src/miscellaneous/high-level-scaler/high-level-scaler.html', keywords: 'high level scaler' },
           { label: 'MarkDown Editor', href: 'src/miscellaneous/MarkDownEditor/markdown.html', keywords: 'markdown editor' } 
