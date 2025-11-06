@@ -1,0 +1,1132 @@
+[
+  {
+    "Locality": "[OTHER]",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "ADAK",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "ANCHORAGE",
+    "Seasons": "05/01 - 08/31",
+    "Max_Lodging": 279,
+    "Local_Meals": 116,
+    "Proportional_Meals": 67,
+    "Local_Incidental": 29,
+    "Max_Per_Diem": 424,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "ANCHORAGE",
+    "Seasons": "09/01 - 04/30",
+    "Max_Lodging": 229,
+    "Local_Meals": 116,
+    "Proportional_Meals": 67,
+    "Local_Incidental": 29,
+    "Max_Per_Diem": 374,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "BARROW",
+    "Seasons": "05/01 - 08/31",
+    "Max_Lodging": 301,
+    "Local_Meals": 103,
+    "Proportional_Meals": 61,
+    "Local_Incidental": 26,
+    "Max_Per_Diem": 430,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "BARROW",
+    "Seasons": "09/01 - 04/30",
+    "Max_Lodging": 266,
+    "Local_Meals": 103,
+    "Proportional_Meals": 61,
+    "Local_Incidental": 26,
+    "Max_Per_Diem": 395,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "BARTER ISLAND LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "BETHEL",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 81,
+    "Proportional_Meals": 50,
+    "Local_Incidental": 20,
+    "Max_Per_Diem": 331,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "BETTLES",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "CAPE LISBURNE LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "CAPE NEWENHAM LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "CAPE ROMANZOF LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "CLEAR AB",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "COLD BAY",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "COLD BAY LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "COLDFOOT",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 249,
+    "Local_Meals": 74,
+    "Proportional_Meals": 46,
+    "Local_Incidental": 19,
+    "Max_Per_Diem": 342,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "COPPER CENTER",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "CORDOVA",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 85,
+    "Proportional_Meals": 52,
+    "Local_Incidental": 21,
+    "Max_Per_Diem": 336,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "CRAIG",
+    "Seasons": "05/01 - 09/30",
+    "Max_Lodging": 274,
+    "Local_Meals": 75,
+    "Proportional_Meals": 47,
+    "Local_Incidental": 19,
+    "Max_Per_Diem": 368,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "CRAIG",
+    "Seasons": "10/01 - 04/30",
+    "Max_Lodging": 179,
+    "Local_Meals": 75,
+    "Proportional_Meals": 47,
+    "Local_Incidental": 19,
+    "Max_Per_Diem": 273,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "DEADHORSE",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "DELTA JUNCTION",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 85,
+    "Proportional_Meals": 52,
+    "Local_Incidental": 21,
+    "Max_Per_Diem": 336,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "DENALI NATIONAL PARK",
+    "Seasons": "05/01 - 09/30",
+    "Max_Lodging": 274,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 392,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "DENALI NATIONAL PARK",
+    "Seasons": "10/01 - 04/30",
+    "Max_Lodging": 179,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 297,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "DILLINGHAM",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 320,
+    "Local_Meals": 90,
+    "Proportional_Meals": 54,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 433,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "DUTCH HARBOR-UNALASKA",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 103,
+    "Proportional_Meals": 61,
+    "Local_Incidental": 26,
+    "Max_Per_Diem": 359,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "EARECKSON AIR STATION",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 146,
+    "Local_Meals": 59,
+    "Proportional_Meals": 39,
+    "Local_Incidental": 15,
+    "Max_Per_Diem": 220,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "EIELSON AFB",
+    "Seasons": "05/16 - 09/30",
+    "Max_Lodging": 254,
+    "Local_Meals": 86,
+    "Proportional_Meals": 52,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 362,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "EIELSON AFB",
+    "Seasons": "10/01 - 05/15",
+    "Max_Lodging": 179,
+    "Local_Meals": 86,
+    "Proportional_Meals": 52,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 287,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "ELFIN COVE",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "ELMENDORF AFB",
+    "Seasons": "05/01 - 08/31",
+    "Max_Lodging": 279,
+    "Local_Meals": 116,
+    "Proportional_Meals": 67,
+    "Local_Incidental": 29,
+    "Max_Per_Diem": 424,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "ELMENDORF AFB",
+    "Seasons": "09/01 - 04/30",
+    "Max_Lodging": 229,
+    "Local_Meals": 116,
+    "Proportional_Meals": 67,
+    "Local_Incidental": 29,
+    "Max_Per_Diem": 374,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "FAIRBANKS",
+    "Seasons": "05/16 - 09/30",
+    "Max_Lodging": 254,
+    "Local_Meals": 86,
+    "Proportional_Meals": 52,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 362,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "FAIRBANKS",
+    "Seasons": "10/01 - 05/15",
+    "Max_Lodging": 179,
+    "Local_Meals": 86,
+    "Proportional_Meals": 52,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 287,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "FORT YUKON LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "FT. GREELY",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 85,
+    "Proportional_Meals": 52,
+    "Local_Incidental": 21,
+    "Max_Per_Diem": 336,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "FT. RICHARDSON",
+    "Seasons": "05/01 - 08/31",
+    "Max_Lodging": 279,
+    "Local_Meals": 116,
+    "Proportional_Meals": 67,
+    "Local_Incidental": 29,
+    "Max_Per_Diem": 424,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "FT. RICHARDSON",
+    "Seasons": "09/01 - 04/30",
+    "Max_Lodging": 229,
+    "Local_Meals": 116,
+    "Proportional_Meals": 67,
+    "Local_Incidental": 29,
+    "Max_Per_Diem": 374,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "FT. WAINWRIGHT",
+    "Seasons": "05/16 - 09/30",
+    "Max_Lodging": 254,
+    "Local_Meals": 86,
+    "Proportional_Meals": 52,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 362,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "FT. WAINWRIGHT",
+    "Seasons": "10/01 - 05/15",
+    "Max_Lodging": 179,
+    "Local_Meals": 86,
+    "Proportional_Meals": 52,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 287,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "GAMBELL",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "GLENNALLEN",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "HAINES",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 90,
+    "Proportional_Meals": 54,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 343,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "HEALY",
+    "Seasons": "05/01 - 09/30",
+    "Max_Lodging": 274,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 392,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "HEALY",
+    "Seasons": "10/01 - 04/30",
+    "Max_Lodging": 179,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 297,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "HOMER",
+    "Seasons": "05/01 - 09/30",
+    "Max_Lodging": 274,
+    "Local_Meals": 99,
+    "Proportional_Meals": 59,
+    "Local_Incidental": 25,
+    "Max_Per_Diem": 398,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "HOMER",
+    "Seasons": "10/01 - 04/30",
+    "Max_Lodging": 179,
+    "Local_Meals": 99,
+    "Proportional_Meals": 59,
+    "Local_Incidental": 25,
+    "Max_Per_Diem": 303,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "JB ELMENDORF-RICHARDSON",
+    "Seasons": "05/01 - 08/31",
+    "Max_Lodging": 279,
+    "Local_Meals": 116,
+    "Proportional_Meals": 67,
+    "Local_Incidental": 29,
+    "Max_Per_Diem": 424,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "JB ELMENDORF-RICHARDSON",
+    "Seasons": "09/01 - 04/30",
+    "Max_Lodging": 229,
+    "Local_Meals": 116,
+    "Proportional_Meals": 67,
+    "Local_Incidental": 29,
+    "Max_Per_Diem": 374,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "JUNEAU",
+    "Seasons": "02/01 - 10/31",
+    "Max_Lodging": 274,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 392,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "JUNEAU",
+    "Seasons": "11/01 - 01/31",
+    "Max_Lodging": 214,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 332,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KAKTOVIK",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KAVIK CAMP",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KENAI-SOLDOTNA",
+    "Seasons": "05/01 - 10/31",
+    "Max_Lodging": 274,
+    "Local_Meals": 90,
+    "Proportional_Meals": 54,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 387,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KENAI-SOLDOTNA",
+    "Seasons": "11/01 - 04/30",
+    "Max_Lodging": 179,
+    "Local_Meals": 90,
+    "Proportional_Meals": 54,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 292,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KENNICOTT",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KETCHIKAN",
+    "Seasons": "05/01 - 09/30",
+    "Max_Lodging": 275,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 393,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KETCHIKAN",
+    "Seasons": "10/01 - 04/30",
+    "Max_Lodging": 160,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 278,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KING SALMON",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KING SALMON LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KLAWOCK",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 75,
+    "Proportional_Meals": 47,
+    "Local_Incidental": 19,
+    "Max_Per_Diem": 324,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KODIAK",
+    "Seasons": "02/01 - 10/31",
+    "Max_Lodging": 231,
+    "Local_Meals": 87,
+    "Proportional_Meals": 53,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 340,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KODIAK",
+    "Seasons": "11/01 - 01/31",
+    "Max_Lodging": 138,
+    "Local_Meals": 87,
+    "Proportional_Meals": 53,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 247,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KOTZEBUE",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KULIS AGS",
+    "Seasons": "05/01 - 08/31",
+    "Max_Lodging": 279,
+    "Local_Meals": 116,
+    "Proportional_Meals": 67,
+    "Local_Incidental": 29,
+    "Max_Per_Diem": 424,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "KULIS AGS",
+    "Seasons": "09/01 - 04/30",
+    "Max_Lodging": 229,
+    "Local_Meals": 116,
+    "Proportional_Meals": 67,
+    "Local_Incidental": 29,
+    "Max_Per_Diem": 374,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "MCCARTHY",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "MCGRATH",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "MURPHY DOME",
+    "Seasons": "05/16 - 09/30",
+    "Max_Lodging": 254,
+    "Local_Meals": 86,
+    "Proportional_Meals": 52,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 362,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "MURPHY DOME",
+    "Seasons": "10/01 - 05/15",
+    "Max_Lodging": 179,
+    "Local_Meals": 86,
+    "Proportional_Meals": 52,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 287,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "NOME",
+    "Seasons": "05/01 - 08/31",
+    "Max_Lodging": 274,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 392,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "NOME",
+    "Seasons": "09/01 - 04/30",
+    "Max_Lodging": 242,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 360,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "NOSC ANCHORAGE",
+    "Seasons": "05/01 - 08/31",
+    "Max_Lodging": 279,
+    "Local_Meals": 116,
+    "Proportional_Meals": 67,
+    "Local_Incidental": 29,
+    "Max_Per_Diem": 424,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "NOSC ANCHORAGE",
+    "Seasons": "09/01 - 04/30",
+    "Max_Lodging": 229,
+    "Local_Meals": 116,
+    "Proportional_Meals": 67,
+    "Local_Incidental": 29,
+    "Max_Per_Diem": 374,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "NUIQSUT",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "OLIKTOK LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "PALMER",
+    "Seasons": "05/01 - 09/30",
+    "Max_Lodging": 274,
+    "Local_Meals": 105,
+    "Proportional_Meals": 62,
+    "Local_Incidental": 26,
+    "Max_Per_Diem": 405,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "PALMER",
+    "Seasons": "10/01 - 04/30",
+    "Max_Lodging": 196,
+    "Local_Meals": 105,
+    "Proportional_Meals": 62,
+    "Local_Incidental": 26,
+    "Max_Per_Diem": 327,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "PETERSBURG",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 86,
+    "Proportional_Meals": 52,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 338,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "POINT BARROW LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "POINT HOPE",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "POINT LONELY LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "PORT ALEXANDER",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "PORT ALSWORTH",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "PRUDHOE BAY",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "SELDOVIA",
+    "Seasons": "05/01 - 09/30",
+    "Max_Lodging": 274,
+    "Local_Meals": 99,
+    "Proportional_Meals": 59,
+    "Local_Incidental": 25,
+    "Max_Per_Diem": 398,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "SELDOVIA",
+    "Seasons": "10/01 - 04/30",
+    "Max_Lodging": 179,
+    "Local_Meals": 99,
+    "Proportional_Meals": 59,
+    "Local_Incidental": 25,
+    "Max_Per_Diem": 303,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "SEWARD",
+    "Seasons": "04/01 - 09/30",
+    "Max_Lodging": 284,
+    "Local_Meals": 131,
+    "Proportional_Meals": 75,
+    "Local_Incidental": 33,
+    "Max_Per_Diem": 448,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "SEWARD",
+    "Seasons": "10/01 - 03/31",
+    "Max_Lodging": 179,
+    "Local_Meals": 131,
+    "Proportional_Meals": 75,
+    "Local_Incidental": 33,
+    "Max_Per_Diem": 343,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "SITKA-MT. EDGECUMBE",
+    "Seasons": "05/01 - 09/30",
+    "Max_Lodging": 274,
+    "Local_Meals": 93,
+    "Proportional_Meals": 56,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 390,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "SITKA-MT. EDGECUMBE",
+    "Seasons": "10/01 - 04/30",
+    "Max_Lodging": 199,
+    "Local_Meals": 93,
+    "Proportional_Meals": 56,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 315,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "SKAGWAY",
+    "Seasons": "05/01 - 09/30",
+    "Max_Lodging": 274,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 392,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "SKAGWAY",
+    "Seasons": "10/01 - 04/30",
+    "Max_Lodging": 179,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 297,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "SLANA",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "SPARREVOHN LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "SPRUCE CAPE",
+    "Seasons": "03/01 - 09/30",
+    "Max_Lodging": 274,
+    "Local_Meals": 87,
+    "Proportional_Meals": 53,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 383,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "SPRUCE CAPE",
+    "Seasons": "10/01 - 02/28",
+    "Max_Lodging": 179,
+    "Local_Meals": 87,
+    "Proportional_Meals": 53,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 288,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "ST. GEORGE",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "TALKEETNA",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 98,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 25,
+    "Max_Per_Diem": 353,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "TANANA",
+    "Seasons": "05/01 - 08/31",
+    "Max_Lodging": 274,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 392,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "TANANA",
+    "Seasons": "09/01 - 04/30",
+    "Max_Lodging": 242,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 360,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "TATALINA LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "TIN CITY LRRS",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 97,
+    "Proportional_Meals": 58,
+    "Local_Incidental": 24,
+    "Max_Per_Diem": 351,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "TOK",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 230,
+    "Local_Meals": 90,
+    "Proportional_Meals": 54,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 343,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "VALDEZ",
+    "Seasons": "05/16 - 09/15",
+    "Max_Lodging": 274,
+    "Local_Meals": 88,
+    "Proportional_Meals": 53,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 384,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "VALDEZ",
+    "Seasons": "09/16 - 05/15",
+    "Max_Lodging": 179,
+    "Local_Meals": 88,
+    "Proportional_Meals": 53,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 289,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "WAINWRIGHT",
+    "Seasons": "01/01 - 12/31",
+    "Max_Lodging": 295,
+    "Local_Meals": 62,
+    "Proportional_Meals": 40,
+    "Local_Incidental": 15,
+    "Max_Per_Diem": 372,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "WASILLA",
+    "Seasons": "06/01 - 09/30",
+    "Max_Lodging": 274,
+    "Local_Meals": 83,
+    "Proportional_Meals": 51,
+    "Local_Incidental": 21,
+    "Max_Per_Diem": 378,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "WASILLA",
+    "Seasons": "10/01 - 05/31",
+    "Max_Lodging": 179,
+    "Local_Meals": 83,
+    "Proportional_Meals": 51,
+    "Local_Incidental": 21,
+    "Max_Per_Diem": 283,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "WRANGELL",
+    "Seasons": "05/01 - 09/30",
+    "Max_Lodging": 275,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 393,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "WRANGELL",
+    "Seasons": "10/01 - 04/30",
+    "Max_Lodging": 160,
+    "Local_Meals": 95,
+    "Proportional_Meals": 57,
+    "Local_Incidental": 23,
+    "Max_Per_Diem": 278,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "YAKUTAT",
+    "Seasons": "06/01 - 09/30",
+    "Max_Lodging": 350,
+    "Local_Meals": 89,
+    "Proportional_Meals": 54,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 461,
+    "Effective_Date": "2024-02-01"
+  },
+  {
+    "Locality": "YAKUTAT",
+    "Seasons": "10/01 - 05/31",
+    "Max_Lodging": 179,
+    "Local_Meals": 89,
+    "Proportional_Meals": 54,
+    "Local_Incidental": 22,
+    "Max_Per_Diem": 290,
+    "Effective_Date": "2024-02-01"
+  }
+]
