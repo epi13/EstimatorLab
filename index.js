@@ -279,6 +279,7 @@ const navigationData = [
         link.textContent = calc.label;
         link.dataset.sectionTitle = section.title;
         link.dataset.calculator = calc.label;
+        link.target = calculatorFrame.name || 'calculatorFrame';
 
         item.appendChild(link);
         list.appendChild(item);
