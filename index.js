@@ -164,7 +164,43 @@ const navigationData = [
 
     const navLinkElements = [];
     const hrefToLink = new Map();
+    const frameCache = new Map();
+    const frameHost = calculatorFrame.parentElement;
+    const STORAGE_KEY = 'calculator_hub_state_v1';
     let lastFilterQuery = '';
+    let currentHref = '';
+
+    const normalizeHref = (href) => {
+      if (!href) return '';
+      try {
+        return new URL(href, window.location.href).href;
+      } catch (error) {
+        console.warn('Could not normalize href', href, error);
+        return href;
+      }
+    };
+
+    const loadPersistedState = () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (error) {
+        console.warn('Could not load persisted state', error);
+        return {};
+      }
+    };
+
+    const persistState = () => {
+      try {
+        const state = {
+          lastHref: currentHref,
+          navQuery: searchInput.value || '',
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (error) {
+        console.warn('Could not persist state', error);
+      }
+    };
 
     const sr = (text) => {
       const span = document.createElement('span');
@@ -261,6 +297,13 @@ const navigationData = [
 
     const getSections = () => Array.from(navContainer.querySelectorAll('.nav-section'));
 
+    const getActiveFrame = () => {
+      for (const frame of frameCache.values()) {
+        if (!frame.hidden) return frame;
+      }
+      return calculatorFrame;
+    };
+
     const setActiveLink = (link) => {
       navLinkElements.forEach((item) => {
         item.removeAttribute('aria-current');
@@ -272,6 +315,62 @@ const navigationData = [
       categoryLabel.textContent = link.dataset.sectionTitle;
       collapseButton.dataset.state = 'expanded';
       collapseLabel.textContent = 'Collapse all';
+    };
+
+    const handleFrameLoad = (event) => {
+      const frame = event.target;
+      const attributeSrc = frame.getAttribute('src');
+      const propertySrc = frame.src;
+      const normalized = normalizeHref(attributeSrc || propertySrc || '');
+      const activeLink =
+        hrefToLink.get(attributeSrc || '') ||
+        hrefToLink.get(propertySrc || '') ||
+        hrefToLink.get(normalized || '');
+      if (activeLink) {
+        setActiveLink(activeLink);
+        const sectionEl = activeLink.closest('.nav-section');
+        if (sectionEl) {
+          setSectionOpen(sectionEl, true);
+        }
+      }
+      currentHref = normalized;
+      persistState();
+    };
+
+    const showFrame = (href) => {
+      const key = normalizeHref(href);
+      let frame = frameCache.get(key);
+      if (!frame) {
+        frame = document.createElement('iframe');
+        frame.className = calculatorFrame.className;
+        frame.name = calculatorFrame.name || 'calculatorFrame';
+        frame.title = calculatorFrame.title || 'Calculator workspace';
+        frame.loading = 'lazy';
+        frame.setAttribute('src', href);
+        frame.hidden = true;
+        frame.addEventListener('load', handleFrameLoad);
+        frameCache.set(key, frame);
+        frameHost.appendChild(frame);
+      }
+
+      frameCache.forEach((cachedFrame, cachedKey) => {
+        const isActive = cachedKey === key;
+        cachedFrame.hidden = !isActive;
+        if (isActive) {
+          currentHref = cachedKey;
+        }
+      });
+
+      const matchingLink = hrefToLink.get(href) || hrefToLink.get(key);
+      if (matchingLink) {
+        setActiveLink(matchingLink);
+        const sectionEl = matchingLink.closest('.nav-section');
+        if (sectionEl) {
+          setSectionOpen(sectionEl, true);
+        }
+      }
+
+      persistState();
     };
 
     const setSectionOpen = (sectionEl, open) => {
@@ -311,14 +410,8 @@ const navigationData = [
 
       event.preventDefault();
       const href = link.getAttribute('href');
-      if (href && calculatorFrame.getAttribute('src') !== href) {
-        calculatorFrame.setAttribute('src', href);
-      }
-
-      setActiveLink(link);
-      const sectionEl = link.closest('.nav-section');
-      if (sectionEl) {
-        setSectionOpen(sectionEl, true);
+      if (href) {
+        showFrame(href);
       }
     });
 
@@ -355,6 +448,8 @@ const navigationData = [
         collapseButton.dataset.state = 'expanded';
         collapseLabel.textContent = 'Collapse all';
       }
+
+      persistState();
     };
 
     searchInput.addEventListener('input', (event) => {
@@ -369,24 +464,30 @@ const navigationData = [
     });
 
     refreshButton.addEventListener('click', () => {
-      calculatorFrame.contentWindow?.location.reload();
+      getActiveFrame().contentWindow?.location.reload();
     });
 
-    calculatorFrame.addEventListener('load', () => {
-      const attributeSrc = calculatorFrame.getAttribute('src');
-      const propertySrc = calculatorFrame.src;
-      const activeLink = hrefToLink.get(attributeSrc || '') || hrefToLink.get(propertySrc || '');
-      if (activeLink) {
-        setActiveLink(activeLink);
-        const sectionEl = activeLink.closest('.nav-section');
-        if (sectionEl) {
-          setSectionOpen(sectionEl, true);
-        }
-      }
-    });
+    calculatorFrame.addEventListener('load', handleFrameLoad);
+
+    const persisted = loadPersistedState();
+    if (persisted.navQuery) {
+      searchInput.value = persisted.navQuery;
+      applyFilter(persisted.navQuery);
+    }
 
     const defaultLink = navContainer.querySelector('.nav-section__link');
-    if (defaultLink) {
+    const initialHref =
+      (persisted.lastHref && (hrefToLink.get(persisted.lastHref) || hrefToLink.get(normalizeHref(persisted.lastHref))))
+        ? persisted.lastHref
+        : defaultLink?.getAttribute('href');
+
+    const initialKey = normalizeHref(calculatorFrame.getAttribute('src'));
+    frameCache.set(initialKey, calculatorFrame);
+    currentHref = initialKey;
+
+    if (initialHref) {
+      showFrame(initialHref);
+    } else if (defaultLink) {
       setActiveLink(defaultLink);
       const defaultSection = defaultLink.closest('.nav-section');
       if (defaultSection) {
