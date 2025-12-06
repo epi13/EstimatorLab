@@ -6,6 +6,11 @@ let fuse = null;    // Fuse instance
 let allFields = []; // list of field names
 let showCols = [];  // columns to display
 let searchKeys = [];// fields to search
+let loadedFileName = '';
+
+const DB_NAME = 'EstimatorLabCache';
+const STORE_NAME = 'fuzzy-search-state';
+const DB_VERSION = 1;
 
 const fileInput = document.getElementById('fileInput');
 const searchInput = document.getElementById('searchInput');
@@ -17,6 +22,21 @@ const tbody = document.getElementById('tbody');
 const searchKeysWrap = document.getElementById('searchKeysWrap');
 const columnsWrap = document.getElementById('columnsWrap');
 const reindexBtn = document.getElementById('reindexBtn');
+
+function getDefaultShowFields(){
+  const preferredCols = ['ITEM','UIT','MATERIAL PRICE','LABOR PRICE'];
+  const defaults = new Set(preferredCols.filter(c => allFields.includes(c)));
+  if(defaults.size === 0){
+    allFields.slice(0, Math.min(4, allFields.length)).forEach(f => defaults.add(f));
+  }
+  return Array.from(defaults);
+}
+
+function getDefaultSearchFields(){
+  if(!allFields.length) return [];
+  const defaults = new Set((allFields.includes('ITEM') ? ['ITEM'] : allFields).slice(0, 8));
+  return Array.from(defaults);
+}
 
 function buildCheckboxes(container, fields, selectedSet){
   container.innerHTML = '';
@@ -40,6 +60,91 @@ function buildCheckboxes(container, fields, selectedSet){
   }
 }
 
+function openStateDb(){
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if(!db.objectStoreNames.contains(STORE_NAME)){
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function writeStateToDb(db, state){
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.objectStore(STORE_NAME).put(state, 'latest');
+  });
+}
+
+function readStateFromDb(db){
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).get('latest');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function persistState(){
+  if(!rows.length) return;
+  const state = {
+    rows,
+    allFields,
+    showCols,
+    searchKeys,
+    limit: +limitInput.value || 200,
+    threshold: thresholdInput.value,
+    search: searchInput.value,
+    fileName: loadedFileName
+  };
+
+  try {
+    const db = await openStateDb();
+    await writeStateToDb(db, state);
+    db.close();
+  } catch(dbErr){
+    console.warn('Unable to persist fuzzy search state to IndexedDB', dbErr);
+  }
+}
+
+async function restoreState(){
+  try {
+    const db = await openStateDb();
+    const state = await readStateFromDb(db);
+    db.close();
+
+    if(!state || !state.rows || !state.rows.length) return;
+
+    rows = state.rows;
+    allFields = state.allFields || [];
+    showCols = state.showCols || [];
+    searchKeys = state.searchKeys || [];
+    loadedFileName = state.fileName || '';
+
+    initializeFromRows({
+      show: showCols,
+      search: searchKeys,
+      limit: state.limit,
+      threshold: state.threshold,
+      searchValue: state.search,
+      statusMessage: loadedFileName
+        ? `Restored ${rows.length} rows from ${loadedFileName}`
+        : `Restored ${rows.length} rows from previous session.`
+    });
+  } catch(err){
+    console.warn('Unable to restore fuzzy search state', err);
+  }
+}
+
 function onOptionsChanged(){
   // read checkboxes
   const sk = new Set();
@@ -53,10 +158,42 @@ function onOptionsChanged(){
   // re-render and optionally rebuild index if keys changed
   buildHeader(showCols);
   renderTable(rows.slice(0, +limitInput.value)); // show first page for context
+  persistState();
 }
 
 function buildHeader(cols){
   theadRow.innerHTML = cols.map(c => `<th>${htmlEscape(c)}</th>`).join('');
+}
+
+function initializeFromRows({ show, search, limit, threshold, searchValue, statusMessage } = {}){
+  fuse = null;
+
+  if(!allFields.length){
+    allFields = detectFields(rows);
+  }
+
+  const showSet = new Set((show && show.length) ? show : getDefaultShowFields());
+  const searchSet = new Set((search && search.length) ? search : getDefaultSearchFields());
+
+  buildCheckboxes(searchKeysWrap, allFields, searchSet);
+  buildCheckboxes(columnsWrap, allFields, showSet);
+
+  searchKeys = Array.from(searchSet);
+  showCols = Array.from(showSet);
+
+  if(limit) limitInput.value = limit;
+  if(threshold !== undefined) thresholdInput.value = threshold;
+  if(typeof searchValue === 'string') searchInput.value = searchValue;
+
+  searchInput.disabled = false;
+  reindexBtn.disabled = false;
+
+  buildHeader(showCols);
+  buildFuse();
+  doSearch();
+
+  statusEl.textContent = statusMessage || `Loaded ${rows.length} rows${loadedFileName ? ` from ${loadedFileName}` : ''}.`;
+  persistState();
 }
 
 function renderTable(data){
@@ -89,19 +226,23 @@ function buildFuse(){
 
 function doSearch(){
   const q = searchInput.value.trim();
+  let results = rows;
   if(!q){
-    renderTable(rows);
+    renderTable(results);
+    persistState();
     return;
   }
   if(!fuse){
     buildFuse();
   }
   if(!fuse){
-    renderTable(rows);
+    renderTable(results);
+    persistState();
     return;
   }
-  const res = fuse.search(q).map(r => r.item);
-  renderTable(res);
+  results = fuse.search(q).map(r => r.item);
+  renderTable(results);
+  persistState();
 }
 
 // --- events ---
@@ -111,6 +252,7 @@ fileInput.addEventListener('change', async (e) => {
   statusEl.textContent = 'Loading…';
   const text = await file.text();
   rows = parseJSONL(text);
+  loadedFileName = file.name;
 
   if(!rows.length){
     statusEl.textContent = 'No rows found.';
@@ -118,39 +260,14 @@ fileInput.addEventListener('change', async (e) => {
   }
 
   allFields = detectFields(rows);
-
-  // Preferred defaults for your dataset if present:
-  const preferredCols = ['ITEM','UIT','MATERIAL PRICE','LABOR PRICE'];
-  const defaultShow = new Set(preferredCols.filter(c => allFields.includes(c)));
-  if(defaultShow.size === 0){
-    // fallback: first four fields
-    allFields.slice(0, Math.min(4, allFields.length)).forEach(f => defaultShow.add(f));
-  }
-
-  // Default search keys: if ITEM exists use it, else all string-like columns
-  const defaultSearch = new Set(
-    (allFields.includes('ITEM') ? ['ITEM'] : allFields).slice(0, 8) // cap defaults
-  );
-
-  buildCheckboxes(searchKeysWrap, allFields, defaultSearch);
-  buildCheckboxes(columnsWrap, allFields, defaultShow);
-
-  searchKeys = Array.from(defaultSearch);
-  showCols = Array.from(defaultShow);
-  buildHeader(showCols);
-
-  searchInput.disabled = false;
-  reindexBtn.disabled = false;
-
-  buildFuse();
-  renderTable(rows);
-  statusEl.textContent = `Loaded ${rows.length} rows from ${file.name}`;
+  initializeFromRows({ statusMessage: `Loaded ${rows.length} rows from ${file.name}` });
 });
 
-searchInput.addEventListener('input', debounce(doSearch, 120));
-limitInput.addEventListener('change', () => doSearch());
-thresholdInput.addEventListener('change', () => { buildFuse(); doSearch(); });
-reindexBtn.addEventListener('click', () => { buildFuse(); doSearch(); });
+searchInput.addEventListener('input', debounce(() => { doSearch(); }, 120));
+limitInput.addEventListener('change', () => { doSearch(); persistState(); });
+thresholdInput.addEventListener('change', () => { buildFuse(); doSearch(); persistState(); });
+reindexBtn.addEventListener('click', () => { buildFuse(); doSearch(); persistState(); });
 
 // small debounce helper
 // debounce imported from ../lib/utils.js
+restoreState();
