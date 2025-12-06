@@ -8,9 +8,7 @@ let showCols = [];  // columns to display
 let searchKeys = [];// fields to search
 let loadedFileName = '';
 
-const DB_NAME = 'EstimatorLabCache';
-const STORE_NAME = 'fuzzy-search-state';
-const DB_VERSION = 1;
+const STORAGE_KEY = 'fuzzy-search-state';
 
 const fileInput = document.getElementById('fileInput');
 const searchInput = document.getElementById('searchInput');
@@ -60,70 +58,31 @@ function buildCheckboxes(container, fields, selectedSet){
   }
 }
 
-function openStateDb(){
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onupgradeneeded = () => {
-      const db = request.result;
-      if(!db.objectStoreNames.contains(STORE_NAME)){
-        db.createObjectStore(STORE_NAME);
-      }
-    };
-
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function writeStateToDb(db, state){
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.objectStore(STORE_NAME).put(state, 'latest');
-  });
-}
-
-function readStateFromDb(db){
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const req = tx.objectStore(STORE_NAME).get('latest');
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function persistState(){
+function persistState(){
   if(!rows.length) return;
-  const state = {
-    rows,
-    allFields,
-    showCols,
-    searchKeys,
-    limit: +limitInput.value || 200,
-    threshold: thresholdInput.value,
-    search: searchInput.value,
-    fileName: loadedFileName
-  };
-
   try {
-    const db = await openStateDb();
-    await writeStateToDb(db, state);
-    db.close();
-  } catch(dbErr){
-    console.warn('Unable to persist fuzzy search state to IndexedDB', dbErr);
+    const state = {
+      rows,
+      allFields,
+      showCols,
+      searchKeys,
+      limit: +limitInput.value || 200,
+      threshold: thresholdInput.value,
+      search: searchInput.value,
+      fileName: loadedFileName
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch(err){
+    console.warn('Unable to persist fuzzy search state', err);
   }
 }
 
-async function restoreState(){
+function restoreState(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw) return;
   try {
-    const db = await openStateDb();
-    const state = await readStateFromDb(db);
-    db.close();
-
-    if(!state || !state.rows || !state.rows.length) return;
-
+    const state = JSON.parse(raw);
+    if(!state.rows || !state.rows.length) return;
     rows = state.rows;
     allFields = state.allFields || [];
     showCols = state.showCols || [];
@@ -142,6 +101,7 @@ async function restoreState(){
     });
   } catch(err){
     console.warn('Unable to restore fuzzy search state', err);
+    localStorage.removeItem(STORAGE_KEY);
   }
 }
 
