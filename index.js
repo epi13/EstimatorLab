@@ -164,8 +164,6 @@ const navigationData = [
 
     const navLinkElements = [];
     const hrefToLink = new Map();
-    const frameCache = new Map();
-    const frameHost = calculatorFrame.parentElement;
     const STORAGE_KEY = 'calculator_hub_state_v1';
     let lastFilterQuery = '';
     let currentHref = '';
@@ -279,7 +277,6 @@ const navigationData = [
         link.textContent = calc.label;
         link.dataset.sectionTitle = section.title;
         link.dataset.calculator = calc.label;
-        link.target = calculatorFrame.name || 'calculatorFrame';
 
         item.appendChild(link);
         list.appendChild(item);
@@ -298,12 +295,7 @@ const navigationData = [
 
     const getSections = () => Array.from(navContainer.querySelectorAll('.nav-section'));
 
-    const getActiveFrame = () => {
-      for (const frame of frameCache.values()) {
-        if (!frame.hidden) return frame;
-      }
-      return calculatorFrame;
-    };
+    const getActiveFrame = () => calculatorFrame;
 
     const setActiveLink = (link) => {
       navLinkElements.forEach((item) => {
@@ -339,30 +331,13 @@ const navigationData = [
     };
 
     const showFrame = (href) => {
-      const key = normalizeHref(href);
-      let frame = frameCache.get(key);
-      if (!frame) {
-        frame = document.createElement('iframe');
-        frame.className = calculatorFrame.className;
-        frame.name = calculatorFrame.name || 'calculatorFrame';
-        frame.title = calculatorFrame.title || 'Calculator workspace';
-        frame.loading = 'lazy';
-        frame.setAttribute('src', href);
-        frame.hidden = true;
-        frame.addEventListener('load', handleFrameLoad);
-        frameCache.set(key, frame);
-        frameHost.appendChild(frame);
-      }
+      const normalized = normalizeHref(href);
+      if (!href || normalized === currentHref) return;
 
-      frameCache.forEach((cachedFrame, cachedKey) => {
-        const isActive = cachedKey === key;
-        cachedFrame.hidden = !isActive;
-        if (isActive) {
-          currentHref = cachedKey;
-        }
-      });
+      calculatorFrame.setAttribute('src', href);
+      currentHref = normalized;
 
-      const matchingLink = hrefToLink.get(href) || hrefToLink.get(key);
+      const matchingLink = hrefToLink.get(href) || hrefToLink.get(normalized);
       if (matchingLink) {
         setActiveLink(matchingLink);
         const sectionEl = matchingLink.closest('.nav-section');
@@ -483,7 +458,6 @@ const navigationData = [
         : defaultLink?.getAttribute('href');
 
     const initialKey = normalizeHref(calculatorFrame.getAttribute('src'));
-    frameCache.set(initialKey, calculatorFrame);
     currentHref = initialKey;
 
     if (initialHref) {
