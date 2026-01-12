@@ -108,6 +108,7 @@ const navigationData = [
         title: 'Assemblies',
         icon: 'layers',
         calculators: [
+          { label: 'Shed Estimator', href: 'src/assemblies/shedest/shedestimator.html', keywords: 'simple model estimator' },
           { label: 'Door Calculator', href: 'src/assemblies/doors/doors.html', keywords: 'openings hardware' },
           { label: 'Insulation', href: 'src/assemblies/insulation/insulation.html', keywords: 'thermal envelope' },
           { label: 'OC Linear Ft', href: 'src/assemblies/OC_linear_ft/OC_linear_ft.html', keywords: 'on center spacing' }
