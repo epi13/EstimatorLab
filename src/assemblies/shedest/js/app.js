@@ -1,5 +1,5 @@
 import { readStateFromUI, defaultState, applyStateToUI } from "./state.js";
-import { createScene } from "./three/scene.js";
+import { createScene } from "../three/scene.js";
 import { buildTakeoff } from "./calc/takeoff.js";
 import { costItems } from "./calc/costing.js";
 import { calcLaborHours } from "./calc/labor.js";
