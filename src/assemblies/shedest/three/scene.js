@@ -156,7 +156,7 @@ export function createScene(canvas) {
       const mesh = new THREE.Mesh(geom, mat);
       const yOffset = H + (thickness / 2) * Math.cos(tilt) + (roofW / 2) * Math.sin(tilt);
       mesh.position.set(0, yOffset, 0);
-      mesh.rotation.x = -tilt;
+      mesh.rotation.x = tilt;
       shedGroup.add(mesh);
 
       const wgeom = new THREE.WireframeGeometry(geom);
