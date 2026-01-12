@@ -1,4 +1,5 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
 
 export function createScene(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
@@ -20,6 +21,15 @@ export function createScene(canvas) {
 
   const shedGroup = new THREE.Group();
   scene.add(shedGroup);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.screenSpacePanning = true;
+  controls.enablePan = true;
+  controls.enableZoom = true;
+  controls.minDistance = 4;
+  controls.maxDistance = 200;
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
@@ -109,10 +119,25 @@ export function createScene(canvas) {
       addRoofGable(roofL, roofW, H, H + rise);
     }
 
+    const bounds = new THREE.Box3().setFromObject(shedGroup);
+    const size = bounds.getSize(new THREE.Vector3());
+    const center = bounds.getCenter(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const safeDim = Number.isFinite(maxDim) && maxDim > 0 ? maxDim : 10;
+    const currentDir = camera.position.clone().sub(controls.target);
+    const direction = currentDir.lengthSq() > 0 ? currentDir.normalize() : new THREE.Vector3(1, 1, 1).normalize();
+    const distance = safeDim * 1.6 + 6;
+    camera.position.copy(center).add(direction.multiplyScalar(distance));
+    camera.near = Math.max(0.1, distance / 200);
+    camera.far = distance * 20;
+    camera.updateProjectionMatrix();
+    controls.target.copy(center);
+    controls.update();
     resize();
   }
 
   function tick() {
+    controls.update();
     renderer.render(scene, camera);
     requestAnimationFrame(tick);
   }
