@@ -1,0 +1,27 @@
+{
+  "lumber": {
+    "2x4x8": { "desc": "2x4x8 SPF", "unit": "EA", "base_price": 6.50, "freight_class": "bulk" },
+    "2x6x8": { "desc": "2x6x8 SPF", "unit": "EA", "base_price": 10.50, "freight_class": "bulk" }
+  },
+  "sheet_goods": {
+    "osb_7_16": { "desc": "4x8 7/16 OSB", "unit": "EA", "sf": 32, "base_price": 22.00, "freight_class": "flat" },
+    "ply_1_2": { "desc": "4x8 1/2 Plywood", "unit": "EA", "sf": 32, "base_price": 35.00, "freight_class": "flat" },
+    "tg_ply_3_4": { "desc": "4x8 3/4 T&G Plywood", "unit": "EA", "sf": 32, "base_price": 68.00, "freight_class": "flat" }
+  },
+  "trim": {
+    "trim_1x4": { "desc": "1x4 Trim", "unit": "LF", "base_price": 1.65, "freight_class": "bulk" },
+    "trim_1x6": { "desc": "1x6 Trim", "unit": "LF", "base_price": 2.10, "freight_class": "bulk" }
+  },
+  "foundation": {
+    "geotextile": { "desc": "Geotextile Fabric", "unit": "SF", "base_price": 0.55, "freight_class": "pallet" },
+    "gravel": { "desc": "Gravel Base (delivered)", "unit": "CY", "base_price": 85.00, "freight_class": "heavy" },
+    "pt_skid_4x6x12": { "desc": "PT 4x6x12 Skid", "unit": "EA", "base_price": 52.00, "freight_class": "bulk" },
+    "sonotube_12x4": { "desc": "12in Sonotube x 4ft", "unit": "EA", "base_price": 22.00, "freight_class": "pallet" },
+    "concrete": { "desc": "Concrete (delivered)", "unit": "CY", "base_price": 285.00, "freight_class": "heavy" },
+    "rebar": { "desc": "Rebar (allowance)", "unit": "SF", "base_price": 1.25, "freight_class": "heavy" },
+    "vapor_barrier": { "desc": "10 mil Vapor Barrier", "unit": "SF", "base_price": 0.22, "freight_class": "flat" }
+  },
+  "misc": {
+    "fasteners_ls": { "desc": "Fasteners / Misc", "unit": "LS", "base_price": 120.00, "freight_class": "pallet" }
+  }
+}
