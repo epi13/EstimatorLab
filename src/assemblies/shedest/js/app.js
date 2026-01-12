@@ -74,7 +74,7 @@ async function main() {
   const [materials, freightRules, laborRates] = await Promise.all([
     safeFetchJson("./data/materials.json", fallbackMaterials),
     safeFetchJson("./data/freight_rules.json", fallbackFreight),
-    safeFetchJson("./data/labor_rates.json", fallbackRates)
+    safeFetchJson("./data/labor_rate.json", fallbackRates)
   ]);
 
   const db = makeDB(materials);
