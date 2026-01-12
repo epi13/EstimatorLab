@@ -1,5 +1,4 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
-import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
 
 export function createScene(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
@@ -10,9 +9,6 @@ export function createScene(canvas) {
 
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 2000);
   camera.position.set(18, 14, 18);
-
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.6));
   const dir = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -113,12 +109,10 @@ export function createScene(canvas) {
       addRoofGable(roofL, roofW, H, H + rise);
     }
 
-    controls.target.set(0, H/2, 0);
     resize();
   }
 
   function tick() {
-    controls.update();
     renderer.render(scene, camera);
     requestAnimationFrame(tick);
   }
