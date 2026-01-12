@@ -67,11 +67,64 @@ export function createScene(canvas) {
     const extrudeSettings = { steps: 1, depth: L, bevelEnabled: false };
     const geom = new THREE.ExtrudeGeometry(shape, extrudeSettings);
     geom.rotateY(Math.PI / 2);
-    geom.translate(0, eaveH, 0);
+    geom.translate(-L / 2, eaveH, 0);
 
     const mat = new THREE.MeshStandardMaterial({ color:0x242424, metalness:0.05, roughness:0.95 });
     const mesh = new THREE.Mesh(geom, mat);
     shedGroup.add(mesh);
+  }
+
+  function addGableEndPanels(L, W, eaveH, ridgeH, color = 0x2e2e2e) {
+    const rise = ridgeH - eaveH;
+    const shape = new THREE.Shape();
+    shape.moveTo(-W / 2, eaveH);
+    shape.lineTo(0, eaveH + rise);
+    shape.lineTo(W / 2, eaveH);
+    shape.lineTo(-W / 2, eaveH);
+
+    const geom = new THREE.ShapeGeometry(shape);
+    const mat = new THREE.MeshStandardMaterial({
+      color,
+      metalness: 0.05,
+      roughness: 0.9,
+      side: THREE.DoubleSide
+    });
+
+    const left = new THREE.Mesh(geom, mat);
+    left.rotation.y = Math.PI / 2;
+    left.position.set(-L / 2, 0, 0);
+    shedGroup.add(left);
+
+    const right = new THREE.Mesh(geom, mat);
+    right.rotation.y = -Math.PI / 2;
+    right.position.set(L / 2, 0, 0);
+    shedGroup.add(right);
+  }
+
+  function addShedEndPanels(L, W, eaveH, rise, color = 0x2e2e2e) {
+    const shape = new THREE.Shape();
+    shape.moveTo(-W / 2, eaveH);
+    shape.lineTo(-W / 2, eaveH + rise);
+    shape.lineTo(W / 2, eaveH);
+    shape.lineTo(-W / 2, eaveH);
+
+    const geom = new THREE.ShapeGeometry(shape);
+    const mat = new THREE.MeshStandardMaterial({
+      color,
+      metalness: 0.05,
+      roughness: 0.9,
+      side: THREE.DoubleSide
+    });
+
+    const left = new THREE.Mesh(geom, mat);
+    left.rotation.y = Math.PI / 2;
+    left.position.set(-L / 2, 0, 0);
+    shedGroup.add(left);
+
+    const right = new THREE.Mesh(geom, mat);
+    right.rotation.y = -Math.PI / 2;
+    right.position.set(L / 2, 0, 0);
+    shedGroup.add(right);
   }
 
   function rebuild(state) {
@@ -97,11 +150,12 @@ export function createScene(canvas) {
       const roofL = L + 2*over;
       const rise = roofW * (pitch/12);
       const tilt = Math.atan2(rise, roofW);
-
-      const geom = new THREE.BoxGeometry(roofL, 0.25, roofW);
+      const thickness = 0.25;
+      const geom = new THREE.BoxGeometry(roofL, thickness, roofW);
       const mat = new THREE.MeshStandardMaterial({ color:0x262626, metalness:0.05, roughness:0.95 });
       const mesh = new THREE.Mesh(geom, mat);
-      mesh.position.set(0, H + 0.3, 0);
+      const yOffset = H + (thickness / 2) * Math.cos(tilt) + (roofW / 2) * Math.sin(tilt);
+      mesh.position.set(0, yOffset, 0);
       mesh.rotation.x = -tilt;
       shedGroup.add(mesh);
 
@@ -110,6 +164,8 @@ export function createScene(canvas) {
       wire.position.copy(mesh.position);
       wire.rotation.copy(mesh.rotation);
       shedGroup.add(wire);
+
+      addShedEndPanels(L, W, H, rise);
     } else {
       // gable: show triangular prism
       const roofW = W + 2*over;
@@ -117,6 +173,7 @@ export function createScene(canvas) {
       const half = roofW / 2;
       const rise = half * (pitch/12);
       addRoofGable(roofL, roofW, H, H + rise);
+      addGableEndPanels(L, W, H, H + rise);
     }
 
     const bounds = new THREE.Box3().setFromObject(shedGroup);
