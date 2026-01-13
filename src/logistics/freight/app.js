@@ -9,8 +9,11 @@ const state = {
     assumptions: null
 };
 
+const appBaseUrl = new URL(".", import.meta.url);
+
 async function loadJson(path) {
-    const res = await fetch(path, { cache: "no-store" });
+    const resolvedPath = new URL(path, appBaseUrl).toString();
+    const res = await fetch(resolvedPath, { cache: "no-store" });
     if (!res.ok) throw new Error(`Failed to load ${path}`);
     return res.json();
 }
