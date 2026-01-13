@@ -352,7 +352,7 @@ async function init() {
     const [locations, routes, rates, accessorials, assumptions] = await Promise.all([
         loadJson("./lib/locations.ak.json"),
                                                                                     loadJson("./lib/routes.ak.json"),
-                                                                                    loadJson("./lib/rate_tables.ak.json"),
+                                                                                    loadJson("./lib/rate.ak.json"),
                                                                                     loadJson("./lib/accessorials.ak.json"),
                                                                                     loadJson("./lib/assumptions.ak.json")
     ]);
