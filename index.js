@@ -118,7 +118,7 @@ const navigationData = [
         title: 'Logistics',
         icon: 'route',
         calculators: [
-          { label: 'Freight', href: 'src/logistics/freight/freight.html', keywords: 'shipping transport' },
+          { label: 'Freight', href: 'src/logistics/freight/index.html', keywords: 'shipping transport' },
           { label: 'Labor', href: 'src/logistics/perDiem/labor.html', keywords: 'workforce staffing' }
         ]
       },
