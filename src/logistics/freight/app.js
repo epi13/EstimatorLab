@@ -12,10 +12,17 @@ const state = {
 const appBaseUrl = new URL(".", import.meta.url);
 
 async function loadJson(path) {
-    const resolvedPath = new URL(path, appBaseUrl).toString();
-    const res = await fetch(resolvedPath, { cache: "no-store" });
-    if (!res.ok) throw new Error(`Failed to load ${path}`);
-    return res.json();
+    const attempts = [
+        new URL(path, appBaseUrl).toString(),
+        new URL(path, document.baseURI).toString()
+    ];
+
+    for (const resolvedPath of attempts) {
+        const res = await fetch(resolvedPath, { cache: "no-store" });
+        if (res.ok) return res.json();
+    }
+
+    throw new Error(`Failed to load ${path} (tried ${attempts.join(", ")})`);
 }
 
 function money(n) {
