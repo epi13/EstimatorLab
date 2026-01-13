@@ -1,0 +1,56 @@
+{
+  "version": "0.1",
+  "updated": "2026-01-12",
+  "routes": [
+    {
+      "id": "ANC->FAI_road",
+      "from": "ANC",
+      "to": "FAI",
+      "mode": "truck",
+      "availability": "year_round",
+      "distance_mi": 360,
+      "notes": "Standard linehaul."
+    },
+    {
+      "id": "ANC->JNU_barge",
+      "from": "ANC",
+      "to": "JNU",
+      "mode": "barge",
+      "availability": "scheduled",
+      "season": { "start_month": 1, "end_month": 12 },
+      "notes": "Barge schedule variability; add dwell/handling."
+    },
+    {
+      "id": "ANC->BET_air",
+      "from": "ANC",
+      "to": "BET",
+      "mode": "air",
+      "availability": "year_round",
+      "notes": "Air cargo baseline."
+    },
+    {
+      "id": "BET->UNK_air",
+      "from": "BET",
+      "to": "UNK",
+      "mode": "air",
+      "availability": "year_round",
+      "notes": "Hub-and-spoke last mile."
+    },
+    {
+      "id": "ANC->OME_air",
+      "from": "ANC",
+      "to": "OME",
+      "mode": "air",
+      "availability": "year_round",
+      "notes": "Air baseline; barge exists seasonally (model as separate lane when you add it)."
+    },
+    {
+      "id": "OME->UNK_air",
+      "from": "OME",
+      "to": "UNK",
+      "mode": "air",
+      "availability": "year_round",
+      "notes": "Alternate spoke depending on carrier."
+    }
+  ]
+}

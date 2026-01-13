@@ -1,0 +1,76 @@
+{
+  "version": "0.1",
+  "updated": "2026-01-12",
+  "locations": [
+    {
+      "id": "ANC",
+      "name": "Anchorage",
+      "type": "city",
+      "region": "Southcentral",
+      "hub": true,
+      "access": ["road", "air"],
+      "remote_factor": 1.00,
+      "notes": "Primary logistics hub."
+    },
+    {
+      "id": "FAI",
+      "name": "Fairbanks",
+      "type": "city",
+      "region": "Interior",
+      "hub": true,
+      "access": ["road", "air"],
+      "remote_factor": 1.05,
+      "notes": "Interior hub; winter conditions impact linehaul variability."
+    },
+    {
+      "id": "JNU",
+      "name": "Juneau",
+      "type": "city",
+      "region": "Southeast",
+      "hub": true,
+      "access": ["barge", "air"],
+      "remote_factor": 1.10,
+      "notes": "No road connection; barge/air dominant."
+    },
+    {
+      "id": "BET",
+      "name": "Bethel",
+      "type": "town",
+      "region": "Yukon-Kuskokwim",
+      "hub": true,
+      "access": ["air", "barge_seasonal"],
+      "remote_factor": 1.35,
+      "notes": "Major Y-K hub; barge seasonal; last-mile can be air/river dependent."
+    },
+    {
+      "id": "OME",
+      "name": "Nome",
+      "type": "town",
+      "region": "Bering Strait",
+      "hub": true,
+      "access": ["air", "barge_seasonal"],
+      "remote_factor": 1.45,
+      "notes": "Barge season; air freight common."
+    },
+    {
+      "id": "UNK",
+      "name": "Unalakleet",
+      "type": "village",
+      "region": "Bering Strait",
+      "hub": false,
+      "access": ["air"],
+      "remote_factor": 1.65,
+      "notes": "Often air-only for jobsite freight; staging via Nome/Anchorage."
+    },
+    {
+      "id": "KOT",
+      "name": "Kotzebue",
+      "type": "town",
+      "region": "Northwest Arctic",
+      "hub": true,
+      "access": ["air", "barge_seasonal"],
+      "remote_factor": 1.55,
+      "notes": "Seasonal sealift; air cargo baseline."
+    }
+  ]
+}

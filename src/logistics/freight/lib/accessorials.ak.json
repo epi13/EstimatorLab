@@ -1,0 +1,70 @@
+{
+  "version": "0.1",
+  "updated": "2026-01-12",
+  "accessorials": [
+    {
+      "id": "remote_handling",
+      "label": "Remote handling / cross-dock / village transfer",
+      "type": "percent",
+      "value": 8.0,
+      "applies_to": ["ltl", "ftl", "airCargo", "container"],
+      "note": "Covers hub transfers, manual handling, limited dock equipment, etc."
+    },
+    {
+      "id": "limited_access_delivery",
+      "label": "Limited access / jobsite delivery",
+      "type": "flat",
+      "value": 250,
+      "applies_to": ["ltl", "ftl"],
+      "note": "Construction sites, constrained roads, escort coordination."
+    },
+    {
+      "id": "inside_delivery",
+      "label": "Inside delivery / unpack / place",
+      "type": "flat",
+      "value": 300,
+      "applies_to": ["ltl"],
+      "note": "Common for schools/clinics; adjust to your standard."
+    },
+    {
+      "id": "liftgate",
+      "label": "Liftgate required",
+      "type": "flat",
+      "value": 175,
+      "applies_to": ["ltl"],
+      "note": "If no forklift/dock."
+    },
+    {
+      "id": "residential",
+      "label": "Residential delivery",
+      "type": "flat",
+      "value": 120,
+      "applies_to": ["ltl"],
+      "note": "Not typical for civic jobs, but useful."
+    },
+    {
+      "id": "hazmat",
+      "label": "Hazmat / DG documentation",
+      "type": "flat",
+      "value": 350,
+      "applies_to": ["ltl", "airCargo", "container"],
+      "note": "Documentation + carrier handling premiums."
+    },
+    {
+      "id": "oversize",
+      "label": "Oversize / awkward freight",
+      "type": "percent",
+      "value": 12.0,
+      "applies_to": ["ltl", "airCargo", "container"],
+      "note": "Crating, special stow, manual transfer."
+    },
+    {
+      "id": "weather_delay_buffer",
+      "label": "Weather delay / schedule risk buffer",
+      "type": "percent",
+      "value": 5.0,
+      "applies_to": ["airCargo", "barge", "container"],
+      "note": "Budgetary contingency for common delays."
+    }
+  ]
+}

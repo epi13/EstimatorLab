@@ -1,0 +1,17 @@
+{
+  "version": "0.1",
+  "updated": "2026-01-12",
+  "defaults": {
+    "origin_default": "ANC",
+    "ship_type_default": "ltl",
+    "nmfc_default": "85",
+    "markup_pct": 10.0,
+    "remote_multiplier": 1.0
+  },
+  "rules": {
+    "air_dim_from_cuft": true,
+    "air_dim_assumes_single_cube": true,
+    "barge_requires_port_handling": true,
+    "ltl_uses_cwt_round_up": true
+  }
+}
