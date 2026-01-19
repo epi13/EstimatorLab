@@ -2,7 +2,7 @@
 
 EstimatorLab is a collection of modular estimation tools designed for real-world construction and engineering workflows — built to streamline takeoffs, budgeting, and field calculations across all trades.
 
-Created and maintained by **Poor Louis Labs**, this project aims to make estimating accessible, flexible, and transparent, using lightweight, browser-based calculators that can be hosted anywhere — from GitHub Pages to offline jobsite laptops.
+Created and maintained by **Poor Louis Labs**, this project aims to make estimating accessible, flexible, and transparent, using lightweight, browser-based calculators that can be hosted anywhere — from GitHub Pages to offline jobsite laptops...
 
 ---
 
