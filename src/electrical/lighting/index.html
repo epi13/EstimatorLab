@@ -95,13 +95,56 @@
           <input id="cap" type="text" placeholder="e.g., LM 4010" />
         </div>
         <div>
+          <label>Wattage</label>
+          <input id="watt" type="text" placeholder="e.g., 34W" />
+        </div>
+        <div>
           <label>Power</label>
           <input id="pwr" type="text" placeholder="e.g., 120V or MVOLT" />
         </div>
+        <div>
+          <label>CCT</label>
+          <input id="cct" type="text" placeholder="e.g., 3500K" />
+        </div>
+        <div>
+          <label>CRI</label>
+          <input id="cri" type="text" placeholder="e.g., 80+ CRI" />
+        </div>
 
+        <div>
+          <label>Optics / Distribution</label>
+          <input id="optics" type="text" placeholder="e.g., Type 2, wide flood, uplight/downlight" />
+        </div>
+        <div>
+          <label>Rating / Environment</label>
+          <input id="rating" type="text" placeholder="e.g., Damp, Wet, IP65" />
+        </div>
+        <div>
+          <label>Mounting</label>
+          <input id="mount" type="text" placeholder="e.g., Recessed, Surface, Pendant" />
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div>
+          <label>Controls</label>
+          <input id="controls" type="text" placeholder="e.g., 0-10V, DALI, Occ Sensor" />
+        </div>
+        <div>
+          <label>Finish</label>
+          <input id="finish" type="text" placeholder="e.g., White, Black, Bronze" />
+        </div>
+        <div>
+          <label>Lens / Diffuser</label>
+          <input id="lens" type="text" placeholder="e.g., Prismatic, Frosted, Clear" />
+        </div>
+        <div>
+          <label>Driver / Emergency</label>
+          <input id="driver" type="text" placeholder="e.g., 1% dimming, EM pack" />
+        </div>
         <div class="span-2">
           <label>Features</label>
-          <input id="feat" type="text" placeholder="e.g., Volumetric, 0-10V dimming, 80CRI" />
+          <input id="feat" type="text" placeholder="e.g., Volumetric, sealed, gasketed" />
         </div>
         <div>
           <label>Item</label>
@@ -137,7 +180,7 @@
 
       <div class="preview">
         <div><b>Generated Line-Item Name:</b></div>
-        <code id="namePreview">(Dimension)(Capacity)(Power)(Features) ITEM (Ancillaries)</code>
+        <code id="namePreview">(Dim)(Lumens)(Watt)(Voltage)(CCT)(CRI)(Optics)(Rating)(Mount)(Controls)(Finish)(Lens)(Driver)(Features) ITEM (Ancillaries)</code>
       </div>
     </section>
 

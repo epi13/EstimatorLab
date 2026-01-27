@@ -25,12 +25,39 @@ function shipPctFor(freightClassId, mode){
   return cls.mixedPct;
 }
 
-function buildLineItemName({dim, cap, pwr, feat, itemName, anc}){
-  // Enforce order: Dimension, Capacity, Power, Features, ITEM (Ancillaries)
+function buildLineItemName({
+  dim,
+  cap,
+  watt,
+  pwr,
+  cct,
+  cri,
+  optics,
+  rating,
+  mount,
+  controls,
+  finish,
+  lens,
+  driver,
+  feat,
+  itemName,
+  anc
+}){
+  // Enforce order: Dim, Output, Watt, Power, CCT, CRI, Optics, Rating, Mount, Controls, Finish, Lens, Driver, Features, ITEM (Ancillaries)
   const parts = [];
   if(dim?.trim()) parts.push(capFirst(dim.trim()));
   if(cap?.trim()) parts.push(capFirst(cap.trim()));
+  if(watt?.trim()) parts.push(capFirst(watt.trim()));
   if(pwr?.trim()) parts.push(capFirst(pwr.trim()));
+  if(cct?.trim()) parts.push(capFirst(cct.trim()));
+  if(cri?.trim()) parts.push(capFirst(cri.trim()));
+  if(optics?.trim()) parts.push(capFirst(optics.trim()));
+  if(rating?.trim()) parts.push(capFirst(rating.trim()));
+  if(mount?.trim()) parts.push(capFirst(mount.trim()));
+  if(controls?.trim()) parts.push(capFirst(controls.trim()));
+  if(finish?.trim()) parts.push(capFirst(finish.trim()));
+  if(lens?.trim()) parts.push(capFirst(lens.trim()));
+  if(driver?.trim()) parts.push(capFirst(driver.trim()));
   if(feat?.trim()) parts.push(capFirst(feat.trim()));
   const head = parts.join(", ");
   const item = itemName?.trim() ? capFirst(itemName.trim()) : "Fixture";
@@ -54,7 +81,17 @@ function readForm(){
     qty: Math.max(1, parseInt($("qty").value || "1", 10)),
     dim: $("dim").value,
     cap: $("cap").value,
+    watt: $("watt").value,
     pwr: $("pwr").value,
+    cct: $("cct").value,
+    cri: $("cri").value,
+    optics: $("optics").value,
+    rating: $("rating").value,
+    mount: $("mount").value,
+    controls: $("controls").value,
+    finish: $("finish").value,
+    lens: $("lens").value,
+    driver: $("driver").value,
     feat: $("feat").value,
     itemName: $("itemName").value,
     anc: $("anc").value,
@@ -141,7 +178,17 @@ function applyFixtureDefaults(fx){
   const d = fx.defaults;
   $("dim").value = d.dim ?? "";
   $("cap").value = d.cap ?? "";
+  $("watt").value = d.watt ?? "";
   $("pwr").value = d.pwr ?? "";
+  $("cct").value = d.cct ?? "";
+  $("cri").value = d.cri ?? "";
+  $("optics").value = d.optics ?? "";
+  $("rating").value = d.rating ?? "";
+  $("mount").value = d.mount ?? "";
+  $("controls").value = d.controls ?? "";
+  $("finish").value = d.finish ?? "";
+  $("lens").value = d.lens ?? "";
+  $("driver").value = d.driver ?? "";
   $("feat").value = d.feat ?? "";
   $("itemName").value = d.itemName ?? "";
   $("anc").value = d.anc ?? "";
@@ -273,7 +320,7 @@ async function init(){
   fillFixtures();
 
   // Live preview updates
-  ["dim","cap","pwr","feat","itemName","anc"].forEach(id => {
+  ["dim","cap","watt","pwr","cct","cri","optics","rating","mount","controls","finish","lens","driver","feat","itemName","anc"].forEach(id => {
     $(id).addEventListener("input", recalcPreview);
   });
   $("laborRate").addEventListener("input", () => {
