@@ -72,7 +72,8 @@ const navigationData = [
           { label: 'Electrical Calculator', href: 'src/electrical/electrical_calculator/electrical_calculator.html', keywords: 'power circuits' },
           { label: 'Network Devices', href: 'src/electrical/telecom/telecom.html', keywords: 'telecom communications' },
           { label: 'Panelboard Pricing', href: 'src/electrical/panelboard/panelboard.html', keywords: 'panel schedules' },
-          { label: 'Service Calculator', href: 'src/electrical/service/service.html', keywords: 'distribution load' }
+          { label: 'Service Calculator', href: 'src/electrical/service/service.html', keywords: 'distribution load' },
+          { label: 'Lighting Fixtures', href: 'src/electrical/lighting/index.html', keywords: 'lighting fixtures' }
         ]
       },
       {
