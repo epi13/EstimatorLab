@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Alaska Lighting Cost Calculator</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="wrap">
+    <div class="titlebar">
+      <h1>Lighting Material + Install Calculator (Alaska)</h1>
+      <div class="meta">
+        <div class="pill">Elec Labor: <b id="laborRatePill">$96/hr</b></div>
+        <div class="pill">Includes: <b>Base + Shipping + Handling</b></div>
+      </div>
+    </div>
+
+    <section class="card grid-3">
+      <div>
+        <label>Project Location (preset)</label>
+        <select id="locationPreset"></select>
+        <small class="hint">Sets default freight multiplier + mode. Override below if needed.</small>
+      </div>
+
+      <div>
+        <label>Freight Mode</label>
+        <select id="freightMode">
+          <option value="truck">Truck</option>
+          <option value="air">Air</option>
+          <option value="barge">Barge</option>
+          <option value="mixed">Mixed/Unknown</option>
+        </select>
+        <small class="hint">Used with class-based freight % defaults.</small>
+      </div>
+
+      <div>
+        <label>Handling Fee %</label>
+        <input id="handlingPct" type="number" step="0.1" value="4.0" />
+        <small class="hint">Applied to (Base + Shipping). Typical: 3–6%.</small>
+      </div>
+
+      <div>
+        <label>Freight Multiplier</label>
+        <input id="freightMultiplier" type="number" step="0.01" value="1.25" />
+        <small class="hint">Rural/remote premium factor. Nenana default ~1.20–1.30.</small>
+      </div>
+
+      <div>
+        <label>Electrical Labor Rate ($/hr)</label>
+        <input id="laborRate" type="number" step="1" value="96" />
+        <small class="hint">Anchorage default per your standard rates.</small>
+      </div>
+
+      <div>
+        <label>Labor Premium % (optional)</label>
+        <input id="laborPremiumPct" type="number" step="0.1" value="0.0" />
+        <small class="hint">Use for winter, security, OT premiums, etc.</small>
+      </div>
+    </section>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <h2>Add Fixture</h2>
+
+      <div class="grid-2">
+        <div>
+          <label>Fixture Library</label>
+          <select id="fixtureSelect"></select>
+          <small class="hint">Pick standard, schedule-based, or custom templates.</small>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Quantity</label>
+            <input id="qty" type="number" step="1" min="1" value="1" />
+          </div>
+          <div>
+            <label>Tag / Type (optional)</label>
+            <input id="typeTag" type="text" placeholder="e.g., A1, B2, EXW" />
+          </div>
+        </div>
+      </div>
+
+      <hr />
+
+      <div class="grid-3">
+        <div>
+          <label>Dimension</label>
+          <input id="dim" type="text" placeholder='e.g., 2&#39;0&quot;x4&#39;0&quot; or 6&quot; Dia' />
+        </div>
+        <div>
+          <label>Capacity (Lumens)</label>
+          <input id="cap" type="text" placeholder="e.g., LM 4010" />
+        </div>
+        <div>
+          <label>Power</label>
+          <input id="pwr" type="text" placeholder="e.g., 120V or MVOLT" />
+        </div>
+
+        <div class="span-2">
+          <label>Features</label>
+          <input id="feat" type="text" placeholder="e.g., Volumetric, 0-10V dimming, 80CRI" />
+        </div>
+        <div>
+          <label>Item</label>
+          <input id="itemName" type="text" placeholder="e.g., Troffer" />
+        </div>
+
+        <div class="span-3">
+          <label>Ancillaries</label>
+          <input id="anc" type="text" placeholder="e.g., With drywall adapter, with canopy, including whip" />
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div>
+          <label>Material Base ($/EA)</label>
+          <input id="baseCost" type="number" step="1" value="0" />
+        </div>
+        <div>
+          <label>Freight Class</label>
+          <select id="freightClass"></select>
+          <small class="hint">Controls default shipping % by mode.</small>
+        </div>
+        <div>
+          <label>Labor (man-hrs / EA)</label>
+          <input id="laborHrs" type="number" step="0.05" value="0.75" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="addBtn">Add Line Item</button>
+        <button id="clearFormBtn" class="ghost">Clear</button>
+      </div>
+
+      <div class="preview">
+        <div><b>Generated Line-Item Name:</b></div>
+        <code id="namePreview">(Dimension)(Capacity)(Power)(Features) ITEM (Ancillaries)</code>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h2>Estimate Lines</h2>
+        <div class="toolbar-right">
+          <button id="exportBtn" class="ghost">Export CSV</button>
+          <button id="clearLinesBtn" class="danger ghost">Clear Lines</button>
+        </div>
+      </div>
+
+      <div class="tablewrap">
+        <table id="linesTable">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Line Item</th>
+              <th class="num">Qty</th>
+              <th class="num">Base/EA</th>
+              <th class="num">Ship/EA</th>
+              <th class="num">Handle/EA</th>
+              <th class="num">Mat/EA</th>
+              <th class="num">Labor Hrs/EA</th>
+              <th class="num">Labor/EA</th>
+              <th class="num">Total/EA</th>
+              <th class="num">Extended Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="10" class="num"><b>Grand Total</b></td>
+              <td class="num" id="grandTotal">$0.00</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <small class="hint">
+        Shipping is calculated as: <b>Base × Shipping%</b> × <b>Freight Multiplier</b>. Handling is <b>(Base+Ship)×Handling%</b>.
+      </small>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <small>
+      Budgetary calculator for Alaska estimating. Update fixture library JSON over time for consistency.
+    </small>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>
