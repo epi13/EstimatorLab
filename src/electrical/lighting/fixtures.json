@@ -1,0 +1,189 @@
+{
+  "meta": {
+    "defaultLaborRate": 96,
+    "freightClasses": [
+      { "id": "small", "label": "Small Parcel (heads, exit, e-light)", "truckPct": 0.15, "airPct": 0.40, "bargePct": 0.18, "mixedPct": 0.25 },
+      { "id": "standard", "label": "Standard (troffers, strips, downlights)", "truckPct": 0.20, "airPct": 0.50, "bargePct": 0.25, "mixedPct": 0.32 },
+      { "id": "fragile", "label": "Fragile / Decorative (pendants, specialty)", "truckPct": 0.28, "airPct": 0.65, "bargePct": 0.35, "mixedPct": 0.42 },
+      { "id": "exterior", "label": "Exterior (wallpacks, wet-rated)", "truckPct": 0.22, "airPct": 0.55, "bargePct": 0.28, "mixedPct": 0.35 },
+      { "id": "site", "label": "Site / Pole Light Heads", "truckPct": 0.30, "airPct": 0.85, "bargePct": 0.40, "mixedPct": 0.55 },
+      { "id": "pole", "label": "Poles (if you add as separate item)", "truckPct": 0.35, "airPct": 0.95, "bargePct": 0.45, "mixedPct": 0.60 }
+    ],
+    "locationPresets": [
+      { "id": "anchorage", "label": "Anchorage / Road System", "freightMultiplier": 1.00, "freightMode": "truck" },
+      { "id": "fairbanks", "label": "Fairbanks / Interior Road", "freightMultiplier": 1.10, "freightMode": "truck" },
+      { "id": "nenana", "label": "Nenana (Interior AK)", "freightMultiplier": 1.25, "freightMode": "truck" },
+      { "id": "dillingham", "label": "Dillingham (Barge/Air)", "freightMultiplier": 1.45, "freightMode": "mixed" },
+      { "id": "kotzebue", "label": "Kotzebue (Air / Seasonal)", "freightMultiplier": 1.70, "freightMode": "air" },
+      { "id": "bethel", "label": "Bethel (Air/Barge)", "freightMultiplier": 1.55, "freightMode": "mixed" },
+      { "id": "northslope", "label": "North Slope / Remote", "freightMultiplier": 1.95, "freightMode": "air" }
+    ]
+  },
+  "fixtures": [
+    {
+      "id": "2x4_vol_troffer",
+      "label": "2'x4' Volumetric Troffer (0-10V typical)",
+      "defaults": {
+        "dim": "2'0\"x4'0\"",
+        "cap": "LM 4000",
+        "pwr": "MVOLT",
+        "feat": "Volumetric, 0-10V",
+        "itemName": "Troffer",
+        "anc": "",
+        "baseCost": 275,
+        "freightClass": "standard",
+        "laborHrs": 0.75
+      }
+    },
+    {
+      "id": "2x2_vol_troffer",
+      "label": "2'x2' Volumetric Troffer",
+      "defaults": {
+        "dim": "2'0\"x2'0\"",
+        "cap": "LM 4100",
+        "pwr": "MVOLT",
+        "feat": "Volumetric, 0-10V",
+        "itemName": "Troffer",
+        "anc": "",
+        "baseCost": 255,
+        "freightClass": "standard",
+        "laborHrs": 0.70
+      }
+    },
+    {
+      "id": "4in_recessed_downlight",
+      "label": "4\" Recessed Downlight",
+      "defaults": {
+        "dim": "4\" Dia",
+        "cap": "LM 1050",
+        "pwr": "MVOLT",
+        "feat": "Recessed",
+        "itemName": "Downlight",
+        "anc": "",
+        "baseCost": 185,
+        "freightClass": "standard",
+        "laborHrs": 0.65
+      }
+    },
+    {
+      "id": "exit_sign_wall",
+      "label": "Exit Sign (Wall Mount)",
+      "defaults": {
+        "dim": "",
+        "cap": "",
+        "pwr": "120/277V",
+        "feat": "LED",
+        "itemName": "Exit Sign",
+        "anc": "Wall mount",
+        "baseCost": 155,
+        "freightClass": "small",
+        "laborHrs": 0.60
+      }
+    },
+    {
+      "id": "exit_sign_recessed",
+      "label": "Exit Sign (Recessed/Canopy)",
+      "defaults": {
+        "dim": "",
+        "cap": "",
+        "pwr": "120/277V",
+        "feat": "LED",
+        "itemName": "Exit Sign",
+        "anc": "Recessed canopy",
+        "baseCost": 175,
+        "freightClass": "small",
+        "laborHrs": 0.60
+      }
+    },
+    {
+      "id": "emergency_light",
+      "label": "Emergency Light (Battery Pack)",
+      "defaults": {
+        "dim": "",
+        "cap": "",
+        "pwr": "MVOLT",
+        "feat": "Self diagnostics",
+        "itemName": "Emergency Light",
+        "anc": "",
+        "baseCost": 130,
+        "freightClass": "small",
+        "laborHrs": 0.65
+      }
+    },
+    {
+      "id": "4ft_strip_standard",
+      "label": "4' LED Strip Light (Standard)",
+      "defaults": {
+        "dim": "4'0\"",
+        "cap": "LM 5000",
+        "pwr": "MVOLT",
+        "feat": "Damp rated",
+        "itemName": "Strip Light",
+        "anc": "",
+        "baseCost": 245,
+        "freightClass": "standard",
+        "laborHrs": 0.80
+      }
+    },
+    {
+      "id": "exterior_wallpack",
+      "label": "Exterior Wall Fixture / Wallpack",
+      "defaults": {
+        "dim": "",
+        "cap": "LM 1300",
+        "pwr": "MVOLT",
+        "feat": "Exterior, wet-rated",
+        "itemName": "Wall Fixture",
+        "anc": "",
+        "baseCost": 335,
+        "freightClass": "exterior",
+        "laborHrs": 1.10
+      }
+    },
+    {
+      "id": "site_light_head",
+      "label": "Site Light Head (Pole Mounted)",
+      "defaults": {
+        "dim": "",
+        "cap": "LM 13700",
+        "pwr": "277-480V",
+        "feat": "Type 2 distribution",
+        "itemName": "Site Light",
+        "anc": "Pole mounted",
+        "baseCost": 1950,
+        "freightClass": "site",
+        "laborHrs": 3.00
+      }
+    },
+    {
+      "id": "decorative_pendant",
+      "label": "Decorative Pendant (Fragile)",
+      "defaults": {
+        "dim": "24\" Dia",
+        "cap": "LM 1650",
+        "pwr": "120/277V",
+        "feat": "Decorative, cable/rod hung",
+        "itemName": "Pendant",
+        "anc": "",
+        "baseCost": 650,
+        "freightClass": "fragile",
+        "laborHrs": 1.75
+      }
+    },
+    {
+      "id": "linear_pendant_per_lf",
+      "label": "Linear Pendant (Per LF)",
+      "defaults": {
+        "dim": "",
+        "cap": "Direct/Indirect (per LF)",
+        "pwr": "UNV",
+        "feat": "Linear pendant",
+        "itemName": "Linear Fixture",
+        "anc": "Per LF pricing",
+        "baseCost": 125,
+        "freightClass": "fragile",
+        "laborHrs": 0.35
+      }
+    }
+  ]
+}
