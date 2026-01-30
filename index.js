@@ -4,7 +4,7 @@ const navigationData = [
         icon: 'sparkles',
         startOpen: true,
         calculators: [
-          { label: 'Home', href: 'src/homeCalc/homeCalc.html', keywords: 'generic calculator' },
+          { label: 'Home', href: 'src/REPLCalc/estimator-repl.html', keywords: 'repl calculator' },
           { label: 'JSON Search', href: 'src/search/fuzzy_search.html', keywords: 'data fuzzy finder' },
           { label: 'Unit Conversion', href: 'src/miscellaneous/unitConvert/units.html', keywords: 'measurements conversions' },
           { label: 'XLSX to LLM', href: 'src/miscellaneous/xlsx-to-llm/xlsx-to-llm.html', keywords: 'llm token saver' },
