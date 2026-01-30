@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Estimator REPL</title>
-  <link rel="stylesheet" href="estimator-repl.css" />
+  <link rel="stylesheet" href="assets/css/estimator-repl.css" />
 </head>
 
 <body data-theme="default">
@@ -26,7 +26,14 @@
 
           <div class="replRow">
             <div class="ps1">est&gt;</div>
-            <input id="replInput" autocomplete="off" spellcheck="false" placeholder="Try: 12*4 + markup(2000,15)  or  slab = concrete_cy(1200 sf, 4 in)" />
+            <div class="replEditor">
+              <div class="editor">
+                <pre class="highlight" id="replHighlight" aria-hidden="true"></pre>
+                <textarea id="replInput" autocomplete="off" spellcheck="false" rows="1" placeholder="Try: 12*4 + markup(2000,15)  or  slab = concrete_cy(1200 sf, 4 in)"></textarea>
+              </div>
+              <div class="autocomplete" id="autocomplete" role="listbox" aria-label="Autocomplete suggestions"></div>
+              <div class="liveResult" id="liveResult">Live result: <span class="muted">—</span></div>
+            </div>
           </div>
 
           <div class="hint" id="hint">
@@ -101,6 +108,6 @@ Supported tokens: in, ft, yd, sf, sy, cf, cy, lb, ton.
 
     </div>
   </div>
-  <script src="estimator-repl.js"></script>
+  <script src="assets/js/estimator-repl.js"></script>
 </body>
 </html>

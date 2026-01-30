@@ -4,6 +4,9 @@
   // -----------------------------
   const terminalEl = document.getElementById('terminal');
   const inputEl = document.getElementById('replInput');
+  const highlightEl = document.getElementById('replHighlight');
+  const autocompleteEl = document.getElementById('autocomplete');
+  const liveResultEl = document.getElementById('liveResult');
   const statusPill = document.getElementById('statusPill');
   const hintRight = document.getElementById('hintRight');
 
@@ -553,6 +556,8 @@
     writeLine("Math: +  -  *  /  ^  ( )  and functions", "muted");
     writeLine("Variables: x = 12.5   |   use: x*3", "muted");
     writeLine("Units: in, ft, yd, sf, sy, cf, cy, lb, ton (use like: 12 ft + 6 in)", "muted");
+    writeLine("Editor: autocomplete, syntax highlight, and live preview while typing", "muted");
+    writeLine("Tip: Enter runs when complete; Enter adds new line if incomplete.", "muted");
     writeLine("Commands:", "muted");
     writeLine("  :help                show help", "muted");
     writeLine("  :clear               clear terminal output", "muted");
@@ -661,7 +666,7 @@
     }
 
     // assignment: name = expression
-    const m = src.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$/);
+    const m = src.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]+)$/);
     if (m){
       return { type:"assign", name:m[1], expr:m[2] };
     }
@@ -701,6 +706,311 @@
       return { main: qtyToString(v), extra: `${(Math.round(ton*1e6)/1e6)} ton` };
     }
     return { main: qtyToString(v), extra: "" };
+  }
+
+  // -----------------------------
+  // Formatting + editor helpers
+  // -----------------------------
+  const COMMANDS = [
+    { label: ":help", detail: "help" },
+    { label: ":clear", detail: "clear output" },
+    { label: ":vars", detail: "list variables" },
+    { label: ":reset", detail: "reset session" },
+    { label: ":export", detail: "copy session" },
+    { label: ":import", detail: "load session" },
+    { label: ":theme", detail: "switch theme" },
+  ];
+
+  function formatTokens(tokens){
+    const parts = tokens.map((t) => {
+      if (t.type === "num") return String(t.value);
+      if (t.type === "id") return t.value;
+      if (t.type === "op") return ` ${t.value} `;
+      if (t.type === ",") return ", ";
+      if (t.type === "(" || t.type === ")") return t.type;
+      return "";
+    });
+    return parts.join("")
+      .replace(/\s+/g, " ")
+      .replace(/\s+\)/g, ")")
+      .replace(/\(\s+/g, "(")
+      .replace(/\s+,/g, ",")
+      .replace(/,\s*/g, ", ")
+      .replace(/\s+$/g, "")
+      .trim();
+  }
+
+  function formatExpression(expr){
+    const trimmed = expr.trim();
+    if (!trimmed) return expr.trimEnd();
+    try{
+      const tokens = tokenize(trimmed);
+      return formatTokens(tokens);
+    }catch{
+      return expr.trimEnd();
+    }
+  }
+
+  function formatInput(source){
+    return source.split("\n").map((line) => {
+      const leading = (line.match(/^\s*/) || [""])[0];
+      const trimmed = line.trim();
+      if (!trimmed) return line.trimEnd();
+      const m = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]+)$/);
+      if (m){
+        const formattedExpr = formatExpression(m[2]);
+        return `${leading}${m[1]} = ${formattedExpr}`;
+      }
+      return `${leading}${formatExpression(trimmed)}`;
+    }).join("\n");
+  }
+
+  function isStatementComplete(source){
+    const trimmed = source.trim();
+    if (!trimmed) return false;
+    let depth = 0;
+    for (const c of trimmed){
+      if (c === "(") depth += 1;
+      if (c === ")") depth -= 1;
+      if (depth < 0) return true;
+    }
+    if (depth > 0) return false;
+    return !/[+\-*/^,=]$/.test(trimmed);
+  }
+
+  function escapeHtml(text){
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function highlightSource(source){
+    const value = source || "";
+    if (!value) return "&nbsp;";
+    let out = "";
+    let i = 0;
+    const isDigit = c => /[0-9]/.test(c);
+    const isIdentStart = c => /[A-Za-z_]/.test(c);
+    const isIdent = c => /[A-Za-z0-9_]/.test(c);
+    const fnSet = new Set(Object.keys(fns));
+    const unitSet = new Set(Object.keys(UNIT));
+    const varSet = new Set(Object.keys(state.vars));
+    const cmdSet = new Set(COMMANDS.map((c) => c.label));
+
+    while (i < value.length){
+      const c = value[i];
+      if (c === "\n"){
+        out += "\n";
+        i += 1;
+        continue;
+      }
+      if (/\s/.test(c)){
+        out += c;
+        i += 1;
+        continue;
+      }
+      if (isDigit(c) || (c === "." && isDigit(value[i + 1]))){
+        let j = i + 1;
+        while (j < value.length && /[0-9.eE+-]/.test(value[j])) j += 1;
+        out += `<span class="token-number">${escapeHtml(value.slice(i, j))}</span>`;
+        i = j;
+        continue;
+      }
+      if (isIdentStart(c) || c === ":"){
+        let j = i + 1;
+        while (j < value.length && (isIdent(value[j]) || value[j] === ":")) j += 1;
+        const word = value.slice(i, j);
+        let cls = "token-var";
+        if (cmdSet.has(word)) cls = "token-cmd";
+        else if (fnSet.has(word)) cls = "token-fn";
+        else if (unitSet.has(word)) cls = "token-unit";
+        else if (varSet.has(word)) cls = "token-var";
+        out += `<span class="${cls}">${escapeHtml(word)}</span>`;
+        i = j;
+        continue;
+      }
+      if ("+-*/^=,".includes(c)){
+        out += `<span class="token-op">${escapeHtml(c)}</span>`;
+        i += 1;
+        continue;
+      }
+      out += escapeHtml(c);
+      i += 1;
+    }
+    return out || "&nbsp;";
+  }
+
+  function syncEditorHeight(){
+    inputEl.style.height = "auto";
+    inputEl.style.height = `${Math.min(inputEl.scrollHeight, 220)}px`;
+  }
+
+  function updateHighlight(){
+    highlightEl.innerHTML = highlightSource(inputEl.value);
+  }
+
+  function setLiveResult(text, kind="muted"){
+    const label = kind === "err" ? "Error" : kind === "warn" ? "Incomplete" : "Live result";
+    const display = text ? `<strong>${text}</strong>` : `<span class="muted">—</span>`;
+    liveResultEl.className = `liveResult ${kind}`;
+    liveResultEl.innerHTML = `${label}: ${display}`;
+  }
+
+  let liveTimer = null;
+  function scheduleLiveResult(){
+    if (liveTimer) window.clearTimeout(liveTimer);
+    liveTimer = window.setTimeout(() => {
+      updateLiveResult();
+    }, 220);
+  }
+
+  function updateLiveResult(){
+    const src = inputEl.value;
+    if (!src.trim()){
+      setLiveResult("", "muted");
+      return;
+    }
+    if (!isStatementComplete(src)){
+      setLiveResult("statement incomplete", "warn");
+      return;
+    }
+    const formatted = formatInput(src);
+    try{
+      const parsed = evaluate(formatted);
+      if (!parsed) return;
+      if (parsed.type === "cmd"){
+        setLiveResult(parsed.cmd ? `:${parsed.cmd}` : "command", "muted");
+        return;
+      }
+      if (parsed.type === "assign"){
+        const val = runExpression(parsed.expr);
+        const fr = formatResult(val);
+        setLiveResult(`${parsed.name} = ${fr.main}`, "ok");
+        return;
+      }
+      if (parsed.type === "expr"){
+        const val = runExpression(parsed.expr);
+        const fr = formatResult(val);
+        setLiveResult(fr.main, "ok");
+      }
+    }catch(err){
+      setLiveResult(err.message || String(err), "err");
+    }
+  }
+
+  const autocompleteState = {
+    items: [],
+    index: -1,
+    start: 0,
+    end: 0,
+    open: false,
+    userNavigated: false,
+  };
+
+  function getTokenAtCursor(value, cursor){
+    let start = cursor;
+    while (start > 0 && /[A-Za-z0-9_:]/.test(value[start - 1])) start -= 1;
+    let end = cursor;
+    while (end < value.length && /[A-Za-z0-9_:]/.test(value[end])) end += 1;
+    return { text: value.slice(start, end), start, end };
+  }
+
+  function buildAutocompleteItems(prefix){
+    if (!prefix) return [];
+    const lowered = prefix.toLowerCase();
+    const items = [];
+    const addItem = (label, kind, detail, insertText = label) => {
+      items.push({ label, kind, detail, insertText });
+    };
+
+    if (prefix.startsWith(":")){
+      for (const cmd of COMMANDS){
+        if (cmd.label.toLowerCase().startsWith(lowered)){
+          addItem(cmd.label, "command", cmd.detail, cmd.label);
+        }
+      }
+      return items;
+    }
+
+    for (const name of Object.keys(fns)){
+      if (name.toLowerCase().startsWith(lowered)){
+        addItem(name, "function", "fn", `${name}(`);
+      }
+    }
+    for (const unit of Object.keys(UNIT)){
+      if (unit.startsWith(lowered)){
+        addItem(unit, "unit", "unit", unit);
+      }
+    }
+    for (const name of Object.keys(state.vars)){
+      if (name.toLowerCase().startsWith(lowered)){
+        addItem(name, "variable", "var", name);
+      }
+    }
+    for (const constant of ["pi", "e"]){
+      if (constant.startsWith(lowered)){
+        addItem(constant, "constant", "const", constant);
+      }
+    }
+    return items;
+  }
+
+  function renderAutocomplete(){
+    autocompleteEl.innerHTML = "";
+    if (!autocompleteState.open || !autocompleteState.items.length){
+      autocompleteEl.classList.remove("active");
+      return;
+    }
+    autocompleteEl.classList.add("active");
+    autocompleteState.items.forEach((item, idx) => {
+      const row = document.createElement("div");
+      row.className = `item${idx === autocompleteState.index ? " active" : ""}`;
+      row.setAttribute("role", "option");
+      row.innerHTML = `<div>${item.label}</div><span>${item.detail}</span>`;
+      row.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        applyAutocomplete(idx);
+      });
+      autocompleteEl.appendChild(row);
+    });
+  }
+
+  function openAutocomplete(token){
+    autocompleteState.items = buildAutocompleteItems(token.text);
+    autocompleteState.index = autocompleteState.items.length ? 0 : -1;
+    autocompleteState.start = token.start;
+    autocompleteState.end = token.end;
+    autocompleteState.open = autocompleteState.items.length > 0;
+    autocompleteState.userNavigated = false;
+    renderAutocomplete();
+  }
+
+  function closeAutocomplete(){
+    autocompleteState.open = false;
+    autocompleteState.items = [];
+    autocompleteState.index = -1;
+    autocompleteState.userNavigated = false;
+    renderAutocomplete();
+  }
+
+  function applyAutocomplete(index){
+    const item = autocompleteState.items[index];
+    if (!item) return;
+    const value = inputEl.value;
+    const before = value.slice(0, autocompleteState.start);
+    const after = value.slice(autocompleteState.end);
+    const insert = item.insertText;
+    const needsSpace = item.kind === "command" ? " " : "";
+    const nextValue = `${before}${insert}${needsSpace}${after}`;
+    const cursorPos = before.length + insert.length + needsSpace.length;
+    inputEl.value = nextValue;
+    inputEl.focus();
+    inputEl.setSelectionRange(cursorPos, cursorPos);
+    closeAutocomplete();
+    updateHighlight();
+    syncEditorHeight();
+    scheduleLiveResult();
   }
 
   async function handleLine(line){
@@ -766,31 +1076,142 @@
     state.histIdx = state.history.length;
   }
 
+  function countOpenParens(text){
+    let depth = 0;
+    for (const c of text){
+      if (c === "(") depth += 1;
+      if (c === ")") depth = Math.max(depth - 1, 0);
+    }
+    return depth;
+  }
+
+  function getIndentation(value, cursor){
+    const before = value.slice(0, cursor);
+    const lineStart = before.lastIndexOf("\n") + 1;
+    const line = before.slice(lineStart);
+    const leading = (line.match(/^\s*/) || [""])[0];
+    const depth = countOpenParens(before);
+    const desired = "  ".repeat(depth);
+    return desired.length > leading.length ? desired : leading;
+  }
+
+  async function submitInput(){
+    const raw = inputEl.value;
+    const formatted = formatInput(raw);
+    if (!formatted.trim()) return;
+    inputEl.value = "";
+    closeAutocomplete();
+    writeInputEcho(formatted);
+    pushHistory(formatted);
+    updateHighlight();
+    syncEditorHeight();
+    await handleLine(formatted);
+    scheduleLiveResult();
+  }
+
   inputEl.addEventListener("keydown", async (e) => {
-    if (e.key === "Enter"){
-      const line = inputEl.value;
-      inputEl.value = "";
-      writeInputEcho(line);
-      pushHistory(line);
-      await handleLine(line);
+    if (e.key === "Enter" && !e.shiftKey){
+      if (autocompleteState.open && autocompleteState.userNavigated){
+        applyAutocomplete(autocompleteState.index);
+        e.preventDefault();
+        return;
+      }
+      const value = inputEl.value;
+      if (!isStatementComplete(value)){
+        const cursor = inputEl.selectionStart;
+        const indent = getIndentation(value, cursor);
+        const insert = `\n${indent}`;
+        const before = value.slice(0, cursor);
+        const after = value.slice(inputEl.selectionEnd);
+        inputEl.value = `${before}${insert}${after}`;
+        const newPos = before.length + insert.length;
+        inputEl.setSelectionRange(newPos, newPos);
+        updateHighlight();
+        syncEditorHeight();
+        scheduleLiveResult();
+        e.preventDefault();
+        return;
+      }
+      await submitInput();
       e.preventDefault();
-    } else if (e.key === "ArrowUp"){
+      return;
+    }
+
+    if (autocompleteState.open){
+      if (e.key === "ArrowDown"){
+        autocompleteState.index = (autocompleteState.index + 1) % autocompleteState.items.length;
+        autocompleteState.userNavigated = true;
+        renderAutocomplete();
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "ArrowUp"){
+        autocompleteState.index = (autocompleteState.index - 1 + autocompleteState.items.length) % autocompleteState.items.length;
+        autocompleteState.userNavigated = true;
+        renderAutocomplete();
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "Tab"){
+        applyAutocomplete(autocompleteState.index);
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "Escape"){
+        closeAutocomplete();
+        e.preventDefault();
+        return;
+      }
+    }
+
+    if (e.key === "ArrowUp" && !autocompleteState.open){
       if (!state.history.length) return;
       state.histIdx = Math.max(0, state.histIdx - 1);
       inputEl.value = state.history[state.histIdx] || "";
-      // move caret to end
+      updateHighlight();
+      syncEditorHeight();
+      scheduleLiveResult();
       setTimeout(() => inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length), 0);
       e.preventDefault();
-    } else if (e.key === "ArrowDown"){
+      return;
+    }
+    if (e.key === "ArrowDown" && !autocompleteState.open){
       if (!state.history.length) return;
       state.histIdx = Math.min(state.history.length, state.histIdx + 1);
       inputEl.value = state.history[state.histIdx] || "";
+      updateHighlight();
+      syncEditorHeight();
+      scheduleLiveResult();
       setTimeout(() => inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length), 0);
       e.preventDefault();
-    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "l"){
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "l"){
       clearTerminal();
       e.preventDefault();
     }
+  });
+
+  inputEl.addEventListener("input", () => {
+    updateHighlight();
+    syncEditorHeight();
+    scheduleLiveResult();
+    const cursor = inputEl.selectionStart;
+    const token = getTokenAtCursor(inputEl.value, cursor);
+    if (token.text){
+      openAutocomplete(token);
+    }else{
+      closeAutocomplete();
+    }
+  });
+
+  inputEl.addEventListener("scroll", () => {
+    highlightEl.scrollTop = inputEl.scrollTop;
+    highlightEl.scrollLeft = inputEl.scrollLeft;
+  });
+
+  inputEl.addEventListener("blur", () => {
+    closeAutocomplete();
   });
 
   // Buttons
@@ -827,6 +1248,9 @@
     state.vars.hr = 1; // placeholder if you want
     state.vars.pi = Math.PI;
 
+    updateHighlight();
+    syncEditorHeight();
+    scheduleLiveResult();
     inputEl.focus();
   }
 
