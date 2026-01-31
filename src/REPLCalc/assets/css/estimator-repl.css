@@ -8,6 +8,7 @@
   --ok:#48d597;
   --warn:#f7c948;
   --err:#ff6b6b;
+  --string:#f2b1ff;
   --code:#101a27;
   --caret:#d6e2ff;
   --shadow: 0 10px 30px rgba(0,0,0,.45);
@@ -25,6 +26,7 @@
   --ok:#9cf29c;
   --warn:#ffd166;
   --err:#ff6b6b;
+  --string:#ffd1a4;
   --code:#1b1400;
   --caret:#fff4d6;
   --line:#2a1f07;
@@ -39,6 +41,7 @@
   --ok:#00ff7b;
   --warn:#f7c948;
   --err:#ff6b6b;
+  --string:#9bffbd;
   --code:#06160c;
   --caret:#c7ffd7;
   --line:#0d2417;
@@ -145,6 +148,15 @@ html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-f
 .warn{color:var(--warn);}
 .err{color:var(--err);}
 .muted{color:var(--muted);}
+.out-label{color:var(--accent-2); font-weight:600;}
+.out-command{color:var(--accent);}
+.out-keyword{color:var(--accent-2); font-weight:600;}
+.out-fn{color:var(--ok);}
+.out-unit{color:var(--warn);}
+.out-number{color:var(--accent-2);}
+.out-op{color:var(--accent);}
+.out-string{color:var(--string);}
+.out-var{color:var(--text);}
 
 .replRow{
   display:flex;
