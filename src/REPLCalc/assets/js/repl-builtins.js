@@ -77,7 +77,14 @@ export function createBaseFns(){
       const area = makeQty(lenQty.value * height.value, "area");
       parts.push(`area: ${qtyToString(area)}`);
       if (sheathing !== undefined){
-        const layerCount = Number(isQty(sheathing) ? sheathing.value : sheathing);
+        const layerCount = (() => {
+          if (isQty(sheathing)) return sheathing.value;
+          if (typeof sheathing === "string"){
+            const parsed = Number.parseFloat(sheathing);
+            if (Number.isFinite(parsed)) return parsed;
+          }
+          return Number(sheathing);
+        })();
         if (!Number.isFinite(layerCount)) throw new Error("sheathing layers must be numeric.");
         const sheathingArea = makeQty(area.value * layerCount, "area");
         const label = layerCount === 1 ? "sheathing" : `sheathing x${layerCount}`;
