@@ -229,24 +229,38 @@ export function toRPN(tokens){
 
 export function evalRPN(rpn, ctx){
   const st = [];
+  const onResolve = typeof ctx.onResolve === "function" ? ctx.onResolve : null;
+  const onCall = typeof ctx.onCall === "function" ? ctx.onCall : null;
+
+  function recordResolve(name, resolvedName = null){
+    if (!onResolve) return;
+    onResolve(name, resolvedName);
+  }
 
   function getVar(name){
     if (name === "pi") return Math.PI;
     if (name === "e") return Math.E;
 
     if (ctx.unitOverrides && Object.prototype.hasOwnProperty.call(ctx.unitOverrides, name)){
+      recordResolve(name);
       return ctx.unitOverrides[name];
     }
 
     if (isUnitToken(name)){
       const unit = UNIT[name];
+      recordResolve(name);
       return makeQty(unit.toBase, unit.kind);
     }
 
     if (Object.prototype.hasOwnProperty.call(ctx.aliases, name)){
-      return ctx.vars[ctx.aliases[name]];
+      const resolved = ctx.aliases[name];
+      recordResolve(name, resolved);
+      return ctx.vars[resolved];
     }
-    if (Object.prototype.hasOwnProperty.call(ctx.vars, name)) return ctx.vars[name];
+    if (Object.prototype.hasOwnProperty.call(ctx.vars, name)){
+      recordResolve(name);
+      return ctx.vars[name];
+    }
     throw new Error(`Unknown identifier: ${name}`);
   }
 
@@ -264,6 +278,7 @@ export function evalRPN(rpn, ctx){
       st.push(OPS[t.value].fn(a, b));
     }else if (t.type === "fn"){
       const fnName = t.value;
+      if (onCall) onCall(fnName);
       const fn = ctx.fns[fnName];
       if (!fn) throw new Error(`Unknown function: ${fnName}()`);
 

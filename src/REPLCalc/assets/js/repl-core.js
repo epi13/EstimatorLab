@@ -38,7 +38,21 @@ export function initRepl(){
     userFns: Object.create(null),
     gfx: null,
     gfxDirty: false,
+    symbolTable: new Map(),
+    shadowTable: new Map(),
+    depGraph: new Map(),
+    usageLog: [],
+    usageSeq: 0,
+    touchedSymbols: new Map(),
+    lastSaveSeq: 0,
+    symbolVersions: new Map(),
+    pinnedSymbols: new Set(),
+    loadedProfiles: new Map(),
+    forcedSymbols: new Map(),
+    currentUsage: null,
+    loadingProfileSymbol: false,
   };
+  state.resolver = state.symbolTable;
 
   const KEYWORDS = new Set(["if", "else", "for", "in", "step", "repeat", "def", "fn", "function", "assy"]);
   const baseFns = createBaseFns();
@@ -72,6 +86,15 @@ export function initRepl(){
     gfxFns,
   });
 
+  const session = createSession({
+    state,
+    setTheme: ui.setTheme,
+    writeLine: ui.writeLine,
+    setStatus: ui.setStatus,
+    renderUserFunctions: userFnUi.renderUserFunctions,
+    defineUserFn: runtime.defineUserFn,
+  });
+
   const evaluator = createEvaluator({
     state,
     getFns: runtime.getFns,
@@ -88,6 +111,8 @@ export function initRepl(){
     makeQty,
     qtyToString,
     formatResult,
+    ensureSymbolsLoaded: session.ensureSymbolsLoaded,
+    usageTracker: session.usageTracker,
   });
 
   runtime.setRunExpressionWithContext(evaluator.runExpressionWithContext);
@@ -121,15 +146,6 @@ export function initRepl(){
     writeLineRich: ui.writeLineRich,
     token: ui.token,
     GFX_COLOR_TOKENS,
-  });
-
-  const session = createSession({
-    state,
-    setTheme: ui.setTheme,
-    writeLine: ui.writeLine,
-    setStatus: ui.setStatus,
-    renderUserFunctions: userFnUi.renderUserFunctions,
-    defineUserFn: runtime.defineUserFn,
   });
 
   const tests = createTests({

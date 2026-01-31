@@ -40,6 +40,9 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
     defn.name = name;
     state.userFns[name] = defn;
     renderUserFunctions();
+    if (typeof state.onUserFnDefined === "function"){
+      state.onUserFnDefined({ name, params: params.slice(), expr: defn.expr });
+    }
   }
 
   metaFns.eval = defFn("eval", 1, (expr) => {
@@ -55,12 +58,18 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
   metaFns.set = defFn("set", 2, (name, value) => {
     const key = normalizeMetaName(name, "set");
     state.vars[key] = value;
+    if (typeof state.onVarDefined === "function"){
+      state.onVarDefined({ name: key, value, expr: "" });
+    }
     return value;
   });
   metaFns.unset = defFn("unset", 1, (name) => {
     const key = normalizeMetaName(name, "unset");
     const existed = Object.prototype.hasOwnProperty.call(state.vars, key);
     if (existed) delete state.vars[key];
+    if (existed && typeof state.onVarRemoved === "function"){
+      state.onVarRemoved(key);
+    }
     return existed ? 1 : 0;
   });
   metaFns.vars = defFn("vars", 0, () => Object.keys(state.vars).sort().join(", "));
@@ -77,6 +86,9 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
     if (!Object.prototype.hasOwnProperty.call(state.userFns, fnName)) return 0;
     delete state.userFns[fnName];
     renderUserFunctions();
+    if (typeof state.onFnRemoved === "function"){
+      state.onFnRemoved(fnName);
+    }
     return 1;
   });
 
