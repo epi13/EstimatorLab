@@ -55,24 +55,81 @@ export function initRepl(){
     label.textContent = `gfx ${buffer.width}x${buffer.height} • scale ${buffer.scale}`;
     const panel = document.createElement("div");
     panel.className = "gfx-panel";
-    panel.style.setProperty("--gfx-width", buffer.width);
-    panel.style.setProperty("--gfx-scale", `${buffer.scale}px`);
     if (buffer.bg && buffer.bg !== "transparent"){
       panel.style.setProperty("--gfx-bg", `var(--${buffer.bg})`);
     }
-    for (const color of buffer.pixels){
-      const cell = document.createElement("div");
-      cell.className = "gfx-pixel";
-      if (color === "transparent"){
-        cell.classList.add("gfx-transparent");
-      }else if (color){
-        cell.classList.add(`gfx-${color}`);
+    const canvas = document.createElement("canvas");
+    canvas.className = "gfx-canvas";
+    canvas.width = buffer.width;
+    canvas.height = buffer.height;
+    canvas.style.width = `${buffer.width * buffer.scale}px`;
+    canvas.style.height = `${buffer.height * buffer.scale}px`;
+    const ctx = canvas.getContext("2d");
+    if (ctx){
+      ctx.imageSmoothingEnabled = false;
+      const imageData = ctx.createImageData(buffer.width, buffer.height);
+      const data = imageData.data;
+      const palette = getGfxPalette();
+      for (let i = 0; i < buffer.pixels.length; i++){
+        const color = buffer.pixels[i] || "transparent";
+        const rgba = palette[color] || palette.transparent;
+        const offset = i * 4;
+        data[offset] = rgba[0];
+        data[offset + 1] = rgba[1];
+        data[offset + 2] = rgba[2];
+        data[offset + 3] = rgba[3];
       }
-      panel.appendChild(cell);
+      ctx.putImageData(imageData, 0, 0);
     }
+    panel.appendChild(canvas);
     wrapper.append(label, panel);
     terminalEl.appendChild(wrapper);
     terminalEl.scrollTop = terminalEl.scrollHeight;
+  }
+
+  let gfxPaletteCache = null;
+  function getGfxPalette(){
+    if (gfxPaletteCache && gfxPaletteCache.theme === state.theme){
+      return gfxPaletteCache.colors;
+    }
+    const styles = getComputedStyle(document.documentElement);
+    const colors = Object.create(null);
+    for (const token of GFX_COLOR_TOKENS){
+      if (token === "transparent"){
+        colors[token] = [0, 0, 0, 0];
+        continue;
+      }
+      const value = styles.getPropertyValue(`--${token}`).trim() || "#000";
+      colors[token] = parseCssColor(value);
+    }
+    gfxPaletteCache = { theme: state.theme, colors };
+    return colors;
+  }
+
+  let gfxColorContext = null;
+  function getGfxColorContext(){
+    if (!gfxColorContext){
+      const canvas = document.createElement("canvas");
+      gfxColorContext = canvas.getContext("2d");
+    }
+    return gfxColorContext;
+  }
+
+  function parseCssColor(value){
+    const ctx = getGfxColorContext();
+    if (!ctx) return [0, 0, 0, 255];
+    ctx.fillStyle = "#000";
+    ctx.fillStyle = value;
+    const computed = ctx.fillStyle;
+    const match = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/);
+    if (!match) return [0, 0, 0, 255];
+    const alpha = match[4] === undefined ? 1 : Number(match[4]);
+    return [
+      Number(match[1]),
+      Number(match[2]),
+      Number(match[3]),
+      Math.round(alpha * 255),
+    ];
   }
 
   function writeLineRich(parts, cls="out"){
