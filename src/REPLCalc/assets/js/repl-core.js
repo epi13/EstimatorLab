@@ -971,6 +971,18 @@ export function initRepl(){
     return { pass: false, message: `expected ${String(expected)}, got ${formatTestValue(actual)}` };
   }
 
+  function formatExpectedValue(expected){
+    if (expected && typeof expected === "object" && expected.type === "qty"){
+      return qtyToString(makeQty(expected.value, expected.kind));
+    }
+    if (expected && typeof expected === "object" && expected.type === "scalar"){
+      return String(expected.value);
+    }
+    if (typeof expected === "number") return String(expected);
+    if (expected === undefined) return "undefined";
+    return String(expected);
+  }
+
   function runTestSuite(){
     setStatus("Testing...", "warn");
     writeLine("Running REPLCalc tests...", "ok");
@@ -999,20 +1011,31 @@ export function initRepl(){
         state.history = [];
         state.histIdx = -1;
         const source = test.steps ? test.steps.join("\n") : test.expr;
+        const formattedSource = formatInput(source);
+        const formattedExpected = formatExpectedValue(test.expect);
         const result = evaluateTestStatements(source);
         const match = matchExpected(result, test.expect);
+        writeLine(`• ${test.name}`, "muted");
+        writeLine(`  input: ${formattedSource}`, "muted");
+        writeLine(`  outcome: ${formatTestValue(result)}`, "muted");
+        writeLine(`  expected: ${formattedExpected}`, "muted");
         if (match.pass){
           passCount += 1;
           writeLine(`✓ ${test.name}`, "ok");
         }else{
           failures.push({ name: test.name, reason: match.message || "failed" });
           writeLine(`✗ ${test.name}: ${match.message || "failed"}`, "err");
-          writeLine(`  ↳ ${source}`, "muted");
         }
       }catch(err){
+        const source = test.steps ? test.steps.join("\n") : test.expr;
+        const formattedSource = formatInput(source);
+        const formattedExpected = formatExpectedValue(test.expect);
         failures.push({ name: test.name, reason: err.message || String(err) });
+        writeLine(`• ${test.name}`, "muted");
+        writeLine(`  input: ${formattedSource}`, "muted");
+        writeLine(`  outcome: error (${err.message || String(err)})`, "muted");
+        writeLine(`  expected: ${formattedExpected}`, "muted");
         writeLine(`✗ ${test.name}: ${err.message || String(err)}`, "err");
-        writeLine(`  ↳ ${test.steps ? test.steps.join("\\n") : test.expr}`, "muted");
       }
     }
 
