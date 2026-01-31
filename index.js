@@ -8,8 +8,8 @@ const navigationData = [
           { label: 'JSON Search', href: 'src/search/fuzzy_search.html', keywords: 'data fuzzy finder' },
           { label: 'Unit Conversion', href: 'src/miscellaneous/unitConvert/units.html', keywords: 'measurements conversions' },
           { label: 'Scaler', href: 'src/miscellaneous/high-level-scaler/high-level-scaler.html', keywords: 'high level scaler' },
-          { label: 'PDF Extractor', href: 'src/pdf/extractor/extract.html', keywords: 'export data' },
-          { label: 'Tracker', href: 'src/tracker/index.html', keywords: 'tracker' }   
+          { label: 'PDF Extractor', href: 'src/pdf/extractor/extract.html', keywords: 'export data' }
+           
           
         ]
       },
