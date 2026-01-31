@@ -268,12 +268,17 @@ export function createHelp({ writeLine, writeLineRich, token, GFX_COLOR_TOKENS }
     writeLineRich([
       "  ",
       token(":save", "out-command"),
-      " name          save session profile"
+      " name [--recent|--roots a,b|--include-globals] save modular profile"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":mux", "out-command"),
+      " name          merge loaded profiles into new profile"
     ], "muted");
     writeLineRich([
       "  ",
       token(":load", "out-command"),
-      " name          load saved profile"
+      " name          load saved profile (no reset)"
     ], "muted");
     writeLineRich([
       "  ",
@@ -282,13 +287,38 @@ export function createHelp({ writeLine, writeLineRich, token, GFX_COLOR_TOKENS }
     ], "muted");
     writeLineRich([
       "  ",
+      token(":pin", "out-command"),
+      " name          always include symbol when saving"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":unpin", "out-command"),
+      " name        remove pin"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":which", "out-command"),
+      " name       show resolved symbol origin"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":use", "out-command"),
+      " name@profile force symbol selection"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":diff", "out-command"),
+      " name        compare symbol versions"
+    ], "muted");
+    writeLineRich([
+      "  ",
       token(":export", "out-command"),
-      "              copy session JSON to clipboard"
+      "              copy profile JSON to clipboard"
     ], "muted");
     writeLineRich([
       "  ",
       token(":import", "out-command"),
-      "              load session JSON from clipboard"
+      "              load profile JSON from clipboard"
     ], "muted");
     writeLineRich([
       "  ",

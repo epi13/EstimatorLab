@@ -26,7 +26,29 @@ export function createEvaluator({
   makeQty,
   qtyToString,
   formatResult,
+  ensureSymbolsLoaded,
+  usageTracker,
 }){
+  function collectIdentifierNames(tokens){
+    const names = new Set();
+    for (let i = 0; i < tokens.length; i++){
+      const t = tokens[i];
+      if (t.type !== "id") continue;
+      names.add(t.value);
+    }
+    return names;
+  }
+
+  function maybeEnsureSymbols(tokens){
+    if (!ensureSymbolsLoaded) return;
+    const names = collectIdentifierNames(tokens);
+    if (names.size) ensureSymbolsLoaded(names);
+  }
+
+  function getUsageHooks(){
+    if (!usageTracker) return {};
+    return usageTracker.getHooks();
+  }
   function isBareUnitToken(tokens, idx){
     const token = tokens[idx];
     if (!token || token.type !== "id" || !isUnitToken(token.value)) return false;
@@ -174,6 +196,7 @@ export function createEvaluator({
 
   function runExpressionWithContext(expr, vars){
     const tokens = insertImplicitMultiplication(tokenize(expr));
+    maybeEnsureSymbols(tokens);
     const fns = getFns();
     const aliasMap = buildAliasMap(tokens, vars, new Set(Object.keys(fns)));
     const rpn = toRPN(tokens);
@@ -181,6 +204,7 @@ export function createEvaluator({
       vars,
       fns,
       aliases: aliasMap,
+      ...getUsageHooks(),
     });
   }
 
@@ -190,6 +214,7 @@ export function createEvaluator({
 
   function runExpressionWithOverrides(expr, vars, unitOverrides, aliasMap = null){
     const tokens = insertImplicitMultiplication(tokenize(expr));
+    maybeEnsureSymbols(tokens);
     const fns = getFns();
     const resolvedAliases = aliasMap || buildAliasMap(tokens, vars, new Set(Object.keys(fns)));
     const rpn = toRPN(tokens);
@@ -198,6 +223,7 @@ export function createEvaluator({
       fns,
       aliases: resolvedAliases,
       unitOverrides,
+      ...getUsageHooks(),
     });
   }
 

@@ -63,6 +63,15 @@ export function createInputHandlers({
     saveProfile,
     loadProfile,
     listProfiles,
+    beginUsage,
+    endUsage,
+    pinSymbol,
+    unpinSymbol,
+    whichSymbol,
+    useSymbolFromProfile,
+    diffSymbol,
+    muxProfile,
+    recordSymbolDefinition,
     resetAll,
   } = session;
   const { runTestSuite } = tests;
@@ -117,34 +126,42 @@ export function createInputHandlers({
       for (const stmt of statementList){
         const parsed = evaluate(stmt);
         if (!parsed) continue;
+        const usageEntry = beginUsage(parsed, stmt);
 
-        if (parsed.type === "cmd"){
-          const {cmd,arg} = parsed;
-          if (cmd === "help"){ showHelp(); continue; }
-          if (cmd === "docs"){ showDocs(); continue; }
-          if (cmd === "clear"){ clearTerminal(); continue; }
-          if (cmd === "vars"){ listVars(); continue; }
-          if (cmd === "methods"){ listMethods(); continue; }
-          if (cmd === "reset"){ resetAll(); continue; }
-          if (cmd === "save"){ saveProfile(arg); continue; }
-          if (cmd === "load"){ loadProfile(arg); continue; }
-          if (cmd === "profiles"){ listProfiles(); continue; }
-          if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); continue; }
-          if (cmd === "test"){ runTestSuite(); continue; }
+        try{
+          if (parsed.type === "cmd"){
+            const {cmd,arg} = parsed;
+            if (cmd === "help"){ showHelp(); continue; }
+            if (cmd === "docs"){ showDocs(); continue; }
+            if (cmd === "clear"){ clearTerminal(); continue; }
+            if (cmd === "vars"){ listVars(); continue; }
+            if (cmd === "methods"){ listMethods(); continue; }
+            if (cmd === "reset"){ resetAll(); continue; }
+            if (cmd === "save"){ saveProfile(arg); continue; }
+            if (cmd === "mux"){ muxProfile(arg); continue; }
+            if (cmd === "load"){ loadProfile(arg); continue; }
+            if (cmd === "profiles"){ listProfiles(); continue; }
+            if (cmd === "pin"){ pinSymbol(arg); continue; }
+            if (cmd === "unpin"){ unpinSymbol(arg); continue; }
+            if (cmd === "which"){ whichSymbol(arg); continue; }
+            if (cmd === "use"){ useSymbolFromProfile(arg); continue; }
+            if (cmd === "diff"){ diffSymbol(arg); continue; }
+            if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); continue; }
+            if (cmd === "test"){ runTestSuite(); continue; }
 
-          if (cmd === "export"){
-            const text = exportSession();
-            await copyText(text);
-            continue;
+            if (cmd === "export"){
+              const text = exportSession();
+              await copyText(text);
+              continue;
+            }
+            if (cmd === "import"){
+              const text = await readClipboard();
+              importSession(text);
+              writeLine("Imported profile from clipboard.", "ok");
+              continue;
+            }
+            throw new Error(`Unknown command: :${cmd}`);
           }
-          if (cmd === "import"){
-            const text = await readClipboard();
-            importSession(text);
-            writeLine("Imported session from clipboard.", "ok");
-            continue;
-          }
-          throw new Error(`Unknown command: :${cmd}`);
-        }
 
         if (parsed.type === "def"){
           const existed = Object.prototype.hasOwnProperty.call(state.userFns, parsed.name);
@@ -157,6 +174,12 @@ export function createInputHandlers({
         if (parsed.type === "assy"){
           const assembly = createAssembly(parsed.name, parsed.fields);
           state.vars[parsed.name] = assembly;
+          recordSymbolDefinition({
+            name: parsed.name,
+            kind: "assy",
+            fields: parsed.fields,
+            value: assembly,
+          });
           const fr = formatValueDisplay(assembly);
           writeLine(`${parsed.name} = ${fr.main}`, "ok");
           continue;
@@ -165,6 +188,12 @@ export function createInputHandlers({
         if (parsed.type === "assign"){
           const val = runExpression(parsed.expr);
           state.vars[parsed.name] = val;
+          recordSymbolDefinition({
+            name: parsed.name,
+            kind: "var",
+            expr: parsed.expr,
+            value: val,
+          });
           const fr = formatValueDisplay(val);
           writeLine(`${parsed.name} = ${fr.main}`, "ok");
           if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
@@ -179,6 +208,12 @@ export function createInputHandlers({
           }else{
             solvedValue = solved.value;
             state.vars[solved.unknown.name] = solvedValue;
+            recordSymbolDefinition({
+              name: solved.unknown.name,
+              kind: "var",
+              expr: `${parsed.left} = ${parsed.right}`,
+              value: solvedValue,
+            });
           }
           const fr = formatValueDisplay(solvedValue);
           writeLine(`${solved.unknown.name} = ${fr.main}`, "ok");
@@ -253,6 +288,9 @@ export function createInputHandlers({
           writeLine(fr.main, "out");
           if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
           continue;
+        }
+        }finally{
+          endUsage(usageEntry);
         }
       }
     }catch(err){
