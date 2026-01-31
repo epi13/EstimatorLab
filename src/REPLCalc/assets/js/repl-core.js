@@ -1251,6 +1251,73 @@ export function initRepl(){
     userNavigated: false,
   };
 
+  const FN_DOCS = {
+    abs: { usage: "abs(x)", doc: "Absolute value." },
+    min: { usage: "min(a, b)", doc: "Smaller of two values." },
+    max: { usage: "max(a, b)", doc: "Larger of two values." },
+    round: { usage: "round(x)", doc: "Round to nearest integer." },
+    ceil: { usage: "ceil(x)", doc: "Round up to integer." },
+    floor: { usage: "floor(x)", doc: "Round down to integer." },
+    sqrt: { usage: "sqrt(x)", doc: "Square root." },
+    pow: { usage: "pow(a, b)", doc: "a raised to the power b." },
+    exp: { usage: "exp(x)", doc: "e to the power x." },
+    log: { usage: "log(x)", doc: "Natural logarithm." },
+    log10: { usage: "log10(x)", doc: "Base-10 logarithm." },
+    sin: { usage: "sin(x)", doc: "Sine of radians." },
+    cos: { usage: "cos(x)", doc: "Cosine of radians." },
+    tan: { usage: "tan(x)", doc: "Tangent of radians." },
+    asin: { usage: "asin(x)", doc: "Arcsine (radians)." },
+    acos: { usage: "acos(x)", doc: "Arccosine (radians)." },
+    atan: { usage: "atan(x)", doc: "Arctangent (radians)." },
+    atan2: { usage: "atan2(y, x)", doc: "Arctangent from y/x." },
+    clamp: { usage: "clamp(x, min, max)", doc: "Clamp between min and max." },
+    if: { usage: "if(cond, a, b)", doc: "Return a if cond is true, else b." },
+    waste: { usage: "waste(qty, pct)", doc: "Apply waste percentage to quantity." },
+    markup: { usage: "markup(cost, pct)", doc: "Apply markup percentage." },
+    burden: { usage: "burden(labor, pct)", doc: "Apply labor burden percentage." },
+    unit: { usage: "unit(cost, qty)", doc: "Unit cost from total and quantity." },
+    round_up: { usage: "round_up(x, step)", doc: "Round up to a step." },
+    area_rect: { usage: "area_rect(a, b)", doc: "Area from length and width." },
+    area_circle: { usage: "area_circle(diam)", doc: "Area from diameter." },
+    vol_rect: { usage: "vol_rect(area, thk_in)", doc: "Volume from area and thickness." },
+    concrete_cy: { usage: "concrete_cy(area, thk_in)", doc: "Concrete volume in cubic yards." },
+    bf: { usage: "bf(t_in, w_in, len_ft, qty)", doc: "Board feet from size and quantity." },
+    pipe_wt: { usage: "pipe_wt(nps, schedule, len_ft)", doc: "Pipe weight from NPS/schedule." },
+    to_in: { usage: "to_in(x)", doc: "Convert length to inches." },
+    to_ft: { usage: "to_ft(x)", doc: "Convert length to feet." },
+    to_sf: { usage: "to_sf(x)", doc: "Convert area to square feet." },
+    to_sy: { usage: "to_sy(x)", doc: "Convert area to square yards." },
+    to_cf: { usage: "to_cf(x)", doc: "Convert volume to cubic feet." },
+    to_cy: { usage: "to_cy(x)", doc: "Convert volume to cubic yards." },
+    to_lb: { usage: "to_lb(x)", doc: "Convert weight to pounds." },
+    to_ton: { usage: "to_ton(x)", doc: "Convert weight to tons." },
+    eval: { usage: "eval(\"expr\")", doc: "Evaluate a string expression." },
+    get: { usage: "get(\"name\")", doc: "Read a variable by name." },
+    set: { usage: "set(\"name\", value)", doc: "Set a variable by name." },
+    unset: { usage: "unset(\"name\")", doc: "Remove a variable by name." },
+    vars: { usage: "vars()", doc: "List variable names." },
+    methods: { usage: "methods()", doc: "List user function names." },
+    define: { usage: "define(\"fn\", \"a,b\", \"expr\")", doc: "Define a user function." },
+    undefine: { usage: "undefine(\"fn\")", doc: "Remove a user function." },
+  };
+
+  function getFnAutocompleteMeta(name){
+    if (Object.prototype.hasOwnProperty.call(state.userFns, name)){
+      const defn = state.userFns[name];
+      const params = defn.params ? defn.params.join(", ") : "";
+      return { usage: `${name}(${params})`, doc: `= ${defn.expr}` };
+    }
+    if (Object.prototype.hasOwnProperty.call(FN_DOCS, name)){
+      return FN_DOCS[name];
+    }
+    const fn = getFns()[name];
+    if (fn && typeof fn.arity === "number"){
+      const params = Array.from({ length: fn.arity }, (_, idx) => `arg${idx + 1}`);
+      return { usage: `${name}(${params.join(", ")})`, doc: "Built-in function." };
+    }
+    return { usage: `${name}()`, doc: "" };
+  }
+
   function getTokenAtCursor(value, cursor){
     let start = cursor;
     while (start > 0 && /[A-Za-z0-9_:]/.test(value[start - 1])) start -= 1;
@@ -1263,8 +1330,8 @@ export function initRepl(){
     if (!prefix) return [];
     const lowered = prefix.toLowerCase();
     const items = [];
-    const addItem = (label, kind, detail, insertText = label) => {
-      items.push({ label, kind, detail, insertText });
+    const addItem = (label, kind, detail, insertText = label, usage = "", doc = "") => {
+      items.push({ label, kind, detail, insertText, usage, doc });
     };
 
     if (prefix.startsWith(":")){
@@ -1279,7 +1346,8 @@ export function initRepl(){
     for (const name of Object.keys(getFns())){
       if (name.toLowerCase().startsWith(lowered)){
         const detail = Object.prototype.hasOwnProperty.call(state.userFns, name) ? "user" : "fn";
-        addItem(name, "function", detail, `${name}(`);
+        const meta = getFnAutocompleteMeta(name);
+        addItem(name, "function", detail, `${name}(`, meta.usage, meta.doc);
       }
     }
     for (const unit of Object.keys(UNIT)){
@@ -1307,6 +1375,8 @@ export function initRepl(){
       return;
     }
     autocompleteEl.classList.add("active");
+    const listEl = document.createElement("div");
+    listEl.className = "autocomplete-list";
     autocompleteState.items.forEach((item, idx) => {
       const row = document.createElement("div");
       row.className = `item${idx === autocompleteState.index ? " active" : ""}`;
@@ -1316,8 +1386,21 @@ export function initRepl(){
         event.preventDefault();
         applyAutocomplete(idx);
       });
-      autocompleteEl.appendChild(row);
+      listEl.appendChild(row);
     });
+    const detailEl = document.createElement("div");
+    detailEl.className = "autocomplete-detail";
+    const activeItem = autocompleteState.items[autocompleteState.index];
+    if (activeItem){
+      const usage = document.createElement("div");
+      usage.className = "usage";
+      usage.textContent = activeItem.usage || activeItem.label;
+      const doc = document.createElement("div");
+      doc.className = "doc";
+      doc.textContent = activeItem.doc || activeItem.detail;
+      detailEl.append(usage, doc);
+    }
+    autocompleteEl.append(listEl, detailEl);
   }
 
   function openAutocomplete(token){
