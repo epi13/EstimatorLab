@@ -1,4 +1,4 @@
-(() => {
+export function initRepl(){
   // -----------------------------
   // Terminal UI
   // -----------------------------
@@ -465,7 +465,7 @@
     return st[0];
   }
 
-  function buildAliasMap(tokens, vars){
+  function buildAliasMap(tokens, vars, fnNames){
     const referenced = new Set();
     const unknown = [];
     for (let i = 0; i < tokens.length; i++){
@@ -475,6 +475,7 @@
       const next = tokens[i + 1];
       if (next && next.type === "(") continue; // function call
       if (isUnitToken(name) || name === "pi" || name === "e") continue;
+      if (fnNames && fnNames.has(name)) continue;
       if (Object.prototype.hasOwnProperty.call(vars, name)){
         referenced.add(name);
       }else{
@@ -1029,11 +1030,12 @@
 
   function runExpressionWithContext(expr, vars){
     const tokens = insertImplicitMultiplication(tokenize(expr));
-    const aliasMap = buildAliasMap(tokens, vars);
+    const fns = getFns();
+    const aliasMap = buildAliasMap(tokens, vars, new Set(Object.keys(fns)));
     const rpn = toRPN(tokens);
     return evalRPN(rpn, {
       vars,
-      fns: getFns(),
+      fns,
       aliases: aliasMap,
     });
   }
@@ -1765,4 +1767,4 @@
   }
 
   boot();
-})();
+}
