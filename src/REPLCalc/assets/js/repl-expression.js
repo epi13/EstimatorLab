@@ -1,4 +1,4 @@
-import { UNIT, add, div, isQty, isUnitToken, makeQty, mul, pow, sub } from "./repl-units.js";
+import { UNIT, add, div, isQty, isScalarKind, isUnitToken, makeQty, mul, pow, sameDimension, sub } from "./repl-units.js";
 
 const OPS = {
   "||": { prec: 0, assoc: "L", fn: (a, b) => (isTruthy(a) || isTruthy(b)) ? 1 : 0 },
@@ -23,15 +23,15 @@ export function isTruthy(value){
 
 export function normalizeCompare(a, b){
   if (isQty(a) && isQty(b)){
-    if (a.kind !== b.kind) throw new Error(`Unit mismatch: ${a.kind} vs ${b.kind}`);
+    if (!sameDimension(a, b)) throw new Error(`Unit mismatch: ${a.kind} vs ${b.kind}`);
     return [a.value, b.value];
   }
   if (isQty(a) && !isQty(b)){
-    if (a.kind !== "scalar") throw new Error("Cannot compare unit quantity to scalar.");
+    if (!isScalarKind(a.kind)) throw new Error("Cannot compare unit quantity to scalar.");
     return [a.value, b];
   }
   if (!isQty(a) && isQty(b)){
-    if (b.kind !== "scalar") throw new Error("Cannot compare scalar to unit quantity.");
+    if (!isScalarKind(b.kind)) throw new Error("Cannot compare scalar to unit quantity.");
     return [a, b.value];
   }
   return [a, b];

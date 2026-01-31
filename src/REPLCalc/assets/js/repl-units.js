@@ -25,6 +25,76 @@ export function isQty(value){
   return value && typeof value === "object" && typeof value.value === "number" && typeof value.kind === "string";
 }
 
+const DIMENSIONS = {
+  scalar: {},
+  len: { len: 1 },
+  area: { len: 2 },
+  vol: { len: 3 },
+  wt: { wt: 1 },
+};
+
+function cloneDim(dim){
+  return Object.assign({}, dim);
+}
+
+function dimFromKind(kind){
+  if (!kind || kind === "scalar") return {};
+  if (Object.prototype.hasOwnProperty.call(DIMENSIONS, kind)) return cloneDim(DIMENSIONS[kind]);
+  if (typeof kind !== "string") return {};
+  const dim = {};
+  for (const part of kind.split("*")){
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const [base, expRaw] = trimmed.split("^");
+    if (!base) continue;
+    const exp = expRaw ? Number(expRaw) : 1;
+    if (!Number.isFinite(exp)) continue;
+    dim[base] = (dim[base] || 0) + exp;
+    if (dim[base] === 0) delete dim[base];
+  }
+  return dim;
+}
+
+function dimKey(dim){
+  const entries = Object.entries(dim).filter(([, val]) => val !== 0);
+  if (!entries.length) return "scalar";
+  entries.sort(([a], [b]) => a.localeCompare(b));
+  return entries.map(([key, exp]) => (exp === 1 ? key : `${key}^${exp}`)).join("*");
+}
+
+function kindFromDim(dim){
+  const len = dim.len || 0;
+  const wt = dim.wt || 0;
+  if (len === 0 && wt === 0) return "scalar";
+  if (len === 1 && wt === 0) return "len";
+  if (len === 2 && wt === 0) return "area";
+  if (len === 3 && wt === 0) return "vol";
+  if (len === 0 && wt === 1) return "wt";
+  return dimKey(dim);
+}
+
+function combineDims(a, b, sign = 1){
+  const dim = cloneDim(a);
+  for (const [key, val] of Object.entries(b)){
+    dim[key] = (dim[key] || 0) + val * sign;
+    if (dim[key] === 0) delete dim[key];
+  }
+  return dim;
+}
+
+function scaleDim(dim, power){
+  const out = {};
+  for (const [key, val] of Object.entries(dim)){
+    const next = val * power;
+    if (next !== 0) out[key] = next;
+  }
+  return out;
+}
+
+export function sameDimension(a, b){
+  return dimKey(dimFromKind(a.kind)) === dimKey(dimFromKind(b.kind));
+}
+
 export function qtyToString(qty){
   if (!qty || typeof qty !== "object" || !("value" in qty)) return String(qty);
   const value = qty.value;
@@ -43,28 +113,33 @@ export function qtyToString(qty){
   return `${fmt(value)} ${kind}`;
 }
 
+export function isScalarKind(kind){
+  return dimKey(dimFromKind(kind)) === "scalar";
+}
+
 export function convert(qty, toUnit){
   if (!qty || typeof qty !== "object") throw new Error("convert() expects a quantity");
   if (!isUnitToken(toUnit)) throw new Error(`Unknown unit: ${toUnit}`);
   const unit = UNIT[toUnit];
-  const kindMap = { len: "len", area: "area", vol: "vol", wt: "wt" };
-  const qtyKind = kindMap[qty.kind] || qty.kind;
-  if (qtyKind !== unit.kind) throw new Error(`Unit mismatch: cannot convert ${qty.kind} -> ${unit.kind}`);
+  const qtyDim = dimFromKind(qty.kind);
+  const unitDim = dimFromKind(unit.kind);
+  if (dimKey(qtyDim) !== dimKey(unitDim)) throw new Error(`Unit mismatch: cannot convert ${qty.kind} -> ${unit.kind}`);
   const base = qty.value;
   return base / unit.toBase;
 }
 
 export function add(a, b){
   if (isQty(a) && isQty(b)){
-    if (a.kind !== b.kind) throw new Error(`Unit mismatch: ${a.kind} + ${b.kind}`);
-    return makeQty(a.value + b.value, a.kind);
+    if (!sameDimension(a, b)) throw new Error(`Unit mismatch: ${a.kind} + ${b.kind}`);
+    const kind = kindFromDim(dimFromKind(a.kind));
+    return makeQty(a.value + b.value, kind);
   }
   if (isQty(a) && !isQty(b)){
-    if (a.kind !== "scalar") throw new Error("Cannot add scalar to a unit quantity without a unit.");
+    if (!isScalarKind(a.kind)) throw new Error("Cannot add scalar to a unit quantity without a unit.");
     return makeQty(a.value + b, "scalar");
   }
   if (!isQty(a) && isQty(b)){
-    if (b.kind !== "scalar") throw new Error("Cannot add scalar to a unit quantity without a unit.");
+    if (!isScalarKind(b.kind)) throw new Error("Cannot add scalar to a unit quantity without a unit.");
     return makeQty(a + b.value, "scalar");
   }
   return a + b;
@@ -72,15 +147,16 @@ export function add(a, b){
 
 export function sub(a, b){
   if (isQty(a) && isQty(b)){
-    if (a.kind !== b.kind) throw new Error(`Unit mismatch: ${a.kind} - ${b.kind}`);
-    return makeQty(a.value - b.value, a.kind);
+    if (!sameDimension(a, b)) throw new Error(`Unit mismatch: ${a.kind} - ${b.kind}`);
+    const kind = kindFromDim(dimFromKind(a.kind));
+    return makeQty(a.value - b.value, kind);
   }
   if (isQty(a) && !isQty(b)){
-    if (a.kind !== "scalar") throw new Error("Cannot subtract scalar from a unit quantity without a unit.");
+    if (!isScalarKind(a.kind)) throw new Error("Cannot subtract scalar from a unit quantity without a unit.");
     return makeQty(a.value - b, "scalar");
   }
   if (!isQty(a) && isQty(b)){
-    if (b.kind !== "scalar") throw new Error("Cannot subtract unit quantity from scalar.");
+    if (!isScalarKind(b.kind)) throw new Error("Cannot subtract unit quantity from scalar.");
     return makeQty(a - b.value, "scalar");
   }
   return a - b;
@@ -88,38 +164,55 @@ export function sub(a, b){
 
 export function mul(a, b){
   if (isQty(a) && isQty(b)){
-    const kindKey = `${a.kind}*${b.kind}`;
-    if (kindKey === "len*len") return makeQty(a.value * b.value, "area");
-    if (kindKey === "area*len" || kindKey === "len*area") return makeQty(a.value * b.value, "vol");
-    if (a.kind === b.kind) return makeQty(a.value * b.value, a.kind);
-    if (a.kind === "scalar") return makeQty(a.value * b.value, b.kind);
-    if (b.kind === "scalar") return makeQty(a.value * b.value, a.kind);
-    return makeQty(a.value * b.value, "scalar");
+    const dim = combineDims(dimFromKind(a.kind), dimFromKind(b.kind), 1);
+    return makeQty(a.value * b.value, kindFromDim(dim));
   }
-  if (isQty(a) && !isQty(b)) return makeQty(a.value * b, a.kind);
-  if (!isQty(a) && isQty(b)) return makeQty(a * b.value, b.kind);
+  if (isQty(a) && !isQty(b)){
+    const dim = dimFromKind(a.kind);
+    return makeQty(a.value * b, kindFromDim(dim));
+  }
+  if (!isQty(a) && isQty(b)){
+    const dim = dimFromKind(b.kind);
+    return makeQty(a * b.value, kindFromDim(dim));
+  }
   return a * b;
 }
 
 export function div(a, b){
   if (isQty(a) && isQty(b)){
-    if (a.kind === b.kind) return makeQty(a.value / b.value, "scalar");
-    if (b.kind === "scalar") return makeQty(a.value / b.value, a.kind);
-    return makeQty(a.value / b.value, "scalar");
+    const dim = combineDims(dimFromKind(a.kind), dimFromKind(b.kind), -1);
+    return makeQty(a.value / b.value, kindFromDim(dim));
   }
-  if (isQty(a) && !isQty(b)) return makeQty(a.value / b, a.kind);
-  if (!isQty(a) && isQty(b)) return makeQty(a / b.value, "scalar");
+  if (isQty(a) && !isQty(b)){
+    const dim = dimFromKind(a.kind);
+    return makeQty(a.value / b, kindFromDim(dim));
+  }
+  if (!isQty(a) && isQty(b)){
+    const dim = combineDims({}, dimFromKind(b.kind), -1);
+    return makeQty(a / b.value, kindFromDim(dim));
+  }
   return a / b;
 }
 
 export function pow(a, b){
   if (isQty(a) && isQty(b)){
-    if (b.kind !== "scalar") throw new Error("Exponent must be scalar.");
-    return makeQty(Math.pow(a.value, b.value), a.kind);
+    if (!isScalarKind(b.kind)) throw new Error("Exponent must be scalar.");
+    const exp = b.value;
+    if (!Number.isInteger(exp) && !isScalarKind(a.kind)){
+      throw new Error("Exponent must be integer for dimensioned quantities.");
+    }
+    const dim = scaleDim(dimFromKind(a.kind), exp);
+    return makeQty(Math.pow(a.value, exp), kindFromDim(dim));
   }
-  if (isQty(a) && !isQty(b)) return makeQty(Math.pow(a.value, b), a.kind);
+  if (isQty(a) && !isQty(b)){
+    if (!Number.isInteger(b) && !isScalarKind(a.kind)){
+      throw new Error("Exponent must be integer for dimensioned quantities.");
+    }
+    const dim = scaleDim(dimFromKind(a.kind), b);
+    return makeQty(Math.pow(a.value, b), kindFromDim(dim));
+  }
   if (!isQty(a) && isQty(b)){
-    if (b.kind !== "scalar") throw new Error("Exponent must be scalar.");
+    if (!isScalarKind(b.kind)) throw new Error("Exponent must be scalar.");
     return Math.pow(a, b.value);
   }
   return Math.pow(a, b);
