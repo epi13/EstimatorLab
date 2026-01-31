@@ -424,11 +424,10 @@
         if (u.kind === "wt") return makeQty(u.toBase, "wt");
       }
 
-      if (Object.prototype.hasOwnProperty.call(ctx.vars, name)) return ctx.vars[name];
-      if (ctx.allowImplicit){
-        ctx.vars[name] = 0;
-        return ctx.vars[name];
+      if (Object.prototype.hasOwnProperty.call(ctx.aliases, name)){
+        return ctx.vars[ctx.aliases[name]];
       }
+      if (Object.prototype.hasOwnProperty.call(ctx.vars, name)) return ctx.vars[name];
       throw new Error(`Unknown identifier: ${name}`);
     }
 
@@ -464,6 +463,73 @@
     }
     if (st.length !== 1) throw new Error("Expression did not reduce to a single value");
     return st[0];
+  }
+
+  function buildAliasMap(tokens, vars){
+    const referenced = new Set();
+    const unknown = [];
+    for (let i = 0; i < tokens.length; i++){
+      const t = tokens[i];
+      if (t.type !== "id") continue;
+      const name = t.value;
+      const next = tokens[i + 1];
+      if (next && next.type === "(") continue; // function call
+      if (isUnitToken(name) || name === "pi" || name === "e") continue;
+      if (Object.prototype.hasOwnProperty.call(vars, name)){
+        referenced.add(name);
+      }else{
+        unknown.push(name);
+      }
+    }
+
+    const available = Object.keys(vars).filter((name) => !referenced.has(name));
+    const remaining = new Set(available);
+    const aliases = Object.create(null);
+
+    for (const name of unknown){
+      const alias = pickAlias(name, Array.from(remaining));
+      if (alias){
+        aliases[name] = alias;
+        remaining.delete(alias);
+      }
+    }
+
+    return aliases;
+  }
+
+  function pickAlias(unknown, candidates){
+    if (!candidates.length) return null;
+    if (candidates.length === 1) return candidates[0];
+    const scored = candidates.map((candidate) => ({
+      candidate,
+      score: similarityScore(unknown, candidate),
+    }));
+    scored.sort((a, b) => b.score - a.score);
+    if (scored[0].score <= 0) return null;
+    if (scored.length > 1 && scored[0].score === scored[1].score) return null;
+    return scored[0].candidate;
+  }
+
+  function similarityScore(a, b){
+    const left = a.toLowerCase();
+    const right = b.toLowerCase();
+    let prefix = 0;
+    while (prefix < left.length && prefix < right.length && left[prefix] === right[prefix]){
+      prefix += 1;
+    }
+    let longest = 0;
+    for (let i = 0; i < left.length; i++){
+      for (let j = 0; j < right.length; j++){
+        let k = 0;
+        while (left[i + k] && right[j + k] && left[i + k] === right[j + k]){
+          k += 1;
+        }
+        if (k > longest) longest = k;
+      }
+    }
+    let score = prefix * 2 + longest;
+    if (left.includes(right) || right.includes(left)) score += 2;
+    return score;
   }
 
   // -----------------------------
@@ -961,13 +1027,14 @@
     return { type:"repeat", countExpr, body };
   }
 
-  function runExpressionWithContext(expr, vars, options = {}){
+  function runExpressionWithContext(expr, vars){
     const tokens = insertImplicitMultiplication(tokenize(expr));
+    const aliasMap = buildAliasMap(tokens, vars);
     const rpn = toRPN(tokens);
     return evalRPN(rpn, {
       vars,
       fns: getFns(),
-      allowImplicit: options.allowImplicit !== false,
+      aliases: aliasMap,
     });
   }
 
