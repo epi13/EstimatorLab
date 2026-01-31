@@ -65,6 +65,33 @@ export function tokenize(src){
       continue;
     }
 
+    if (c === "\"" || c === "'"){
+      const quote = c;
+      let j = i + 1;
+      let value = "";
+      while (j < s.length){
+        const ch = s[j];
+        if (ch === "\\"){
+          const next = s[j + 1];
+          if (next === "n") value += "\n";
+          else if (next === "t") value += "\t";
+          else if (next === "r") value += "\r";
+          else if (next === quote) value += quote;
+          else if (next === "\\") value += "\\";
+          else if (next) value += next;
+          j += 2;
+          continue;
+        }
+        if (ch === quote) break;
+        value += ch;
+        j += 1;
+      }
+      if (s[j] !== quote) throw new Error("Unterminated string literal");
+      out.push({ type: "str", value });
+      i = j + 1;
+      continue;
+    }
+
     if (isDigit(c) || (c === "." && isDigit(s[i + 1]))){
       let j = i;
       while (j < s.length && /[0-9.]/.test(s[j])) j += 1;
@@ -139,6 +166,8 @@ export function toRPN(tokens){
     const t = tokens[idx];
 
     if (t.type === "num"){
+      output.push(t);
+    }else if (t.type === "str"){
       output.push(t);
     }else if (t.type === "id"){
       const next = tokens[idx + 1];
@@ -226,6 +255,8 @@ export function evalRPN(rpn, ctx){
 
   for (const t of rpn){
     if (t.type === "num"){
+      st.push(t.value);
+    }else if (t.type === "str"){
       st.push(t.value);
     }else if (t.type === "id"){
       st.push(getVar(t.value));
