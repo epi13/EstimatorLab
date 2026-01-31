@@ -425,6 +425,10 @@
       }
 
       if (Object.prototype.hasOwnProperty.call(ctx.vars, name)) return ctx.vars[name];
+      if (ctx.allowImplicit){
+        ctx.vars[name] = 0;
+        return ctx.vars[name];
+      }
       throw new Error(`Unknown identifier: ${name}`);
     }
 
@@ -957,10 +961,14 @@
     return { type:"repeat", countExpr, body };
   }
 
-  function runExpressionWithContext(expr, vars){
+  function runExpressionWithContext(expr, vars, options = {}){
     const tokens = insertImplicitMultiplication(tokenize(expr));
     const rpn = toRPN(tokens);
-    return evalRPN(rpn, { vars, fns: getFns() });
+    return evalRPN(rpn, {
+      vars,
+      fns: getFns(),
+      allowImplicit: options.allowImplicit !== false,
+    });
   }
 
   function runExpression(expr){
@@ -1201,13 +1209,15 @@
         return;
       }
       if (parsed.type === "assign"){
-        const val = runExpression(parsed.expr);
+        const previewVars = Object.assign(Object.create(null), state.vars);
+        const val = runExpressionWithContext(parsed.expr, previewVars);
         const fr = formatResult(val);
         setLiveResult(`${parsed.name} = ${fr.main}`, "ok");
         return;
       }
       if (parsed.type === "expr"){
-        const val = runExpression(parsed.expr);
+        const previewVars = Object.assign(Object.create(null), state.vars);
+        const val = runExpressionWithContext(parsed.expr, previewVars);
         const fr = formatResult(val);
         setLiveResult(fr.main, "ok");
       }
