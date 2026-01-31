@@ -154,6 +154,7 @@ export function initRepl(){
     writeLine("  :export              copy session JSON to clipboard", "muted");
     writeLine("  :import              load session JSON from clipboard", "muted");
     writeLine("  :theme default|amber|matrix", "muted");
+    writeLine("  :test                run the built-in test suite", "muted");
     writeLine("Functions:", "muted");
     writeLine("  waste(qty,pct)  markup(cost,pct)  burden(labor,pct)  unit(cost,qty)  round_up(x,step)", "muted");
     writeLine("  area_rect(a,b) area_circle(diam) vol_rect(area,thk_in) concrete_cy(area,thk_in)", "muted");
@@ -200,6 +201,7 @@ export function initRepl(){
     writeLine("  :vars list variables   :methods list user methods   :reset wipe session", "muted");
     writeLine("  :export copy JSON      :import load JSON from clipboard", "muted");
     writeLine("  :theme default|amber|matrix", "muted");
+    writeLine("  :test run REPL tests", "muted");
     writeLine("Tips:", "muted");
     writeLine("  - Shift+Enter inserts a new line. Enter runs when the statement is complete.", "muted");
     writeLine("  - Use Up/Down to cycle history; Ctrl/Cmd+L clears the terminal.", "muted");
@@ -766,7 +768,217 @@ export function initRepl(){
     { label: ":export", detail: "copy session" },
     { label: ":import", detail: "load session" },
     { label: ":theme", detail: "switch theme" },
+    { label: ":test", detail: "run tests" },
   ];
+
+  const expectQty = (value, kind, tol = 1e-6) => ({ type: "qty", value, kind, tol });
+  const expectNear = (value, tol = 1e-6) => ({ type: "scalar", value, tol });
+
+  function createTestSuite(){
+    return [
+      { name: "basic arithmetic", expr: "2+2", expect: 4 },
+      { name: "operator precedence", expr: "2+2*5", expect: 12 },
+      { name: "parentheses", expr: "(2+2)*5", expect: 20 },
+      { name: "exponentiation", expr: "2^3", expect: 8 },
+      { name: "comparisons", expr: "3 > 2", expect: 1 },
+      { name: "logic", expr: "1 && 0", expect: 0 },
+      { name: "assignment + reference", steps: ["x = 10", "x * 3"], expect: 30 },
+      { name: "unit addition", expr: "12 in + 1 ft", expect: expectQty(2, "len") },
+      { name: "area from multiplication", expr: "12 ft * 10 ft", expect: expectQty(120, "area") },
+      { name: "volume helper", expr: "vol_rect(1200 sf, 4 in)", expect: expectQty(400, "vol") },
+      { name: "concrete volume", expr: "concrete_cy(1200 sf, 4 in)", expect: expectNear(400 / 27) },
+      { name: "waste factor", expr: "waste(500 sf, 10)", expect: expectQty(550, "area") },
+      { name: "unit cost", expr: "unit(1200, 30)", expect: 40 },
+      { name: "circle area", expr: "area_circle(10 ft)", expect: expectNear(Math.PI * 25) },
+      { name: "pipe weight", expr: "pipe_wt(2, 40, 10 ft)", expect: expectQty(36.5, "wt") },
+      { name: "convert volume", expr: "to_cy(27 cf)", expect: 1 },
+      { name: "user function", steps: ["fn crew_cost(rate, hours) = rate * hours", "crew_cost(85, 12)"], expect: 1020 },
+      { name: "if statement", steps: ["total = 0", "if 3 > 2: total = 5 else: total = 2", "total"], expect: 5 },
+      { name: "for loop", steps: ["total = 0", "for i in 1..4: total = total + i", "total"], expect: 10 },
+      { name: "repeat loop", steps: ["total = 0", "repeat 3: total = total + 2", "total"], expect: 6 },
+      { name: "equation solver", expr: "56 cy = concrete_cy(sf, 6 in)", expect: 3024 },
+      { name: "meta helpers", steps: ["set(\"crew\", 5)", "get(\"crew\")"], expect: 5 },
+      { name: "unset meta", steps: ["set(\"crew\", 5)", "unset(\"crew\")"], expect: 1 },
+    ];
+  }
+
+  function formatTestValue(value){
+    if (isQty(value)) return qtyToString(value);
+    return String(value);
+  }
+
+  function evaluateTestStatements(source){
+    const statements = splitStatements(source);
+    let lastValue = null;
+    for (const stmt of statements){
+      const parsed = evaluate(stmt);
+      if (!parsed) continue;
+      if (parsed.type === "cmd") throw new Error(`Test cannot use command :${parsed.cmd}`);
+      if (parsed.type === "def"){
+        defineUserFn(parsed.name, parsed.params, parsed.expr);
+        continue;
+      }
+      if (parsed.type === "assign"){
+        const val = runExpression(parsed.expr);
+        state.vars[parsed.name] = val;
+        lastValue = val;
+        continue;
+      }
+      if (parsed.type === "equation"){
+        const solved = solveEquation(parsed.left, parsed.right);
+        if (solved.unknown.unitToken){
+          lastValue = makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind);
+        }else{
+          lastValue = solved.value;
+          state.vars[solved.unknown.name] = solved.value;
+        }
+        continue;
+      }
+      if (parsed.type === "if"){
+        const cond = runExpression(parsed.condition);
+        if (isTruthy(cond)){
+          lastValue = evaluateTestStatements(parsed.thenBody);
+        }else if (parsed.elseBody){
+          lastValue = evaluateTestStatements(parsed.elseBody);
+        }
+        continue;
+      }
+      if (parsed.type === "for"){
+        const startVal = runExpression(parsed.startExpr);
+        const endVal = runExpression(parsed.endExpr);
+        const stepVal = parsed.stepExpr ? runExpression(parsed.stepExpr) : 1;
+        let start;
+        let end;
+        let step;
+        let loopKind = null;
+        if (isQty(startVal) || isQty(endVal)){
+          if (!isQty(startVal) || !isQty(endVal)){
+            throw new Error("for loop range must use matching unit quantities");
+          }
+          if (startVal.kind !== endVal.kind){
+            throw new Error("for loop range units must match");
+          }
+          loopKind = startVal.kind;
+          start = startVal.value;
+          end = endVal.value;
+          if (isQty(stepVal)){
+            if (stepVal.kind !== loopKind) throw new Error("for loop step unit mismatch");
+            step = stepVal.value;
+          }else{
+            step = stepVal;
+          }
+        }else{
+          [start, end] = normalizeCompare(startVal, endVal);
+          step = normalizeCompare(stepVal, 0)[0];
+        }
+        if (step === 0) throw new Error("for loop step cannot be 0");
+        const hadVar = Object.prototype.hasOwnProperty.call(state.vars, parsed.varName);
+        const prevVal = state.vars[parsed.varName];
+        const forward = step > 0;
+        for (let i = start; forward ? i <= end : i >= end; i += step){
+          state.vars[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
+          lastValue = evaluateTestStatements(parsed.body);
+        }
+        if (hadVar) state.vars[parsed.varName] = prevVal;
+        else delete state.vars[parsed.varName];
+        continue;
+      }
+      if (parsed.type === "repeat"){
+        const countVal = runExpression(parsed.countExpr);
+        const count = normalizeCompare(countVal, 0)[0];
+        if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
+        for (let i = 0; i < Math.floor(count); i++){
+          lastValue = evaluateTestStatements(parsed.body);
+        }
+        continue;
+      }
+      if (parsed.type === "expr"){
+        lastValue = runExpression(parsed.expr);
+      }
+    }
+    return lastValue;
+  }
+
+  function matchExpected(actual, expected){
+    const tol = 1e-9;
+    if (expected && typeof expected === "object" && expected.type === "qty"){
+      if (!isQty(actual)) return { pass: false, message: `expected quantity ${expected.kind}` };
+      if (actual.kind !== expected.kind) return { pass: false, message: `expected ${expected.kind}, got ${actual.kind}` };
+      const delta = Math.abs(actual.value - expected.value);
+      if (delta > expected.tol) return { pass: false, message: `expected ${expected.value} ${expected.kind}, got ${actual.value} ${actual.kind}` };
+      return { pass: true };
+    }
+    if (expected && typeof expected === "object" && expected.type === "scalar"){
+      const actualValue = isQty(actual) ? actual.value : actual;
+      const delta = Math.abs(actualValue - expected.value);
+      if (delta > expected.tol) return { pass: false, message: `expected ${expected.value}, got ${actualValue}` };
+      return { pass: true };
+    }
+    if (typeof expected === "number"){
+      const actualValue = isQty(actual) ? actual.value : actual;
+      if (Math.abs(actualValue - expected) > tol){
+        return { pass: false, message: `expected ${expected}, got ${actualValue}` };
+      }
+      return { pass: true };
+    }
+    if (Object.is(actual, expected)) return { pass: true };
+    return { pass: false, message: `expected ${String(expected)}, got ${formatTestValue(actual)}` };
+  }
+
+  function runTestSuite(){
+    setStatus("Testing...", "warn");
+    writeLine("Running REPLCalc tests...", "ok");
+    const savedState = {
+      vars: state.vars,
+      userFns: state.userFns,
+      history: state.history,
+      histIdx: state.histIdx,
+    };
+    state.vars = Object.create(null);
+    state.userFns = Object.create(null);
+    state.history = [];
+    state.histIdx = -1;
+    renderUserFunctions();
+
+    const tests = createTestSuite();
+    let passCount = 0;
+    const failures = [];
+
+    for (const test of tests){
+      try{
+        state.vars = Object.create(null);
+        state.userFns = Object.create(null);
+        state.history = [];
+        state.histIdx = -1;
+        const source = test.steps ? test.steps.join("\n") : test.expr;
+        const result = evaluateTestStatements(source);
+        const match = matchExpected(result, test.expect);
+        if (match.pass){
+          passCount += 1;
+        }else{
+          failures.push({ name: test.name, reason: match.message || "failed" });
+        }
+      }catch(err){
+        failures.push({ name: test.name, reason: err.message || String(err) });
+      }
+    }
+
+    state.vars = savedState.vars;
+    state.userFns = savedState.userFns;
+    state.history = savedState.history;
+    state.histIdx = savedState.histIdx;
+    renderUserFunctions();
+
+    if (!failures.length){
+      writeLine(`Tests complete: ${passCount}/${tests.length} passed.`, "ok");
+    }else{
+      writeLine(`Tests complete: ${passCount}/${tests.length} passed.`, "warn");
+      failures.forEach((fail) => {
+        writeLine(`✗ ${fail.name}: ${fail.reason}`, "err");
+      });
+    }
+    setStatus("Ready", "ok");
+  }
 
   function formatTokens(tokens){
     const parts = tokens.map((t) => {
@@ -1156,6 +1368,7 @@ export function initRepl(){
           if (cmd === "methods"){ listMethods(); continue; }
           if (cmd === "reset"){ resetAll(); continue; }
           if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); continue; }
+          if (cmd === "test"){ runTestSuite(); continue; }
 
           if (cmd === "export"){
             const text = exportSession();
