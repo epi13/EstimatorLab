@@ -85,8 +85,7 @@ export function createBaseFns(){
 
   baseFns.concrete_cy = defFn("concrete_cy", 2, (area, thickness_in) => {
     const vol = baseFns.vol_rect.impl(area, thickness_in);
-    const cy = vol.value / 27;
-    return cy;
+    return makeQty(vol.value, "vol");
   });
 
   baseFns.bf = defFn("bf", 4, (t_in, w_in, len_ft, qty) => {
