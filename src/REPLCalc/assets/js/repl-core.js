@@ -46,6 +46,27 @@ export function initRepl(){
     terminalEl.scrollTop = terminalEl.scrollHeight;
   }
 
+  function writeLineRich(parts, cls="out"){
+    const p = document.createElement("p");
+    p.className = `line ${cls}`;
+    for (const part of parts){
+      if (typeof part === "string"){
+        p.appendChild(document.createTextNode(part));
+        continue;
+      }
+      const span = document.createElement("span");
+      span.className = part.className;
+      span.textContent = part.text;
+      p.appendChild(span);
+    }
+    terminalEl.appendChild(p);
+    terminalEl.scrollTop = terminalEl.scrollHeight;
+  }
+
+  function token(text, className){
+    return { text, className };
+  }
+
   function writeInputEcho(text){
     const p = document.createElement('p');
     p.className = 'line';
@@ -132,80 +153,691 @@ export function initRepl(){
   // -----------------------------
   function showHelp(){
     writeLine("Estimator REPL help", "ok");
-    writeLine("Math: +  -  *  /  ^  ( )  comparisons (== != < <= > >=) and logic (&& ||)", "muted");
-    writeLine("Variables: x = 12.5   |   use: x*3", "muted");
-    writeLine("Functions: def|fn|function name(a,b) = expression (redefine to edit)", "muted");
-    writeLine("Flow: if condition: expr [else: expr]", "muted");
-    writeLine("Loop: for i in 1..5 step 1: expr   |   repeat 3: expr", "muted");
-    writeLine("Strings: \"text\" or 'text' (used for meta commands like eval/set)", "muted");
-    writeLine("Units: in, ft, yd, sf, sy, cf, cy, lb, ton (use like: 12 ft + 6 in)", "muted");
-    writeLine("Solve: expr = expr  (one unknown variable, ex: 56 cy = concrete_cy(sf, 6 in))", "muted");
-    writeLine("Editor: autocomplete, syntax highlight, and live preview while typing", "muted");
-    writeLine("Tip: Enter runs when complete; Enter adds new line if incomplete.", "muted");
-    writeLine("Meta: eval(\"expr\") set(\"x\", 5) get(\"x\") unset(\"x\") vars() methods()", "muted");
-    writeLine("Meta: define(\"fn\", \"a,b\", \"a+b\") undefine(\"fn\")", "muted");
-    writeLine("Commands:", "muted");
-    writeLine("  :help                show help", "muted");
-    writeLine("  :docs                detailed docs + examples", "muted");
-    writeLine("  :clear               clear terminal output", "muted");
-    writeLine("  :vars                list variables", "muted");
-    writeLine("  :methods             list user methods", "muted");
-    writeLine("  :reset               reset vars + history", "muted");
-    writeLine("  :export              copy session JSON to clipboard", "muted");
-    writeLine("  :import              load session JSON from clipboard", "muted");
-    writeLine("  :theme default|amber|matrix", "muted");
-    writeLine("  :test                run the built-in test suite", "muted");
-    writeLine("Functions:", "muted");
-    writeLine("  waste(qty,pct)  markup(cost,pct)  burden(labor,pct)  unit(cost,qty)  round_up(x,step)", "muted");
-    writeLine("  area_rect(a,b) area_circle(diam) vol_rect(area,thk_in) concrete_cy(area,thk_in)", "muted");
-    writeLine("  bf(t_in,w_in,len_ft,qty)  pipe_wt(nps_in,schedule,len_ft)", "muted");
-    writeLine("  to_in(x) to_ft(x) to_sf(x) to_sy(x) to_cf(x) to_cy(x) to_lb(x) to_ton(x)", "muted");
-    writeLine("  abs min max round ceil floor sqrt pow exp log log10 sin cos tan atan2 clamp if", "muted");
-    writeLine("Examples:", "muted");
-    writeLine("  slab = concrete_cy(1200 sf, 4 in)", "muted");
-    writeLine("  total = markup(burden(12500, 16.7), 35)", "muted");
-    writeLine("  waste(500 sf, 10)", "muted");
-    writeLine("  fn crew_cost(rate, hours) = rate * hours", "muted");
-    writeLine("  for i in 1..4: total = total + i", "muted");
-    writeLine("  if labor > 40: overtime = labor - 40 else: overtime = 0", "muted");
+    writeLineRich([
+      token("Math:", "out-label"),
+      " ",
+      token("+  -  *  /  ^  ( )", "out-op"),
+      " comparisons ",
+      token("(== != < <= > >=)", "out-op"),
+      " and logic ",
+      token("(&& ||)", "out-op")
+    ], "muted");
+    writeLineRich([
+      token("Variables:", "out-label"),
+      " ",
+      token("x", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("12.5", "out-number"),
+      "   |   use: ",
+      token("x", "out-var"),
+      token("*", "out-op"),
+      token("3", "out-number")
+    ], "muted");
+    writeLineRich([
+      token("Functions:", "out-label"),
+      " ",
+      token("def", "out-keyword"),
+      token("|", "out-op"),
+      token("fn", "out-keyword"),
+      token("|", "out-op"),
+      token("function", "out-keyword"),
+      " ",
+      token("name", "out-fn"),
+      token("(", "out-op"),
+      token("a,b", "out-var"),
+      token(")", "out-op"),
+      " = expression (redefine to edit)"
+    ], "muted");
+    writeLineRich([
+      token("Flow:", "out-label"),
+      " ",
+      token("if", "out-keyword"),
+      " condition: expr [",
+      token("else", "out-keyword"),
+      ": expr]"
+    ], "muted");
+    writeLineRich([
+      token("Loop:", "out-label"),
+      " ",
+      token("for", "out-keyword"),
+      " i ",
+      token("in", "out-keyword"),
+      " ",
+      token("1..5", "out-number"),
+      " ",
+      token("step", "out-keyword"),
+      " ",
+      token("1", "out-number"),
+      ": expr   |   ",
+      token("repeat", "out-keyword"),
+      " ",
+      token("3", "out-number"),
+      ": expr"
+    ], "muted");
+    writeLineRich([
+      token("Strings:", "out-label"),
+      " ",
+      token("\"text\"", "out-string"),
+      " or ",
+      token("'text'", "out-string"),
+      " (used for meta commands like ",
+      token("eval", "out-fn"),
+      "/",
+      token("set", "out-fn"),
+      ")"
+    ], "muted");
+    writeLineRich([
+      token("Units:", "out-label"),
+      " ",
+      token("in, ft, yd, sf, sy, cf, cy, lb, ton", "out-unit"),
+      " (use like: ",
+      token("12", "out-number"),
+      " ",
+      token("ft", "out-unit"),
+      " + ",
+      token("6", "out-number"),
+      " ",
+      token("in", "out-unit"),
+      ")"
+    ], "muted");
+    writeLineRich([
+      token("Solve:", "out-label"),
+      " expr ",
+      token("=", "out-op"),
+      " expr (one unknown variable, ex: ",
+      token("56", "out-number"),
+      " ",
+      token("cy", "out-unit"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("concrete_cy", "out-fn"),
+      token("(", "out-op"),
+      token("sf", "out-unit"),
+      ", ",
+      token("6", "out-number"),
+      " ",
+      token("in", "out-unit"),
+      token(")", "out-op"),
+      ")"
+    ], "muted");
+    writeLineRich([
+      token("Editor:", "out-label"),
+      " autocomplete, syntax highlight, and live preview while typing"
+    ], "muted");
+    writeLineRich([
+      token("Tip:", "out-label"),
+      " Enter runs when complete; Enter adds new line if incomplete."
+    ], "muted");
+    writeLineRich([
+      token("Meta:", "out-label"),
+      " ",
+      token("eval", "out-fn"),
+      token("(", "out-op"),
+      token("\"expr\"", "out-string"),
+      token(")", "out-op"),
+      " ",
+      token("set", "out-fn"),
+      token("(", "out-op"),
+      token("\"x\"", "out-string"),
+      token(", ", "out-op"),
+      token("5", "out-number"),
+      token(")", "out-op"),
+      " ",
+      token("get", "out-fn"),
+      token("(", "out-op"),
+      token("\"x\"", "out-string"),
+      token(")", "out-op"),
+      " ",
+      token("unset", "out-fn"),
+      token("(", "out-op"),
+      token("\"x\"", "out-string"),
+      token(")", "out-op"),
+      " ",
+      token("vars()", "out-fn"),
+      " ",
+      token("methods()", "out-fn")
+    ], "muted");
+    writeLineRich([
+      token("Meta:", "out-label"),
+      " ",
+      token("define", "out-fn"),
+      token("(", "out-op"),
+      token("\"fn\"", "out-string"),
+      ", ",
+      token("\"a,b\"", "out-string"),
+      ", ",
+      token("\"a+b\"", "out-string"),
+      token(")", "out-op"),
+      " ",
+      token("undefine", "out-fn"),
+      token("(", "out-op"),
+      token("\"fn\"", "out-string"),
+      token(")", "out-op")
+    ], "muted");
+    writeLineRich([token("Commands:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token(":help", "out-command"),
+      "                show help"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":docs", "out-command"),
+      "                detailed docs + examples"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":clear", "out-command"),
+      "               clear terminal output"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":vars", "out-command"),
+      "                list variables"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":methods", "out-command"),
+      "             list user methods"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":reset", "out-command"),
+      "               reset vars + history"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":export", "out-command"),
+      "              copy session JSON to clipboard"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":import", "out-command"),
+      "              load session JSON from clipboard"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":theme", "out-command"),
+      " ",
+      token("default", "out-keyword"),
+      token("|", "out-op"),
+      token("amber", "out-keyword"),
+      token("|", "out-op"),
+      token("matrix", "out-keyword")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":test", "out-command"),
+      "                run the built-in test suite"
+    ], "muted");
+    writeLineRich([token("Functions:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("waste", "out-fn"),
+      token("(qty,pct)", "out-op"),
+      "  ",
+      token("markup", "out-fn"),
+      token("(cost,pct)", "out-op"),
+      "  ",
+      token("burden", "out-fn"),
+      token("(labor,pct)", "out-op"),
+      "  ",
+      token("unit", "out-fn"),
+      token("(cost,qty)", "out-op"),
+      "  ",
+      token("round_up", "out-fn"),
+      token("(x,step)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("area_rect", "out-fn"),
+      token("(a,b)", "out-op"),
+      " ",
+      token("area_circle", "out-fn"),
+      token("(diam)", "out-op"),
+      " ",
+      token("vol_rect", "out-fn"),
+      token("(area,thk_in)", "out-op"),
+      " ",
+      token("concrete_cy", "out-fn"),
+      token("(area,thk_in)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("bf", "out-fn"),
+      token("(t_in,w_in,len_ft,qty)", "out-op"),
+      "  ",
+      token("pipe_wt", "out-fn"),
+      token("(nps_in,schedule,len_ft)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("to_in", "out-fn"),
+      token("(x)", "out-op"),
+      " ",
+      token("to_ft", "out-fn"),
+      token("(x)", "out-op"),
+      " ",
+      token("to_sf", "out-fn"),
+      token("(x)", "out-op"),
+      " ",
+      token("to_sy", "out-fn"),
+      token("(x)", "out-op"),
+      " ",
+      token("to_cf", "out-fn"),
+      token("(x)", "out-op"),
+      " ",
+      token("to_cy", "out-fn"),
+      token("(x)", "out-op"),
+      " ",
+      token("to_lb", "out-fn"),
+      token("(x)", "out-op"),
+      " ",
+      token("to_ton", "out-fn"),
+      token("(x)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("abs min max round ceil floor sqrt pow exp log log10 sin cos tan atan2 clamp if", "out-keyword")
+    ], "muted");
+    writeLineRich([token("Examples:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("slab", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("concrete_cy", "out-fn"),
+      token("(", "out-op"),
+      token("1200", "out-number"),
+      " ",
+      token("sf", "out-unit"),
+      ", ",
+      token("4", "out-number"),
+      " ",
+      token("in", "out-unit"),
+      token(")", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("total", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("markup", "out-fn"),
+      token("(", "out-op"),
+      token("burden", "out-fn"),
+      token("(", "out-op"),
+      token("12500", "out-number"),
+      ", ",
+      token("16.7", "out-number"),
+      token(")", "out-op"),
+      ", ",
+      token("35", "out-number"),
+      token(")", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("waste", "out-fn"),
+      token("(", "out-op"),
+      token("500", "out-number"),
+      " ",
+      token("sf", "out-unit"),
+      ", ",
+      token("10", "out-number"),
+      token(")", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("fn", "out-keyword"),
+      " ",
+      token("crew_cost", "out-fn"),
+      token("(", "out-op"),
+      token("rate, hours", "out-var"),
+      token(")", "out-op"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("rate", "out-var"),
+      " ",
+      token("*", "out-op"),
+      " ",
+      token("hours", "out-var")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("for", "out-keyword"),
+      " i ",
+      token("in", "out-keyword"),
+      " ",
+      token("1..4", "out-number"),
+      ": ",
+      token("total", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("total", "out-var"),
+      " ",
+      token("+", "out-op"),
+      " i"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("if", "out-keyword"),
+      " ",
+      token("labor", "out-var"),
+      " ",
+      token(">", "out-op"),
+      " ",
+      token("40", "out-number"),
+      ": ",
+      token("overtime", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("labor", "out-var"),
+      " ",
+      token("-", "out-op"),
+      " ",
+      token("40", "out-number"),
+      " ",
+      token("else", "out-keyword"),
+      ": ",
+      token("overtime", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("0", "out-number")
+    ], "muted");
   }
 
   function showDocs(){
     writeLine("Estimator REPL docs", "ok");
-    writeLine("Overview:", "muted");
-    writeLine("  This REPL mixes calculator math with takeoff helpers, units, and quick scripting.", "muted");
-    writeLine("  Use it for one-off computations or build up a session with variables + methods.", "muted");
-    writeLine("Syntax quickstart:", "muted");
-    writeLine("  Expressions: 2+2*5  |  (1200 sf * 4 in) / 27  |  pow(3,2)", "muted");
-    writeLine("  Assignment: x = 144  |  total = markup(burden(12500, 16.7), 35)", "muted");
-    writeLine("  Functions: fn name(a,b) = expression  (call with name(1,2))", "muted");
-    writeLine("  Flow: if labor > 40: overtime = labor - 40 else: overtime = 0", "muted");
-    writeLine("  Loop: for i in 1..4: total = total + i  |  repeat 3: waste(100 sf, 5)", "muted");
-    writeLine("  Solve: 56 cy = concrete_cy(sf, 6 in)", "muted");
-    writeLine("  Strings: \"crew\" or 'crew' (required for meta-programming helpers)", "muted");
-    writeLine("Units:", "muted");
-    writeLine("  Supported: in, ft, yd, sf, sy, cf, cy, lb, ton.", "muted");
-    writeLine("  Use as tokens: 12 ft + 6 in  |  1200 sf * 4 in  |  3 cy + 9 cf", "muted");
-    writeLine("  Converters: to_in/to_ft, to_sf/to_sy, to_cf/to_cy, to_lb/to_ton.", "muted");
-    writeLine("Construction helpers:", "muted");
-    writeLine("  waste(qty,pct)  markup(cost,pct)  burden(labor,pct)  unit(cost,qty)  round_up(x,step)", "muted");
-    writeLine("  area_rect(a,b) area_circle(diam) vol_rect(area,thk_in) concrete_cy(area,thk_in)", "muted");
-    writeLine("  bf(t_in,w_in,len_ft,qty)  pipe_wt(nps_in,schedule,len_ft)", "muted");
-    writeLine("Math + logic:", "muted");
-    writeLine("  abs min max round ceil floor sqrt pow exp log log10 sin cos tan atan2 clamp", "muted");
-    writeLine("  Comparisons return 1/0: == != < <= > >=  |  Logic: && ||", "muted");
-    writeLine("Meta-programming:", "muted");
-    writeLine("  eval(\"expr\") set(\"name\", value) get(\"name\") unset(\"name\")", "muted");
-    writeLine("  define(\"fn\", \"a,b\", \"a+b\") undefine(\"fn\") vars() methods()", "muted");
-    writeLine("Session commands:", "muted");
-    writeLine("  :vars list variables   :methods list user methods   :reset wipe session", "muted");
-    writeLine("  :export copy JSON      :import load JSON from clipboard", "muted");
-    writeLine("  :theme default|amber|matrix", "muted");
-    writeLine("  :test run REPL tests", "muted");
-    writeLine("Tips:", "muted");
-    writeLine("  - Shift+Enter inserts a new line. Enter runs when the statement is complete.", "muted");
-    writeLine("  - Use Up/Down to cycle history; Ctrl/Cmd+L clears the terminal.", "muted");
-    writeLine("  - Autocomplete works for commands (:), functions, units, variables, constants.", "muted");
+    writeLineRich([token("Overview:", "out-label")], "muted");
+    writeLineRich(["  This REPL mixes calculator math with takeoff helpers, units, and quick scripting."], "muted");
+    writeLineRich(["  Use it for one-off computations or build up a session with variables + methods."], "muted");
+    writeLineRich([token("Syntax quickstart:", "out-label")], "muted");
+    writeLineRich([
+      "  Expressions: ",
+      token("2+2*5", "out-op"),
+      "  |  ",
+      token("(1200 sf * 4 in) / 27", "out-op"),
+      "  |  ",
+      token("pow", "out-fn"),
+      token("(3,2)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  Assignment: ",
+      token("x", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("144", "out-number"),
+      "  |  ",
+      token("total", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("markup", "out-fn"),
+      token("(burden(12500, 16.7), 35)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  Functions: ",
+      token("fn", "out-keyword"),
+      " ",
+      token("name", "out-fn"),
+      token("(a,b)", "out-op"),
+      " = expression  (call with ",
+      token("name(1,2)", "out-op"),
+      ")"
+    ], "muted");
+    writeLineRich([
+      "  Flow: ",
+      token("if", "out-keyword"),
+      " ",
+      token("labor", "out-var"),
+      " ",
+      token(">", "out-op"),
+      " ",
+      token("40", "out-number"),
+      ": ",
+      token("overtime", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("labor", "out-var"),
+      " ",
+      token("-", "out-op"),
+      " ",
+      token("40", "out-number"),
+      " ",
+      token("else", "out-keyword"),
+      ": ",
+      token("overtime", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("0", "out-number")
+    ], "muted");
+    writeLineRich([
+      "  Loop: ",
+      token("for", "out-keyword"),
+      " i ",
+      token("in", "out-keyword"),
+      " ",
+      token("1..4", "out-number"),
+      ": ",
+      token("total", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("total", "out-var"),
+      " ",
+      token("+", "out-op"),
+      " i  |  ",
+      token("repeat", "out-keyword"),
+      " ",
+      token("3", "out-number"),
+      ": ",
+      token("waste", "out-fn"),
+      token("(100 sf, 5)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  Solve: ",
+      token("56", "out-number"),
+      " ",
+      token("cy", "out-unit"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("concrete_cy", "out-fn"),
+      token("(sf, 6 in)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  Strings: ",
+      token("\"crew\"", "out-string"),
+      " or ",
+      token("'crew'", "out-string"),
+      " (required for meta-programming helpers)"
+    ], "muted");
+    writeLineRich([token("Units:", "out-label")], "muted");
+    writeLineRich([
+      "  Supported: ",
+      token("in, ft, yd, sf, sy, cf, cy, lb, ton", "out-unit"),
+      "."
+    ], "muted");
+    writeLineRich([
+      "  Use as tokens: ",
+      token("12", "out-number"),
+      " ",
+      token("ft", "out-unit"),
+      " + ",
+      token("6", "out-number"),
+      " ",
+      token("in", "out-unit"),
+      "  |  ",
+      token("1200", "out-number"),
+      " ",
+      token("sf", "out-unit"),
+      " * ",
+      token("4", "out-number"),
+      " ",
+      token("in", "out-unit"),
+      "  |  ",
+      token("3", "out-number"),
+      " ",
+      token("cy", "out-unit"),
+      " + ",
+      token("9", "out-number"),
+      " ",
+      token("cf", "out-unit")
+    ], "muted");
+    writeLineRich([
+      "  Converters: ",
+      token("to_in", "out-fn"),
+      token("/", "out-op"),
+      token("to_ft", "out-fn"),
+      ", ",
+      token("to_sf", "out-fn"),
+      token("/", "out-op"),
+      token("to_sy", "out-fn"),
+      ", ",
+      token("to_cf", "out-fn"),
+      token("/", "out-op"),
+      token("to_cy", "out-fn"),
+      ", ",
+      token("to_lb", "out-fn"),
+      token("/", "out-op"),
+      token("to_ton", "out-fn"),
+      "."
+    ], "muted");
+    writeLineRich([token("Construction helpers:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("waste", "out-fn"),
+      token("(qty,pct)", "out-op"),
+      "  ",
+      token("markup", "out-fn"),
+      token("(cost,pct)", "out-op"),
+      "  ",
+      token("burden", "out-fn"),
+      token("(labor,pct)", "out-op"),
+      "  ",
+      token("unit", "out-fn"),
+      token("(cost,qty)", "out-op"),
+      "  ",
+      token("round_up", "out-fn"),
+      token("(x,step)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("area_rect", "out-fn"),
+      token("(a,b)", "out-op"),
+      " ",
+      token("area_circle", "out-fn"),
+      token("(diam)", "out-op"),
+      " ",
+      token("vol_rect", "out-fn"),
+      token("(area,thk_in)", "out-op"),
+      " ",
+      token("concrete_cy", "out-fn"),
+      token("(area,thk_in)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("bf", "out-fn"),
+      token("(t_in,w_in,len_ft,qty)", "out-op"),
+      "  ",
+      token("pipe_wt", "out-fn"),
+      token("(nps_in,schedule,len_ft)", "out-op")
+    ], "muted");
+    writeLineRich([token("Math + logic:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("abs min max round ceil floor sqrt pow exp log log10 sin cos tan atan2 clamp", "out-keyword")
+    ], "muted");
+    writeLineRich([
+      "  Comparisons return ",
+      token("1", "out-number"),
+      "/",
+      token("0", "out-number"),
+      ": ",
+      token("== != < <= > >=", "out-op"),
+      "  |  Logic: ",
+      token("&& ||", "out-op")
+    ], "muted");
+    writeLineRich([token("Meta-programming:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("eval", "out-fn"),
+      token("(\"expr\")", "out-op"),
+      " ",
+      token("set", "out-fn"),
+      token("(\"name\", value)", "out-op"),
+      " ",
+      token("get", "out-fn"),
+      token("(\"name\")", "out-op"),
+      " ",
+      token("unset", "out-fn"),
+      token("(\"name\")", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("define", "out-fn"),
+      token("(\"fn\", \"a,b\", \"a+b\")", "out-op"),
+      " ",
+      token("undefine", "out-fn"),
+      token("(\"fn\")", "out-op"),
+      " ",
+      token("vars()", "out-fn"),
+      " ",
+      token("methods()", "out-fn")
+    ], "muted");
+    writeLineRich([token("Session commands:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token(":vars", "out-command"),
+      " list variables   ",
+      token(":methods", "out-command"),
+      " list user methods   ",
+      token(":reset", "out-command"),
+      " wipe session"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":export", "out-command"),
+      " copy JSON      ",
+      token(":import", "out-command"),
+      " load JSON from clipboard"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":theme", "out-command"),
+      " ",
+      token("default", "out-keyword"),
+      token("|", "out-op"),
+      token("amber", "out-keyword"),
+      token("|", "out-op"),
+      token("matrix", "out-keyword")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":test", "out-command"),
+      " run REPL tests"
+    ], "muted");
+    writeLineRich([token("Tips:", "out-label")], "muted");
+    writeLineRich([
+      "  - Shift+Enter inserts a new line. Enter runs when the statement is complete."
+    ], "muted");
+    writeLineRich([
+      "  - Use Up/Down to cycle history; Ctrl/Cmd+L clears the terminal."
+    ], "muted");
+    writeLineRich([
+      "  - Autocomplete works for commands (:), functions, units, variables, constants."
+    ], "muted");
   }
 
   function listVars(){
@@ -216,7 +848,14 @@ export function initRepl(){
     }
     writeLine("Variables:", "ok");
     for (const k of keys){
-      writeLine(`  ${k} = ${qtyToString(state.vars[k])}`, "muted");
+      writeLineRich([
+        "  ",
+        token(k, "out-var"),
+        " ",
+        token("=", "out-op"),
+        " ",
+        token(qtyToString(state.vars[k]), "out-number")
+      ], "muted");
     }
   }
 
@@ -230,7 +869,17 @@ export function initRepl(){
     for (const k of keys){
       const defn = state.userFns[k];
       const params = defn.params ? defn.params.join(", ") : "";
-      writeLine(`  ${k}(${params}) = ${defn.expr}`, "muted");
+      writeLineRich([
+        "  ",
+        token(k, "out-fn"),
+        token("(", "out-op"),
+        token(params, "out-var"),
+        token(")", "out-op"),
+        " ",
+        token("=", "out-op"),
+        " ",
+        token(defn.expr, "out-string")
+      ], "muted");
     }
   }
 
