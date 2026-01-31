@@ -19,6 +19,7 @@ export function createTests({
 }){
   const expectQty = (value, kind, tol = 1e-6) => ({ type: "qty", value, kind, tol });
   const expectNear = (value, tol = 1e-6) => ({ type: "scalar", value, tol });
+  const expectError = (message) => ({ type: "error", message });
 
   function createTestSuite(){
     return [
@@ -457,6 +458,132 @@ export function createTests({
         ],
         expect: 48,
       },
+      {
+        name: "user solution dependency mutation graph",
+        steps: [
+          "len = 10 ft",
+          "width = 5 ft",
+          "area = len * width",
+          "total = area * 2",
+          "len = 12 ft",
+          "width = 6 ft",
+          "stale_area = area",
+          "area = 200 sf",
+          "total = total + area",
+          "check = if(stale_area == 50 sf && area == 200 sf && total == 300 sf, 1, 0)",
+          "check",
+        ],
+        expect: 1,
+      },
+      {
+        name: "user solution mixed units conversion chain",
+        steps: [
+          "run = 2 ft + 6 in",
+          "rise = 3 ft + 4 in",
+          "run_ft = to_ft(run)",
+          "rise_ft = to_ft(rise)",
+          "slope_ft = sqrt(run_ft^2 + rise_ft^2)",
+          "area = area_rect(run, 4 ft) + area_rect(1 yd, 2 ft)",
+          "area_sy = to_sy(area)",
+          "area_back = to_sf(area_sy sy)",
+          "len_in = to_in(run)",
+          "check = if(len_in == 30 && abs(area_back - to_sf(area)) < 1e-6 && slope_ft > 4, 1, 0)",
+          "check",
+        ],
+        expect: 1,
+      },
+      {
+        name: "unit mismatch blocks illegal math",
+        expr: "1 ft + 1 sf",
+        expect: expectError(/Unit mismatch/),
+      },
+      {
+        name: "unit conversion guards mismatched dimensions",
+        expr: "to_sf(10 ft)",
+        expect: expectError("to_sf expects area"),
+      },
+      {
+        name: "user solution temporal history diff",
+        steps: [
+          "cost = 1200",
+          "cost_v1 = cost",
+          "cost = markup(cost, 10)",
+          "cost_v2 = cost",
+          "cost = markup(cost, 5)",
+          "cost_v3 = cost",
+          "delta_12 = cost_v2 - cost_v1",
+          "delta_23 = cost_v3 - cost_v2",
+          "delta_total = cost_v3 - cost_v1",
+          "check = if(delta_12 == 120 && delta_23 == 66 && delta_total == 186, 1, 0)",
+          "check",
+        ],
+        expect: 1,
+      },
+      {
+        name: "circular function call detection",
+        steps: [
+          "so a(x) = b(x) + 1",
+          "so b(x) = c(x) + 1",
+          "so c(x) = a(x) + 1",
+          "a(1)",
+        ],
+        expect: expectError(/Circular function call/),
+      },
+      {
+        name: "forward reference requires definition",
+        steps: [
+          "so price_with_tax(x) = x + tax",
+          "price_with_tax(100)",
+        ],
+        expect: expectError("Unknown identifier: tax"),
+      },
+      {
+        name: "forward reference resolves after definition",
+        steps: [
+          "so price_with_tax(x) = x + tax",
+          "tax = 8",
+          "price_with_tax(100)",
+        ],
+        expect: 108,
+      },
+      {
+        name: "large data streaming accumulation",
+        steps: [
+          "sum = 0",
+          "for i in 1..200: sum = sum + i",
+          "even_sum = 0",
+          "for i in 2..200 step 2: even_sum = even_sum + i",
+          "rolling = 0",
+          "repeat 5: rolling = rolling + sum",
+          "area_total = 0 sf",
+          "for i in 1..10: area_total = area_total + (i * 10 sf)",
+          "check = if(sum == 20100 && even_sum == 10100 && rolling == 100500 && area_total == 550 sf, 1, 0)",
+          "check",
+        ],
+        expect: 1,
+      },
+      {
+        name: "precision accumulation drift check",
+        steps: [
+          "sum = 0",
+          "repeat 100: sum = sum + 0.1",
+          "sum",
+        ],
+        expect: expectNear(10, 1e-6),
+      },
+      {
+        name: "user solution ambiguous profile selection",
+        steps: [
+          "so markup_a(x) = x * 1.25",
+          "so markup_b(x) = x * 1.30",
+          "so pick_markup(x, profile) = if(profile == \"A\", markup_a(x), markup_b(x))",
+          "result_a = pick_markup(100, \"A\")",
+          "result_b = pick_markup(100, \"B\")",
+          "check = if(result_a == 125 && result_b == 130, 1, 0)",
+          "check",
+        ],
+        expect: 1,
+      },
     ];
   }
 
@@ -566,6 +693,9 @@ export function createTests({
 
   function matchExpected(actual, expected){
     const tol = 1e-9;
+    if (expected && typeof expected === "object" && expected.type === "error"){
+      return { pass: false, message: "expected error, got value" };
+    }
     if (expected && typeof expected === "object" && expected.type === "qty"){
       if (!isQty(actual)) return { pass: false, message: `expected quantity ${expected.kind}` };
       if (actual.kind !== expected.kind) return { pass: false, message: `expected ${expected.kind}, got ${actual.kind}` };
@@ -590,12 +720,34 @@ export function createTests({
     return { pass: false, message: `expected ${String(expected)}, got ${formatTestValue(actual)}` };
   }
 
+  function matchExpectedError(err, expected){
+    if (!expected || expected.type !== "error"){
+      return { pass: false, message: "unexpected error" };
+    }
+    const message = err && err.message ? err.message : String(err);
+    if (!expected.message) return { pass: true };
+    if (expected.message instanceof RegExp){
+      if (expected.message.test(message)) return { pass: true };
+      return { pass: false, message: `expected error ${expected.message}, got ${message}` };
+    }
+    if (typeof expected.message === "string"){
+      if (message.includes(expected.message)) return { pass: true };
+      return { pass: false, message: `expected error "${expected.message}", got "${message}"` };
+    }
+    return { pass: true };
+  }
+
   function formatExpectedValue(expected){
     if (expected && typeof expected === "object" && expected.type === "qty"){
       return qtyToString(makeQty(expected.value, expected.kind));
     }
     if (expected && typeof expected === "object" && expected.type === "scalar"){
       return String(expected.value);
+    }
+    if (expected && typeof expected === "object" && expected.type === "error"){
+      if (!expected.message) return "error";
+      if (expected.message instanceof RegExp) return `error ${expected.message}`;
+      return `error ${expected.message}`;
     }
     if (typeof expected === "number") return String(expected);
     if (expected === undefined) return "undefined";
@@ -633,6 +785,15 @@ export function createTests({
         const formattedSource = formatInput(source);
         const formattedExpected = formatExpectedValue(test.expect);
         const result = evaluateTestStatements(source);
+        if (test.expect && typeof test.expect === "object" && test.expect.type === "error"){
+          failures.push({ name: test.name, reason: "expected error, got value" });
+          writeLine(`• ${test.name}`, "muted");
+          writeLine(`  input: ${formattedSource}`, "muted");
+          writeLine(`  outcome: ${formatTestValue(result)}`, "muted");
+          writeLine(`  expected: ${formattedExpected}`, "muted");
+          writeLine(`✗ ${test.name}: expected error, got value`, "err");
+          continue;
+        }
         const match = matchExpected(result, test.expect);
         writeLine(`• ${test.name}`, "muted");
         writeLine(`  input: ${formattedSource}`, "muted");
@@ -649,6 +810,25 @@ export function createTests({
         const source = test.steps ? test.steps.join("\n") : test.expr;
         const formattedSource = formatInput(source);
         const formattedExpected = formatExpectedValue(test.expect);
+        if (test.expect && typeof test.expect === "object" && test.expect.type === "error"){
+          const match = matchExpectedError(err, test.expect);
+          if (match.pass){
+            passCount += 1;
+            writeLine(`• ${test.name}`, "muted");
+            writeLine(`  input: ${formattedSource}`, "muted");
+            writeLine(`  outcome: error (${err.message || String(err)})`, "muted");
+            writeLine(`  expected: ${formattedExpected}`, "muted");
+            writeLine(`✓ ${test.name}`, "ok");
+            continue;
+          }
+          failures.push({ name: test.name, reason: match.message || err.message || String(err) });
+          writeLine(`• ${test.name}`, "muted");
+          writeLine(`  input: ${formattedSource}`, "muted");
+          writeLine(`  outcome: error (${err.message || String(err)})`, "muted");
+          writeLine(`  expected: ${formattedExpected}`, "muted");
+          writeLine(`✗ ${test.name}: ${match.message || err.message || String(err)}`, "err");
+          continue;
+        }
         failures.push({ name: test.name, reason: err.message || String(err) });
         writeLine(`• ${test.name}`, "muted");
         writeLine(`  input: ${formattedSource}`, "muted");

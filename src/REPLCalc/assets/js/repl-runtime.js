@@ -1,5 +1,6 @@
 export function createRuntime({ state, baseFns, defFn, renderUserFunctions, parseParams, gfxFns }){
   let runExpressionWithContext = null;
+  const callStack = [];
 
   const metaFns = Object.create(null);
 
@@ -25,6 +26,11 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
       throw new Error(`Cannot redefine built-in function: ${name}`);
     }
     const defn = defFn(name, params.length, (...args) => {
+      if (callStack.includes(name)){
+        const cycle = [...callStack, name].join(" -> ");
+        throw new Error(`Circular function call: ${cycle}`);
+      }
+      callStack.push(name);
       const scoped = Object.create(null);
       Object.assign(scoped, state.vars);
       params.forEach((param, idx) => {
@@ -33,7 +39,11 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
       if (!runExpressionWithContext){
         throw new Error("Expression engine not ready.");
       }
-      return runExpressionWithContext(expr, scoped);
+      try{
+        return runExpressionWithContext(expr, scoped);
+      }finally{
+        callStack.pop();
+      }
     });
     defn.params = params.slice();
     defn.expr = expr.trim();
