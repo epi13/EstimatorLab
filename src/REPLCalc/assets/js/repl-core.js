@@ -721,6 +721,7 @@ export function initRepl(){
     writeLine("Tip: Enter runs when complete; Enter adds new line if incomplete.", "muted");
     writeLine("Commands:", "muted");
     writeLine("  :help                show help", "muted");
+    writeLine("  :docs                detailed docs + examples", "muted");
     writeLine("  :clear               clear terminal output", "muted");
     writeLine("  :vars                list variables", "muted");
     writeLine("  :methods             list user methods", "muted");
@@ -741,6 +742,38 @@ export function initRepl(){
     writeLine("  def crew_cost(rate, hours) = rate * hours", "muted");
     writeLine("  for i in 1..4: total = total + i", "muted");
     writeLine("  if labor > 40: overtime = labor - 40 else: overtime = 0", "muted");
+  }
+
+  function showDocs(){
+    writeLine("Estimator REPL docs", "ok");
+    writeLine("Overview:", "muted");
+    writeLine("  This REPL mixes calculator math with takeoff helpers, units, and quick scripting.", "muted");
+    writeLine("  Use it for one-off computations or build up a session with variables + methods.", "muted");
+    writeLine("Syntax quickstart:", "muted");
+    writeLine("  Expressions: 2+2*5  |  (1200 sf * 4 in) / 27  |  pow(3,2)", "muted");
+    writeLine("  Assignment: x = 144  |  total = markup(burden(12500, 16.7), 35)", "muted");
+    writeLine("  Methods: def name(a,b) = expression  (call with name(1,2))", "muted");
+    writeLine("  Flow: if labor > 40: overtime = labor - 40 else: overtime = 0", "muted");
+    writeLine("  Loop: for i in 1..4: total = total + i  |  repeat 3: waste(100 sf, 5)", "muted");
+    writeLine("Units:", "muted");
+    writeLine("  Supported: in, ft, yd, sf, sy, cf, cy, lb, ton.", "muted");
+    writeLine("  Use as tokens: 12 ft + 6 in  |  1200 sf * 4 in  |  3 cy + 9 cf", "muted");
+    writeLine("  Converters: to_in/to_ft, to_sf/to_sy, to_cf/to_cy, to_lb/to_ton.", "muted");
+    writeLine("Construction helpers:", "muted");
+    writeLine("  waste(qty,pct)  markup(cost,pct)  burden(labor,pct)  unit(cost,qty)  round_up(x,step)", "muted");
+    writeLine("  area_rect(a,b) area_circle(diam) vol_rect(area,thk_in) concrete_cy(area,thk_in)", "muted");
+    writeLine("  bf(t_in,w_in,len_ft,qty)  pipe_wt(nps_in,schedule,len_ft)", "muted");
+    writeLine("Math + logic:", "muted");
+    writeLine("  abs min max round ceil floor sqrt pow exp log log10 sin cos tan atan2 clamp", "muted");
+    writeLine("  Comparisons return 1/0: == != < <= > >=  |  Logic: && ||", "muted");
+    writeLine("Session commands:", "muted");
+    writeLine("  :vars list variables   :methods list user methods   :reset wipe session", "muted");
+    writeLine("  :export copy JSON      :import load JSON from clipboard", "muted");
+    writeLine("  :theme default|amber|matrix", "muted");
+    writeLine("Tips:", "muted");
+    writeLine("  - Shift+Enter inserts a new line. Enter runs when the statement is complete.", "muted");
+    writeLine("  - Use Up/Down to cycle history; Ctrl/Cmd+L clears the terminal.", "muted");
+    writeLine("  - Autocomplete works for commands (:), functions, units, variables, constants.", "muted");
   }
 
   function listVars(){
@@ -1076,6 +1109,7 @@ export function initRepl(){
   // -----------------------------
   const COMMANDS = [
     { label: ":help", detail: "help" },
+    { label: ":docs", detail: "docs" },
     { label: ":clear", detail: "clear output" },
     { label: ":vars", detail: "list variables" },
     { label: ":methods", detail: "list user methods" },
@@ -1422,6 +1456,7 @@ export function initRepl(){
         if (parsed.type === "cmd"){
           const {cmd,arg} = parsed;
           if (cmd === "help"){ showHelp(); continue; }
+          if (cmd === "docs"){ showDocs(); continue; }
           if (cmd === "clear"){ clearTerminal(); continue; }
           if (cmd === "vars"){ listVars(); continue; }
           if (cmd === "methods"){ listMethods(); continue; }
