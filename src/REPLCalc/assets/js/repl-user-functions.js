@@ -59,7 +59,7 @@ export function createUserFunctionUi({
       deleteBtn.addEventListener("click", () => {
         delete state.userFns[name];
         renderUserFunctions();
-        writeLine(`Removed function ${name}.`, "warn");
+        writeLine(`Removed solution ${name}.`, "warn");
       });
       actions.append(insertBtn, editBtn, deleteBtn);
       userFnList.appendChild(row);

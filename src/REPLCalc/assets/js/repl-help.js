@@ -24,11 +24,11 @@ export function createHelp({ writeLine, writeLineRich, token, GFX_COLOR_TOKENS }
       token("3", "out-number")
     ], "muted");
     writeLineRich([
-      token("Functions:", "out-label"),
+      token("Solutions:", "out-label"),
       " ",
       token("def", "out-keyword"),
       token("|", "out-op"),
-      token("fn", "out-keyword"),
+      token("so", "out-keyword"),
       token("|", "out-op"),
       token("function", "out-keyword"),
       " ",
@@ -187,7 +187,7 @@ export function createHelp({ writeLine, writeLineRich, token, GFX_COLOR_TOKENS }
       " ",
       token("define", "out-fn"),
       token("(", "out-op"),
-      token("\"fn\"", "out-string"),
+      token("\"solution\"", "out-string"),
       ", ",
       token("\"a,b\"", "out-string"),
       ", ",
@@ -196,7 +196,7 @@ export function createHelp({ writeLine, writeLineRich, token, GFX_COLOR_TOKENS }
       " ",
       token("undefine", "out-fn"),
       token("(", "out-op"),
-      token("\"fn\"", "out-string"),
+      token("\"solution\"", "out-string"),
       token(")", "out-op")
     ], "muted");
     writeLineRich([
@@ -335,7 +335,7 @@ export function createHelp({ writeLine, writeLineRich, token, GFX_COLOR_TOKENS }
       token(":test", "out-command"),
       "                run the built-in test suite"
     ], "muted");
-    writeLineRich([token("Functions:", "out-label")], "muted");
+    writeLineRich([token("Solutions:", "out-label")], "muted");
     writeLineRich([
       "  ",
       token("waste", "out-fn"),
@@ -457,7 +457,7 @@ export function createHelp({ writeLine, writeLineRich, token, GFX_COLOR_TOKENS }
     ], "muted");
     writeLineRich([
       "  ",
-      token("fn", "out-keyword"),
+      token("so", "out-keyword"),
       " ",
       token("crew_cost", "out-fn"),
       token("(", "out-op"),

@@ -54,7 +54,7 @@ export function initRepl(){
   };
   state.resolver = state.symbolTable;
 
-  const KEYWORDS = new Set(["if", "else", "for", "in", "step", "repeat", "def", "fn", "function", "assy"]);
+  const KEYWORDS = new Set(["if", "else", "for", "in", "step", "repeat", "def", "fn", "so", "function", "assy"]);
   const baseFns = createBaseFns();
 
   const ui = createUi(state);

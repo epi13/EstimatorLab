@@ -60,9 +60,9 @@ const FN_DOCS = {
   set: { usage: "set(\"name\", value)", doc: "Set a variable by name." },
   unset: { usage: "unset(\"name\")", doc: "Remove a variable by name." },
   vars: { usage: "vars()", doc: "List variable names." },
-  methods: { usage: "methods()", doc: "List user function names." },
-  define: { usage: "define(\"fn\", \"a,b\", \"expr\")", doc: "Define a user function." },
-  undefine: { usage: "undefine(\"fn\")", doc: "Remove a user function." },
+  methods: { usage: "methods()", doc: "List user solution names." },
+  define: { usage: "define(\"name\", \"a,b\", \"expr\")", doc: "Define a user solution." },
+  undefine: { usage: "undefine(\"name\")", doc: "Remove a user solution." },
   gfx: { usage: "gfx(width, height)", doc: "Create a pixel buffer (max 160x160)." },
   gfxs: { usage: "gfxs(scale)", doc: "Set pixel scale for the buffer." },
   bg: { usage: "bg(color)", doc: "Set background color token." },
@@ -125,11 +125,11 @@ export function createEditor({
       const leading = (line.match(/^\s*/) || [""])[0];
       const trimmed = line.trim();
       if (!trimmed) return line.trimEnd();
-      const defMatch = trimmed.match(/^(?:def|fn|function)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
+      const defMatch = trimmed.match(/^(?:def|fn|so|function)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
       if (defMatch){
         const formattedExpr = formatExpression(defMatch[3]);
         const params = defMatch[2].split(",").map((p) => p.trim()).filter(Boolean).join(", ");
-        return `${leading}fn ${defMatch[1]}(${params}) = ${formattedExpr}`;
+        return `${leading}so ${defMatch[1]}(${params}) = ${formattedExpr}`;
       }
       const m = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]+)$/);
       if (m){

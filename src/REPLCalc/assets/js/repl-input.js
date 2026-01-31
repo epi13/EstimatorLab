@@ -470,7 +470,7 @@ export function createInputHandlers({
     writeLine("Type :help for commands and examples.", "muted");
     writeLine("Try: concrete_cy(1200 sf, 4 in)", "muted");
     writeLine("Try: total = markup(burden(12500, 16.7), 35)", "muted");
-    writeLine("Try: fn crew_cost(rate, hours) = rate * hours", "muted");
+    writeLine("Try: so crew_cost(rate, hours) = rate * hours", "muted");
     writeLine("Try: for i in 1..4: total = total + i", "muted");
     writeLine("Try: gfx(32, 16); line(0,0,31,15,\"accent\")", "muted");
 

@@ -30,8 +30,8 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("(burden(12500, 16.7), 35)", "out-op")
     ], "muted");
     writeLineRich([
-      "  Functions: ",
-      token("fn", "out-keyword"),
+      "  Solutions: ",
+      token("so", "out-keyword"),
       " ",
       token("name", "out-fn"),
       token("(a,b)", "out-op"),
@@ -269,10 +269,10 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
     writeLineRich([
       "  ",
       token("define", "out-fn"),
-      token("(\"fn\", \"a,b\", \"a+b\")", "out-op"),
+      token("(\"solution\", \"a,b\", \"a+b\")", "out-op"),
       " ",
       token("undefine", "out-fn"),
-      token("(\"fn\")", "out-op"),
+      token("(\"solution\")", "out-op"),
       " ",
       token("vars()", "out-fn"),
       " ",
@@ -393,10 +393,10 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
   function listMethods(){
     const keys = Object.keys(state.userFns).sort();
     if (!keys.length){
-      writeLine("No user functions defined.", "muted");
+      writeLine("No user solutions defined.", "muted");
       return;
     }
-    writeLine("User functions:", "ok");
+    writeLine("User solutions:", "ok");
     for (const k of keys){
       const defn = state.userFns[k];
       const params = defn.params ? defn.params.join(", ") : "";

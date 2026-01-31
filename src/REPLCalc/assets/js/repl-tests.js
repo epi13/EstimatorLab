@@ -73,15 +73,15 @@ export function createTests({
       { name: "convert weight to lb", expr: "to_lb(2 ton)", expect: 4000 },
       { name: "convert weight to ton", expr: "to_ton(1000 lb)", expect: 0.5 },
       { name: "clamp qty", expr: "clamp(12 ft, 0 ft, 10 ft)", expect: expectQty(10, "len") },
-      { name: "user function", steps: ["fn crew_cost(rate, hours) = rate * hours", "crew_cost(85, 12)"], expect: 1020 },
-      { name: "user function with units", steps: ["fn wall_area(len, ht) = len * ht", "wall_area(12 ft, 8 ft)"], expect: expectQty(96, "area") },
+      { name: "user solution", steps: ["so crew_cost(rate, hours) = rate * hours", "crew_cost(85, 12)"], expect: 1020 },
+      { name: "user solution with units", steps: ["so wall_area(len, ht) = len * ht", "wall_area(12 ft, 8 ft)"], expect: expectQty(96, "area") },
       { name: "define meta function", steps: ["define(\"adder\", \"a,b\", \"a+b\")", "adder(4, 6)"], expect: 10 },
       { name: "methods listing", steps: ["define(\"double\", \"x\", \"x*2\")", "methods()"], expect: "double" },
       { name: "vars listing", steps: ["a = 1", "b = 2", "vars()"], expect: "a, b" },
       { name: "meta helpers", steps: ["set(\"crew\", 5)", "get(\"crew\")"], expect: 5 },
       { name: "unset meta", steps: ["set(\"crew\", 5)", "unset(\"crew\")"], expect: 1 },
       { name: "eval expression", steps: ["eval(\"2+3*4\")"], expect: 14 },
-      { name: "undefine function", steps: ["define(\"temp\", \"x\", \"x+1\")", "undefine(\"temp\")"], expect: 1 },
+      { name: "undefine solution", steps: ["define(\"temp\", \"x\", \"x+1\")", "undefine(\"temp\")"], expect: 1 },
       { name: "if statement", steps: ["total = 0", "if 3 > 2: total = 5 else: total = 2", "total"], expect: 5 },
       { name: "nested if statement", steps: ["total = 0", "if 2 > 3: total = 1 else: if 4 > 2: total = 7 else: total = 3", "total"], expect: 7 },
       { name: "for loop", steps: ["total = 0", "for i in 1..4: total = total + i", "total"], expect: 10 },
@@ -95,7 +95,7 @@ export function createTests({
       {
         name: "nested markup loop total",
         steps: [
-          "fn item_cost(rate, hours, waste_pct) = markup(rate * hours, waste_pct)",
+          "so item_cost(rate, hours, waste_pct) = markup(rate * hours, waste_pct)",
           "total = 0",
           "for crew in 1..3: total = total + item_cost(45 + crew * 5, 8 + crew, 10)",
           "if total > 0: total = round(total) else: total = 0",
@@ -121,7 +121,7 @@ export function createTests({
       {
         name: "bay area loop accumulation",
         steps: [
-          "fn bay_area(span, bays) = area_rect(span, 20 ft) * bays",
+          "so bay_area(span, bays) = area_rect(span, 20 ft) * bays",
           "total = 0 sf",
           "for i in 1..4: total = total + bay_area(15 ft + i ft, i)",
           "total",
@@ -139,13 +139,13 @@ export function createTests({
       },
       {
         name: "repeat bump function",
-        steps: ["fn bump(x) = x * 1.1 + 3", "val = 0", "repeat 4: val = bump(val)", "val"],
+        steps: ["so bump(x) = x * 1.1 + 3", "val = 0", "repeat 4: val = bump(val)", "val"],
         expect: expectNear(13.923),
       },
       {
         name: "trench volume to cy",
         steps: [
-          "fn trench_vol(len, width, depth) = vol_rect(area_rect(len, width), depth)",
+          "so trench_vol(len, width, depth) = vol_rect(area_rect(len, width), depth)",
           "volume = trench_vol(120 ft, 3 ft, 2 ft)",
           "to_cy(volume)",
         ],
@@ -184,7 +184,7 @@ export function createTests({
       {
         name: "slab volume to cy",
         steps: [
-          "fn slab_volume(area, thk_in) = vol_rect(area, thk_in)",
+          "so slab_volume(area, thk_in) = vol_rect(area, thk_in)",
           "volume = slab_volume(2400 sf, 5 in)",
           "to_cy(volume)",
         ],
@@ -251,10 +251,10 @@ export function createTests({
         expect: 1,
       },
       {
-        name: "gfx user fn tile pattern",
+        name: "gfx user solution tile pattern",
         steps: [
           "gfx(20, 12)",
-          "fn tile(x, y, sz) = rect(x, y, sz, sz, \"accent\") + line(x, y, x + sz - 1, y + sz - 1, \"ok\") + line(x + sz - 1, y, x, y + sz - 1, \"warn\") + plot(x + 1, y + 1, \"1,0|0,1|1,0\", \"err\")",
+          "so tile(x, y, sz) = rect(x, y, sz, sz, \"accent\") + line(x, y, x + sz - 1, y + sz - 1, \"ok\") + line(x + sz - 1, y, x, y + sz - 1, \"warn\") + plot(x + 1, y + 1, \"1,0|0,1|1,0\", \"err\")",
           "total = 0",
           "for i in 0..3: total = total + tile(i * 4, 2, 3)",
           "total",

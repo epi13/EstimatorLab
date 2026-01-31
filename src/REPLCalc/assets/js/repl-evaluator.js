@@ -333,7 +333,7 @@ export function createEvaluator({
       return parsed;
     }
 
-    const defMatch = src.match(/^(?:def|fn|function)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
+    const defMatch = src.match(/^(?:def|fn|so|function)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
     if (defMatch){
       const name = defMatch[1];
       const params = parseParams(defMatch[2]);
