@@ -57,6 +57,7 @@
     history: [],
     histIdx: -1,
     theme: "default",
+    userFns: Object.create(null),
   };
 
   // -----------------------------
@@ -402,32 +403,32 @@
     return { arity, impl };
   }
 
-  const fns = Object.create(null);
+  const baseFns = Object.create(null);
 
   // Math-ish helpers (scalar-friendly)
-  fns.abs = defFn("abs", 1, (x) => isQty(x)? makeQty(Math.abs(x.value), x.kind) : Math.abs(x));
-  fns.min = defFn("min", 2, (a,b) => isQty(a)||isQty(b) ? (add(a,0).value <= add(b,0).value ? a : b) : Math.min(a,b));
-  fns.max = defFn("max", 2, (a,b) => isQty(a)||isQty(b) ? (add(a,0).value >= add(b,0).value ? a : b) : Math.max(a,b));
-  fns.round = defFn("round", 1, (x) => isQty(x)? makeQty(Math.round(x.value), x.kind) : Math.round(x));
-  fns.ceil = defFn("ceil", 1, (x) => isQty(x)? makeQty(Math.ceil(x.value), x.kind) : Math.ceil(x));
-  fns.floor = defFn("floor", 1, (x) => isQty(x)? makeQty(Math.floor(x.value), x.kind) : Math.floor(x));
+  baseFns.abs = defFn("abs", 1, (x) => isQty(x)? makeQty(Math.abs(x.value), x.kind) : Math.abs(x));
+  baseFns.min = defFn("min", 2, (a,b) => isQty(a)||isQty(b) ? (add(a,0).value <= add(b,0).value ? a : b) : Math.min(a,b));
+  baseFns.max = defFn("max", 2, (a,b) => isQty(a)||isQty(b) ? (add(a,0).value >= add(b,0).value ? a : b) : Math.max(a,b));
+  baseFns.round = defFn("round", 1, (x) => isQty(x)? makeQty(Math.round(x.value), x.kind) : Math.round(x));
+  baseFns.ceil = defFn("ceil", 1, (x) => isQty(x)? makeQty(Math.ceil(x.value), x.kind) : Math.ceil(x));
+  baseFns.floor = defFn("floor", 1, (x) => isQty(x)? makeQty(Math.floor(x.value), x.kind) : Math.floor(x));
 
   // Estimation helpers
-  fns.waste = defFn("waste", 2, (qty, pct) => {
+  baseFns.waste = defFn("waste", 2, (qty, pct) => {
     const p = isQty(pct) ? pct.value : pct;
     const factor = 1 + (p/100);
     return mul(qty, factor);
   });
-  fns.markup = defFn("markup", 2, (cost, pct) => {
+  baseFns.markup = defFn("markup", 2, (cost, pct) => {
     const p = isQty(pct) ? pct.value : pct;
     return mul(cost, 1 + (p/100));
   });
-  fns.burden = defFn("burden", 2, (labor, pct) => {
+  baseFns.burden = defFn("burden", 2, (labor, pct) => {
     const p = isQty(pct) ? pct.value : pct;
     return mul(labor, 1 + (p/100));
   });
-  fns.unit = defFn("unit", 2, (cost, qty) => div(cost, qty));
-  fns.round_up = defFn("round_up", 2, (x, step) => {
+  baseFns.unit = defFn("unit", 2, (cost, qty) => div(cost, qty));
+  baseFns.round_up = defFn("round_up", 2, (x, step) => {
     const xv = isQty(x) ? x.value : x;
     const sv = isQty(step) ? step.value : step;
     const r = Math.ceil(xv / sv) * sv;
@@ -435,7 +436,7 @@
   });
 
   // Geometry / takeoff
-  fns.area_rect = defFn("area_rect", 2, (a,b) => {
+  baseFns.area_rect = defFn("area_rect", 2, (a,b) => {
     // expects lengths -> area
     const aa = isQty(a) ? a : makeQty(a, "len");
     const bb = isQty(b) ? b : makeQty(b, "len");
@@ -443,14 +444,14 @@
     return makeQty(aa.value * bb.value, "area");
   });
 
-  fns.area_circle = defFn("area_circle", 1, (diam) => {
+  baseFns.area_circle = defFn("area_circle", 1, (diam) => {
     const d = isQty(diam) ? diam : makeQty(diam, "len");
     if (d.kind !== "len") throw new Error("area_circle expects diameter (len)");
     const r = d.value / 2;
     return makeQty(Math.PI * r * r, "area");
   });
 
-  fns.vol_rect = defFn("vol_rect", 2, (area, thickness_in) => {
+  baseFns.vol_rect = defFn("vol_rect", 2, (area, thickness_in) => {
     // area * thickness => vol
     const a = isQty(area) ? area : makeQty(area, "area");
     if (a.kind !== "area") throw new Error("vol_rect expects area as first arg");
@@ -466,15 +467,15 @@
     return makeQty(a.value * t, "vol");
   });
 
-  fns.concrete_cy = defFn("concrete_cy", 2, (area, thickness_in) => {
-    const vol = fns.vol_rect.impl(area, thickness_in); // cf base
+  baseFns.concrete_cy = defFn("concrete_cy", 2, (area, thickness_in) => {
+    const vol = baseFns.vol_rect.impl(area, thickness_in); // cf base
     // convert cf -> cy (divide by 27), but keep as scalar-ish in cy for user display convenience
     const cy = vol.value / 27;
     return cy; // scalar number of cubic yards
   });
 
   // Lumber board-feet
-  fns.bf = defFn("bf", 4, (t_in, w_in, len_ft, qty) => {
+  baseFns.bf = defFn("bf", 4, (t_in, w_in, len_ft, qty) => {
     const t = isQty(t_in) ? t_in.value : t_in;
     const w = isQty(w_in) ? w_in.value : w_in;
     const L = isQty(len_ft) ? len_ft.value : len_ft;
@@ -495,7 +496,7 @@
     "3":   { "40": 7.58, "80": 10.25 },
     "4":   { "40": 10.79,"80": 14.98 },
   };
-  fns.pipe_wt = defFn("pipe_wt", 3, (nps_in, schedule, len_ft) => {
+  baseFns.pipe_wt = defFn("pipe_wt", 3, (nps_in, schedule, len_ft) => {
     const nps = String(isQty(nps_in) ? nps_in.value : nps_in);
     const sch = String(isQty(schedule) ? schedule.value : schedule);
     const L = isQty(len_ft) ? len_ft.value : len_ft;
@@ -507,42 +508,42 @@
 
   // Unit conversion helper: conv(qty, "unit") isn't possible in parser without strings;
   // so provide dedicated functions for common outputs:
-  fns.to_in = defFn("to_in", 1, (x) => {
+  baseFns.to_in = defFn("to_in", 1, (x) => {
     const q = isQty(x) ? x : makeQty(x, "len");
     if (q.kind !== "len") throw new Error("to_in expects length");
     return q.value * 12;
   });
-  fns.to_ft = defFn("to_ft", 1, (x) => {
+  baseFns.to_ft = defFn("to_ft", 1, (x) => {
     const q = isQty(x) ? x : makeQty(x, "len");
     if (q.kind !== "len") throw new Error("to_ft expects length");
     return q.value;
   });
-  fns.to_sf = defFn("to_sf", 1, (x) => {
+  baseFns.to_sf = defFn("to_sf", 1, (x) => {
     const q = isQty(x) ? x : makeQty(x, "area");
     if (q.kind !== "area") throw new Error("to_sf expects area");
     return q.value;
   });
-  fns.to_sy = defFn("to_sy", 1, (x) => {
+  baseFns.to_sy = defFn("to_sy", 1, (x) => {
     const q = isQty(x) ? x : makeQty(x, "area");
     if (q.kind !== "area") throw new Error("to_sy expects area");
     return q.value / 9;
   });
-  fns.to_cf = defFn("to_cf", 1, (x) => {
+  baseFns.to_cf = defFn("to_cf", 1, (x) => {
     const q = isQty(x) ? x : makeQty(x, "vol");
     if (q.kind !== "vol") throw new Error("to_cf expects volume");
     return q.value;
   });
-  fns.to_cy = defFn("to_cy", 1, (x) => {
+  baseFns.to_cy = defFn("to_cy", 1, (x) => {
     const q = isQty(x) ? x : makeQty(x, "vol");
     if (q.kind !== "vol") throw new Error("to_cy expects volume");
     return q.value / 27;
   });
-  fns.to_lb = defFn("to_lb", 1, (x) => {
+  baseFns.to_lb = defFn("to_lb", 1, (x) => {
     const q = isQty(x) ? x : makeQty(x, "wt");
     if (q.kind !== "wt") throw new Error("to_lb expects weight");
     return q.value;
   });
-  fns.to_ton = defFn("to_ton", 1, (x) => {
+  baseFns.to_ton = defFn("to_ton", 1, (x) => {
     const q = isQty(x) ? x : makeQty(x, "wt");
     if (q.kind !== "wt") throw new Error("to_ton expects weight");
     return q.value / 2000;
@@ -555,6 +556,7 @@
     writeLine("Estimator REPL help", "ok");
     writeLine("Math: +  -  *  /  ^  ( )  and functions", "muted");
     writeLine("Variables: x = 12.5   |   use: x*3", "muted");
+    writeLine("Methods: def name(a,b) = expression (redefine to edit)", "muted");
     writeLine("Units: in, ft, yd, sf, sy, cf, cy, lb, ton (use like: 12 ft + 6 in)", "muted");
     writeLine("Editor: autocomplete, syntax highlight, and live preview while typing", "muted");
     writeLine("Tip: Enter runs when complete; Enter adds new line if incomplete.", "muted");
@@ -562,6 +564,7 @@
     writeLine("  :help                show help", "muted");
     writeLine("  :clear               clear terminal output", "muted");
     writeLine("  :vars                list variables", "muted");
+    writeLine("  :methods             list user methods", "muted");
     writeLine("  :reset               reset vars + history", "muted");
     writeLine("  :export              copy session JSON to clipboard", "muted");
     writeLine("  :import              load session JSON from clipboard", "muted");
@@ -575,6 +578,7 @@
     writeLine("  slab = concrete_cy(1200 sf, 4 in)", "muted");
     writeLine("  total = markup(burden(12500, 16.7), 35)", "muted");
     writeLine("  waste(500 sf, 10)", "muted");
+    writeLine("  def crew_cost(rate, hours) = rate * hours", "muted");
   }
 
   function listVars(){
@@ -586,6 +590,20 @@
     writeLine("Variables:", "ok");
     for (const k of keys){
       writeLine(`  ${k} = ${qtyToString(state.vars[k])}`, "muted");
+    }
+  }
+
+  function listMethods(){
+    const keys = Object.keys(state.userFns).sort();
+    if (!keys.length){
+      writeLine("No user methods defined.", "muted");
+      return;
+    }
+    writeLine("User methods:", "ok");
+    for (const k of keys){
+      const defn = state.userFns[k];
+      const params = defn.params ? defn.params.join(", ") : "";
+      writeLine(`  ${k}(${params}) = ${defn.expr}`, "muted");
     }
   }
 
@@ -627,7 +645,12 @@
       exported_at: new Date().toISOString(),
       vars: state.vars,
       history: state.history.slice(-250),
-      theme: state.theme
+      theme: state.theme,
+      methods: Object.values(state.userFns).map((defn) => ({
+        name: defn.name,
+        params: defn.params,
+        expr: defn.expr,
+      })),
     };
     return JSON.stringify(payload, null, 2);
   }
@@ -640,12 +663,26 @@
     state.vars = obj.vars && typeof obj.vars === "object" ? obj.vars : Object.create(null);
     state.history = Array.isArray(obj.history) ? obj.history : [];
     if (obj.theme) setTheme(obj.theme);
+    state.userFns = Object.create(null);
+    if (Array.isArray(obj.methods)){
+      for (const defn of obj.methods){
+        if (defn && typeof defn.name === "string" && typeof defn.expr === "string"){
+          const params = Array.isArray(defn.params) ? defn.params : [];
+          try{
+            defineUserFn(defn.name, params, defn.expr);
+          }catch{
+            // ignore invalid imported methods
+          }
+        }
+      }
+    }
   }
 
   function resetAll(){
     state.vars = Object.create(null);
     state.history = [];
     state.histIdx = -1;
+    state.userFns = Object.create(null);
     setStatus("Reset", "ok");
     writeLine("Session reset.", "warn");
   }
@@ -665,6 +702,13 @@
       return { type:"cmd", cmd, arg };
     }
 
+    const defMatch = src.match(/^def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
+    if (defMatch){
+      const name = defMatch[1];
+      const params = parseParams(defMatch[2]);
+      return { type:"def", name, params, expr:defMatch[3] };
+    }
+
     // assignment: name = expression
     const m = src.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]+)$/);
     if (m){
@@ -674,11 +718,14 @@
     return { type:"expr", expr:src };
   }
 
-  function runExpression(expr){
+  function runExpressionWithContext(expr, vars){
     const tokens = tokenize(expr);
     const rpn = toRPN(tokens);
-    const val = evalRPN(rpn, { vars: state.vars, fns });
-    return val;
+    return evalRPN(rpn, { vars, fns: getFns() });
+  }
+
+  function runExpression(expr){
+    return runExpressionWithContext(expr, state.vars);
   }
 
   function formatResult(v){
@@ -715,6 +762,7 @@
     { label: ":help", detail: "help" },
     { label: ":clear", detail: "clear output" },
     { label: ":vars", detail: "list variables" },
+    { label: ":methods", detail: "list user methods" },
     { label: ":reset", detail: "reset session" },
     { label: ":export", detail: "copy session" },
     { label: ":import", detail: "load session" },
@@ -756,6 +804,12 @@
       const leading = (line.match(/^\s*/) || [""])[0];
       const trimmed = line.trim();
       if (!trimmed) return line.trimEnd();
+      const defMatch = trimmed.match(/^def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
+      if (defMatch){
+        const formattedExpr = formatExpression(defMatch[3]);
+        const params = defMatch[2].split(",").map((p) => p.trim()).filter(Boolean).join(", ");
+        return `${leading}def ${defMatch[1]}(${params}) = ${formattedExpr}`;
+      }
       const m = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]+)$/);
       if (m){
         const formattedExpr = formatExpression(m[2]);
@@ -793,7 +847,7 @@
     const isDigit = c => /[0-9]/.test(c);
     const isIdentStart = c => /[A-Za-z_]/.test(c);
     const isIdent = c => /[A-Za-z0-9_]/.test(c);
-    const fnSet = new Set(Object.keys(fns));
+    const fnSet = new Set(Object.keys(getFns()));
     const unitSet = new Set(Object.keys(UNIT));
     const varSet = new Set(Object.keys(state.vars));
     const cmdSet = new Set(COMMANDS.map((c) => c.label));
@@ -883,6 +937,10 @@
         setLiveResult(parsed.cmd ? `:${parsed.cmd}` : "command", "muted");
         return;
       }
+      if (parsed.type === "def"){
+        setLiveResult(`define ${parsed.name}(${parsed.params.join(", ")})`, "ok");
+        return;
+      }
       if (parsed.type === "assign"){
         const val = runExpression(parsed.expr);
         const fr = formatResult(val);
@@ -933,9 +991,10 @@
       return items;
     }
 
-    for (const name of Object.keys(fns)){
+    for (const name of Object.keys(getFns())){
       if (name.toLowerCase().startsWith(lowered)){
-        addItem(name, "function", "fn", `${name}(`);
+        const detail = Object.prototype.hasOwnProperty.call(state.userFns, name) ? "user" : "fn";
+        addItem(name, "function", detail, `${name}(`);
       }
     }
     for (const unit of Object.keys(UNIT)){
@@ -1023,6 +1082,7 @@
         if (cmd === "help"){ showHelp(); return; }
         if (cmd === "clear"){ clearTerminal(); return; }
         if (cmd === "vars"){ listVars(); return; }
+        if (cmd === "methods"){ listMethods(); return; }
         if (cmd === "reset"){ resetAll(); return; }
         if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); return; }
 
@@ -1038,6 +1098,14 @@
           return;
         }
         throw new Error(`Unknown command: :${cmd}`);
+      }
+
+      if (parsed.type === "def"){
+        const existed = Object.prototype.hasOwnProperty.call(state.userFns, parsed.name);
+        defineUserFn(parsed.name, parsed.params, parsed.expr);
+        const verb = existed ? "Updated" : "Added";
+        writeLine(`${verb} method ${parsed.name}(${parsed.params.join(", ")}).`, "ok");
+        return;
       }
 
       if (parsed.type === "assign"){
@@ -1062,6 +1130,40 @@
     }finally{
       setStatus("Ready", "ok");
     }
+  }
+
+  function parseParams(paramText){
+    if (!paramText.trim()) return [];
+    const params = paramText.split(",").map((p) => p.trim()).filter(Boolean);
+    const seen = new Set();
+    for (const p of params){
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(p)) throw new Error(`Invalid parameter name: ${p}`);
+      if (seen.has(p)) throw new Error(`Duplicate parameter name: ${p}`);
+      seen.add(p);
+    }
+    return params;
+  }
+
+  function getFns(){
+    return Object.assign(Object.create(null), baseFns, state.userFns);
+  }
+
+  function defineUserFn(name, params, expr){
+    if (Object.prototype.hasOwnProperty.call(baseFns, name)){
+      throw new Error(`Cannot redefine built-in function: ${name}`);
+    }
+    const defn = defFn(name, params.length, (...args) => {
+      const scoped = Object.create(null);
+      Object.assign(scoped, state.vars);
+      params.forEach((param, idx) => {
+        scoped[param] = args[idx];
+      });
+      return runExpressionWithContext(expr, scoped);
+    });
+    defn.params = params.slice();
+    defn.expr = expr.trim();
+    defn.name = name;
+    state.userFns[name] = defn;
   }
 
   // -----------------------------
@@ -1243,6 +1345,7 @@
     writeLine("Type :help for commands and examples.", "muted");
     writeLine("Try: concrete_cy(1200 sf, 4 in)", "muted");
     writeLine("Try: total = markup(burden(12500, 16.7), 35)", "muted");
+    writeLine("Try: def crew_cost(rate, hours) = rate * hours", "muted");
 
     // A couple default constants you might like in estimating:
     state.vars.hr = 1; // placeholder if you want
