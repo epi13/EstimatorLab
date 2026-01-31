@@ -2287,6 +2287,38 @@ export function initRepl(){
         steps: ["wt = pipe_wt(2, 40, 120 ft)", "to_ton(wt)"],
         expect: expectNear(0.219),
       },
+      { name: "gfx create buffer", expr: "gfx(12, 8)", expect: "gfx 12x8" },
+      {
+        name: "gfx scale and background",
+        steps: ["gfx(8, 6)", "gfxs(3)", "bg(\"accent\")"],
+        expect: "accent",
+      },
+      {
+        name: "gfx pixel + line",
+        steps: ["gfx(10, 10)", "pix(0, 0, \"ok\")", "line(0, 0, 9, 9, \"warn\")"],
+        expect: 1,
+      },
+      {
+        name: "gfx fill plot rect",
+        steps: [
+          "gfx(12, 12)",
+          "fill(2, 2, 8, 8, \"accent-2\")",
+          "plot(1, 10, \"1,0|1,0|0,-1|0,-1\", \"err\")",
+          "rect(0, 0, 12, 12, \"muted\")",
+        ],
+        expect: 1,
+      },
+      {
+        name: "gfx user fn tile pattern",
+        steps: [
+          "gfx(20, 12)",
+          "fn tile(x, y, sz) = rect(x, y, sz, sz, \"accent\") + line(x, y, x + sz - 1, y + sz - 1, \"ok\") + line(x + sz - 1, y, x, y + sz - 1, \"warn\") + plot(x + 1, y + 1, \"1,0|0,1|1,0\", \"err\")",
+          "total = 0",
+          "for i in 0..3: total = total + tile(i * 4, 2, 3)",
+          "total",
+        ],
+        expect: 16,
+      },
     ];
   }
 
