@@ -944,6 +944,8 @@ export function initRepl(){
     let passCount = 0;
     const failures = [];
 
+    writeLine(`Test plan: ${tests.length} checks.`, "muted");
+
     for (const test of tests){
       try{
         state.vars = Object.create(null);
@@ -955,11 +957,16 @@ export function initRepl(){
         const match = matchExpected(result, test.expect);
         if (match.pass){
           passCount += 1;
+          writeLine(`✓ ${test.name}`, "ok");
         }else{
           failures.push({ name: test.name, reason: match.message || "failed" });
+          writeLine(`✗ ${test.name}: ${match.message || "failed"}`, "err");
+          writeLine(`  ↳ ${source}`, "muted");
         }
       }catch(err){
         failures.push({ name: test.name, reason: err.message || String(err) });
+        writeLine(`✗ ${test.name}: ${err.message || String(err)}`, "err");
+        writeLine(`  ↳ ${test.steps ? test.steps.join("\\n") : test.expr}`, "muted");
       }
     }
 
