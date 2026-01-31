@@ -1494,6 +1494,143 @@ export function initRepl(){
       { name: "repeat loop with units", steps: ["total = 0 ft", "repeat 3: total = total + 2 ft", "total"], expect: expectQty(6, "len") },
       { name: "equation solver", expr: "56 cy = concrete_cy(sf, 6 in)", expect: 3024 },
       { name: "equation solver larger", expr: "100 cy = concrete_cy(sf, 8 in)", expect: 4050 },
+      {
+        name: "nested markup loop total",
+        steps: [
+          "fn item_cost(rate, hours, waste_pct) = markup(rate * hours, waste_pct)",
+          "total = 0",
+          "for crew in 1..3: total = total + item_cost(45 + crew * 5, 8 + crew, 10)",
+          "if total > 0: total = round(total) else: total = 0",
+          "total",
+        ],
+        expect: 1826,
+      },
+      {
+        name: "looped unit accumulation",
+        steps: ["total = 0 ft", "for i in 1..5: total = total + (i * (2 ft))", "total"],
+        expect: expectQty(30, "len"),
+      },
+      {
+        name: "area waste rounding chain",
+        steps: [
+          "base = area_rect(45 ft, 30 ft)",
+          "with_waste = waste(base, 12.5)",
+          "with_waste_sy = to_sy(with_waste)",
+          "round_up(with_waste_sy, 5)",
+        ],
+        expect: 170,
+      },
+      {
+        name: "bay area loop accumulation",
+        steps: [
+          "fn bay_area(span, bays) = area_rect(span, 20 ft) * bays",
+          "total = 0 sf",
+          "for i in 1..4: total = total + bay_area(15 ft + i ft, i)",
+          "total",
+        ],
+        expect: expectQty(3600, "area"),
+      },
+      {
+        name: "conditional scoring loop",
+        steps: [
+          "score = 0",
+          "for i in 1..6: if i > 3 && i < 6: score = score + i else: score = score + (i * 2)",
+          "score",
+        ],
+        expect: 33,
+      },
+      {
+        name: "repeat bump function",
+        steps: ["fn bump(x) = x * 1.1 + 3", "val = 0", "repeat 4: val = bump(val)", "val"],
+        expect: expectNear(13.923),
+      },
+      {
+        name: "trench volume to cy",
+        steps: [
+          "fn trench_vol(len, width, depth) = vol_rect(area_rect(len, width), depth)",
+          "volume = trench_vol(120 ft, 3 ft, 2 ft)",
+          "to_cy(volume)",
+        ],
+        expect: expectNear(26.6666666667),
+      },
+      {
+        name: "eval with variables",
+        steps: ["x = 12", "y = 3", "eval(\"x^2 + y^3 + 2*x*y\")"],
+        expect: 243,
+      },
+      {
+        name: "unit comparisons with if",
+        steps: [
+          "total = 0 ft",
+          "if 2 ft > 1 ft: total = total + 3 ft else: total = total + 5 ft",
+          "if total >= 3 ft: total = total + 2 ft else: total = total + 1 ft",
+          "total",
+        ],
+        expect: expectQty(5, "len"),
+      },
+      {
+        name: "log sqrt trig compound",
+        expr: "log(exp(3)) + sqrt(144) - (sin(pi/6)^2 + cos(pi/6)^2)",
+        expect: expectNear(14),
+      },
+      {
+        name: "unit cost with markup and burden",
+        expr: "unit(markup(200, 15) + burden(80, 25), 4)",
+        expect: 82.5,
+      },
+      {
+        name: "meta set/get with arithmetic",
+        steps: ["set(\"crew\", 4)", "set(\"rate\", 95)", "get(\"crew\") * get(\"rate\") * 8"],
+        expect: 3040,
+      },
+      {
+        name: "slab volume to cy",
+        steps: [
+          "fn slab_volume(area, thk_in) = vol_rect(area, thk_in)",
+          "volume = slab_volume(2400 sf, 5 in)",
+          "to_cy(volume)",
+        ],
+        expect: expectNear(37.037037037),
+      },
+      {
+        name: "for loop with computed step",
+        steps: ["total = 0", "for i in 2..10 step 2 + 1: total = total + i", "total"],
+        expect: 15,
+      },
+      {
+        name: "descending loop with condition",
+        steps: [
+          "total = 0",
+          "for i in 9..1 step -2: if i > 4: total = total + i else: total = total + (i * 2)",
+          "total",
+        ],
+        expect: 29,
+      },
+      {
+        name: "repeat loop unit round_up",
+        steps: ["total = 0 ft", "repeat 4: total = total + 2.5 ft", "round_up(total, 2 ft)"],
+        expect: expectQty(10, "len"),
+      },
+      {
+        name: "if function with logical",
+        expr: "if(5 > 3 && 2 < 1, 10, 20) + if(3 == 3, 7, 0)",
+        expect: 27,
+      },
+      {
+        name: "unit conversion length expression",
+        expr: "to_in(6 ft + 18 in)",
+        expect: 90,
+      },
+      {
+        name: "equation solver slab area",
+        expr: "80 cy = concrete_cy(sf, 5 in)",
+        expect: 5184,
+      },
+      {
+        name: "pipe weight to tons",
+        steps: ["wt = pipe_wt(2, 40, 120 ft)", "to_ton(wt)"],
+        expect: expectNear(0.219),
+      },
     ];
   }
 
