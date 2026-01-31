@@ -141,6 +141,44 @@ html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-f
   font-size:14px;
   margin:0 0 10px 0;
 }
+.gfx-line{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin:0 0 14px 0;
+}
+.gfx-label{
+  font-size:11px;
+  color:var(--muted);
+}
+.gfx-panel{
+  display:grid;
+  grid-template-columns:repeat(var(--gfx-width), var(--gfx-scale));
+  grid-auto-rows:var(--gfx-scale);
+  gap:1px;
+  padding:6px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--gfx-bg, transparent);
+  width:fit-content;
+  max-width:100%;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.gfx-pixel{
+  width:var(--gfx-scale);
+  height:var(--gfx-scale);
+  background:rgba(255,255,255,.06);
+  border-radius:2px;
+}
+.gfx-transparent{ background:transparent; }
+.gfx-accent{ background:var(--accent); }
+.gfx-accent-2{ background:var(--accent-2); }
+.gfx-ok{ background:var(--ok); }
+.gfx-warn{ background:var(--warn); }
+.gfx-err{ background:var(--err); }
+.gfx-string{ background:var(--string); }
+.gfx-text{ background:var(--text); }
+.gfx-muted{ background:var(--muted); }
 .prompt{color:var(--accent);}
 .input{color:var(--text);}
 .out{color:var(--text);}
