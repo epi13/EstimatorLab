@@ -217,6 +217,7 @@ html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-f
 .highlight .token-cmd{ color:var(--accent); }
 .highlight .token-keyword{ color:var(--accent-2); }
 .highlight .token-comment{ color:var(--muted); }
+.highlight .token-string{ color:var(--accent-2); }
 
 .autocomplete{
   display:none;

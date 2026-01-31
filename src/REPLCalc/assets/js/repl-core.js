@@ -75,6 +75,57 @@ export function initRepl(){
 
   const KEYWORDS = new Set(["if", "else", "for", "in", "step", "repeat", "def", "fn", "function"]);
   const baseFns = createBaseFns();
+  const metaFns = Object.create(null);
+
+  function normalizeMetaName(value, label){
+    if (typeof value !== "string") throw new Error(`${label} expects a string name`);
+    const name = value.trim();
+    if (!name) throw new Error(`${label} expects a non-empty name`);
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error(`Invalid name: ${name}`);
+    return name;
+  }
+
+  function normalizeMetaParams(value){
+    if (typeof value !== "string") throw new Error("define expects params as a string");
+    return parseParams(value);
+  }
+
+  metaFns.eval = defFn("eval", 1, (expr) => {
+    if (typeof expr !== "string") throw new Error("eval expects a string expression");
+    return runExpressionWithContext(expr, state.vars);
+  });
+  metaFns.get = defFn("get", 1, (name) => {
+    const key = normalizeMetaName(name, "get");
+    if (!Object.prototype.hasOwnProperty.call(state.vars, key)) throw new Error(`Unknown variable: ${key}`);
+    return state.vars[key];
+  });
+  metaFns.set = defFn("set", 2, (name, value) => {
+    const key = normalizeMetaName(name, "set");
+    state.vars[key] = value;
+    return value;
+  });
+  metaFns.unset = defFn("unset", 1, (name) => {
+    const key = normalizeMetaName(name, "unset");
+    const existed = Object.prototype.hasOwnProperty.call(state.vars, key);
+    if (existed) delete state.vars[key];
+    return existed ? 1 : 0;
+  });
+  metaFns.vars = defFn("vars", 0, () => Object.keys(state.vars).sort().join(", "));
+  metaFns.methods = defFn("methods", 0, () => Object.keys(state.userFns).sort().join(", "));
+  metaFns.define = defFn("define", 3, (name, params, expr) => {
+    const fnName = normalizeMetaName(name, "define");
+    const paramList = normalizeMetaParams(params);
+    if (typeof expr !== "string") throw new Error("define expects an expression string");
+    defineUserFn(fnName, paramList, expr);
+    return fnName;
+  });
+  metaFns.undefine = defFn("undefine", 1, (name) => {
+    const fnName = normalizeMetaName(name, "undefine");
+    if (!Object.prototype.hasOwnProperty.call(state.userFns, fnName)) return 0;
+    delete state.userFns[fnName];
+    renderUserFunctions();
+    return 1;
+  });
 
   // -----------------------------
   // Command handling
@@ -86,10 +137,13 @@ export function initRepl(){
     writeLine("Functions: def|fn|function name(a,b) = expression (redefine to edit)", "muted");
     writeLine("Flow: if condition: expr [else: expr]", "muted");
     writeLine("Loop: for i in 1..5 step 1: expr   |   repeat 3: expr", "muted");
+    writeLine("Strings: \"text\" or 'text' (used for meta commands like eval/set)", "muted");
     writeLine("Units: in, ft, yd, sf, sy, cf, cy, lb, ton (use like: 12 ft + 6 in)", "muted");
     writeLine("Solve: expr = expr  (one unknown variable, ex: 56 cy = concrete_cy(sf, 6 in))", "muted");
     writeLine("Editor: autocomplete, syntax highlight, and live preview while typing", "muted");
     writeLine("Tip: Enter runs when complete; Enter adds new line if incomplete.", "muted");
+    writeLine("Meta: eval(\"expr\") set(\"x\", 5) get(\"x\") unset(\"x\") vars() methods()", "muted");
+    writeLine("Meta: define(\"fn\", \"a,b\", \"a+b\") undefine(\"fn\")", "muted");
     writeLine("Commands:", "muted");
     writeLine("  :help                show help", "muted");
     writeLine("  :docs                detailed docs + examples", "muted");
@@ -127,6 +181,7 @@ export function initRepl(){
     writeLine("  Flow: if labor > 40: overtime = labor - 40 else: overtime = 0", "muted");
     writeLine("  Loop: for i in 1..4: total = total + i  |  repeat 3: waste(100 sf, 5)", "muted");
     writeLine("  Solve: 56 cy = concrete_cy(sf, 6 in)", "muted");
+    writeLine("  Strings: \"crew\" or 'crew' (required for meta-programming helpers)", "muted");
     writeLine("Units:", "muted");
     writeLine("  Supported: in, ft, yd, sf, sy, cf, cy, lb, ton.", "muted");
     writeLine("  Use as tokens: 12 ft + 6 in  |  1200 sf * 4 in  |  3 cy + 9 cf", "muted");
@@ -138,6 +193,9 @@ export function initRepl(){
     writeLine("Math + logic:", "muted");
     writeLine("  abs min max round ceil floor sqrt pow exp log log10 sin cos tan atan2 clamp", "muted");
     writeLine("  Comparisons return 1/0: == != < <= > >=  |  Logic: && ||", "muted");
+    writeLine("Meta-programming:", "muted");
+    writeLine("  eval(\"expr\") set(\"name\", value) get(\"name\") unset(\"name\")", "muted");
+    writeLine("  define(\"fn\", \"a,b\", \"a+b\") undefine(\"fn\") vars() methods()", "muted");
     writeLine("Session commands:", "muted");
     writeLine("  :vars list variables   :methods list user methods   :reset wipe session", "muted");
     writeLine("  :export copy JSON      :import load JSON from clipboard", "muted");
@@ -713,6 +771,7 @@ export function initRepl(){
   function formatTokens(tokens){
     const parts = tokens.map((t) => {
       if (t.type === "num") return String(t.value);
+      if (t.type === "str") return JSON.stringify(t.value);
       if (t.type === "id") return t.value;
       if (t.type === "op") return ` ${t.value} `;
       if (t.type === ",") return ", ";
@@ -763,6 +822,22 @@ export function initRepl(){
   function isStatementComplete(source){
     const trimmed = source.trim();
     if (!trimmed) return false;
+    let quote = null;
+    for (let i = 0; i < trimmed.length; i++){
+      const c = trimmed[i];
+      if (c === "\\" && quote){
+        i += 1;
+        continue;
+      }
+      if (!quote && (c === "\"" || c === "'")){
+        quote = c;
+        continue;
+      }
+      if (quote && c === quote){
+        quote = null;
+      }
+    }
+    if (quote) return false;
     let depth = 0;
     for (const c of trimmed){
       if (c === "(") depth += 1;
@@ -810,6 +885,25 @@ export function initRepl(){
       if (["==","!=",">=","<=","&&","||"].includes(twoChar)){
         out += `<span class="token-op">${escapeHtml(twoChar)}</span>`;
         i += 2;
+        continue;
+      }
+      if (c === "\"" || c === "'"){
+        const quote = c;
+        let j = i + 1;
+        while (j < value.length){
+          const ch = value[j];
+          if (ch === "\\"){
+            j += 2;
+            continue;
+          }
+          if (ch === quote){
+            j += 1;
+            break;
+          }
+          j += 1;
+        }
+        out += `<span class="token-string">${escapeHtml(value.slice(i, j))}</span>`;
+        i = j;
         continue;
       }
       if (isDigit(c) || (c === "." && isDigit(value[i + 1]))){
@@ -1199,11 +1293,11 @@ export function initRepl(){
   }
 
   function getFns(){
-    return Object.assign(Object.create(null), baseFns, state.userFns);
+    return Object.assign(Object.create(null), baseFns, metaFns, state.userFns);
   }
 
   function defineUserFn(name, params, expr){
-    if (Object.prototype.hasOwnProperty.call(baseFns, name)){
+    if (Object.prototype.hasOwnProperty.call(baseFns, name) || Object.prototype.hasOwnProperty.call(metaFns, name)){
       throw new Error(`Cannot redefine built-in function: ${name}`);
     }
     const defn = defFn(name, params.length, (...args) => {
