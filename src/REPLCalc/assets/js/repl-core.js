@@ -644,6 +644,21 @@ export function initRepl(){
     ], "muted");
     writeLineRich([
       "  ",
+      token(":save", "out-command"),
+      " name          save session profile"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":load", "out-command"),
+      " name          load saved profile"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":profiles", "out-command"),
+      "            list saved profiles"
+    ], "muted");
+    writeLineRich([
+      "  ",
       token(":export", "out-command"),
       "              copy session JSON to clipboard"
     ], "muted");
@@ -1177,6 +1192,18 @@ export function initRepl(){
     ], "muted");
     writeLineRich([
       "  ",
+      token(":save", "out-command"),
+      " name save profile   ",
+      token(":load", "out-command"),
+      " name load profile"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":profiles", "out-command"),
+      " list profiles"
+    ], "muted");
+    writeLineRich([
+      "  ",
       token(":export", "out-command"),
       " copy JSON      ",
       token(":import", "out-command"),
@@ -1347,6 +1374,37 @@ export function initRepl(){
     hintRight.textContent = `Theme: ${t}`;
   }
 
+  const PROFILE_STORAGE_KEY = "replcalc_profiles_v1";
+
+  function loadProfileStore(){
+    try{
+      const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (!raw) return Object.create(null);
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return Object.create(null);
+      return parsed;
+    }catch{
+      return Object.create(null);
+    }
+  }
+
+  function saveProfileStore(store){
+    try{
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(store));
+    }catch{
+      throw new Error("Local storage blocked by browser.");
+    }
+  }
+
+  function normalizeProfileName(name){
+    const trimmed = (name || "").trim();
+    if (!trimmed) throw new Error("Profile name required. Use :save name.");
+    if (!/^[A-Za-z0-9 _-]+$/.test(trimmed)){
+      throw new Error("Profile name can only use letters, numbers, spaces, _ or -.");
+    }
+    return trimmed;
+  }
+
   function exportSession(){
     const payload = {
       version: 1,
@@ -1361,6 +1419,40 @@ export function initRepl(){
       })),
     };
     return JSON.stringify(payload, null, 2);
+  }
+
+  function saveProfile(name){
+    const profileName = normalizeProfileName(name);
+    const store = loadProfileStore();
+    const payload = JSON.parse(exportSession());
+    payload.profile_name = profileName;
+    payload.saved_at = new Date().toISOString();
+    store[profileName] = payload;
+    saveProfileStore(store);
+    writeLine(`Saved profile "${profileName}".`, "ok");
+  }
+
+  function loadProfile(name){
+    const profileName = normalizeProfileName(name);
+    const store = loadProfileStore();
+    const payload = store[profileName];
+    if (!payload) throw new Error(`No saved profile named "${profileName}".`);
+    importSession(JSON.stringify(payload));
+    writeLine(`Loaded profile "${profileName}".`, "ok");
+  }
+
+  function listProfiles(){
+    const store = loadProfileStore();
+    const names = Object.keys(store).sort();
+    if (!names.length){
+      writeLine("No saved profiles yet.", "muted");
+      return;
+    }
+    writeLine("Saved profiles:", "ok");
+    for (const name of names){
+      const stamp = store[name]?.saved_at ? ` (saved ${store[name].saved_at})` : "";
+      writeLine(`  ${name}${stamp}`, "muted");
+    }
   }
 
   function importSession(jsonText){
@@ -1917,6 +2009,9 @@ export function initRepl(){
     { label: ":vars", detail: "list variables" },
     { label: ":methods", detail: "list user methods" },
     { label: ":reset", detail: "reset session" },
+    { label: ":save", detail: "save profile" },
+    { label: ":load", detail: "load profile" },
+    { label: ":profiles", detail: "list profiles" },
     { label: ":export", detail: "copy session" },
     { label: ":import", detail: "load session" },
     { label: ":theme", detail: "switch theme" },
@@ -2840,6 +2935,9 @@ export function initRepl(){
           if (cmd === "vars"){ listVars(); continue; }
           if (cmd === "methods"){ listMethods(); continue; }
           if (cmd === "reset"){ resetAll(); continue; }
+          if (cmd === "save"){ saveProfile(arg); continue; }
+          if (cmd === "load"){ loadProfile(arg); continue; }
+          if (cmd === "profiles"){ listProfiles(); continue; }
           if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); continue; }
           if (cmd === "test"){ runTestSuite(); continue; }
 
