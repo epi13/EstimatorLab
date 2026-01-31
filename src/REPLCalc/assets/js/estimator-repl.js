@@ -266,6 +266,24 @@
     return out;
   }
 
+  function insertImplicitMultiplication(tokens){
+    const out = [];
+    const canMultiplyLeft = (t) => t.type==="num" || t.type==="id" || t.type===")";
+    const canMultiplyRight = (t) => t.type==="num" || t.type==="id" || t.type==="(";
+
+    for (let i=0; i<tokens.length; i++){
+      const t = tokens[i];
+      out.push(t);
+      const next = tokens[i+1];
+      if (!next) continue;
+      if (!canMultiplyLeft(t) || !canMultiplyRight(next)) continue;
+      if (t.type==="id" && next.type==="(") continue; // function call
+      out.push({type:"op", value:"*"});
+    }
+
+    return out;
+  }
+
   function toRPN(tokens){
     const output = [];
     const stack = [];
@@ -719,7 +737,7 @@
   }
 
   function runExpressionWithContext(expr, vars){
-    const tokens = tokenize(expr);
+    const tokens = insertImplicitMultiplication(tokenize(expr));
     const rpn = toRPN(tokens);
     return evalRPN(rpn, { vars, fns: getFns() });
   }
