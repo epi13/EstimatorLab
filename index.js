@@ -7,12 +7,19 @@ const navigationData = [
           { label: 'Home', href: 'src/REPLCalc/estimator-repl.html', keywords: 'repl calculator' },
           { label: 'JSON Search', href: 'src/search/fuzzy_search.html', keywords: 'data fuzzy finder' },
           { label: 'Unit Conversion', href: 'src/miscellaneous/unitConvert/units.html', keywords: 'measurements conversions' },
-          { label: 'XLSX to LLM', href: 'src/miscellaneous/xlsx-to-llm/xlsx-to-llm.html', keywords: 'llm token saver' },
           { label: 'Scaler', href: 'src/miscellaneous/high-level-scaler/high-level-scaler.html', keywords: 'high level scaler' },
           { label: 'PDF Extractor', href: 'src/pdf/extractor/extract.html', keywords: 'export data' },
+          { label: 'Tracker', href: 'src/tracker/index.html', keywords: 'tracker' }   
+          
+        ]
+      },
+          {
+        title: 'Utilities',
+        icon: 'clipboard',
+        calculators: [
+           { label: 'XLSX to LLM', href: 'src/miscellaneous/xlsx-to-llm/xlsx-to-llm.html', keywords: 'llm token saver' },   
           { label: 'Dictionary', href: 'src/miscellaneous/dictionary/index.html', keywords: 'dictionary' },
-          { label: 'Tracker', href: 'src/tracker/index.html', keywords: 'tracker' },   
-          { label: 'MarkDown Editor', href: 'src/miscellaneous/MarkDownEditor/markdown.html', keywords: 'markdown editor' } 
+           { label: 'MarkDown Editor', href: 'src/miscellaneous/MarkDownEditor/markdown.html', keywords: 'markdown editor' }
         ]
       },
       {
