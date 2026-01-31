@@ -73,10 +73,110 @@ Expected provider methods:
   { updatedAt, rows:[{id, price, changeAbs, changePct, series:[{t, v}]}] }
 */
 const Providers = {
+  yahoo: yahooFinanceProvider(),
   demo: demoProvider(),
   fred: fredProviderScaffold(),
   commoditiesApi: commoditiesApiScaffold()
 };
+
+const ProviderLabels = {
+  yahoo: "Yahoo Finance",
+  demo: "Demo",
+  fred: "FRED",
+  commoditiesApi: "Commodities API"
+};
+
+function yahooFinanceProvider() {
+  const items = [
+    { id:"lumber", name:"Lumber Futures", unit:"$/MBF", category:"Wood", symbol:"LBS=F" },
+    { id:"steel", name:"Hot-Rolled Steel", unit:"$/ST", category:"Metals", symbol:"HRC=F" },
+    { id:"copper", name:"Copper Futures", unit:"$/lb", category:"Metals", symbol:"HG=F" },
+    { id:"aluminum", name:"Aluminum Futures", unit:"$/MT", category:"Metals", symbol:"ALI=F" },
+    { id:"diesel", name:"Heating Oil (Diesel proxy)", unit:"$/gal", category:"Fuel", symbol:"HO=F" },
+    { id:"gasoline", name:"RBOB Gasoline", unit:"$/gal", category:"Fuel", symbol:"RB=F" }
+  ];
+
+  function rangeConfig(range) {
+    switch (range) {
+      case "1W":
+        return { range: "5d", interval: "30m" };
+      case "1M":
+        return { range: "1mo", interval: "1d" };
+      case "3M":
+        return { range: "3mo", interval: "1d" };
+      case "1Y":
+        return { range: "1y", interval: "1wk" };
+      case "5Y":
+        return { range: "5y", interval: "1mo" };
+      default:
+        return { range: "1mo", interval: "1d" };
+    }
+  }
+
+  async function fetchChart(symbol, range) {
+    const cfg = rangeConfig(range);
+    const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}`);
+    url.searchParams.set("range", cfg.range);
+    url.searchParams.set("interval", cfg.interval);
+    url.searchParams.set("includePrePost", "false");
+    url.searchParams.set("events", "div,splits");
+
+    const res = await fetch(url.toString());
+    if (!res.ok) {
+      throw new Error(`Yahoo Finance error for ${symbol}: ${res.status}`);
+    }
+    const data = await res.json();
+    const result = data?.chart?.result?.[0];
+    if (!result) {
+      throw new Error(`Yahoo Finance returned no data for ${symbol}`);
+    }
+    return result;
+  }
+
+  function toSeries(result) {
+    const timestamps = result.timestamp || [];
+    const closes = result.indicators?.quote?.[0]?.close || [];
+    return timestamps.map((t, i) => {
+      const v = closes[i];
+      if (!isFinite(v)) return null;
+      return { t: t * 1000, v };
+    }).filter(Boolean);
+  }
+
+  return {
+    async listItems() {
+      return items;
+    },
+    async getSnapshot(range) {
+      const rows = await Promise.all(items.map(async (it) => {
+        const result = await fetchChart(it.symbol, range);
+        const series = toSeries(result);
+        const meta = result.meta || {};
+        const last = meta.regularMarketPrice ?? series[series.length - 1]?.v ?? NaN;
+        const prev = meta.previousClose ?? series[series.length - 2]?.v ?? last;
+        const changeAbs = last - prev;
+        const changePct = prev ? (changeAbs / prev) * 100 : 0;
+        return {
+          id: it.id,
+          price: last,
+          changeAbs,
+          changePct,
+          series,
+          metaTime: meta.regularMarketTime ? meta.regularMarketTime * 1000 : null
+        };
+      }));
+
+      const latestMeta = Math.max(...rows.map(r => r.metaTime).filter(Boolean));
+      const fallbackTime = rows
+        .map(r => r.series?.slice(-1)?.[0]?.t)
+        .filter(Boolean)
+        .sort((a, b) => b - a)[0] ?? Date.now();
+      const updatedAt = latestMeta || fallbackTime;
+      const normalizedRows = rows.map(({ metaTime, ...rest }) => rest);
+      return { updatedAt: new Date(updatedAt).toISOString(), rows: normalizedRows };
+    }
+  };
+}
 
 function demoProvider() {
   // Deterministic-ish pseudo series generation
@@ -247,7 +347,7 @@ const els = {
 };
 
 const State = {
-  providerKey: localStorage.getItem(LS.PROVIDER) || "demo",
+  providerKey: localStorage.getItem(LS.PROVIDER) || "yahoo",
   range: localStorage.getItem(LS.RANGE) || DEFAULT_RANGE,
   search: "",
   sort: { key: "name", dir: "asc" }, // name|price|pct
@@ -281,7 +381,7 @@ async function init() {
 
   // Provider
   els.providerSelect.value = State.providerKey;
-  els.providerStatus.textContent = State.providerKey;
+  els.providerStatus.textContent = ProviderLabels[State.providerKey] || State.providerKey;
 
   // Uplift
   els.upliftToggle.checked = State.upliftOn;
@@ -331,7 +431,7 @@ function wire() {
   els.providerSelect.addEventListener("change", async () => {
     State.providerKey = els.providerSelect.value;
     localStorage.setItem(LS.PROVIDER, State.providerKey);
-    els.providerStatus.textContent = State.providerKey;
+    els.providerStatus.textContent = ProviderLabels[State.providerKey] || State.providerKey;
     await refreshAll();
   });
 

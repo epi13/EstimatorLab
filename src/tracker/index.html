@@ -97,15 +97,16 @@
           <div class="field">
             <label class="labrow">
               <span>Data provider</span>
-              <span class="muted small" id="providerStatus">Demo</span>
+              <span class="muted small" id="providerStatus">Yahoo Finance</span>
             </label>
             <select id="providerSelect" class="select">
+              <option value="yahoo">Yahoo Finance (near real-time)</option>
               <option value="demo">Demo (offline)</option>
               <option value="fred">FRED (proxy recommended)</option>
               <option value="commoditiesApi">Commodities API (key required)</option>
             </select>
             <div class="muted small">
-              This UI ships with a demo provider. Real providers may require a serverless proxy for CORS + API key safety.
+              Yahoo Finance streams near real-time futures data where available; other providers may require a serverless proxy for CORS + API key safety.
             </div>
           </div>
         </section>
