@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Construction Materials Commodity Tracker</title>
+  <link rel="stylesheet" href="./styles.css" />
+
+  <!-- Chart.js (no build step). If you prefer no CDN, remove and replace chart code. -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">CT</div>
+        <div class="brandtext">
+          <div class="title">Construction Commodity Tracker</div>
+          <div class="subtitle">Materials • Indices • Fuel • AK-adjustable view</div>
+        </div>
+      </div>
+
+      <div class="top-controls">
+        <div class="searchbox">
+          <input id="searchInput" type="search" placeholder="Search (e.g., lumber, steel, diesel)..." />
+          <button id="clearSearchBtn" class="btn ghost" title="Clear">✕</button>
+        </div>
+
+        <div class="seg" role="group" aria-label="Timeframe">
+          <button class="segbtn" data-range="1W">1W</button>
+          <button class="segbtn" data-range="1M">1M</button>
+          <button class="segbtn" data-range="3M">3M</button>
+          <button class="segbtn" data-range="1Y">1Y</button>
+          <button class="segbtn" data-range="5Y">5Y</button>
+        </div>
+
+        <button id="refreshBtn" class="btn">Refresh</button>
+
+        <label class="toggle">
+          <input id="autoRefreshToggle" type="checkbox" />
+          <span class="track"></span>
+          <span class="lbl">Auto</span>
+        </label>
+
+        <label class="toggle">
+          <input id="themeToggle" type="checkbox" />
+          <span class="track"></span>
+          <span class="lbl">Dark</span>
+        </label>
+      </div>
+    </header>
+
+    <main class="main">
+      <aside class="left">
+        <section class="panel">
+          <div class="panelhead">
+            <h2>Watchlist</h2>
+            <button id="addCustomBtn" class="btn small ghost">+ Custom</button>
+          </div>
+          <div class="watchlist" id="watchlist"></div>
+          <div class="hint">
+            Tip: Star items in the table to pin them here.
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panelhead">
+            <h2>Adjustments</h2>
+          </div>
+
+          <div class="field">
+            <label class="labrow">
+              <span>Alaska uplift</span>
+              <span class="muted" id="upliftPctLabel">0%</span>
+            </label>
+
+            <div class="row">
+              <label class="toggle">
+                <input id="upliftToggle" type="checkbox" />
+                <span class="track"></span>
+                <span class="lbl">Enable</span>
+              </label>
+
+              <select id="upliftPreset" class="select">
+                <option value="0.08">Anchorage / Railbelt +8%</option>
+                <option value="0.15">Hub town +15%</option>
+                <option value="0.25">Remote +25%</option>
+                <option value="0.40">Very remote +40%</option>
+              </select>
+            </div>
+
+            <div class="muted small">
+              Applies a simple multiplier to *displayed* prices (doesn’t replace procurement quotes).
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="labrow">
+              <span>Data provider</span>
+              <span class="muted small" id="providerStatus">Demo</span>
+            </label>
+            <select id="providerSelect" class="select">
+              <option value="demo">Demo (offline)</option>
+              <option value="fred">FRED (proxy recommended)</option>
+              <option value="commoditiesApi">Commodities API (key required)</option>
+            </select>
+            <div class="muted small">
+              This UI ships with a demo provider. Real providers may require a serverless proxy for CORS + API key safety.
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panelhead">
+            <h2>Alerts</h2>
+            <button id="newAlertBtn" class="btn small ghost">+ Alert</button>
+          </div>
+
+          <div class="alerts" id="alerts"></div>
+          <div class="hint">
+            Alerts evaluate on refresh and auto-refresh. Browser notifications optional (not enabled by default).
+          </div>
+        </section>
+      </aside>
+
+      <section class="center">
+        <section class="cards" id="cards"></section>
+
+        <section class="panel chartpanel">
+          <div class="panelhead">
+            <div class="stack">
+              <h2 id="chartTitle">Select an item</h2>
+              <div class="meta">
+                <span id="lastUpdated">Last updated: —</span>
+                <span class="dot">•</span>
+                <span id="selectedMeta">—</span>
+              </div>
+            </div>
+            <div class="chartactions">
+              <button id="exportCsvBtn" class="btn small ghost">Export CSV</button>
+            </div>
+          </div>
+
+          <div class="chartwrap">
+            <canvas id="priceChart"></canvas>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panelhead">
+            <h2>Market Board</h2>
+            <div class="righttools">
+              <button id="sortNameBtn" class="btn small ghost" title="Sort by name">Name</button>
+              <button id="sortChangeBtn" class="btn small ghost" title="Sort by % change">%Δ</button>
+              <button id="sortPriceBtn" class="btn small ghost" title="Sort by price">Price</button>
+            </div>
+          </div>
+
+          <div class="tablewrap">
+            <table class="table" id="boardTable">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Material</th>
+                  <th>Unit</th>
+                  <th class="num">Price</th>
+                  <th class="num">Δ</th>
+                  <th class="num">%Δ</th>
+                  <th>Trend</th>
+                </tr>
+              </thead>
+              <tbody id="boardBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <aside class="right">
+        <section class="panel">
+          <div class="panelhead">
+            <h2>Details</h2>
+          </div>
+
+          <div class="details" id="details">
+            <div class="muted">Pick a material from the Market Board.</div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panelhead">
+            <h2>Notes</h2>
+          </div>
+
+          <div class="notes">
+            <ul>
+              <li>Use this tracker for **trend visibility**; procurement should still be quote-driven.</li>
+              <li>For Alaska work: freight + handling can dwarf commodity moves on remote jobs.</li>
+              <li>Hook this UI to your internal pricing library later (JSON + freight rules + vendor quotes).</li>
+            </ul>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="footer">
+      <div class="muted">
+        Built for construction estimating workflows • Local-only storage (watchlist/alerts/theme).
+      </div>
+    </footer>
+  </div>
+
+  <!-- Modals -->
+  <dialog id="alertDialog" class="dialog">
+    <form method="dialog" class="dialogcard" id="alertForm">
+      <h3>Create Alert</h3>
+
+      <label class="field">
+        <span>Material</span>
+        <select id="alertMaterial" class="select"></select>
+      </label>
+
+      <div class="row">
+        <label class="field grow">
+          <span>Condition</span>
+          <select id="alertCondition" class="select">
+            <option value="above">Above</option>
+            <option value="below">Below</option>
+          </select>
+        </label>
+
+        <label class="field grow">
+          <span>Target price</span>
+          <input id="alertTarget" type="number" step="0.01" inputmode="decimal" placeholder="e.g., 525.00" />
+        </label>
+      </div>
+
+      <label class="field">
+        <span>Label (optional)</span>
+        <input id="alertLabel" type="text" placeholder="e.g., Diesel spikes again" />
+      </label>
+
+      <div class="dialogactions">
+        <button class="btn ghost" value="cancel">Cancel</button>
+        <button class="btn" id="saveAlertBtn" value="ok">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="customDialog" class="dialog">
+    <form method="dialog" class="dialogcard" id="customForm">
+      <h3>Add Custom Item</h3>
+
+      <label class="field">
+        <span>Name</span>
+        <input id="customName" type="text" placeholder="e.g., Gypsum board" required />
+      </label>
+
+      <div class="row">
+        <label class="field grow">
+          <span>Unit</span>
+          <input id="customUnit" type="text" placeholder="e.g., $/EA, $/SF, Index" />
+        </label>
+        <label class="field grow">
+          <span>Starting price</span>
+          <input id="customPrice" type="number" step="0.01" inputmode="decimal" placeholder="e.g., 14.25" required />
+        </label>
+      </div>
+
+      <div class="dialogactions">
+        <button class="btn ghost" value="cancel">Cancel</button>
+        <button class="btn" id="saveCustomBtn" value="ok">Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="./app.js"></script>
+</body>
+</html>
