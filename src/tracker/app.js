@@ -260,7 +260,6 @@ const State = {
   snapshot: null
 };
 
-let chart = null;
 let autoTimer = null;
 
 /* -----------------------------
@@ -757,54 +756,106 @@ function evaluateAlerts(){
 /* -----------------------------
    Chart
 ------------------------------ */
-function destroyChart(){
-  if (chart) {
-    chart.destroy();
-    chart = null;
-  }
+function renderChart(item, series) {
+  const canvas = document.getElementById("priceChart");
+  drawMainChart(canvas, item, series || []);
 }
 
-function renderChart(item, series) {
-  const ctx = document.getElementById("priceChart");
-  destroyChart();
+function destroyChart(){
+  const canvas = document.getElementById("priceChart");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
 
-  const pts = (series || []).map(p => ({ x: new Date(p.t), y: uplifted(p.v) }));
-  chart = new Chart(ctx, {
-    type: "line",
-    data: {
-      datasets: [{
-        label: item.name,
-        data: pts,
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0.25
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      parsing: false,
-      interaction: { mode: "index", intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (c) => `${fmtMoney(c.parsed.y)} ${item.unit}`
-          }
-        }
-      },
-      scales: {
-        x: {
-          type: "time",
-          time: { unit: "day" },
-          ticks: { color: getComputedStyle(document.documentElement).getPropertyValue("--muted") }
-        },
-        y: {
-          ticks: { color: getComputedStyle(document.documentElement).getPropertyValue("--muted") }
-        }
-      }
-    }
+function resizeCanvasToDisplaySize(canvas) {
+  const { width, height } = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const displayWidth = Math.max(1, Math.round(width * dpr));
+  const displayHeight = Math.max(1, Math.round(height * dpr));
+  if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+    canvas.width = displayWidth;
+    canvas.height = displayHeight;
+  }
+  return { width: displayWidth, height: displayHeight, dpr };
+}
+
+function drawMainChart(canvas, item, series) {
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const { width, height, dpr } = resizeCanvasToDisplaySize(canvas);
+  ctx.clearRect(0, 0, width, height);
+
+  if (series.length < 2) {
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted");
+    ctx.font = `${12 * dpr}px sans-serif`;
+    ctx.fillText("Not enough data", 12 * dpr, 20 * dpr);
+    return;
+  }
+
+  const values = series.map(p => uplifted(p.v));
+  const times = series.map(p => p.t);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = (max - min) || 1;
+
+  const margin = {
+    top: 16 * dpr,
+    right: 16 * dpr,
+    bottom: 32 * dpr,
+    left: 56 * dpr
+  };
+  const plotW = width - margin.left - margin.right;
+  const plotH = height - margin.top - margin.bottom;
+
+  const css = getComputedStyle(document.documentElement);
+  const lineColor = css.getPropertyValue("--accent").trim() || "#6ea8fe";
+  const gridColor = css.getPropertyValue("--line").trim() || "rgba(255,255,255,.08)";
+  const textColor = css.getPropertyValue("--muted").trim() || "#9aa0a6";
+
+  ctx.strokeStyle = gridColor;
+  ctx.lineWidth = 1 * dpr;
+
+  const gridLines = 3;
+  for (let i = 0; i <= gridLines; i++) {
+    const y = margin.top + (plotH / gridLines) * i;
+    ctx.beginPath();
+    ctx.moveTo(margin.left, y);
+    ctx.lineTo(margin.left + plotW, y);
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 2 * dpr;
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const x = margin.left + (i / (values.length - 1)) * plotW;
+    const y = margin.top + (1 - (v - min) / span) * plotH;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
   });
+  ctx.stroke();
+
+  ctx.fillStyle = textColor;
+  ctx.font = `${11 * dpr}px sans-serif`;
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  ctx.fillText(fmtMoney(max), margin.left - 8 * dpr, margin.top);
+  ctx.fillText(fmtMoney(min), margin.left - 8 * dpr, margin.top + plotH);
+
+  const startLabel = new Date(times[0]).toLocaleDateString();
+  const endLabel = new Date(times[times.length - 1]).toLocaleDateString();
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillText(startLabel, margin.left, margin.top + plotH + 8 * dpr);
+  ctx.textAlign = "right";
+  ctx.fillText(endLabel, margin.left + plotW, margin.top + plotH + 8 * dpr);
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = textColor;
+  ctx.font = `${12 * dpr}px sans-serif`;
+  ctx.fillText(`${item.name} (${item.unit})`, margin.left, 4 * dpr);
 }
 
 /* -----------------------------
