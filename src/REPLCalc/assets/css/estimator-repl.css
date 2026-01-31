@@ -221,16 +221,25 @@ html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-f
 
 .autocomplete{
   display:none;
-  flex-direction:column;
-  gap:4px;
+  flex-direction:row;
+  gap:8px;
   background:rgba(0,0,0,.4);
   border:1px solid var(--line);
   border-radius:10px;
   padding:6px;
   max-height:160px;
-  overflow:auto;
+  overflow:hidden;
 }
 .autocomplete.active{ display:flex; }
+.autocomplete-list{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  overflow:auto;
+  max-height:160px;
+  flex:1 1 180px;
+  min-width:150px;
+}
 .autocomplete .item{
   display:flex;
   justify-content:space-between;
@@ -245,6 +254,22 @@ html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-f
 .autocomplete .item.active{
   background:rgba(255,255,255,.08);
   border:1px solid rgba(255,255,255,.12);
+}
+.autocomplete-detail{
+  flex:1 1 220px;
+  border-left:1px solid rgba(255,255,255,.08);
+  padding:6px 10px;
+  font-size:12px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.autocomplete-detail .usage{
+  color:var(--text);
+  font-weight:600;
+}
+.autocomplete-detail .doc{
+  color:var(--muted);
 }
 
 .liveResult{
