@@ -1,6 +1,7 @@
 export const UNIT = {
   in: { kind: "len", toBase: 1 / 12 },
   ft: { kind: "len", toBase: 1 },
+  lf: { kind: "len", toBase: 1 },
   yd: { kind: "len", toBase: 3 },
 
   sf: { kind: "area", toBase: 1 },
@@ -11,6 +12,8 @@ export const UNIT = {
 
   lb: { kind: "wt", toBase: 1 },
   ton: { kind: "wt", toBase: 2000 },
+
+  layer: { kind: "layer", toBase: 1 },
 };
 
 export function isUnitToken(token){

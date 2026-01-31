@@ -125,7 +125,7 @@ export function initRepl(){
     gfxDirty: false,
   };
 
-  const KEYWORDS = new Set(["if", "else", "for", "in", "step", "repeat", "def", "fn", "function"]);
+  const KEYWORDS = new Set(["if", "else", "for", "in", "step", "repeat", "def", "fn", "function", "assy"]);
   const baseFns = createBaseFns();
   const metaFns = Object.create(null);
   const GFX_LIMIT = 160;
@@ -456,7 +456,7 @@ export function initRepl(){
     writeLineRich([
       token("Units:", "out-label"),
       " ",
-      token("in, ft, yd, sf, sy, cf, cy, lb, ton", "out-unit"),
+      token("in, ft, lf, yd, sf, sy, cf, cy, lb, ton, layer", "out-unit"),
       " (use like: ",
       token("12", "out-number"),
       " ",
@@ -466,6 +466,40 @@ export function initRepl(){
       " ",
       token("in", "out-unit"),
       ")"
+    ], "muted");
+    writeLineRich([
+      token("Assemblies:", "out-label"),
+      " ",
+      token("assy", "out-keyword"),
+      " ",
+      token("wall", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("{", "out-op"),
+      " ",
+      token("studs", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("16 in o.c.", "out-number"),
+      "; ",
+      token("height", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("10 ft", "out-number"),
+      "; ",
+      token("sheathing", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("1 layer", "out-number"),
+      " ",
+      token("}", "out-op"),
+      "  |  ",
+      token("qty", "out-fn"),
+      token("(wall, 120 lf)", "out-op")
     ], "muted");
     writeLineRich([
       token("Solve:", "out-label"),
@@ -647,6 +681,9 @@ export function initRepl(){
       "  ",
       token("unit", "out-fn"),
       token("(cost,qty)", "out-op"),
+      "  ",
+      token("qty", "out-fn"),
+      token("(assy,len)", "out-op"),
       "  ",
       token("round_up", "out-fn"),
       token("(x,step)", "out-op")
@@ -926,7 +963,7 @@ export function initRepl(){
     writeLineRich([token("Units:", "out-label")], "muted");
     writeLineRich([
       "  Supported: ",
-      token("in, ft, yd, sf, sy, cf, cy, lb, ton", "out-unit"),
+      token("in, ft, lf, yd, sf, sy, cf, cy, lb, ton, layer", "out-unit"),
       "."
     ], "muted");
     writeLineRich([
@@ -954,6 +991,43 @@ export function initRepl(){
       token("9", "out-number"),
       " ",
       token("cf", "out-unit")
+    ], "muted");
+    writeLineRich([token("Assemblies:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("assy", "out-keyword"),
+      " ",
+      token("wall", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("{", "out-op"),
+      " ",
+      token("studs", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("16 in o.c.", "out-number"),
+      "; ",
+      token("height", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("10 ft", "out-number"),
+      "; ",
+      token("sheathing", "out-var"),
+      " ",
+      token("=", "out-op"),
+      " ",
+      token("1 layer", "out-number"),
+      " ",
+      token("}", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("qty", "out-fn"),
+      token("(wall, 120 lf)", "out-op"),
+      " → studs + area breakdown"
     ], "muted");
     writeLineRich([
       "  Converters: ",
@@ -1143,14 +1217,16 @@ export function initRepl(){
     }
     writeLine("Variables:", "ok");
     for (const k of keys){
+      const formatted = formatValueDisplay(state.vars[k]);
       writeLineRich([
         "  ",
         token(k, "out-var"),
         " ",
         token("=", "out-op"),
         " ",
-        token(qtyToString(state.vars[k]), "out-number")
+        token(formatted.main, "out-number")
       ], "muted");
+      if (formatted.extra) writeLine(`↳ ${formatted.extra}`, "muted");
     }
   }
 
@@ -1346,13 +1422,16 @@ export function initRepl(){
     }
 
     let depth = 0;
+    let braceDepth = 0;
     let start = 0;
     const joined = normalized.join("\n");
     for (let i = 0; i < joined.length; i++){
       const c = joined[i];
       if (c === "(") depth += 1;
       if (c === ")") depth = Math.max(0, depth - 1);
-      const isBreak = (c === "\n" || c === ";") && depth === 0;
+      if (c === "{") braceDepth += 1;
+      if (c === "}") braceDepth = Math.max(0, braceDepth - 1);
+      const isBreak = (c === "\n" || c === ";") && depth === 0 && braceDepth === 0;
       if (isBreak){
         const piece = joined.slice(start, i).trim();
         if (piece) out.push(piece);
@@ -1366,22 +1445,28 @@ export function initRepl(){
 
   function findTopLevelChar(source, char){
     let depth = 0;
+    let braceDepth = 0;
     for (let i = 0; i < source.length; i++){
       const c = source[i];
       if (c === "(") depth += 1;
       if (c === ")") depth = Math.max(0, depth - 1);
-      if (depth === 0 && c === char) return i;
+      if (c === "{") braceDepth += 1;
+      if (c === "}") braceDepth = Math.max(0, braceDepth - 1);
+      if (depth === 0 && braceDepth === 0 && c === char) return i;
     }
     return -1;
   }
 
   function findTopLevelEquals(source){
     let depth = 0;
+    let braceDepth = 0;
     for (let i = 0; i < source.length; i++){
       const c = source[i];
       if (c === "(") depth += 1;
       if (c === ")") depth = Math.max(0, depth - 1);
-      if (depth !== 0) continue;
+      if (c === "{") braceDepth += 1;
+      if (c === "}") braceDepth = Math.max(0, braceDepth - 1);
+      if (depth !== 0 || braceDepth !== 0) continue;
       if (c !== "=") continue;
       const prev = source[i - 1];
       const next = source[i + 1];
@@ -1394,12 +1479,15 @@ export function initRepl(){
 
   function findTopLevelKeyword(source, keyword){
     let depth = 0;
+    let braceDepth = 0;
     const lower = keyword.toLowerCase();
     for (let i = 0; i < source.length; i++){
       const c = source[i];
       if (c === "(") depth += 1;
       if (c === ")") depth = Math.max(0, depth - 1);
-      if (depth !== 0) continue;
+      if (c === "{") braceDepth += 1;
+      if (c === "}") braceDepth = Math.max(0, braceDepth - 1);
+      if (depth !== 0 || braceDepth !== 0) continue;
       if (source.slice(i, i + lower.length).toLowerCase() === lower){
         const before = source[i - 1];
         const after = source[i + lower.length];
@@ -1413,13 +1501,95 @@ export function initRepl(){
 
   function findTopLevelRange(source){
     let depth = 0;
+    let braceDepth = 0;
     for (let i = 0; i < source.length - 1; i++){
       const c = source[i];
       if (c === "(") depth += 1;
       if (c === ")") depth = Math.max(0, depth - 1);
-      if (depth === 0 && source[i] === "." && source[i + 1] === ".") return i;
+      if (c === "{") braceDepth += 1;
+      if (c === "}") braceDepth = Math.max(0, braceDepth - 1);
+      if (depth === 0 && braceDepth === 0 && source[i] === "." && source[i + 1] === ".") return i;
     }
     return -1;
+  }
+
+  function splitAssemblyEntries(source){
+    const out = [];
+    let start = 0;
+    let depth = 0;
+    let quote = null;
+    for (let i = 0; i < source.length; i++){
+      const c = source[i];
+      if (c === "\\" && quote){
+        i += 1;
+        continue;
+      }
+      if (quote){
+        if (c === quote) quote = null;
+        continue;
+      }
+      if (c === "\"" || c === "'"){
+        quote = c;
+        continue;
+      }
+      if (c === "(") depth += 1;
+      if (c === ")") depth = Math.max(0, depth - 1);
+      if ((c === "\n" || c === ";") && depth === 0){
+        const piece = source.slice(start, i).trim();
+        if (piece) out.push(piece);
+        start = i + 1;
+      }
+    }
+    const tail = source.slice(start).trim();
+    if (tail) out.push(tail);
+    return out;
+  }
+
+  function parseAssemblyValue(valueStr){
+    const raw = valueStr.trim();
+    if (!raw) throw new Error("Assembly entry missing value.");
+
+    const tryExpr = (expr) => {
+      try{
+        return { ok: true, value: runExpressionWithContext(expr, state.vars) };
+      }catch{
+        return { ok: false };
+      }
+    };
+
+    const direct = tryExpr(raw);
+    if (direct.ok) return { value: direct.value, note: "", raw };
+
+    const parts = raw.split(/\s+/);
+    for (let idx = parts.length - 1; idx >= 1; idx--){
+      const candidate = parts.slice(0, idx).join(" ");
+      const attempt = tryExpr(candidate);
+      if (attempt.ok){
+        const note = parts.slice(idx).join(" ");
+        return { value: attempt.value, note, raw };
+      }
+    }
+
+    return { value: raw, note: "", raw };
+  }
+
+  function parseAssemblyStatement(src){
+    const assyMatch = src.match(/^assy\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\{([\s\S]*)\}$/i);
+    if (!assyMatch) return null;
+    const name = assyMatch[1];
+    const body = assyMatch[2].trim();
+    const entries = body ? splitAssemblyEntries(body) : [];
+    const fields = Object.create(null);
+    for (const entry of entries){
+      const eqIdx = findTopLevelEquals(entry);
+      if (eqIdx < 0) throw new Error("Assembly entries must be key = value.");
+      const key = entry.slice(0, eqIdx).trim();
+      if (!key) throw new Error("Assembly entry missing key.");
+      const valueStr = entry.slice(eqIdx + 1).trim();
+      const parsed = parseAssemblyValue(valueStr);
+      fields[key] = parsed;
+    }
+    return { type: "assy", name, fields };
   }
 
   // -----------------------------
@@ -1447,6 +1617,12 @@ export function initRepl(){
 
     if (src.startsWith("repeat ")){
       return parseRepeatStatement(src);
+    }
+
+    if (/^assy\b/i.test(src)){
+      const parsed = parseAssemblyStatement(src);
+      if (!parsed) throw new Error("Assembly must use: assy name = { key = value }");
+      return parsed;
     }
 
     const defMatch = src.match(/^(?:def|fn|function)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
@@ -1701,6 +1877,36 @@ export function initRepl(){
     });
   }
 
+  function isAssembly(value){
+    return value && typeof value === "object" && value.__assy;
+  }
+
+  function createAssembly(name, fields){
+    return {
+      __assy: true,
+      name,
+      fields,
+    };
+  }
+
+  function formatAssemblySummary(assy){
+    const fields = assy.fields || {};
+    const entries = Object.entries(fields).map(([key, info]) => {
+      const value = info?.value;
+      const note = info?.note;
+      let rendered = isQty(value) ? qtyToString(value) : String(value);
+      if (note) rendered += ` ${note}`;
+      return `${key} = ${rendered}`;
+    });
+    const inner = entries.join("; ");
+    return `assy ${assy.name}${inner ? ` { ${inner} }` : " {}"}`;
+  }
+
+  function formatValueDisplay(value){
+    if (isAssembly(value)) return { main: formatAssemblySummary(value), extra: "" };
+    return formatResult(value);
+  }
+
   // -----------------------------
   // Formatting + editor helpers
   // -----------------------------
@@ -1747,6 +1953,7 @@ export function initRepl(){
       { name: "assignment + reference", steps: ["x = 10", "x * 3"], expect: 30 },
       { name: "variable reassignment", steps: ["x = 5", "x = x + 2", "x"], expect: 7 },
       { name: "unit addition", expr: "12 in + 1 ft", expect: expectQty(2, "len") },
+      { name: "linear foot unit", expr: "10 lf", expect: expectQty(10, "len") },
       { name: "unit subtraction", expr: "5 ft - 6 in", expect: expectQty(4.5, "len") },
       { name: "unit scaling", expr: "3 * 4 ft", expect: expectQty(12, "len") },
       { name: "area from multiplication", expr: "12 ft * 10 ft", expect: expectQty(120, "area") },
@@ -1933,6 +2140,7 @@ export function initRepl(){
 
   function formatTestValue(value){
     if (isQty(value)) return qtyToString(value);
+    if (isAssembly(value)) return formatAssemblySummary(value);
     return String(value);
   }
 
@@ -1945,6 +2153,12 @@ export function initRepl(){
       if (parsed.type === "cmd") throw new Error(`Test cannot use command :${parsed.cmd}`);
       if (parsed.type === "def"){
         defineUserFn(parsed.name, parsed.params, parsed.expr);
+        continue;
+      }
+      if (parsed.type === "assy"){
+        const assembly = createAssembly(parsed.name, parsed.fields);
+        state.vars[parsed.name] = assembly;
+        lastValue = assembly;
         continue;
       }
       if (parsed.type === "assign"){
@@ -2210,12 +2424,15 @@ export function initRepl(){
     }
     if (quote) return false;
     let depth = 0;
+    let braceDepth = 0;
     for (const c of trimmed){
       if (c === "(") depth += 1;
       if (c === ")") depth -= 1;
-      if (depth < 0) return true;
+      if (c === "{") braceDepth += 1;
+      if (c === "}") braceDepth -= 1;
+      if (depth < 0 || braceDepth < 0) return true;
     }
-    if (depth > 0) return false;
+    if (depth > 0 || braceDepth > 0) return false;
     return !/[+\-*/^,=<>!&|:]$/.test(trimmed);
   }
 
@@ -2355,6 +2572,10 @@ export function initRepl(){
         setLiveResult(`define ${parsed.name}(${parsed.params.join(", ")})`, "ok");
         return;
       }
+      if (parsed.type === "assy"){
+        setLiveResult(`assy ${parsed.name}`, "ok");
+        return;
+      }
       if (parsed.type === "equation"){
         try{
           const solved = solveEquation(parsed.left, parsed.right);
@@ -2379,14 +2600,14 @@ export function initRepl(){
       if (parsed.type === "assign"){
         const previewVars = Object.assign(Object.create(null), state.vars);
         const val = runExpressionWithContext(parsed.expr, previewVars);
-        const fr = formatResult(val);
+        const fr = formatValueDisplay(val);
         setLiveResult(`${parsed.name} = ${fr.main}`, "ok");
         return;
       }
       if (parsed.type === "expr"){
         const previewVars = Object.assign(Object.create(null), state.vars);
         const val = runExpressionWithContext(parsed.expr, previewVars);
-        const fr = formatResult(val);
+        const fr = formatValueDisplay(val);
         setLiveResult(fr.main, "ok");
       }
     }catch(err){
@@ -2428,6 +2649,7 @@ export function initRepl(){
     markup: { usage: "markup(cost, pct)", doc: "Apply markup percentage." },
     burden: { usage: "burden(labor, pct)", doc: "Apply labor burden percentage." },
     unit: { usage: "unit(cost, qty)", doc: "Unit cost from total and quantity." },
+    qty: { usage: "qty(assy, length)", doc: "Compute quantities from an assembly and length." },
     round_up: { usage: "round_up(x, step)", doc: "Round up to a step." },
     area_rect: { usage: "area_rect(a, b)", doc: "Area from length and width." },
     area_circle: { usage: "area_circle(diam)", doc: "Area from diameter." },
@@ -2643,10 +2865,18 @@ export function initRepl(){
           continue;
         }
 
+        if (parsed.type === "assy"){
+          const assembly = createAssembly(parsed.name, parsed.fields);
+          state.vars[parsed.name] = assembly;
+          const fr = formatValueDisplay(assembly);
+          writeLine(`${parsed.name} = ${fr.main}`, "ok");
+          continue;
+        }
+
         if (parsed.type === "assign"){
           const val = runExpression(parsed.expr);
           state.vars[parsed.name] = val;
-          const fr = formatResult(val);
+          const fr = formatValueDisplay(val);
           writeLine(`${parsed.name} = ${fr.main}`, "ok");
           if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
           continue;
@@ -2730,7 +2960,7 @@ export function initRepl(){
 
         if (parsed.type === "expr"){
           const val = runExpression(parsed.expr);
-          const fr = formatResult(val);
+          const fr = formatValueDisplay(val);
           writeLine(fr.main, "out");
           if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
           continue;

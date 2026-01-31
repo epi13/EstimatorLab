@@ -1,4 +1,4 @@
-import { add, div, isQty, makeQty, mul, pow } from "./repl-units.js";
+import { add, div, isQty, makeQty, mul, pow, qtyToString } from "./repl-units.js";
 import { isTruthy } from "./repl-expression.js";
 
 export function defFn(name, arity, impl){
@@ -49,6 +49,44 @@ export function createBaseFns(){
     return mul(labor, 1 + (p / 100));
   });
   baseFns.unit = defFn("unit", 2, (cost, qty) => div(cost, qty));
+  baseFns.qty = defFn("qty", 2, (assy, length) => {
+    if (!assy || typeof assy !== "object" || !assy.__assy) throw new Error("qty expects an assembly as the first argument.");
+    const lenQty = isQty(length) ? length : makeQty(length, "len");
+    if (lenQty.kind !== "len") throw new Error("qty expects a length quantity as the second argument.");
+    const fields = assy.fields || {};
+    const parts = [`len: ${qtyToString(lenQty)}`];
+
+    const spacing = fields.studs?.value;
+    const height = fields.height?.value;
+    const sheathing = fields.sheathing?.value;
+
+    if (spacing !== undefined){
+      if (!isQty(spacing) || spacing.kind !== "len") throw new Error("studs spacing must be a length quantity.");
+      if (spacing.value <= 0) throw new Error("studs spacing must be > 0.");
+      const studs = Math.floor(lenQty.value / spacing.value) + 1;
+      parts.push(`studs: ${studs} ea`);
+      if (height !== undefined){
+        if (!isQty(height) || height.kind !== "len") throw new Error("height must be a length quantity.");
+        const studLength = makeQty(studs * height.value, "len");
+        parts.push(`stud length: ${qtyToString(studLength)}`);
+      }
+    }
+
+    if (height !== undefined){
+      if (!isQty(height) || height.kind !== "len") throw new Error("height must be a length quantity.");
+      const area = makeQty(lenQty.value * height.value, "area");
+      parts.push(`area: ${qtyToString(area)}`);
+      if (sheathing !== undefined){
+        const layerCount = Number(isQty(sheathing) ? sheathing.value : sheathing);
+        if (!Number.isFinite(layerCount)) throw new Error("sheathing layers must be numeric.");
+        const sheathingArea = makeQty(area.value * layerCount, "area");
+        const label = layerCount === 1 ? "sheathing" : `sheathing x${layerCount}`;
+        parts.push(`${label}: ${qtyToString(sheathingArea)}`);
+      }
+    }
+
+    return parts.join(" | ");
+  });
   baseFns.round_up = defFn("round_up", 2, (x, step) => {
     const xv = isQty(x) ? x.value : x;
     const sv = isQty(step) ? step.value : step;

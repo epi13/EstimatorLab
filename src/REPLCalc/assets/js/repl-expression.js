@@ -240,10 +240,7 @@ export function evalRPN(rpn, ctx){
 
     if (isUnitToken(name)){
       const unit = UNIT[name];
-      if (unit.kind === "len") return makeQty(unit.toBase, "len");
-      if (unit.kind === "area") return makeQty(unit.toBase, "area");
-      if (unit.kind === "vol") return makeQty(unit.toBase, "vol");
-      if (unit.kind === "wt") return makeQty(unit.toBase, "wt");
+      return makeQty(unit.toBase, unit.kind);
     }
 
     if (Object.prototype.hasOwnProperty.call(ctx.aliases, name)){
