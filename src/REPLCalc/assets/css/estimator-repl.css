@@ -215,6 +215,7 @@ html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-f
 .highlight .token-unit{ color:var(--warn); }
 .highlight .token-var{ color:var(--text); }
 .highlight .token-cmd{ color:var(--accent); }
+.highlight .token-keyword{ color:var(--accent-2); }
 .highlight .token-comment{ color:var(--muted); }
 
 .autocomplete{

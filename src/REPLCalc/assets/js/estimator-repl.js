@@ -60,6 +60,8 @@
     userFns: Object.create(null),
   };
 
+  const KEYWORDS = new Set(["if", "else", "for", "in", "step", "repeat"]);
+
   // -----------------------------
   // Lightweight Units System
   // -----------------------------
@@ -200,12 +202,52 @@
   // Expression Engine (shunting-yard)
   // -----------------------------
   const OPS = {
-    "+": { prec: 2, assoc:"L", fn:add },
-    "-": { prec: 2, assoc:"L", fn:sub },
-    "*": { prec: 3, assoc:"L", fn:mul },
-    "/": { prec: 3, assoc:"L", fn:div },
-    "^": { prec: 4, assoc:"R", fn:pow },
+    "||": { prec: 0, assoc:"L", fn:(a,b) => (isTruthy(a) || isTruthy(b)) ? 1 : 0 },
+    "&&": { prec: 1, assoc:"L", fn:(a,b) => (isTruthy(a) && isTruthy(b)) ? 1 : 0 },
+    "==": { prec: 2, assoc:"L", fn:(a,b) => compareValues(a,b, "==") },
+    "!=": { prec: 2, assoc:"L", fn:(a,b) => compareValues(a,b, "!=") },
+    "<": { prec: 2, assoc:"L", fn:(a,b) => compareValues(a,b, "<") },
+    "<=": { prec: 2, assoc:"L", fn:(a,b) => compareValues(a,b, "<=") },
+    ">": { prec: 2, assoc:"L", fn:(a,b) => compareValues(a,b, ">") },
+    ">=": { prec: 2, assoc:"L", fn:(a,b) => compareValues(a,b, ">=") },
+    "+": { prec: 3, assoc:"L", fn:add },
+    "-": { prec: 3, assoc:"L", fn:sub },
+    "*": { prec: 4, assoc:"L", fn:mul },
+    "/": { prec: 4, assoc:"L", fn:div },
+    "^": { prec: 5, assoc:"R", fn:pow },
   };
+
+  function isTruthy(value){
+    if (isQty(value)) return value.value !== 0;
+    return Boolean(value);
+  }
+
+  function normalizeCompare(a, b){
+    if (isQty(a) && isQty(b)){
+      if (a.kind !== b.kind) throw new Error(`Unit mismatch: ${a.kind} vs ${b.kind}`);
+      return [a.value, b.value];
+    }
+    if (isQty(a) && !isQty(b)){
+      if (a.kind !== "scalar") throw new Error("Cannot compare unit quantity to scalar.");
+      return [a.value, b];
+    }
+    if (!isQty(a) && isQty(b)){
+      if (b.kind !== "scalar") throw new Error("Cannot compare scalar to unit quantity.");
+      return [a, b.value];
+    }
+    return [a, b];
+  }
+
+  function compareValues(a, b, op){
+    const [left, right] = normalizeCompare(a, b);
+    if (op === "==") return left === right ? 1 : 0;
+    if (op === "!=") return left !== right ? 1 : 0;
+    if (op === "<") return left < right ? 1 : 0;
+    if (op === "<=") return left <= right ? 1 : 0;
+    if (op === ">") return left > right ? 1 : 0;
+    if (op === ">=") return left >= right ? 1 : 0;
+    return 0;
+  }
 
   function tokenize(src){
     // supports numbers, identifiers, commas, parens, operators, and unit tokens.
@@ -250,6 +292,12 @@
       }
 
       // operators & punctuation
+      const twoChar = s.slice(i, i+2);
+      if (["==","!=",">=","<=","&&","||"].includes(twoChar)){
+        out.push({type:"op", value:twoChar});
+        i += 2;
+        continue;
+      }
       if (c==="(" || c===")" || c==="," ){
         out.push({type:c});
         i++;
@@ -430,6 +478,26 @@
   baseFns.round = defFn("round", 1, (x) => isQty(x)? makeQty(Math.round(x.value), x.kind) : Math.round(x));
   baseFns.ceil = defFn("ceil", 1, (x) => isQty(x)? makeQty(Math.ceil(x.value), x.kind) : Math.ceil(x));
   baseFns.floor = defFn("floor", 1, (x) => isQty(x)? makeQty(Math.floor(x.value), x.kind) : Math.floor(x));
+  baseFns.sqrt = defFn("sqrt", 1, (x) => isQty(x)? makeQty(Math.sqrt(x.value), x.kind) : Math.sqrt(x));
+  baseFns.pow = defFn("pow", 2, (a,b) => pow(a,b));
+  baseFns.exp = defFn("exp", 1, (x) => isQty(x)? makeQty(Math.exp(x.value), x.kind) : Math.exp(x));
+  baseFns.log = defFn("log", 1, (x) => isQty(x)? makeQty(Math.log(x.value), x.kind) : Math.log(x));
+  baseFns.log10 = defFn("log10", 1, (x) => isQty(x)? makeQty(Math.log10(x.value), x.kind) : Math.log10(x));
+  baseFns.sin = defFn("sin", 1, (x) => Math.sin(isQty(x) ? x.value : x));
+  baseFns.cos = defFn("cos", 1, (x) => Math.cos(isQty(x) ? x.value : x));
+  baseFns.tan = defFn("tan", 1, (x) => Math.tan(isQty(x) ? x.value : x));
+  baseFns.asin = defFn("asin", 1, (x) => Math.asin(isQty(x) ? x.value : x));
+  baseFns.acos = defFn("acos", 1, (x) => Math.acos(isQty(x) ? x.value : x));
+  baseFns.atan = defFn("atan", 1, (x) => Math.atan(isQty(x) ? x.value : x));
+  baseFns.atan2 = defFn("atan2", 2, (y,x) => Math.atan2(isQty(y) ? y.value : y, isQty(x) ? x.value : x));
+  baseFns.clamp = defFn("clamp", 3, (x, min, max) => {
+    const xv = isQty(x) ? x.value : x;
+    const minv = isQty(min) ? min.value : min;
+    const maxv = isQty(max) ? max.value : max;
+    const v = Math.min(Math.max(xv, minv), maxv);
+    return isQty(x) ? makeQty(v, x.kind) : v;
+  });
+  baseFns.if = defFn("if", 3, (cond, a, b) => (isTruthy(cond) ? a : b));
 
   // Estimation helpers
   baseFns.waste = defFn("waste", 2, (qty, pct) => {
@@ -572,9 +640,11 @@
   // -----------------------------
   function showHelp(){
     writeLine("Estimator REPL help", "ok");
-    writeLine("Math: +  -  *  /  ^  ( )  and functions", "muted");
+    writeLine("Math: +  -  *  /  ^  ( )  comparisons (== != < <= > >=) and logic (&& ||)", "muted");
     writeLine("Variables: x = 12.5   |   use: x*3", "muted");
     writeLine("Methods: def name(a,b) = expression (redefine to edit)", "muted");
+    writeLine("Flow: if condition: expr [else: expr]", "muted");
+    writeLine("Loop: for i in 1..5 step 1: expr   |   repeat 3: expr", "muted");
     writeLine("Units: in, ft, yd, sf, sy, cf, cy, lb, ton (use like: 12 ft + 6 in)", "muted");
     writeLine("Editor: autocomplete, syntax highlight, and live preview while typing", "muted");
     writeLine("Tip: Enter runs when complete; Enter adds new line if incomplete.", "muted");
@@ -592,11 +662,14 @@
     writeLine("  area_rect(a,b) area_circle(diam) vol_rect(area,thk_in) concrete_cy(area,thk_in)", "muted");
     writeLine("  bf(t_in,w_in,len_ft,qty)  pipe_wt(nps_in,schedule,len_ft)", "muted");
     writeLine("  to_in(x) to_ft(x) to_sf(x) to_sy(x) to_cf(x) to_cy(x) to_lb(x) to_ton(x)", "muted");
+    writeLine("  abs min max round ceil floor sqrt pow exp log log10 sin cos tan atan2 clamp if", "muted");
     writeLine("Examples:", "muted");
     writeLine("  slab = concrete_cy(1200 sf, 4 in)", "muted");
     writeLine("  total = markup(burden(12500, 16.7), 35)", "muted");
     writeLine("  waste(500 sf, 10)", "muted");
     writeLine("  def crew_cost(rate, hours) = rate * hours", "muted");
+    writeLine("  for i in 1..4: total = total + i", "muted");
+    writeLine("  if labor > 40: overtime = labor - 40 else: overtime = 0", "muted");
   }
 
   function listVars(){
@@ -705,6 +778,88 @@
     writeLine("Session reset.", "warn");
   }
 
+  function splitStatements(source){
+    const out = [];
+    const normalized = [];
+    const lines = source.split("\n");
+    let blockIndent = null;
+    for (let idx = 0; idx < lines.length; idx++){
+      const line = lines[idx];
+      const indent = (line.match(/^\s*/) || [""])[0].length;
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (blockIndent !== null){
+        if (indent > blockIndent){
+          const last = normalized.pop();
+          normalized.push(`${last}; ${trimmed}`);
+          continue;
+        }
+        blockIndent = null;
+      }
+      normalized.push(line.trimEnd());
+      if (trimmed.endsWith(":")) blockIndent = indent;
+    }
+
+    let depth = 0;
+    let start = 0;
+    const joined = normalized.join("\n");
+    for (let i = 0; i < joined.length; i++){
+      const c = joined[i];
+      if (c === "(") depth += 1;
+      if (c === ")") depth = Math.max(0, depth - 1);
+      const isBreak = (c === "\n" || c === ";") && depth === 0;
+      if (isBreak){
+        const piece = joined.slice(start, i).trim();
+        if (piece) out.push(piece);
+        start = i + 1;
+      }
+    }
+    const tail = joined.slice(start).trim();
+    if (tail) out.push(tail);
+    return out;
+  }
+
+  function findTopLevelChar(source, char){
+    let depth = 0;
+    for (let i = 0; i < source.length; i++){
+      const c = source[i];
+      if (c === "(") depth += 1;
+      if (c === ")") depth = Math.max(0, depth - 1);
+      if (depth === 0 && c === char) return i;
+    }
+    return -1;
+  }
+
+  function findTopLevelKeyword(source, keyword){
+    let depth = 0;
+    const lower = keyword.toLowerCase();
+    for (let i = 0; i < source.length; i++){
+      const c = source[i];
+      if (c === "(") depth += 1;
+      if (c === ")") depth = Math.max(0, depth - 1);
+      if (depth !== 0) continue;
+      if (source.slice(i, i + lower.length).toLowerCase() === lower){
+        const before = source[i - 1];
+        const after = source[i + lower.length];
+        const beforeOk = !before || /\s/.test(before);
+        const afterOk = !after || /\s|:/.test(after);
+        if (beforeOk && afterOk) return i;
+      }
+    }
+    return -1;
+  }
+
+  function findTopLevelRange(source){
+    let depth = 0;
+    for (let i = 0; i < source.length - 1; i++){
+      const c = source[i];
+      if (c === "(") depth += 1;
+      if (c === ")") depth = Math.max(0, depth - 1);
+      if (depth === 0 && source[i] === "." && source[i + 1] === ".") return i;
+    }
+    return -1;
+  }
+
   // -----------------------------
   // Main evaluator
   // -----------------------------
@@ -718,6 +873,18 @@
       const cmd = (parts[0] || "").toLowerCase();
       const arg = parts.slice(1).join(" ");
       return { type:"cmd", cmd, arg };
+    }
+
+    if (src.startsWith("if ")){
+      return parseIfStatement(src);
+    }
+
+    if (src.startsWith("for ")){
+      return parseForStatement(src);
+    }
+
+    if (src.startsWith("repeat ")){
+      return parseRepeatStatement(src);
     }
 
     const defMatch = src.match(/^def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
@@ -734,6 +901,60 @@
     }
 
     return { type:"expr", expr:src };
+  }
+
+  function parseIfStatement(src){
+    const remainder = src.replace(/^if\s+/i, "");
+    const colonIdx = findTopLevelChar(remainder, ":");
+    if (colonIdx < 0) throw new Error("if statement missing ':'");
+    const condition = remainder.slice(0, colonIdx).trim();
+    const rest = remainder.slice(colonIdx + 1).trim();
+    const elseIdx = findTopLevelKeyword(rest, "else");
+    if (elseIdx < 0){
+      return { type:"if", condition, thenBody: rest, elseBody: null };
+    }
+    const thenBody = rest.slice(0, elseIdx).trim();
+    let elseBody = rest.slice(elseIdx + 4).trim();
+    if (elseBody.startsWith(":")) elseBody = elseBody.slice(1).trim();
+    if (!elseBody) throw new Error("else statement missing body");
+    return { type:"if", condition, thenBody, elseBody };
+  }
+
+  function parseForStatement(src){
+    const remainder = src.replace(/^for\s+/i, "");
+    const match = remainder.match(/^([A-Za-z_][A-Za-z0-9_]*)\s+in\s+([\s\S]+)$/);
+    if (!match) throw new Error("for statement must be: for var in start..end : expr");
+    const varName = match[1];
+    const rest = match[2];
+    const colonIdx = findTopLevelChar(rest, ":");
+    if (colonIdx < 0) throw new Error("for statement missing ':'");
+    const rangePart = rest.slice(0, colonIdx).trim();
+    const body = rest.slice(colonIdx + 1).trim();
+    const stepIdx = findTopLevelKeyword(rangePart, "step");
+    const rangeExpr = stepIdx >= 0 ? rangePart.slice(0, stepIdx).trim() : rangePart;
+    const stepExpr = stepIdx >= 0 ? rangePart.slice(stepIdx + 4).trim() : null;
+    const rangeIdx = findTopLevelRange(rangeExpr);
+    if (rangeIdx < 0) throw new Error("for statement range must use start..end");
+    const startExpr = rangeExpr.slice(0, rangeIdx).trim();
+    const endExpr = rangeExpr.slice(rangeIdx + 2).trim();
+    return {
+      type:"for",
+      varName,
+      startExpr,
+      endExpr,
+      stepExpr,
+      body,
+    };
+  }
+
+  function parseRepeatStatement(src){
+    const remainder = src.replace(/^repeat\s+/i, "");
+    const colonIdx = findTopLevelChar(remainder, ":");
+    if (colonIdx < 0) throw new Error("repeat statement missing ':'");
+    const countExpr = remainder.slice(0, colonIdx).trim();
+    const body = remainder.slice(colonIdx + 1).trim();
+    if (!countExpr || !body) throw new Error("repeat statement requires count and body");
+    return { type:"repeat", countExpr, body };
   }
 
   function runExpressionWithContext(expr, vars){
@@ -847,7 +1068,7 @@
       if (depth < 0) return true;
     }
     if (depth > 0) return false;
-    return !/[+\-*/^,=]$/.test(trimmed);
+    return !/[+\-*/^,=<>!&|:]$/.test(trimmed);
   }
 
   function escapeHtml(text){
@@ -869,6 +1090,7 @@
     const unitSet = new Set(Object.keys(UNIT));
     const varSet = new Set(Object.keys(state.vars));
     const cmdSet = new Set(COMMANDS.map((c) => c.label));
+    const keywordSet = KEYWORDS;
 
     while (i < value.length){
       const c = value[i];
@@ -880,6 +1102,12 @@
       if (/\s/.test(c)){
         out += c;
         i += 1;
+        continue;
+      }
+      const twoChar = value.slice(i, i + 2);
+      if (["==","!=",">=","<=","&&","||"].includes(twoChar)){
+        out += `<span class="token-op">${escapeHtml(twoChar)}</span>`;
+        i += 2;
         continue;
       }
       if (isDigit(c) || (c === "." && isDigit(value[i + 1]))){
@@ -897,12 +1125,13 @@
         if (cmdSet.has(word)) cls = "token-cmd";
         else if (fnSet.has(word)) cls = "token-fn";
         else if (unitSet.has(word)) cls = "token-unit";
+        else if (keywordSet.has(word)) cls = "token-keyword";
         else if (varSet.has(word)) cls = "token-var";
         out += `<span class="${cls}">${escapeHtml(word)}</span>`;
         i = j;
         continue;
       }
-      if ("+-*/^=,".includes(c)){
+      if ("+-*/^=,<>&|!".includes(c)){
         out += `<span class="token-op">${escapeHtml(c)}</span>`;
         i += 1;
         continue;
@@ -957,6 +1186,18 @@
       }
       if (parsed.type === "def"){
         setLiveResult(`define ${parsed.name}(${parsed.params.join(", ")})`, "ok");
+        return;
+      }
+      if (parsed.type === "if"){
+        setLiveResult("if statement", "ok");
+        return;
+      }
+      if (parsed.type === "for"){
+        setLiveResult(`for ${parsed.varName} in ...`, "ok");
+        return;
+      }
+      if (parsed.type === "repeat"){
+        setLiveResult("repeat statement", "ok");
         return;
       }
       if (parsed.type === "assign"){
@@ -1091,56 +1332,122 @@
   }
 
   async function handleLine(line){
-    const parsed = evaluate(line);
-    if (!parsed) return;
+    const statements = splitStatements(line);
+    if (!statements.length) return;
 
     try{
-      if (parsed.type === "cmd"){
-        const {cmd,arg} = parsed;
-        if (cmd === "help"){ showHelp(); return; }
-        if (cmd === "clear"){ clearTerminal(); return; }
-        if (cmd === "vars"){ listVars(); return; }
-        if (cmd === "methods"){ listMethods(); return; }
-        if (cmd === "reset"){ resetAll(); return; }
-        if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); return; }
+      for (const stmt of statements){
+        const parsed = evaluate(stmt);
+        if (!parsed) continue;
 
-        if (cmd === "export"){
-          const text = exportSession();
-          await copyText(text);
-          return;
+        if (parsed.type === "cmd"){
+          const {cmd,arg} = parsed;
+          if (cmd === "help"){ showHelp(); continue; }
+          if (cmd === "clear"){ clearTerminal(); continue; }
+          if (cmd === "vars"){ listVars(); continue; }
+          if (cmd === "methods"){ listMethods(); continue; }
+          if (cmd === "reset"){ resetAll(); continue; }
+          if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); continue; }
+
+          if (cmd === "export"){
+            const text = exportSession();
+            await copyText(text);
+            continue;
+          }
+          if (cmd === "import"){
+            const text = await readClipboard();
+            importSession(text);
+            writeLine("Imported session from clipboard.", "ok");
+            continue;
+          }
+          throw new Error(`Unknown command: :${cmd}`);
         }
-        if (cmd === "import"){
-          const text = await readClipboard();
-          importSession(text);
-          writeLine("Imported session from clipboard.", "ok");
-          return;
+
+        if (parsed.type === "def"){
+          const existed = Object.prototype.hasOwnProperty.call(state.userFns, parsed.name);
+          defineUserFn(parsed.name, parsed.params, parsed.expr);
+          const verb = existed ? "Updated" : "Added";
+          writeLine(`${verb} method ${parsed.name}(${parsed.params.join(", ")}).`, "ok");
+          continue;
         }
-        throw new Error(`Unknown command: :${cmd}`);
-      }
 
-      if (parsed.type === "def"){
-        const existed = Object.prototype.hasOwnProperty.call(state.userFns, parsed.name);
-        defineUserFn(parsed.name, parsed.params, parsed.expr);
-        const verb = existed ? "Updated" : "Added";
-        writeLine(`${verb} method ${parsed.name}(${parsed.params.join(", ")}).`, "ok");
-        return;
-      }
+        if (parsed.type === "assign"){
+          const val = runExpression(parsed.expr);
+          state.vars[parsed.name] = val;
+          const fr = formatResult(val);
+          writeLine(`${parsed.name} = ${fr.main}`, "ok");
+          if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
+          continue;
+        }
 
-      if (parsed.type === "assign"){
-        const val = runExpression(parsed.expr);
-        state.vars[parsed.name] = val;
-        const fr = formatResult(val);
-        writeLine(`${parsed.name} = ${fr.main}`, "ok");
-        if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
-        return;
-      }
+        if (parsed.type === "if"){
+          const cond = runExpression(parsed.condition);
+          if (isTruthy(cond)){
+            await handleLine(parsed.thenBody);
+          }else if (parsed.elseBody){
+            await handleLine(parsed.elseBody);
+          }
+          continue;
+        }
 
-      if (parsed.type === "expr"){
-        const val = runExpression(parsed.expr);
-        const fr = formatResult(val);
-        writeLine(fr.main, "out");
-        if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
-        return;
+        if (parsed.type === "for"){
+          const startVal = runExpression(parsed.startExpr);
+          const endVal = runExpression(parsed.endExpr);
+          const stepVal = parsed.stepExpr ? runExpression(parsed.stepExpr) : 1;
+          let start;
+          let end;
+          let step;
+          let loopKind = null;
+          if (isQty(startVal) || isQty(endVal)){
+            if (!isQty(startVal) || !isQty(endVal)){
+              throw new Error("for loop range must use matching unit quantities");
+            }
+            if (startVal.kind !== endVal.kind){
+              throw new Error("for loop range units must match");
+            }
+            loopKind = startVal.kind;
+            start = startVal.value;
+            end = endVal.value;
+            if (isQty(stepVal)){
+              if (stepVal.kind !== loopKind) throw new Error("for loop step unit mismatch");
+              step = stepVal.value;
+            }else{
+              step = stepVal;
+            }
+          }else{
+            [start, end] = normalizeCompare(startVal, endVal);
+            step = normalizeCompare(stepVal, 0)[0];
+          }
+          if (step === 0) throw new Error("for loop step cannot be 0");
+          const hadVar = Object.prototype.hasOwnProperty.call(state.vars, parsed.varName);
+          const prevVal = state.vars[parsed.varName];
+          const forward = step > 0;
+          for (let i = start; forward ? i <= end : i >= end; i += step){
+            state.vars[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
+            await handleLine(parsed.body);
+          }
+          if (hadVar) state.vars[parsed.varName] = prevVal;
+          else delete state.vars[parsed.varName];
+          continue;
+        }
+
+        if (parsed.type === "repeat"){
+          const countVal = runExpression(parsed.countExpr);
+          const count = normalizeCompare(countVal, 0)[0];
+          if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
+          for (let i = 0; i < Math.floor(count); i++){
+            await handleLine(parsed.body);
+          }
+          continue;
+        }
+
+        if (parsed.type === "expr"){
+          const val = runExpression(parsed.expr);
+          const fr = formatResult(val);
+          writeLine(fr.main, "out");
+          if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
+          continue;
+        }
       }
     }catch(err){
       setStatus("Error", "err");
@@ -1211,7 +1518,11 @@
     const line = before.slice(lineStart);
     const leading = (line.match(/^\s*/) || [""])[0];
     const depth = countOpenParens(before);
-    const desired = "  ".repeat(depth);
+    let desired = "  ".repeat(depth);
+    const trimmed = line.trim();
+    if (!depth && trimmed.endsWith(":")){
+      desired += "  ";
+    }
     return desired.length > leading.length ? desired : leading;
   }
 
@@ -1364,6 +1675,7 @@
     writeLine("Try: concrete_cy(1200 sf, 4 in)", "muted");
     writeLine("Try: total = markup(burden(12500, 16.7), 35)", "muted");
     writeLine("Try: def crew_cost(rate, hours) = rate * hours", "muted");
+    writeLine("Try: for i in 1..4: total = total + i", "muted");
 
     // A couple default constants you might like in estimating:
     state.vars.hr = 1; // placeholder if you want
