@@ -46,6 +46,35 @@ export function initRepl(){
     terminalEl.scrollTop = terminalEl.scrollHeight;
   }
 
+  function writeGfx(buffer){
+    if (!buffer) return;
+    const wrapper = document.createElement("div");
+    wrapper.className = "line gfx-line";
+    const label = document.createElement("div");
+    label.className = "gfx-label";
+    label.textContent = `gfx ${buffer.width}x${buffer.height} • scale ${buffer.scale}`;
+    const panel = document.createElement("div");
+    panel.className = "gfx-panel";
+    panel.style.setProperty("--gfx-width", buffer.width);
+    panel.style.setProperty("--gfx-scale", `${buffer.scale}px`);
+    if (buffer.bg && buffer.bg !== "transparent"){
+      panel.style.setProperty("--gfx-bg", `var(--${buffer.bg})`);
+    }
+    for (const color of buffer.pixels){
+      const cell = document.createElement("div");
+      cell.className = "gfx-pixel";
+      if (color === "transparent"){
+        cell.classList.add("gfx-transparent");
+      }else if (color){
+        cell.classList.add(`gfx-${color}`);
+      }
+      panel.appendChild(cell);
+    }
+    wrapper.append(label, panel);
+    terminalEl.appendChild(wrapper);
+    terminalEl.scrollTop = terminalEl.scrollHeight;
+  }
+
   function writeLineRich(parts, cls="out"){
     const p = document.createElement("p");
     p.className = `line ${cls}`;
@@ -92,11 +121,125 @@ export function initRepl(){
     histIdx: -1,
     theme: "default",
     userFns: Object.create(null),
+    gfx: null,
+    gfxDirty: false,
   };
 
   const KEYWORDS = new Set(["if", "else", "for", "in", "step", "repeat", "def", "fn", "function"]);
   const baseFns = createBaseFns();
   const metaFns = Object.create(null);
+  const GFX_LIMIT = 160;
+  const GFX_DEFAULT_SCALE = 6;
+  const GFX_COLOR_TOKENS = [
+    "transparent",
+    "accent",
+    "accent-2",
+    "ok",
+    "warn",
+    "err",
+    "string",
+    "text",
+    "muted",
+  ];
+
+  function normalizeGfxDimension(value, label){
+    const num = Math.round(isQty(value) ? value.value : value);
+    if (!Number.isFinite(num) || num <= 0) throw new Error(`${label} must be > 0`);
+    if (num > GFX_LIMIT) throw new Error(`${label} must be <= ${GFX_LIMIT}`);
+    return num;
+  }
+
+  function normalizeGfxScale(value){
+    const num = Math.round(isQty(value) ? value.value : value);
+    if (!Number.isFinite(num) || num < 1) throw new Error("scale must be >= 1");
+    return Math.min(num, 18);
+  }
+
+  function normalizeGfxColor(value){
+    if (typeof value === "string"){
+      const name = value.trim().toLowerCase();
+      if (!name) return "accent";
+      if (!GFX_COLOR_TOKENS.includes(name)) throw new Error(`Unknown color token: ${name}`);
+      return name;
+    }
+    const num = Math.round(isQty(value) ? value.value : value);
+    if (!Number.isFinite(num)) return "accent";
+    const idx = Math.max(0, Math.min(GFX_COLOR_TOKENS.length - 1, num));
+    return GFX_COLOR_TOKENS[idx];
+  }
+
+  function createGfxBuffer(width, height, scale){
+    return {
+      width,
+      height,
+      scale,
+      pixels: Array.from({ length: width * height }, () => null),
+      bg: null,
+    };
+  }
+
+  function requireGfxBuffer(){
+    if (!state.gfx) throw new Error("No gfx buffer. Use gfx(width, height, scale) first.");
+    return state.gfx;
+  }
+
+  function setPixel(buffer, x, y, color){
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const ix = Math.round(x);
+    const iy = Math.round(y);
+    if (ix < 0 || iy < 0 || ix >= buffer.width || iy >= buffer.height) return;
+    buffer.pixels[iy * buffer.width + ix] = color;
+  }
+
+  function drawLine(buffer, x0, y0, x1, y1, color){
+    let x = Math.round(x0);
+    let y = Math.round(y0);
+    const xEnd = Math.round(x1);
+    const yEnd = Math.round(y1);
+    const dx = Math.abs(xEnd - x);
+    const dy = Math.abs(yEnd - y);
+    const sx = x < xEnd ? 1 : -1;
+    const sy = y < yEnd ? 1 : -1;
+    let err = dx - dy;
+    while (true){
+      setPixel(buffer, x, y, color);
+      if (x === xEnd && y === yEnd) break;
+      const e2 = 2 * err;
+      if (e2 > -dy){
+        err -= dy;
+        x += sx;
+      }
+      if (e2 < dx){
+        err += dx;
+        y += sy;
+      }
+    }
+  }
+
+  function drawRect(buffer, x, y, w, h, color){
+    const width = Math.round(w);
+    const height = Math.round(h);
+    const x0 = Math.round(x);
+    const y0 = Math.round(y);
+    if (width <= 0 || height <= 0) return;
+    drawLine(buffer, x0, y0, x0 + width - 1, y0, color);
+    drawLine(buffer, x0, y0 + height - 1, x0 + width - 1, y0 + height - 1, color);
+    drawLine(buffer, x0, y0, x0, y0 + height - 1, color);
+    drawLine(buffer, x0 + width - 1, y0, x0 + width - 1, y0 + height - 1, color);
+  }
+
+  function fillRect(buffer, x, y, w, h, color){
+    const width = Math.round(w);
+    const height = Math.round(h);
+    const x0 = Math.round(x);
+    const y0 = Math.round(y);
+    if (width <= 0 || height <= 0) return;
+    for (let yy = 0; yy < height; yy++){
+      for (let xx = 0; xx < width; xx++){
+        setPixel(buffer, x0 + xx, y0 + yy, color);
+      }
+    }
+  }
 
   function normalizeMetaName(value, label){
     if (typeof value !== "string") throw new Error(`${label} expects a string name`);
@@ -109,6 +252,17 @@ export function initRepl(){
   function normalizeMetaParams(value){
     if (typeof value !== "string") throw new Error("define expects params as a string");
     return parseParams(value);
+  }
+
+  function markGfxDirty(){
+    state.gfxDirty = true;
+  }
+
+  function flushGfxOutput(){
+    if (state.gfxDirty && state.gfx){
+      writeGfx(state.gfx);
+      state.gfxDirty = false;
+    }
   }
 
   metaFns.eval = defFn("eval", 1, (expr) => {
@@ -145,6 +299,77 @@ export function initRepl(){
     if (!Object.prototype.hasOwnProperty.call(state.userFns, fnName)) return 0;
     delete state.userFns[fnName];
     renderUserFunctions();
+    return 1;
+  });
+  metaFns.gfx = defFn("gfx", 2, (width, height) => {
+    const w = normalizeGfxDimension(width, "width");
+    const h = normalizeGfxDimension(height, "height");
+    state.gfx = createGfxBuffer(w, h, GFX_DEFAULT_SCALE);
+    markGfxDirty();
+    return `gfx ${w}x${h}`;
+  });
+  metaFns.gfxs = defFn("gfxs", 1, (scale) => {
+    const buffer = requireGfxBuffer();
+    buffer.scale = normalizeGfxScale(scale);
+    markGfxDirty();
+    return buffer.scale;
+  });
+  metaFns.cls = defFn("cls", 0, () => {
+    const buffer = requireGfxBuffer();
+    buffer.pixels.fill(null);
+    buffer.bg = null;
+    markGfxDirty();
+    return 1;
+  });
+  metaFns.bg = defFn("bg", 1, (color) => {
+    const buffer = requireGfxBuffer();
+    buffer.bg = normalizeGfxColor(color);
+    markGfxDirty();
+    return buffer.bg || "transparent";
+  });
+  metaFns.pix = defFn("pix", 3, (x, y, color) => {
+    const buffer = requireGfxBuffer();
+    setPixel(buffer, x, y, normalizeGfxColor(color));
+    markGfxDirty();
+    return 1;
+  });
+  metaFns.line = defFn("line", 5, (x0, y0, x1, y1, color) => {
+    const buffer = requireGfxBuffer();
+    drawLine(buffer, x0, y0, x1, y1, normalizeGfxColor(color));
+    markGfxDirty();
+    return 1;
+  });
+  metaFns.rect = defFn("rect", 5, (x, y, w, h, color) => {
+    const buffer = requireGfxBuffer();
+    drawRect(buffer, x, y, w, h, normalizeGfxColor(color));
+    markGfxDirty();
+    return 1;
+  });
+  metaFns.fill = defFn("fill", 5, (x, y, w, h, color) => {
+    const buffer = requireGfxBuffer();
+    fillRect(buffer, x, y, w, h, normalizeGfxColor(color));
+    markGfxDirty();
+    return 1;
+  });
+  metaFns.plot = defFn("plot", 4, (x0, y0, points, color) => {
+    const buffer = requireGfxBuffer();
+    if (typeof points !== "string") throw new Error("plot expects a string of dx,dy pairs");
+    const entries = points.split("|").map((pair) => pair.trim()).filter(Boolean);
+    const colorValue = normalizeGfxColor(color);
+    let x = Math.round(isQty(x0) ? x0.value : x0);
+    let y = Math.round(isQty(y0) ? y0.value : y0);
+    setPixel(buffer, x, y, colorValue);
+    for (const entry of entries){
+      const [dxRaw, dyRaw] = entry.split(",").map((v) => v.trim());
+      if (!dxRaw || !dyRaw) continue;
+      const dx = Number(dxRaw);
+      const dy = Number(dyRaw);
+      if (!Number.isFinite(dx) || !Number.isFinite(dy)) continue;
+      x += dx;
+      y += dy;
+      setPixel(buffer, x, y, colorValue);
+    }
+    markGfxDirty();
     return 1;
   });
 
@@ -316,6 +541,41 @@ export function initRepl(){
       token("(", "out-op"),
       token("\"fn\"", "out-string"),
       token(")", "out-op")
+    ], "muted");
+    writeLineRich([
+      token("Graphics:", "out-label"),
+      " ",
+      token("gfx", "out-fn"),
+      token("(w,h)", "out-op"),
+      " ",
+      token("pix", "out-fn"),
+      token("(x,y,color)", "out-op"),
+      " ",
+      token("line", "out-fn"),
+      token("(x0,y0,x1,y1,color)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("rect", "out-fn"),
+      token("(x,y,w,h,color)", "out-op"),
+      " ",
+      token("fill", "out-fn"),
+      token("(x,y,w,h,color)", "out-op"),
+      " ",
+      token("plot", "out-fn"),
+      token("(x,y,\"dx,dy|...\",color)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("bg", "out-fn"),
+      token("(color)", "out-op"),
+      " ",
+      token("gfxs", "out-fn"),
+      token("(scale)", "out-op"),
+      " ",
+      token("cls()", "out-fn"),
+      "  colors: ",
+      token(GFX_COLOR_TOKENS.join(", "), "out-unit")
     ], "muted");
     writeLineRich([token("Commands:", "out-label")], "muted");
     writeLineRich([
@@ -796,6 +1056,41 @@ export function initRepl(){
       " ",
       token("methods()", "out-fn")
     ], "muted");
+    writeLineRich([token("Graphics:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("gfx", "out-fn"),
+      token("(w,h)", "out-op"),
+      " ",
+      token("gfxs", "out-fn"),
+      token("(scale)", "out-op"),
+      " ",
+      token("bg", "out-fn"),
+      token("(color)", "out-op"),
+      " ",
+      token("cls()", "out-fn")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("pix", "out-fn"),
+      token("(x,y,color)", "out-op"),
+      " ",
+      token("line", "out-fn"),
+      token("(x0,y0,x1,y1,color)", "out-op"),
+      " ",
+      token("rect", "out-fn"),
+      token("(x,y,w,h,color)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("fill", "out-fn"),
+      token("(x,y,w,h,color)", "out-op"),
+      " ",
+      token("plot", "out-fn"),
+      token("(x,y,\"dx,dy|...\",color)", "out-op"),
+      "  colors: ",
+      token(GFX_COLOR_TOKENS.join(", "), "out-unit")
+    ], "muted");
     writeLineRich([token("Session commands:", "out-label")], "muted");
     writeLineRich([
       "  ",
@@ -1021,6 +1316,8 @@ export function initRepl(){
     state.history = [];
     state.histIdx = -1;
     state.userFns = Object.create(null);
+    state.gfx = null;
+    state.gfxDirty = false;
     renderUserFunctions();
     setStatus("Reset", "ok");
     writeLine("Session reset.", "warn");
@@ -2154,6 +2451,15 @@ export function initRepl(){
     methods: { usage: "methods()", doc: "List user function names." },
     define: { usage: "define(\"fn\", \"a,b\", \"expr\")", doc: "Define a user function." },
     undefine: { usage: "undefine(\"fn\")", doc: "Remove a user function." },
+    gfx: { usage: "gfx(width, height)", doc: "Create a pixel buffer (max 160x160)." },
+    gfxs: { usage: "gfxs(scale)", doc: "Set pixel scale for the buffer." },
+    bg: { usage: "bg(color)", doc: "Set background color token." },
+    cls: { usage: "cls()", doc: "Clear the pixel buffer." },
+    pix: { usage: "pix(x, y, color)", doc: "Set a single pixel." },
+    line: { usage: "line(x0, y0, x1, y1, color)", doc: "Draw a line." },
+    rect: { usage: "rect(x, y, w, h, color)", doc: "Draw a rectangle outline." },
+    fill: { usage: "fill(x, y, w, h, color)", doc: "Draw a filled rectangle." },
+    plot: { usage: "plot(x, y, \"dx,dy|...\", color)", doc: "Plot relative vector steps from a start." },
   };
 
   function getFnAutocompleteMeta(name){
@@ -2434,6 +2740,7 @@ export function initRepl(){
       setStatus("Error", "err");
       writeLine(`[${nowStamp()}] ${err.message || String(err)}`, "err");
     }finally{
+      flushGfxOutput();
       setStatus("Ready", "ok");
     }
   }
@@ -2682,6 +2989,7 @@ export function initRepl(){
     writeLine("Try: total = markup(burden(12500, 16.7), 35)", "muted");
     writeLine("Try: fn crew_cost(rate, hours) = rate * hours", "muted");
     writeLine("Try: for i in 1..4: total = total + i", "muted");
+    writeLine("Try: gfx(32, 16); line(0,0,31,15,\"accent\")", "muted");
 
     // A couple default constants you might like in estimating:
     state.vars.hr = 1; // placeholder if you want
