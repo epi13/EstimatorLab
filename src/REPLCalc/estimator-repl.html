@@ -49,6 +49,7 @@
               <button class="btn" id="btnHelp">Help</button>
               <button class="btn" id="btnClear">Clear</button>
               <button class="btn" id="btnVars">Vars</button>
+              <button class="btn" id="btnMethods">Functions</button>
             </div>
           </div>
           <div class="scroll">
@@ -77,6 +78,31 @@ Supported tokens: in, ft, yd, sf, sy, cf, cy, lb, ton.
 <br/><code>12 ft + 6 in</code>
 <br/><code>1200 sf * 4 in</code> (interprets as volume via unit multiply)
               </div>
+            </div>
+
+            <div class="card">
+              <h4>User Functions</h4>
+              <div class="fnForm">
+                <div class="field">
+                  <label class="mini" for="fnName">Name</label>
+                  <input class="inputField" id="fnName" type="text" placeholder="crew_cost" />
+                </div>
+                <div class="field">
+                  <label class="mini" for="fnParams">Params</label>
+                  <input class="inputField" id="fnParams" type="text" placeholder="rate, hours" />
+                </div>
+                <div class="field">
+                  <label class="mini" for="fnExpr">Expression</label>
+                  <input class="inputField" id="fnExpr" type="text" placeholder="rate * hours" />
+                </div>
+                <div class="btnRow">
+                  <button class="btn" id="btnFnSave">Save</button>
+                  <button class="btn" id="btnFnClear">Clear</button>
+                </div>
+              </div>
+              <div class="fnList" id="userFnList"></div>
+              <div class="mini muted" id="userFnEmpty">No user functions yet.</div>
+              <div class="mini" style="margin-top:6px;">Use <code>fn name(a,b) = expr</code> or the form above.</div>
             </div>
 
             <div class="card">

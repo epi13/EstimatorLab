@@ -17,9 +17,18 @@ export function initRepl(){
   const btnHelp = document.getElementById('btnHelp');
   const btnClear = document.getElementById('btnClear');
   const btnVars = document.getElementById('btnVars');
+  const btnMethods = document.getElementById('btnMethods');
   const btnExport = document.getElementById('btnExport');
   const btnImport = document.getElementById('btnImport');
   const btnReset = document.getElementById('btnReset');
+
+  const fnNameInput = document.getElementById('fnName');
+  const fnParamsInput = document.getElementById('fnParams');
+  const fnExprInput = document.getElementById('fnExpr');
+  const btnFnSave = document.getElementById('btnFnSave');
+  const btnFnClear = document.getElementById('btnFnClear');
+  const userFnList = document.getElementById('userFnList');
+  const userFnEmpty = document.getElementById('userFnEmpty');
 
   function nowStamp(){
     const d = new Date();
@@ -64,7 +73,7 @@ export function initRepl(){
     userFns: Object.create(null),
   };
 
-  const KEYWORDS = new Set(["if", "else", "for", "in", "step", "repeat"]);
+  const KEYWORDS = new Set(["if", "else", "for", "in", "step", "repeat", "def", "fn", "function"]);
   const baseFns = createBaseFns();
 
   // -----------------------------
@@ -74,7 +83,7 @@ export function initRepl(){
     writeLine("Estimator REPL help", "ok");
     writeLine("Math: +  -  *  /  ^  ( )  comparisons (== != < <= > >=) and logic (&& ||)", "muted");
     writeLine("Variables: x = 12.5   |   use: x*3", "muted");
-    writeLine("Methods: def name(a,b) = expression (redefine to edit)", "muted");
+    writeLine("Functions: def|fn|function name(a,b) = expression (redefine to edit)", "muted");
     writeLine("Flow: if condition: expr [else: expr]", "muted");
     writeLine("Loop: for i in 1..5 step 1: expr   |   repeat 3: expr", "muted");
     writeLine("Units: in, ft, yd, sf, sy, cf, cy, lb, ton (use like: 12 ft + 6 in)", "muted");
@@ -101,7 +110,7 @@ export function initRepl(){
     writeLine("  slab = concrete_cy(1200 sf, 4 in)", "muted");
     writeLine("  total = markup(burden(12500, 16.7), 35)", "muted");
     writeLine("  waste(500 sf, 10)", "muted");
-    writeLine("  def crew_cost(rate, hours) = rate * hours", "muted");
+    writeLine("  fn crew_cost(rate, hours) = rate * hours", "muted");
     writeLine("  for i in 1..4: total = total + i", "muted");
     writeLine("  if labor > 40: overtime = labor - 40 else: overtime = 0", "muted");
   }
@@ -114,7 +123,7 @@ export function initRepl(){
     writeLine("Syntax quickstart:", "muted");
     writeLine("  Expressions: 2+2*5  |  (1200 sf * 4 in) / 27  |  pow(3,2)", "muted");
     writeLine("  Assignment: x = 144  |  total = markup(burden(12500, 16.7), 35)", "muted");
-    writeLine("  Methods: def name(a,b) = expression  (call with name(1,2))", "muted");
+    writeLine("  Functions: fn name(a,b) = expression  (call with name(1,2))", "muted");
     writeLine("  Flow: if labor > 40: overtime = labor - 40 else: overtime = 0", "muted");
     writeLine("  Loop: for i in 1..4: total = total + i  |  repeat 3: waste(100 sf, 5)", "muted");
     writeLine("  Solve: 56 cy = concrete_cy(sf, 6 in)", "muted");
@@ -154,14 +163,75 @@ export function initRepl(){
   function listMethods(){
     const keys = Object.keys(state.userFns).sort();
     if (!keys.length){
-      writeLine("No user methods defined.", "muted");
+      writeLine("No user functions defined.", "muted");
       return;
     }
-    writeLine("User methods:", "ok");
+    writeLine("User functions:", "ok");
     for (const k of keys){
       const defn = state.userFns[k];
       const params = defn.params ? defn.params.join(", ") : "";
       writeLine(`  ${k}(${params}) = ${defn.expr}`, "muted");
+    }
+  }
+
+  function clearFnForm(){
+    fnNameInput.value = "";
+    fnParamsInput.value = "";
+    fnExprInput.value = "";
+  }
+
+  function insertIntoEditor(text){
+    const value = inputEl.value;
+    const start = inputEl.selectionStart ?? value.length;
+    const end = inputEl.selectionEnd ?? value.length;
+    const nextValue = `${value.slice(0, start)}${text}${value.slice(end)}`;
+    inputEl.value = nextValue;
+    const cursorPos = start + text.length;
+    inputEl.focus();
+    inputEl.setSelectionRange(cursorPos, cursorPos);
+    updateHighlight();
+    syncEditorHeight();
+    scheduleLiveResult();
+  }
+
+  function renderUserFunctions(){
+    const keys = Object.keys(state.userFns).sort();
+    userFnList.innerHTML = "";
+    userFnEmpty.style.display = keys.length ? "none" : "block";
+    for (const name of keys){
+      const defn = state.userFns[name];
+      const row = document.createElement("div");
+      row.className = "fnRow";
+      const params = defn.params ? defn.params.join(", ") : "";
+      row.innerHTML = `
+        <div class="fnTitle">${name}(${params})</div>
+        <div class="fnExpr">= ${defn.expr}</div>
+        <div class="fnActions"></div>
+      `;
+      const actions = row.querySelector(".fnActions");
+      const insertBtn = document.createElement("button");
+      insertBtn.className = "btn mini";
+      insertBtn.textContent = "Insert";
+      insertBtn.addEventListener("click", () => insertIntoEditor(`${name}(`));
+      const editBtn = document.createElement("button");
+      editBtn.className = "btn mini";
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", () => {
+        fnNameInput.value = name;
+        fnParamsInput.value = params;
+        fnExprInput.value = defn.expr;
+        fnNameInput.focus();
+      });
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "btn mini danger";
+      deleteBtn.textContent = "Delete";
+      deleteBtn.addEventListener("click", () => {
+        delete state.userFns[name];
+        renderUserFunctions();
+        writeLine(`Removed function ${name}.`, "warn");
+      });
+      actions.append(insertBtn, editBtn, deleteBtn);
+      userFnList.appendChild(row);
     }
   }
 
@@ -234,6 +304,7 @@ export function initRepl(){
         }
       }
     }
+    renderUserFunctions();
   }
 
   function resetAll(){
@@ -241,6 +312,7 @@ export function initRepl(){
     state.history = [];
     state.histIdx = -1;
     state.userFns = Object.create(null);
+    renderUserFunctions();
     setStatus("Reset", "ok");
     writeLine("Session reset.", "warn");
   }
@@ -371,7 +443,7 @@ export function initRepl(){
       return parseRepeatStatement(src);
     }
 
-    const defMatch = src.match(/^def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
+    const defMatch = src.match(/^(?:def|fn|function)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
     if (defMatch){
       const name = defMatch[1];
       const params = parseParams(defMatch[2]);
@@ -673,11 +745,11 @@ export function initRepl(){
       const leading = (line.match(/^\s*/) || [""])[0];
       const trimmed = line.trim();
       if (!trimmed) return line.trimEnd();
-      const defMatch = trimmed.match(/^def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
+      const defMatch = trimmed.match(/^(?:def|fn|function)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
       if (defMatch){
         const formattedExpr = formatExpression(defMatch[3]);
         const params = defMatch[2].split(",").map((p) => p.trim()).filter(Boolean).join(", ");
-        return `${leading}def ${defMatch[1]}(${params}) = ${formattedExpr}`;
+        return `${leading}fn ${defMatch[1]}(${params}) = ${formattedExpr}`;
       }
       const m = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]+)$/);
       if (m){
@@ -1009,7 +1081,7 @@ export function initRepl(){
           const existed = Object.prototype.hasOwnProperty.call(state.userFns, parsed.name);
           defineUserFn(parsed.name, parsed.params, parsed.expr);
           const verb = existed ? "Updated" : "Added";
-          writeLine(`${verb} method ${parsed.name}(${parsed.params.join(", ")}).`, "ok");
+          writeLine(`${verb} function ${parsed.name}(${parsed.params.join(", ")}).`, "ok");
           continue;
         }
 
@@ -1146,6 +1218,7 @@ export function initRepl(){
     defn.expr = expr.trim();
     defn.name = name;
     state.userFns[name] = defn;
+    renderUserFunctions();
   }
 
   // -----------------------------
@@ -1306,6 +1379,7 @@ export function initRepl(){
   btnHelp.addEventListener("click", showHelp);
   btnClear.addEventListener("click", clearTerminal);
   btnVars.addEventListener("click", listVars);
+  btnMethods.addEventListener("click", listMethods);
   btnReset.addEventListener("click", resetAll);
 
   btnExport.addEventListener("click", async () => {
@@ -1322,6 +1396,29 @@ export function initRepl(){
     }
   });
 
+  btnFnSave.addEventListener("click", () => {
+    try{
+      const name = fnNameInput.value.trim();
+      const expr = fnExprInput.value.trim();
+      if (!name) throw new Error("Function name is required.");
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error("Invalid function name.");
+      if (!expr) throw new Error("Function expression is required.");
+      const params = parseParams(fnParamsInput.value);
+      const existed = Object.prototype.hasOwnProperty.call(state.userFns, name);
+      defineUserFn(name, params, expr);
+      const verb = existed ? "Updated" : "Added";
+      writeLine(`${verb} function ${name}(${params.join(", ")}).`, "ok");
+      clearFnForm();
+    }catch(err){
+      writeLine(err.message || String(err), "err");
+    }
+  });
+
+  btnFnClear.addEventListener("click", () => {
+    clearFnForm();
+    fnNameInput.focus();
+  });
+
   // -----------------------------
   // Boot message + defaults
   // -----------------------------
@@ -1331,13 +1428,14 @@ export function initRepl(){
     writeLine("Type :help for commands and examples.", "muted");
     writeLine("Try: concrete_cy(1200 sf, 4 in)", "muted");
     writeLine("Try: total = markup(burden(12500, 16.7), 35)", "muted");
-    writeLine("Try: def crew_cost(rate, hours) = rate * hours", "muted");
+    writeLine("Try: fn crew_cost(rate, hours) = rate * hours", "muted");
     writeLine("Try: for i in 1..4: total = total + i", "muted");
 
     // A couple default constants you might like in estimating:
     state.vars.hr = 1; // placeholder if you want
     state.vars.pi = Math.PI;
 
+    renderUserFunctions();
     updateHighlight();
     syncEditorHeight();
     scheduleLiveResult();
