@@ -265,8 +265,8 @@ export function createTests({
       {
         name: "user solution sparse structured data repl",
         steps: [
-          "assy wall_main = { studs = 16 in o.c.; height = 10 ft; sheathing = 1 layer }",
-          "assy wall_alt = { height = 12 ft; sheathing = 2 layers }",
+          "assy wall_main = { studs = 16 in o.c.; height = 10 ft; sheathing = 1 }",
+          "assy wall_alt = { height = 12 ft; sheathing = 2 }",
           "assy wall_misc = { studs = 24 in o.c.; height = 9 ft; fire_rating = \"1 hr\" }",
           "so default(val, fallback) = if(val == 0, fallback, val)",
           "so line_total(qty, unit_cost, labor, waste) = if(qty > 0, markup(qty * unit_cost + labor, waste), 0)",
