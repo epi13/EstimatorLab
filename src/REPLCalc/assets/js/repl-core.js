@@ -77,6 +77,8 @@ export function initRepl(){
     writeLine: ui.writeLine,
   });
 
+  const MAX_LOOP_ITERATIONS = 100000;
+
   const runtime = createRuntime({
     state,
     baseFns,
@@ -192,7 +194,12 @@ export function initRepl(){
         const hadVar = Object.prototype.hasOwnProperty.call(state.vars, parsed.varName);
         const prevVal = state.vars[parsed.varName];
         const forward = step > 0;
+        let iter = 0;
         for (let i = start; forward ? i <= end : i >= end; i += step){
+          iter += 1;
+          if (iter > MAX_LOOP_ITERATIONS){
+            throw new Error(`for loop exceeded ${MAX_LOOP_ITERATIONS} iterations`);
+          }
           state.vars[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
           runLoopStatements(parsed.body);
         }
@@ -205,7 +212,11 @@ export function initRepl(){
         const countVal = evaluator.runExpression(parsed.countExpr);
         const count = normalizeCompare(countVal, 0)[0];
         if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
-        for (let i = 0; i < Math.floor(count); i++){
+        const n = Math.floor(count);
+        if (n > MAX_LOOP_ITERATIONS){
+          throw new Error(`repeat exceeded ${MAX_LOOP_ITERATIONS} iterations`);
+        }
+        for (let i = 0; i < n; i++){
           runLoopStatements(parsed.body);
         }
         continue;

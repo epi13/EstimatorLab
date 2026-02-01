@@ -65,6 +65,10 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
     if (!Object.prototype.hasOwnProperty.call(state.vars, key)) throw new Error(`Unknown variable: ${key}`);
     return state.vars[key];
   });
+  metaFns.has = defFn("has", 1, (name) => {
+    const key = normalizeMetaName(name, "has");
+    return Object.prototype.hasOwnProperty.call(state.vars, key) ? 1 : 0;
+  });
   metaFns.set = defFn("set", 2, (name, value) => {
     const key = normalizeMetaName(name, "set");
     state.vars[key] = value;

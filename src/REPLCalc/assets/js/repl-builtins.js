@@ -1,5 +1,5 @@
 import { add, div, isQty, makeQty, mul, pow, qtyToString } from "./repl-units.js";
-import { isTruthy } from "./repl-expression.js";
+import { isTruthy, normalizeCompare } from "./repl-expression.js";
 
 export function defFn(name, arity, impl){
   return { arity, impl };
@@ -8,28 +8,40 @@ export function defFn(name, arity, impl){
 export function createBaseFns(){
   const baseFns = Object.create(null);
 
+  function requireScalarArg(value, label){
+    if (isQty(value) && value.kind !== "scalar"){
+      throw new Error(`${label} expects a scalar value`);
+    }
+    return isQty(value) ? value.value : value;
+  }
+
   baseFns.abs = defFn("abs", 1, (x) => isQty(x) ? makeQty(Math.abs(x.value), x.kind) : Math.abs(x));
-  baseFns.min = defFn("min", 2, (a, b) => isQty(a) || isQty(b) ? (add(a, 0).value <= add(b, 0).value ? a : b) : Math.min(a, b));
-  baseFns.max = defFn("max", 2, (a, b) => isQty(a) || isQty(b) ? (add(a, 0).value >= add(b, 0).value ? a : b) : Math.max(a, b));
+  baseFns.min = defFn("min", 2, (a, b) => {
+    const [av, bv] = normalizeCompare(a, b);
+    return av <= bv ? a : b;
+  });
+  baseFns.max = defFn("max", 2, (a, b) => {
+    const [av, bv] = normalizeCompare(a, b);
+    return av >= bv ? a : b;
+  });
   baseFns.round = defFn("round", 1, (x) => isQty(x) ? makeQty(Math.round(x.value), x.kind) : Math.round(x));
   baseFns.ceil = defFn("ceil", 1, (x) => isQty(x) ? makeQty(Math.ceil(x.value), x.kind) : Math.ceil(x));
   baseFns.floor = defFn("floor", 1, (x) => isQty(x) ? makeQty(Math.floor(x.value), x.kind) : Math.floor(x));
-  baseFns.sqrt = defFn("sqrt", 1, (x) => isQty(x) ? makeQty(Math.sqrt(x.value), x.kind) : Math.sqrt(x));
+  baseFns.sqrt = defFn("sqrt", 1, (x) => Math.sqrt(requireScalarArg(x, "sqrt")));
   baseFns.pow = defFn("pow", 2, (a, b) => pow(a, b));
-  baseFns.exp = defFn("exp", 1, (x) => isQty(x) ? makeQty(Math.exp(x.value), x.kind) : Math.exp(x));
-  baseFns.log = defFn("log", 1, (x) => isQty(x) ? makeQty(Math.log(x.value), x.kind) : Math.log(x));
-  baseFns.log10 = defFn("log10", 1, (x) => isQty(x) ? makeQty(Math.log10(x.value), x.kind) : Math.log10(x));
-  baseFns.sin = defFn("sin", 1, (x) => Math.sin(isQty(x) ? x.value : x));
-  baseFns.cos = defFn("cos", 1, (x) => Math.cos(isQty(x) ? x.value : x));
-  baseFns.tan = defFn("tan", 1, (x) => Math.tan(isQty(x) ? x.value : x));
-  baseFns.asin = defFn("asin", 1, (x) => Math.asin(isQty(x) ? x.value : x));
-  baseFns.acos = defFn("acos", 1, (x) => Math.acos(isQty(x) ? x.value : x));
-  baseFns.atan = defFn("atan", 1, (x) => Math.atan(isQty(x) ? x.value : x));
-  baseFns.atan2 = defFn("atan2", 2, (y, x) => Math.atan2(isQty(y) ? y.value : y, isQty(x) ? x.value : x));
+  baseFns.exp = defFn("exp", 1, (x) => Math.exp(requireScalarArg(x, "exp")));
+  baseFns.log = defFn("log", 1, (x) => Math.log(requireScalarArg(x, "log")));
+  baseFns.log10 = defFn("log10", 1, (x) => Math.log10(requireScalarArg(x, "log10")));
+  baseFns.sin = defFn("sin", 1, (x) => Math.sin(requireScalarArg(x, "sin")));
+  baseFns.cos = defFn("cos", 1, (x) => Math.cos(requireScalarArg(x, "cos")));
+  baseFns.tan = defFn("tan", 1, (x) => Math.tan(requireScalarArg(x, "tan")));
+  baseFns.asin = defFn("asin", 1, (x) => Math.asin(requireScalarArg(x, "asin")));
+  baseFns.acos = defFn("acos", 1, (x) => Math.acos(requireScalarArg(x, "acos")));
+  baseFns.atan = defFn("atan", 1, (x) => Math.atan(requireScalarArg(x, "atan")));
+  baseFns.atan2 = defFn("atan2", 2, (y, x) => Math.atan2(requireScalarArg(y, "atan2"), requireScalarArg(x, "atan2")));
   baseFns.clamp = defFn("clamp", 3, (x, min, max) => {
-    const xv = isQty(x) ? x.value : x;
-    const minv = isQty(min) ? min.value : min;
-    const maxv = isQty(max) ? max.value : max;
+    const [xv, minv] = normalizeCompare(x, min);
+    const [, maxv] = normalizeCompare(x, max);
     const v = Math.min(Math.max(xv, minv), maxv);
     return isQty(x) ? makeQty(v, x.kind) : v;
   });

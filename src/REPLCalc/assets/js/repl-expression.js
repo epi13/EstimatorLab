@@ -98,15 +98,30 @@ export function tokenize(src){
     }
 
     if (isDigit(c) || (c === "." && isDigit(s[i + 1]))){
+      const start = i;
       let j = i;
-      while (j < s.length && /[0-9.]/.test(s[j])) j += 1;
+
+      while (j < s.length && isDigit(s[j])) j += 1;
+
+      if (s[j] === "."){
+        if (s[j + 1] !== "."){
+          j += 1;
+          while (j < s.length && isDigit(s[j])) j += 1;
+        }
+      }
+
       if (s[j] === "e" || s[j] === "E"){
         let k = j + 1;
         if (s[k] === "+" || s[k] === "-") k += 1;
-        while (k < s.length && /[0-9]/.test(s[k])) k += 1;
-        j = k;
+        const expStart = k;
+        while (k < s.length && isDigit(s[k])) k += 1;
+        if (k !== expStart) j = k;
       }
-      out.push({ type: "num", value: parseFloat(s.slice(i, j)) });
+
+      const raw = s.slice(start, j);
+      const value = Number(raw);
+      if (!Number.isFinite(value)) throw new Error(`Invalid number literal: ${raw}`);
+      out.push({ type: "num", value, start, end: j });
       i = j;
       continue;
     }

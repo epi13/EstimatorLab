@@ -1,4 +1,4 @@
-import { splitStatements } from "./repl-parser.js";
+import { splitStatements, findTopLevelEquals } from "./repl-parser.js";
 import { isQty } from "./repl-units.js";
 
 const GFX_LIMIT = 160;
@@ -23,6 +23,10 @@ export function createGfxTools({ state, terminalEl, writeLine }){
   let gfxColorContext = null;
   let runExpressionWithContext = null;
   let runLoopStatement = null;
+
+  const keyState = {
+    down: Object.create(null),
+  };
 
   const loopState = {
     expr: null,
@@ -115,9 +119,18 @@ export function createGfxTools({ state, terminalEl, writeLine }){
       canvas.setAttribute("aria-label", "GFX canvas");
       canvas.addEventListener("pointerdown", () => canvas.focus());
       canvas.addEventListener("keydown", (event) => {
+        const key = normalizeGfxKey(event.key);
+        if (key) keyState.down[key] = 1;
         if (handleGfxKeydown(event)){
           event.preventDefault();
         }
+      });
+      canvas.addEventListener("keyup", (event) => {
+        const key = normalizeGfxKey(event.key);
+        if (key) keyState.down[key] = 0;
+      });
+      canvas.addEventListener("blur", () => {
+        keyState.down = Object.create(null);
       });
       panel.appendChild(canvas);
       wrapper.append(label, hint, panel);
@@ -295,13 +308,32 @@ export function createGfxTools({ state, terminalEl, writeLine }){
       throw new Error("Loop runner not ready.");
     }
     const statements = splitStatements(loopState.expr);
+    // Use a persistent scope for gfx loops so scripts can maintain state across frames.
+    const vars = state.vars;
+    
     for (const stmt of statements){
       if (!stmt) continue;
       if (stmt.trim().startsWith("#")) continue;
-      if (runLoopStatement){
-        runLoopStatement(stmt);
-      }else{
-        runExpressionWithContext(stmt, state.vars);
+      try{
+        if (runLoopStatement){
+          runLoopStatement(stmt);
+        }else{
+          // Check if this is an assignment statement
+          const equalsIdx = findTopLevelEquals(stmt);
+          if (equalsIdx >= 0){
+            // Handle assignment: update frameVars
+            const name = stmt.slice(0, equalsIdx).trim();
+            const expr = stmt.slice(equalsIdx + 1).trim();
+            const val = runExpressionWithContext(expr, vars);
+            vars[name] = val;
+          }else{
+            // Handle regular expression
+            runExpressionWithContext(stmt, vars);
+          }
+        }
+      }catch(err){
+        // Enhance error with statement context for debugging
+        throw new Error(`GFX loop error in statement "${stmt.trim()}": ${err.message || String(err)}`);
       }
     }
   }
@@ -315,6 +347,18 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     state.vars.frame = frame;
     state.vars.time = frame / fps;
     state.vars.dt = 1 / fps;
+    state.vars.key_w = keyState.down.w ? 1 : 0;
+    state.vars.key_a = keyState.down.a ? 1 : 0;
+    state.vars.key_s = keyState.down.s ? 1 : 0;
+    state.vars.key_d = keyState.down.d ? 1 : 0;
+    state.vars.key_q = keyState.down.q ? 1 : 0;
+    state.vars.key_e = keyState.down.e ? 1 : 0;
+    state.vars.key_space = keyState.down.space ? 1 : 0;
+    state.vars.key_shift = keyState.down.shift ? 1 : 0;
+    state.vars.key_up = keyState.down.arrowup ? 1 : 0;
+    state.vars.key_down = keyState.down.arrowdown ? 1 : 0;
+    state.vars.key_left = keyState.down.arrowleft ? 1 : 0;
+    state.vars.key_right = keyState.down.arrowright ? 1 : 0;
     try{
       runLoopScript();
       flushGfxOutput();
@@ -324,6 +368,16 @@ export function createGfxTools({ state, terminalEl, writeLine }){
         writeLine(`GFX loop error: ${err.message || String(err)}`, "err");
       }
     }
+  }
+
+  function normalizeGfxKey(key){
+    if (!key) return null;
+    if (key === " ") return "space";
+    if (key === "Shift") return "shift";
+    if (key.startsWith("Arrow")) return key.toLowerCase();
+    const lower = key.toLowerCase();
+    if (lower.length === 1) return lower;
+    return null;
   }
 
   function tickLoop(timestamp){
@@ -489,20 +543,39 @@ export function createGfxTools({ state, terminalEl, writeLine }){
         markGfxDirty();
         return 1;
       }),
-      line: defFn("line", 5, (x0, y0, x1, y1, color) => {
+      line: defFn("line", 5, function(x0, y0, x1, y1, color){
         const buffer = requireGfxBuffer();
+        // Validate arguments for better error messages
+        if (arguments.length !== 5) {
+          throw new Error(`line() requires exactly 5 arguments: x0, y0, x1, y1, color (got ${arguments.length}). Received: [${Array.from(arguments).map(a => JSON.stringify(a)).join(', ')}]`);
+        }
+        if (![x0, y0, x1, y1].every(Number.isFinite)) {
+          throw new Error(`line() requires numeric coordinates: got x0=${x0}, y0=${y0}, x1=${x1}, y1=${y1}`);
+        }
         drawLine(buffer, x0, y0, x1, y1, normalizeGfxColor(color));
         markGfxDirty();
         return 1;
       }),
-      rect: defFn("rect", 5, (x, y, w, h, color) => {
+      rect: defFn("rect", 5, function(x, y, w, h, color){
         const buffer = requireGfxBuffer();
+        if (arguments.length !== 5) {
+          throw new Error(`rect() requires exactly 5 arguments: x, y, w, h, color (got ${arguments.length})`);
+        }
+        if (![x, y, w, h].every(Number.isFinite)) {
+          throw new Error(`rect() requires numeric parameters: got x=${x}, y=${y}, w=${w}, h=${h}`);
+        }
         drawRect(buffer, x, y, w, h, normalizeGfxColor(color));
         markGfxDirty();
         return 1;
       }),
-      fill: defFn("fill", 5, (x, y, w, h, color) => {
+      fill: defFn("fill", 5, function(x, y, w, h, color){
         const buffer = requireGfxBuffer();
+        if (arguments.length !== 5) {
+          throw new Error(`fill() requires exactly 5 arguments: x, y, w, h, color (got ${arguments.length})`);
+        }
+        if (![x, y, w, h].every(Number.isFinite)) {
+          throw new Error(`fill() requires numeric parameters: got x=${x}, y=${y}, w=${w}, h=${h}`);
+        }
         fillRect(buffer, x, y, w, h, normalizeGfxColor(color));
         markGfxDirty();
         return 1;
