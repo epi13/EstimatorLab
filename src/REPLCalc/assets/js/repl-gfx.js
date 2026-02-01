@@ -22,6 +22,7 @@ export function createGfxTools({ state, terminalEl, writeLine }){
   let gfxPaletteCache = null;
   let gfxColorContext = null;
   let runExpressionWithContext = null;
+  let runLoopStatement = null;
 
   const loopState = {
     expr: null,
@@ -282,13 +283,23 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     runExpressionWithContext = fn;
   }
 
+  function setRunLoopStatementRunner(fn){
+    runLoopStatement = fn;
+  }
+
   function runLoopScript(){
-    if (!runExpressionWithContext) throw new Error("Loop runner not ready.");
+    if (!runLoopStatement && !runExpressionWithContext){
+      throw new Error("Loop runner not ready.");
+    }
     const statements = splitStatements(loopState.expr);
     for (const stmt of statements){
       if (!stmt) continue;
       if (stmt.trim().startsWith("#")) continue;
-      runExpressionWithContext(stmt, state.vars);
+      if (runLoopStatement){
+        runLoopStatement(stmt);
+      }else{
+        runExpressionWithContext(stmt, state.vars);
+      }
     }
   }
 
@@ -550,6 +561,7 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     setLoopFps,
     getLoopStatus,
     setRunExpressionWithContext,
+    setRunLoopStatementRunner,
     handleGfxKeydown,
     getBuffer: () => state.gfx,
     getCanvas: () => state.gfx?.canvasEl || null,

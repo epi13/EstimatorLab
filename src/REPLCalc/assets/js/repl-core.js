@@ -115,8 +115,111 @@ export function initRepl(){
     usageTracker: session.usageTracker,
   });
 
+  const runLoopStatements = (source) => {
+    const statementList = splitStatements(source);
+    for (const stmt of statementList){
+      if (!stmt) continue;
+      const parsed = evaluator.evaluate(stmt);
+      if (!parsed) continue;
+
+      if (parsed.type === "cmd"){
+        throw new Error("Commands are not supported in gfx loop scripts.");
+      }
+
+      if (parsed.type === "def"){
+        runtime.defineUserFn(parsed.name, parsed.params, parsed.expr);
+        continue;
+      }
+
+      if (parsed.type === "assy"){
+        const assembly = evaluator.createAssembly(parsed.name, parsed.fields);
+        state.vars[parsed.name] = assembly;
+        continue;
+      }
+
+      if (parsed.type === "assign"){
+        state.vars[parsed.name] = evaluator.runExpression(parsed.expr);
+        continue;
+      }
+
+      if (parsed.type === "equation"){
+        const solved = evaluator.solveEquation(parsed.left, parsed.right);
+        if (!solved.unknown.unitToken){
+          state.vars[solved.unknown.name] = solved.value;
+        }
+        continue;
+      }
+
+      if (parsed.type === "if"){
+        const cond = evaluator.runExpression(parsed.condition);
+        if (isTruthy(cond)){
+          runLoopStatements(parsed.thenBody);
+        }else if (parsed.elseBody){
+          runLoopStatements(parsed.elseBody);
+        }
+        continue;
+      }
+
+      if (parsed.type === "for"){
+        const startVal = evaluator.runExpression(parsed.startExpr);
+        const endVal = evaluator.runExpression(parsed.endExpr);
+        const stepVal = parsed.stepExpr ? evaluator.runExpression(parsed.stepExpr) : 1;
+        let start;
+        let end;
+        let step;
+        let loopKind = null;
+        if (isQty(startVal) || isQty(endVal)){
+          if (!isQty(startVal) || !isQty(endVal)){
+            throw new Error("for loop range must use matching unit quantities");
+          }
+          if (startVal.kind !== endVal.kind){
+            throw new Error("for loop range units must match");
+          }
+          loopKind = startVal.kind;
+          start = startVal.value;
+          end = endVal.value;
+          if (isQty(stepVal)){
+            if (stepVal.kind !== loopKind) throw new Error("for loop step unit mismatch");
+            step = stepVal.value;
+          }else{
+            step = stepVal;
+          }
+        }else{
+          [start, end] = normalizeCompare(startVal, endVal);
+          step = normalizeCompare(stepVal, 0)[0];
+        }
+        if (step === 0) throw new Error("for loop step cannot be 0");
+        const hadVar = Object.prototype.hasOwnProperty.call(state.vars, parsed.varName);
+        const prevVal = state.vars[parsed.varName];
+        const forward = step > 0;
+        for (let i = start; forward ? i <= end : i >= end; i += step){
+          state.vars[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
+          runLoopStatements(parsed.body);
+        }
+        if (hadVar) state.vars[parsed.varName] = prevVal;
+        else delete state.vars[parsed.varName];
+        continue;
+      }
+
+      if (parsed.type === "repeat"){
+        const countVal = evaluator.runExpression(parsed.countExpr);
+        const count = normalizeCompare(countVal, 0)[0];
+        if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
+        for (let i = 0; i < Math.floor(count); i++){
+          runLoopStatements(parsed.body);
+        }
+        continue;
+      }
+
+      if (parsed.type === "expr"){
+        evaluator.runExpression(parsed.expr);
+      }
+    }
+  };
+
   runtime.setRunExpressionWithContext(evaluator.runExpressionWithContext);
   gfx.setRunExpressionWithContext(evaluator.runExpressionWithContext);
+  gfx.setRunLoopStatementRunner(runLoopStatements);
 
   editor = createEditor({
     state,
