@@ -315,15 +315,15 @@ export function createEvaluator({
       return { type:"cmd", cmd, arg };
     }
 
-    if (/^if\b/i.test(src)){
+    if (/^if\s+/i.test(src)){
       return parseIfStatement(src);
     }
 
-    if (/^for\b/i.test(src)){
+    if (/^for\s+/i.test(src)){
       return parseForStatement(src);
     }
 
-    if (/^repeat\b/i.test(src)){
+    if (/^repeat\s+/i.test(src)){
       return parseRepeatStatement(src);
     }
 
