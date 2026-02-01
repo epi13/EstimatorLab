@@ -550,6 +550,9 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     getLoopStatus,
     setRunExpressionWithContext,
     handleGfxKeydown,
+    getBuffer: () => state.gfx,
+    getCanvas: () => state.gfx?.canvasEl || null,
+    markDirty: markGfxDirty,
     initBuffer: (width, height, scale = GFX_DEFAULT_SCALE) => {
       const w = normalizeGfxDimension(width, "width");
       const h = normalizeGfxDimension(height, "height");
