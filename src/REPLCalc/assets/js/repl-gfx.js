@@ -308,9 +308,13 @@ export function createGfxTools({ state, terminalEl, writeLine }){
 
   function runLoopFrame(){
     if (!loopState.expr) return;
-    state.vars.frame = loopState.frame;
-    state.vars.time = loopState.frame / loopState.fps;
-    state.vars.dt = 1 / loopState.fps;
+    const fps = normalizeLoopFps(loopState.fps);
+    loopState.fps = fps;
+    const frame = Number.isFinite(loopState.frame) ? loopState.frame : 0;
+    loopState.frame = frame;
+    state.vars.frame = frame;
+    state.vars.time = frame / fps;
+    state.vars.dt = 1 / fps;
     try{
       runLoopScript();
       flushGfxOutput();
