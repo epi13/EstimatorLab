@@ -46,6 +46,21 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     ctx.fillStyle = "#000";
     ctx.fillStyle = value;
     const computed = ctx.fillStyle;
+    if (computed === "transparent") return [0, 0, 0, 0];
+    if (computed.startsWith("#")){
+      let hex = computed.slice(1);
+      if (hex.length === 3 || hex.length === 4){
+        hex = hex.split("").map((c) => c + c).join("");
+      }
+      if (hex.length === 6) hex += "ff";
+      if (hex.length === 8){
+        const r = parseInt(hex.slice(0, 2), 16);
+        const g = parseInt(hex.slice(2, 4), 16);
+        const b = parseInt(hex.slice(4, 6), 16);
+        const a = parseInt(hex.slice(6, 8), 16);
+        return [r, g, b, a];
+      }
+    }
     const match = computed.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([0-9.]+))?\)/);
     if (!match) return [0, 0, 0, 255];
     const alpha = match[4] === undefined ? 1 : Number(match[4]);
