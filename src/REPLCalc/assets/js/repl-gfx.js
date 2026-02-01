@@ -226,6 +226,9 @@ export function createGfxTools({ state, terminalEl, writeLine }){
   }
 
   function drawLine(buffer, x0, y0, x1, y1, color){
+    if (![x0, y0, x1, y1].every(Number.isFinite)){
+      return;
+    }
     let x = Math.round(x0);
     let y = Math.round(y0);
     const xEnd = Math.round(x1);
