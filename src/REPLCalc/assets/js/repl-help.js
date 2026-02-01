@@ -234,6 +234,37 @@ export function createHelp({ writeLine, writeLineRich, token, GFX_COLOR_TOKENS }
       "  colors: ",
       token(GFX_COLOR_TOKENS.join(", "), "out-unit")
     ], "muted");
+    writeLineRich([
+      "  ",
+      token("gfxloop", "out-fn"),
+      token("(\"script\")", "out-op"),
+      " ",
+      token("gfxplay()", "out-fn"),
+      " ",
+      token("gfxpause()", "out-fn")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("gfxstep", "out-fn"),
+      token("(n)", "out-op"),
+      " ",
+      token("gfxrewind", "out-fn"),
+      token("(n)", "out-op"),
+      " ",
+      token("gfxfps", "out-fn"),
+      token("(fps)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("Loop vars:", "out-label"),
+      " ",
+      token("frame", "out-var"),
+      ", ",
+      token("time", "out-var"),
+      ", ",
+      token("dt", "out-var"),
+      " • focus gfx canvas for Space/Arrow controls"
+    ], "muted");
     writeLineRich([token("Commands:", "out-label")], "muted");
     writeLineRich([
       "  ",
@@ -334,6 +365,11 @@ export function createHelp({ writeLine, writeLineRich, token, GFX_COLOR_TOKENS }
       "  ",
       token(":test", "out-command"),
       "                run the built-in test suite"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":doom", "out-command"),
+      "                run the gfx loop demo"
     ], "muted");
     writeLineRich([token("Solutions:", "out-label")], "muted");
     writeLineRich([

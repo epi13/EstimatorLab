@@ -313,6 +313,37 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       "  colors: ",
       token(GFX_COLOR_TOKENS.join(", "), "out-unit")
     ], "muted");
+    writeLineRich([
+      "  ",
+      token("gfxloop", "out-fn"),
+      token("(\"script\")", "out-op"),
+      " ",
+      token("gfxplay()", "out-fn"),
+      " ",
+      token("gfxpause()", "out-fn")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("gfxstep", "out-fn"),
+      token("(n)", "out-op"),
+      " ",
+      token("gfxrewind", "out-fn"),
+      token("(n)", "out-op"),
+      " ",
+      token("gfxfps", "out-fn"),
+      token("(fps)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("Loop vars:", "out-label"),
+      " ",
+      token("frame", "out-var"),
+      ", ",
+      token("time", "out-var"),
+      ", ",
+      token("dt", "out-var"),
+      " • focus gfx canvas for Space/Arrow controls"
+    ], "muted");
     writeLineRich([token("Session commands:", "out-label")], "muted");
     writeLineRich([
       "  ",
@@ -356,6 +387,11 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       "  ",
       token(":test", "out-command"),
       " run REPL tests"
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token(":doom", "out-command"),
+      " run gfx loop demo"
     ], "muted");
     writeLineRich([token("Tips:", "out-label")], "muted");
     writeLineRich([
