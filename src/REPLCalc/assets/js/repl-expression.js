@@ -92,6 +92,11 @@ export function tokenize(src){
       continue;
     }
 
+    if (c === "#"){
+      while (i < s.length && s[i] !== "\n") i += 1;
+      continue;
+    }
+
     if (isDigit(c) || (c === "." && isDigit(s[i + 1]))){
       let j = i;
       while (j < s.length && /[0-9.]/.test(s[j])) j += 1;

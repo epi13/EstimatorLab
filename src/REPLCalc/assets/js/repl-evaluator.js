@@ -333,6 +333,8 @@ export function createEvaluator({
       return parsed;
     }
 
+    if (src.startsWith("#")) return null;
+
     const defMatch = src.match(/^(?:def|fn|so|function)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
     if (defMatch){
       const name = defMatch[1];

@@ -9,8 +9,9 @@ const DOOM_SCRIPT = `
 cls();
 bg("transparent");
 
-w = ${DOOM_CONFIG.width};
-h = ${DOOM_CONFIG.height};
+# NOTE: Keep in sync with DOOM_CONFIG above.
+w = 96;
+h = 54;
 hud = 10;
 view = h - hud;
 mid = floor(view / 2);
@@ -143,7 +144,15 @@ export function getDoomController({ gfx, writeLine }){
   return doomController;
 }
 
-export function runDoomDemo({ gfx, writeLine }){
+export function runDoomDemo({ gfx, writeLine, writeInputEcho }){
+  if (typeof writeLine === "function"){
+    writeLine("Running doom demo script:", "muted");
+  }
+  if (typeof writeInputEcho === "function"){
+    DOOM_SCRIPT.trim().split("\n").forEach((line) => writeInputEcho(line));
+  }else if (typeof writeLine === "function"){
+    DOOM_SCRIPT.trim().split("\n").forEach((line) => writeLine(line, "muted"));
+  }
   const controller = getDoomController({ gfx, writeLine });
   controller.start();
 }
