@@ -151,6 +151,11 @@ html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-f
   font-size:11px;
   color:var(--muted);
 }
+.gfx-hint{
+  font-size:11px;
+  color:var(--muted);
+  margin-top:-4px;
+}
 .gfx-panel{
   padding:6px;
   border:1px solid var(--line);
@@ -164,6 +169,10 @@ html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-f
   display:block;
   image-rendering:pixelated;
   background:var(--gfx-bg, transparent);
+  outline:none;
+}
+.gfx-canvas:focus-visible{
+  box-shadow:0 0 0 2px rgba(125, 211, 252, 0.6);
 }
 .prompt{color:var(--accent);}
 .input{color:var(--text);}

@@ -1,3 +1,4 @@
+import { runDoomDemo } from "./repl-doom.js";
 import { parseParams, splitStatements } from "./repl-parser.js";
 
 export function createInputHandlers({
@@ -147,6 +148,7 @@ export function createInputHandlers({
             if (cmd === "use"){ useSymbolFromProfile(arg); continue; }
             if (cmd === "diff"){ diffSymbol(arg); continue; }
             if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); continue; }
+            if (cmd === "doom"){ runDoomDemo({ gfx, writeLine }); continue; }
             if (cmd === "test"){ runTestSuite(); continue; }
 
             if (cmd === "export"){

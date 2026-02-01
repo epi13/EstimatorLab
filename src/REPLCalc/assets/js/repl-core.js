@@ -58,7 +58,7 @@ export function initRepl(){
   const baseFns = createBaseFns();
 
   const ui = createUi(state);
-  const gfx = createGfxTools({ state, terminalEl: ui.terminalEl });
+  const gfx = createGfxTools({ state, terminalEl: ui.terminalEl, writeLine: ui.writeLine });
   const gfxFns = gfx.buildGfxMetaFns(defFn);
 
   let editor;
@@ -116,6 +116,7 @@ export function initRepl(){
   });
 
   runtime.setRunExpressionWithContext(evaluator.runExpressionWithContext);
+  gfx.setRunExpressionWithContext(evaluator.runExpressionWithContext);
 
   editor = createEditor({
     state,
