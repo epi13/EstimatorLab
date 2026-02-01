@@ -151,7 +151,7 @@ export function createInputHandlers({
             if (cmd === "use"){ useSymbolFromProfile(arg); continue; }
             if (cmd === "diff"){ diffSymbol(arg); continue; }
             if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); continue; }
-            if (cmd === "doom"){ runDoomDemo({ gfx, writeLine }); continue; }
+            if (cmd === "doom"){ runDoomDemo({ gfx, writeLine, writeInputEcho }); continue; }
             if (cmd === "test"){ runTestSuite(); continue; }
 
             if (cmd === "export"){

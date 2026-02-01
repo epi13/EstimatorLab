@@ -287,6 +287,7 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     const statements = splitStatements(loopState.expr);
     for (const stmt of statements){
       if (!stmt) continue;
+      if (stmt.trim().startsWith("#")) continue;
       runExpressionWithContext(stmt, state.vars);
     }
   }
