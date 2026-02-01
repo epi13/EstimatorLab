@@ -22,6 +22,7 @@ export function splitStatements(source){
 
   let depth = 0;
   let braceDepth = 0;
+  let inlineBlock = false;
   let start = 0;
   const joined = normalized.join("\n");
   for (let i = 0; i < joined.length; i++){
@@ -30,11 +31,17 @@ export function splitStatements(source){
     if (c === ")") depth = Math.max(0, depth - 1);
     if (c === "{") braceDepth += 1;
     if (c === "}") braceDepth = Math.max(0, braceDepth - 1);
-    const isBreak = (c === "\n" || c === ";") && depth === 0 && braceDepth === 0;
+    if (c === ":" && depth === 0 && braceDepth === 0){
+      inlineBlock = true;
+    }
+    const isBreak = (c === "\n" || (c === ";" && !inlineBlock)) && depth === 0 && braceDepth === 0;
     if (isBreak){
       const piece = joined.slice(start, i).trim();
       if (piece) out.push(piece);
       start = i + 1;
+    }
+    if (c === "\n"){
+      inlineBlock = false;
     }
   }
   const tail = joined.slice(start).trim();
