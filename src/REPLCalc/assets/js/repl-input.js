@@ -1,4 +1,4 @@
-import { handleDoomInput, runDoomDemo } from "./repl-doom.js";
+import { runDoomDemo } from "./repl-doom.js";
 import { parseParams, splitStatements } from "./repl-parser.js";
 
 export function createInputHandlers({
@@ -125,9 +125,6 @@ export function createInputHandlers({
 
     try{
       for (const stmt of statementList){
-        if (handleDoomInput(stmt, { gfx, writeLine })){
-          continue;
-        }
         const parsed = evaluate(stmt);
         if (!parsed) continue;
         const usageEntry = beginUsage(parsed, stmt);
