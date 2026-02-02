@@ -13,6 +13,9 @@ import { attachScenarioBuiltins } from "./repl-builtins-scenario.js";
 import { attachGraphBuiltins } from "./repl-builtins-graph.js";
 import { attachMaterialBuiltins } from "./repl-builtins-material.js";
 import { attachGeometryBuiltins } from "./repl-builtins-geometry.js";
+import { attachLinAlgBuiltins } from "./repl-builtins-linalg.js";
+import { attachUncertaintyBuiltins } from "./repl-builtins-uncertainty.js";
+import { attachCsiBuiltins } from "./repl-builtins-csi.js";
 
 export function defFn(name, arity, impl){
   return { arity, impl };
@@ -82,55 +85,6 @@ export function createBaseFns(){
 
   baseFns.usd = defFn("usd", 1, (x) => normalizeMoney(x));
 
-  baseFns.vec = defFn("vec", -1, (...args) => {
-    return OPS_INTERNAL.makeVec("vec", args);
-  });
-
-  baseFns.mat = defFn("mat", -1, (...args) => {
-    if (args.length === 1 && typeof args[0] === "string"){
-      const text = args[0].trim();
-      if (!text) throw new Error("mat expects a non-empty string");
-      const rows = text.split(";").map((row) => row.trim()).filter(Boolean);
-      const parsedRows = rows.map((row) => row.split(",").map((cell) => cell.trim()).filter(Boolean));
-      const rowCount = parsedRows.length;
-      const colCount = parsedRows[0]?.length || 0;
-      if (!rowCount || !colCount) throw new Error("mat expects at least 1x1");
-      for (const row of parsedRows){
-        if (row.length !== colCount) throw new Error("mat rows must all be same length");
-      }
-      const elements = [];
-      for (let r = 0; r < rowCount; r++){
-        for (let c = 0; c < colCount; c++){
-          const raw = parsedRows[r][c];
-          const num = Number(raw);
-          if (!Number.isFinite(num)) throw new Error("mat string cells must be numeric");
-          elements.push(num);
-        }
-      }
-      return OPS_INTERNAL.makeMat("mat", rowCount, colCount, elements);
-    }
-
-    if (args.length < 3) throw new Error("mat expects (rows, cols, ...elements) or mat(\"...\")");
-    const rows = Math.floor(requireScalarArg(args[0], "mat"));
-    const cols = Math.floor(requireScalarArg(args[1], "mat"));
-    if (!Number.isFinite(rows) || !Number.isFinite(cols) || rows <= 0 || cols <= 0) throw new Error("mat rows/cols must be > 0");
-    const elements = args.slice(2);
-    if (elements.length !== rows * cols) throw new Error("mat element count mismatch");
-    return OPS_INTERNAL.makeMat("mat", rows, cols, elements);
-  });
-
-  baseFns.range = defFn("range", 2, (lo, hi) => {
-    return OPS_INTERNAL.makeRange(lo, hi);
-  });
-
-  baseFns.mean = defFn("mean", 1, (x) => {
-    if (OPS_INTERNAL.isRange(x)){
-      const lo = x.fields?.lo?.value;
-      const hi = x.fields?.hi?.value;
-      return div(add(lo, hi), 2);
-    }
-    throw new Error("mean expects a range");
-  });
 
   function buildAssy(name, fields){
     return {
@@ -197,53 +151,6 @@ export function createBaseFns(){
     });
   }
 
-  baseFns.mc = defFnCtx("mc", 2, (ctx, n, exprOrRange) => {
-    const count = Math.max(1, Math.min(100000, Math.floor(requireScalarArg(n, "mc"))));
-    if (OPS_INTERNAL.isRange(exprOrRange)){
-      const lo = exprOrRange.fields?.lo?.value;
-      const hi = exprOrRange.fields?.hi?.value;
-      if (isQty(lo) || isQty(hi)){
-        if (!isQty(lo) || !isQty(hi)) throw new Error("mc range bounds must both be quantities");
-        if (lo.kind !== hi.kind) throw new Error("mc range unit mismatch");
-        const loNum = lo.value;
-        const hiNum = hi.value;
-        if (!Number.isFinite(loNum) || !Number.isFinite(hiNum)) throw new Error("mc range bounds must be numeric");
-        if (hiNum < loNum) throw new Error("mc range hi must be >= lo");
-        const samples = [];
-        for (let i = 0; i < count; i++){
-          const v = loNum + (hiNum - loNum) * Math.random();
-          samples.push(makeQty(v, lo.kind));
-        }
-        return summarizeSamples(samples);
-      }
-      const loNum = Number(lo);
-      const hiNum = Number(hi);
-      if (!Number.isFinite(loNum) || !Number.isFinite(hiNum)) throw new Error("mc range bounds must be numeric");
-      if (hiNum < loNum) throw new Error("mc range hi must be >= lo");
-      const samples = [];
-      for (let i = 0; i < count; i++){
-        samples.push(loNum + (hiNum - loNum) * Math.random());
-      }
-      return summarizeSamples(samples);
-    }
-    if (typeof exprOrRange === "string"){
-      if (!ctx || typeof ctx.evalString !== "function") throw new Error("mc(expr) requires evalString support");
-      const samples = [];
-      for (let i = 0; i < count; i++){
-        const v = ctx.evalString(exprOrRange);
-        samples.push(v);
-      }
-      return summarizeSamples(samples);
-    }
-    if (exprOrRange && typeof exprOrRange === "object" && exprOrRange.__dist){
-      const samples = [];
-      for (let i = 0; i < count; i++){
-        samples.push(baseFns.sample.impl(exprOrRange));
-      }
-      return summarizeSamples(samples);
-    }
-    throw new Error("mc expects (n, range(lo, hi)) or (n, \"expr\")");
-  });
 
   function isObjToken(value){
     return value && typeof value === "object" && value.__obj && typeof value.raw === "string";
@@ -328,158 +235,6 @@ export function createBaseFns(){
     return parsed;
   }
 
-  function isDist(value){
-    return value && typeof value === "object" && value.__dist;
-  }
-
-  function scalarOrQty(value, label){
-    if (isQty(value)){
-      return value;
-    }
-    const num = Number(value);
-    if (!Number.isFinite(num)) throw new Error(`${label} must be numeric`);
-    return num;
-  }
-
-  function distNormal(mu, sigma){
-    const m = scalarOrQty(mu, "mu");
-    const s = scalarOrQty(sigma, "sigma");
-    if (isQty(m) !== isQty(s)) throw new Error("dist.normal mu/sigma must both be quantities or both be scalars");
-    if (isQty(m)){
-      const [mv, sv] = normalizeCompare(m, s);
-      if (sv <= 0) throw new Error("dist.normal sigma must be > 0");
-      return { __dist: true, kind: "normal", mu: m, sigma: s };
-    }
-    if (!(Number.isFinite(m) && Number.isFinite(s)) || s <= 0) throw new Error("dist.normal expects sigma > 0");
-    return { __dist: true, kind: "normal", mu: m, sigma: s };
-  }
-
-  function distTri(a, b, c){
-    const aa = scalarOrQty(a, "a");
-    const bb = scalarOrQty(b, "b");
-    const cc = scalarOrQty(c, "c");
-    if (isQty(aa) !== isQty(bb) || isQty(aa) !== isQty(cc)) throw new Error("dist.tri params must all be quantities or all be scalars");
-    if (isQty(aa)){
-      const av = aa.value;
-      const bv = bb.value;
-      const cv = cc.value;
-      if (aa.kind !== bb.kind || aa.kind !== cc.kind) throw new Error("dist.tri quantity params must have same units");
-      if (!(av <= cv && cv <= bv)) throw new Error("dist.tri requires a <= c <= b");
-      return { __dist: true, kind: "tri", a: aa, b: bb, c: cc };
-    }
-    if (!(Number.isFinite(aa) && Number.isFinite(bb) && Number.isFinite(cc))) throw new Error("dist.tri params must be numeric");
-    if (!(aa <= cc && cc <= bb)) throw new Error("dist.tri requires a <= c <= b");
-    return { __dist: true, kind: "tri", a: aa, b: bb, c: cc };
-  }
-
-  function erf(x){
-    const sign = x < 0 ? -1 : 1;
-    const ax = Math.abs(x);
-    const t = 1 / (1 + 0.3275911 * ax);
-    const a1 = 0.254829592;
-    const a2 = -0.284496736;
-    const a3 = 1.421413741;
-    const a4 = -1.453152027;
-    const a5 = 1.061405429;
-    const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-ax * ax);
-    return sign * y;
-  }
-
-  function normalCdf(z){
-    return 0.5 * (1 + erf(z / Math.SQRT2));
-  }
-
-  function distCdf(dist, x){
-    if (!isDist(dist)) throw new Error("cdf expects a distribution");
-    if (dist.kind === "normal"){
-      const mu = dist.mu;
-      const sigma = dist.sigma;
-      if (isQty(mu)){
-        if (!isQty(x) || x.kind !== mu.kind) throw new Error("cdf(normal) x must be same unit kind as mu");
-        const z = (x.value - mu.value) / sigma.value;
-        return normalCdf(z);
-      }
-      const xv = Number(x);
-      if (!Number.isFinite(xv)) throw new Error("cdf(normal) x must be numeric");
-      const z = (xv - mu) / sigma;
-      return normalCdf(z);
-    }
-    if (dist.kind === "tri"){
-      const a0 = dist.a;
-      const b0 = dist.b;
-      const c0 = dist.c;
-      if (isQty(a0)){
-        if (!isQty(x) || x.kind !== a0.kind) throw new Error("cdf(tri) x must be same unit kind as a/b/c");
-        const a = a0.value;
-        const b = b0.value;
-        const c = c0.value;
-        const xv = x.value;
-        if (xv <= a) return 0;
-        if (xv >= b) return 1;
-        if (xv <= c) return ((xv - a) * (xv - a)) / ((b - a) * (c - a));
-        return 1 - ((b - xv) * (b - xv)) / ((b - a) * (b - c));
-      }
-      const a = a0;
-      const b = b0;
-      const c = c0;
-      const xv = Number(x);
-      if (!Number.isFinite(xv)) throw new Error("cdf(tri) x must be numeric");
-      if (xv <= a) return 0;
-      if (xv >= b) return 1;
-      if (xv <= c) return ((xv - a) * (xv - a)) / ((b - a) * (c - a));
-      return 1 - ((b - xv) * (b - xv)) / ((b - a) * (b - c));
-    }
-    throw new Error("cdf: unsupported distribution");
-  }
-
-  function randn(){
-    let u = 0;
-    let v = 0;
-    while (u === 0) u = Math.random();
-    while (v === 0) v = Math.random();
-    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
-  }
-
-  function distSample(dist){
-    if (!isDist(dist)) throw new Error("sample expects a distribution");
-    if (dist.kind === "normal"){
-      const z = randn();
-      if (isQty(dist.mu)){
-        return makeQty(dist.mu.value + z * dist.sigma.value, dist.mu.kind);
-      }
-      return dist.mu + z * dist.sigma;
-    }
-    if (dist.kind === "tri"){
-      const u = Math.random();
-      const a0 = dist.a;
-      const b0 = dist.b;
-      const c0 = dist.c;
-      if (isQty(a0)){
-        const a = a0.value;
-        const b = b0.value;
-        const c = c0.value;
-        const fc = (c - a) / (b - a);
-        const x = u < fc ? a + Math.sqrt(u * (b - a) * (c - a)) : b - Math.sqrt((1 - u) * (b - a) * (b - c));
-        return makeQty(x, a0.kind);
-      }
-      const a = a0;
-      const b = b0;
-      const c = c0;
-      const fc = (c - a) / (b - a);
-      return u < fc ? a + Math.sqrt(u * (b - a) * (c - a)) : b - Math.sqrt((1 - u) * (b - a) * (b - c));
-    }
-    throw new Error("sample: unsupported distribution");
-  }
-
-  baseFns["dist.normal"] = defFn("dist.normal", 2, (mu, sigma) => distNormal(mu, sigma));
-  baseFns["dist.tri"] = defFn("dist.tri", 3, (a, b, c) => distTri(a, b, c));
-  baseFns.sample = defFn("sample", 1, (dist) => distSample(dist));
-  baseFns.cdf = defFn("cdf", 2, (dist, x) => distCdf(dist, x));
-  baseFns.pvalue = defFn("pvalue", 2, (dist, x) => {
-    const p = distCdf(dist, x);
-    const twoSided = 2 * Math.min(p, 1 - p);
-    return twoSided;
-  });
 
   baseFns.to_json = defFn("to_json", 1, (value) => {
     const encode = (v) => {
@@ -876,8 +631,42 @@ export function createBaseFns(){
 
   attachMapBuiltins(baseFns, { defFn, isQty });
 
+  attachCsiBuiltins(baseFns, {
+    defFn,
+    add,
+  });
+
+  attachLinAlgBuiltins(baseFns, {
+    defFn,
+    defFnCtx,
+    isQty,
+    makeQty,
+    add,
+    sub,
+    mul,
+    div,
+    pow,
+    OPS_INTERNAL,
+  });
+
+  attachUncertaintyBuiltins(baseFns, {
+    defFn,
+    defFnCtx,
+    isQty,
+    makeQty,
+    add,
+    sub,
+    mul,
+    div,
+    normalizeCompare,
+    OPS_INTERNAL,
+    buildAssy,
+    fieldInfo,
+  });
+
   attachGraphBuiltins(baseFns, {
     defFn,
+    defFnCtx,
     add,
   });
 

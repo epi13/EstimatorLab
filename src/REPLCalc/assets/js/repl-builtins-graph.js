@@ -1,5 +1,6 @@
 export function attachGraphBuiltins(baseFns, {
   defFn,
+  defFnCtx,
   add,
 }){
   function requireGraph(value, label){
@@ -24,6 +25,15 @@ export function attachGraphBuiltins(baseFns, {
     const key = typeof id === "string" ? id.trim() : String(id);
     if (!key) throw new Error("gnode expects a node id");
     graph.nodes[key] = { id: key, cost };
+    return graph;
+  });
+
+  baseFns.gexpr = defFn("gexpr", 3, (g, id, expr) => {
+    const graph = requireGraph(g, "gexpr");
+    const key = typeof id === "string" ? id.trim() : String(id);
+    if (!key) throw new Error("gexpr expects a node id");
+    if (typeof expr !== "string") throw new Error("gexpr expects expression string");
+    graph.nodes[key] = { id: key, expr: expr.trim() };
     return graph;
   });
 
@@ -106,6 +116,70 @@ export function attachGraphBuiltins(baseFns, {
       graph.nodes[id].total = totals[id];
     }
     graph.__calced = true;
+    return graph;
+  });
+
+  baseFns.gcalcx = defFnCtx("gcalcx", 1, (ctx, g) => {
+    const graph = requireGraph(g, "gcalcx");
+    if (!ctx || typeof ctx.evalString !== "function") throw new Error("gcalcx requires evalString support");
+
+    graph.nodes = graph.nodes || Object.create(null);
+    graph.edges = Array.isArray(graph.edges) ? graph.edges : [];
+
+    const indeg = Object.create(null);
+    const out = Object.create(null);
+    for (const id of Object.keys(graph.nodes)){
+      indeg[id] = 0;
+      out[id] = [];
+    }
+    for (const e of graph.edges){
+      const from = ensureNode(graph, e?.from);
+      const to = ensureNode(graph, e?.to);
+      if (!out[from]) out[from] = [];
+      out[from].push(to);
+      indeg[to] = (indeg[to] || 0) + 1;
+      if (indeg[from] === undefined) indeg[from] = 0;
+    }
+
+    const q = [];
+    for (const [id, d] of Object.entries(indeg)) if (d === 0) q.push(id);
+    const order = [];
+    while (q.length){
+      const id = q.shift();
+      order.push(id);
+      for (const nxt of out[id] || []){
+        indeg[nxt] -= 1;
+        if (indeg[nxt] === 0) q.push(nxt);
+      }
+    }
+    const nodeIds = Object.keys(indeg);
+    if (order.length !== nodeIds.length){
+      const stuck = nodeIds.filter((id) => indeg[id] > 0);
+      throw new Error(`Graph has a cycle involving: ${stuck.join(", ")}`);
+    }
+
+    const totals = Object.create(null);
+    for (const id of order){
+      const node = graph.nodes[id] || {};
+      let base = node.cost;
+      if (base === undefined && typeof node.expr === "string" && node.expr.trim()){
+        base = ctx.evalString(node.expr, Object.assign(Object.create(null), totals));
+      }
+      totals[id] = base === undefined || base === null ? 0 : base;
+    }
+
+    for (const from of order){
+      const fromTotal = totals[from];
+      for (const to of out[from] || []){
+        totals[to] = totals[to] === undefined ? fromTotal : add(totals[to], fromTotal);
+      }
+    }
+
+    for (const id of Object.keys(totals)){
+      graph.nodes[id].total = totals[id];
+    }
+    graph.__calced = true;
+    graph.__calcedx = true;
     return graph;
   });
 

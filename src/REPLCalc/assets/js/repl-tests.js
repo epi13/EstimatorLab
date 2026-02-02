@@ -756,6 +756,41 @@ export function createTests({
       },
 
       {
+        name: "cost graph theory gexpr + gcalcx evaluates expression nodes",
+        steps: [
+          "g = graph(\"g\")",
+          "gnode(g, \"labor\", 100 $)",
+          "gnode(g, \"mat\", 50 $)",
+          "gexpr(g, \"subtotal\", \"labor + mat\")",
+          "gexpr(g, \"total\", \"markup(subtotal, 10%)\")",
+          "gedge(g, \"labor\", \"subtotal\")",
+          "gedge(g, \"mat\", \"subtotal\")",
+          "gedge(g, \"subtotal\", \"total\")",
+          "gcalcx(g)",
+          "to(gtotal(g), usd)",
+        ],
+        expect: 165,
+      },
+
+      {
+        name: "csi_norm normalizes codes",
+        steps: [
+          "csi_norm(\"06-11-16\")",
+        ],
+        expect: "06 11 16",
+      },
+      {
+        name: "csi_rollup sums by CSI",
+        steps: [
+          "a = line(\"studs\", 10 ea, 5 $, {csi: \"06 11 16\"})",
+          "b = line(\"ply\", 1 ea, 100 $, {csi: \"06-11-16\"})",
+          "r = csi_rollup(a, b)",
+          "to(field(r, \"csi_06_11_16\"), usd)",
+        ],
+        expect: 150,
+      },
+
+      {
         name: "unit-aware sqrt reduces len^2 to len",
         steps: [
           "a = 3 ft",
@@ -786,6 +821,76 @@ export function createTests({
           "to_sf(poly_area(shape))",
         ],
         expect: 50,
+      },
+
+      {
+        name: "linalg vec_len supports unit vectors",
+        steps: [
+          "v = vec(3 ft, 4 ft)",
+          "to_ft(vec_len(v))",
+        ],
+        expect: 5,
+      },
+      {
+        name: "linalg vec_dot",
+        steps: [
+          "a = vec(1, 2, 3)",
+          "b = vec(4, 5, 6)",
+          "vec_dot(a, b)",
+        ],
+        expect: 32,
+      },
+      {
+        name: "linalg mat_T transpose",
+        steps: [
+          "m = mat(\"1,2;3,4\")",
+          "mt = mat_T(m)",
+          "field(mt, \"m12\")",
+        ],
+        expect: 3,
+      },
+      {
+        name: "linalg mat_solve solves 2x2",
+        steps: [
+          "A = mat(\"2,0;0,4\")",
+          "b = vec(10, 8)",
+          "x = mat_solve(A, b)",
+          "field(x, \"v1\") + field(x, \"v2\")",
+        ],
+        expect: 7,
+      },
+      {
+        name: "nsolve finds sqrt(2)",
+        steps: [
+          "x = nsolve(\"x^2 - 2\", \"x\", 1)",
+          "x",
+        ],
+        expect: expectNear(Math.SQRT2, 1e-6),
+      },
+
+      {
+        name: "uncertainty dist.uniform + cdf",
+        steps: [
+          "d = dist.uniform(0, 10)",
+          "cdf(d, 5)",
+        ],
+        expect: expectNear(0.5, 1e-9),
+      },
+      {
+        name: "uncertainty prob_gt/prob_lt",
+        steps: [
+          "d = dist.uniform(0, 10)",
+          "prob_gt(d, 5) + prob_lt(d, 5)",
+        ],
+        expect: expectNear(1, 1e-9),
+      },
+      {
+        name: "uncertainty dist.uniform supports unit bounds",
+        steps: [
+          "d = dist.uniform(0 ft, 10 ft)",
+          "cdf(d, 5 ft)",
+        ],
+        expect: expectNear(0.5, 1e-9),
       },
       {
         name: "material density weight chaining",

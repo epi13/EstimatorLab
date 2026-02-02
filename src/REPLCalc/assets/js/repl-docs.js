@@ -302,6 +302,53 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       "  |  ",
       token("cost_leaf cost_breakdown", "out-keyword")
     ], "muted");
+    writeLineRich([token("Linear/nonlinear algebra:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("vec", "out-fn"),
+      token("(1,2,3)", "out-op"),
+      " ",
+      token("mat", "out-fn"),
+      token("(\"1,2;3,4\")", "out-op"),
+      "  ",
+      token("vec_dot", "out-fn"),
+      token("(a,b)", "out-op"),
+      "  ",
+      token("vec_len", "out-fn"),
+      token("(v)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("mat_T", "out-fn"),
+      token("(m)", "out-op"),
+      "  ",
+      token("mat_solve", "out-fn"),
+      token("(A, b)", "out-op"),
+      "  ",
+      token("nsolve", "out-fn"),
+      token("(\"x^2-2\", \"x\", 1)", "out-op")
+    ], "muted");
+    writeLineRich([token("Uncertainty & risk:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("range", "out-fn"),
+      token("(lo,hi)", "out-op"),
+      "  ",
+      token("mean", "out-fn"),
+      token("(range)", "out-op"),
+      "  ",
+      token("dist.normal dist.tri dist.uniform", "out-keyword")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("cdf pvalue prob_lt prob_gt", "out-keyword"),
+      "  ",
+      token("sample", "out-fn"),
+      token("(dist)", "out-op"),
+      "  ",
+      token("mc", "out-fn"),
+      token("(2000, range(0,10))", "out-op")
+    ], "muted");
     writeLineRich([
       "  ",
       token("area_rect", "out-fn"),
@@ -397,6 +444,37 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("mget/mset", "out-fn"),
       " ",
       token("mspawnx/mspawny", "out-fn")
+    ], "muted");
+    writeLineRich([token("Graphs (cost graph theory):", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("graph", "out-fn"),
+      token("(\"name\")", "out-op"),
+      "  ",
+      token("gnode", "out-fn"),
+      token("(g,\"id\", cost)", "out-op"),
+      "  ",
+      token("gexpr", "out-fn"),
+      token("(g,\"id\", \"expr\")", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("gedge", "out-fn"),
+      token("(g,\"from\",\"to\")", "out-op"),
+      "  ",
+      token("gcalcx", "out-fn"),
+      token("(g)", "out-op"),
+      "  ",
+      token("gtotal", "out-fn"),
+      token("(g)", "out-op")
+    ], "muted");
+    writeLineRich([token("CSI semantics:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("csi_norm csi_div csi_section csi_item", "out-keyword"),
+      "  ",
+      token("csi_rollup", "out-fn"),
+      token("(line1, line2, ...)", "out-op")
     ], "muted");
     writeLineRich([
       "  ",
