@@ -144,6 +144,8 @@ defineUnit("$", "cur", 1, ["dollar", "dollars"]);
 defineUnit("pct", "scalar", 0.01, ["percent"]);
 defineUnit("%", "scalar", 0.01);
 
+defineUnit("o.c.", "scalar", 1, ["oc", "o.c", "on_center", "oncenter"]);
+
 defineUnit("layer", "layer", 1);
 
 export function isUnitToken(token){

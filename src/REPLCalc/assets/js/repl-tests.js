@@ -1095,16 +1095,17 @@ export function createTests({
         steps: [
           "a = 3 ft",
           "b = graph(\"g\")",
-          "kind(a) + ',' + kind(b)",
+          "ok = if(kind(a) == \"len\" && kind(b) == \"graph\", 1, 0)",
+          "ok",
         ],
-        expect: "len,graph",
+        expect: 1,
       },
       {
         name: "unit algebra dimkey supports qty and kind strings",
         steps: [
           "k1 = dimkey(3 ft)",
           "k2 = dimkey(\"len\")",
-          "k1 == k2",
+          "if(k1 == k2, 1, 0)",
         ],
         expect: 1,
       },

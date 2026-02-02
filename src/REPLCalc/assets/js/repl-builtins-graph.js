@@ -105,13 +105,6 @@ export function attachGraphBuiltins(baseFns, {
       totals[id] = base === undefined || base === null ? 0 : base;
     }
 
-    for (const from of order){
-      const fromTotal = totals[from];
-      for (const to of out[from] || []){
-        totals[to] = totals[to] === undefined ? fromTotal : add(totals[to], fromTotal);
-      }
-    }
-
     for (const id of Object.keys(totals)){
       graph.nodes[id].total = totals[id];
     }

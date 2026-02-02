@@ -191,6 +191,24 @@ export function attachConstructionBuiltins(baseFns, {
     return q.value / 2000;
   });
 
+  baseFns.to_sec = defFn("to_sec", 1, (x) => {
+    const q = isQty(x) ? x : makeQty(x, "time");
+    if (q.kind !== "time") throw new Error("to_sec expects time");
+    return q.value;
+  });
+
+  baseFns.to_min = defFn("to_min", 1, (x) => {
+    const q = isQty(x) ? x : makeQty(x, "time");
+    if (q.kind !== "time") throw new Error("to_min expects time");
+    return q.value / 60;
+  });
+
+  baseFns.to_hr = defFn("to_hr", 1, (x) => {
+    const q = isQty(x) ? x : makeQty(x, "time");
+    if (q.kind !== "time") throw new Error("to_hr expects time");
+    return q.value / 3600;
+  });
+
   baseFns.not = defFn("not", 1, (x) => (isTruthy(x) ? 0 : 1));
   baseFns.and = defFn("and", 2, (a, b) => (isTruthy(a) && isTruthy(b)) ? 1 : 0);
   baseFns.or = defFn("or", 2, (a, b) => (isTruthy(a) || isTruthy(b)) ? 1 : 0);

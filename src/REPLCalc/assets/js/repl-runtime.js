@@ -18,7 +18,20 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
   }
 
   function getFns(){
-    return Object.assign(Object.create(null), baseFns, metaFns, state.userFns);
+    const merged = Object.assign(Object.create(null), baseFns, metaFns, state.userFns);
+    if (baseFns.line && metaFns.line){
+      merged.line = {
+        arity: -1,
+        ctx: true,
+        impl: (ctx, ...args) => {
+          if (args.length && typeof args[0] === "string"){
+            return baseFns.line.impl(ctx, ...args);
+          }
+          return metaFns.line.impl(...args);
+        },
+      };
+    }
+    return merged;
   }
 
   function defineUserFn(name, params, expr){
