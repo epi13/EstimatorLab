@@ -21,7 +21,6 @@ import { createGfxTools, GFX_COLOR_TOKENS } from "./repl-gfx.js";
 import { createRuntime } from "./repl-runtime.js";
 import { createEvaluator } from "./repl-evaluator.js";
 import { createDocs } from "./repl-docs.js";
-import { createHelp } from "./repl-help.js";
 import { createSession } from "./repl-session.js";
 import { createEditor } from "./repl-editor.js";
 import { createTests } from "./repl-tests.js";
@@ -97,6 +96,23 @@ export function initRepl(){
     defineUserFn: runtime.defineUserFn,
   });
 
+  const cmdRunner = (cmd, arg) => {
+    const name = String(cmd || "").trim();
+    const a = String(arg || "").trim();
+    if (name === "reset"){ session.resetAll(); return 1; }
+    if (name === "save"){ session.saveProfile(a); return 1; }
+    if (name === "mux"){ session.muxProfile(a); return 1; }
+    if (name === "load"){ session.loadProfile(a); return 1; }
+    if (name === "profiles"){ session.listProfiles(); return 1; }
+    if (name === "pin"){ session.pinSymbol(a); return 1; }
+    if (name === "unpin"){ session.unpinSymbol(a); return 1; }
+    if (name === "which"){ session.whichSymbol(a); return 1; }
+    if (name === "use"){ session.useSymbolFromProfile(a); return 1; }
+    if (name === "diff"){ session.diffSymbol(a); return 1; }
+    if (name === "theme"){ ui.setTheme(a || "default"); return state.theme; }
+    throw new Error(`cmd(): unsupported command: ${name}`);
+  };
+
   const evaluator = createEvaluator({
     state,
     getFns: runtime.getFns,
@@ -115,6 +131,7 @@ export function initRepl(){
     formatResult,
     ensureSymbolsLoaded: session.ensureSymbolsLoaded,
     usageTracker: session.usageTracker,
+    cmdRunner,
   });
 
   const runLoopStatements = (source) => {
@@ -256,12 +273,6 @@ export function initRepl(){
     token: ui.token,
     GFX_COLOR_TOKENS,
   });
-  const help = createHelp({
-    writeLine: ui.writeLine,
-    writeLineRich: ui.writeLineRich,
-    token: ui.token,
-    GFX_COLOR_TOKENS,
-  });
 
   const tests = createTests({
     state,
@@ -288,7 +299,7 @@ export function initRepl(){
     ui,
     editor,
     userFnUi,
-    docs: { ...docs, ...help },
+    docs,
     session,
     tests,
     evaluator,

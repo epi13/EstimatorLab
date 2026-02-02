@@ -26,7 +26,10 @@ export function createInputHandlers({
     btnMethods,
     btnExport,
     btnImport,
+    btnUpload,
+    btnDownload,
     btnReset,
+    fileImport,
     fnNameInput,
     fnParamsInput,
     fnExprInput,
@@ -55,7 +58,7 @@ export function createInputHandlers({
   } = editor;
   const { renderUserFunctions, clearFnForm } = userFnUi;
 
-  const { showHelp, showDocs, listVars, listMethods } = docs;
+  const { showDocs, listVars, listMethods } = docs;
   const {
     exportSession,
     importSession,
@@ -134,7 +137,6 @@ export function createInputHandlers({
         try{
           if (parsed.type === "cmd"){
             const {cmd,arg} = parsed;
-            if (cmd === "help"){ showHelp(); continue; }
             if (cmd === "docs"){ showDocs(); continue; }
             if (cmd === "clear"){ clearTerminal(); continue; }
             if (cmd === "vars"){ listVars(); continue; }
@@ -162,6 +164,86 @@ export function createInputHandlers({
               const text = await readClipboard();
               importSession(text);
               writeLine("Imported profile from clipboard.", "ok");
+              continue;
+            }
+
+            if (cmd === "upload"){
+              const name = (arg || "").trim() || "file";
+              if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error("upload expects a variable name");
+              if (!fileImport) throw new Error("File upload not available");
+              const file = await new Promise((resolve) => {
+                fileImport.value = "";
+                fileImport.onchange = () => resolve(fileImport.files && fileImport.files[0] ? fileImport.files[0] : null);
+                fileImport.click();
+              });
+              if (!file) throw new Error("No file selected");
+              const text = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error("Could not read file"));
+                reader.onload = () => resolve(String(reader.result || ""));
+                reader.readAsText(file);
+              });
+
+              if (file.name.toLowerCase().endsWith(".json")){
+                try{
+                  const parsedJson = JSON.parse(text);
+                  if (parsedJson && typeof parsedJson === "object" && parsedJson.version === 2 && parsedJson.profiles){
+                    importSession(text);
+                    writeLine(`Imported profile from ${file.name}.`, "ok");
+                    continue;
+                  }
+                }catch{}
+              }
+
+              let stored = text;
+              if (file.name.toLowerCase().endsWith(".json")){
+                try{
+                  stored = runExpression(`from_json(${JSON.stringify(text)})`);
+                }catch{
+                  stored = text;
+                }
+              }
+              state.vars[name] = stored;
+              recordSymbolDefinition({ name, kind: "var", expr: `:upload ${file.name}`, value: stored });
+              writeLine(`Uploaded ${file.name} -> ${name}.`, "ok");
+              continue;
+            }
+
+            if (cmd === "download"){
+              const parts = (arg || "").trim().split(/\s+/).filter(Boolean);
+              const name = parts[0];
+              const format = (parts[1] || "").toLowerCase();
+              const filename = parts[2] || "";
+              if (!name) throw new Error("download expects a variable name");
+              if (!Object.prototype.hasOwnProperty.call(state.vars, name)) throw new Error(`Unknown variable: ${name}`);
+              let mime = "text/plain";
+              let content;
+              if (format === "csv"){
+                mime = "text/csv";
+                content = runExpression(`to_csv(get(${JSON.stringify(name)}))`);
+              }else if (format === "json" || format === ""){
+                mime = "application/json";
+                const val = state.vars[name];
+                if (typeof val === "string" && format === ""){
+                  content = val;
+                  mime = "text/plain";
+                }else{
+                  content = runExpression(`to_json(get(${JSON.stringify(name)}))`);
+                }
+              }else{
+                throw new Error("download format must be csv or json");
+              }
+              const outName = filename || (format === "csv" ? `${name}.csv` : `${name}.json`);
+              const blob = new Blob([String(content)], { type: mime });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = outName;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+              writeLine(`Downloaded ${name} -> ${outName}.`, "ok");
               continue;
             }
             throw new Error(`Unknown command: :${cmd}`);
@@ -434,7 +516,7 @@ export function createInputHandlers({
     closeAutocomplete();
   });
 
-  btnHelp.addEventListener("click", showHelp);
+  btnHelp.addEventListener("click", showDocs);
   btnClear.addEventListener("click", clearTerminal);
   btnVars.addEventListener("click", listVars);
   btnMethods.addEventListener("click", listMethods);
@@ -453,6 +535,32 @@ export function createInputHandlers({
       writeLine(err.message || String(err), "err");
     }
   });
+
+  if (btnUpload){
+    btnUpload.addEventListener("click", async () => {
+      try{
+        const name = (prompt("Upload into variable name:", "file") || "").trim() || "file";
+        await handleLine(`:upload ${name}`);
+      }catch(err){
+        writeLine(err.message || String(err), "err");
+      }
+    });
+  }
+
+  if (btnDownload){
+    btnDownload.addEventListener("click", async () => {
+      try{
+        const name = (prompt("Download variable name:", "") || "").trim();
+        if (!name) return;
+        const format = (prompt("Format (json|csv):", "json") || "json").trim();
+        const filename = (prompt("Filename (optional):", "") || "").trim();
+        const cmd = [":download", name, format, filename].filter((p) => p && p.length).join(" ");
+        await handleLine(cmd);
+      }catch(err){
+        writeLine(err.message || String(err), "err");
+      }
+    });
+  }
 
   btnFnSave.addEventListener("click", () => {
     try{
@@ -480,7 +588,7 @@ export function createInputHandlers({
   function boot(){
     setTheme("default");
     writeLine("Estimator REPL initialized.", "ok");
-    writeLine("Type :help for commands and examples.", "muted");
+    writeLine("Type :docs for commands and examples.", "muted");
     writeLine("Try: concrete_cy(1200 sf, 4 in)", "muted");
     writeLine("Try: total = markup(burden(12500, 16.7), 35)", "muted");
     writeLine("Try: so crew_cost(rate, hours) = rate * hours", "muted");

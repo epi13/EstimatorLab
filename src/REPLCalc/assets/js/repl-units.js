@@ -151,11 +151,42 @@ export function isUnitToken(token){
 }
 
 export function makeQty(value, kind = "scalar"){
-  return { value, kind };
+  const qty = { value, kind };
+  const dim = dimFromKind(kind);
+  if (dim && dim.cur === 1){
+    qty.__cost = true;
+    qty.breakdown = { type: "leaf", value };
+  }
+  return qty;
 }
 
 export function isQty(value){
   return value && typeof value === "object" && typeof value.value === "number" && typeof value.kind === "string";
+}
+
+export function isCostQty(value){
+  if (!isQty(value)) return false;
+  const dim = dimFromKind(value.kind);
+  return Boolean(dim && dim.cur === 1);
+}
+
+function costLeaf(value){
+  return { type: "leaf", value };
+}
+
+function normalizeCostBreakdown(value){
+  if (!value || typeof value !== "object") return null;
+  if (!isCostQty(value)) return null;
+  if (value.breakdown) return value.breakdown;
+  return costLeaf(value.value);
+}
+
+function applyCostMeta(result, breakdown){
+  if (!result || typeof result !== "object") return result;
+  if (!breakdown) return result;
+  result.__cost = true;
+  result.breakdown = breakdown;
+  return result;
 }
 
 const DIMENSIONS = {
@@ -341,7 +372,13 @@ export function add(a, b){
   if (isQty(a) && isQty(b)){
     if (!sameDimension(a, b)) throw new Error(`Unit mismatch: ${a.kind} + ${b.kind}`);
     const kind = kindFromDim(dimFromKind(a.kind));
-    return makeQty(a.value + b.value, kind);
+    const result = makeQty(a.value + b.value, kind);
+    if (isCostQty(result)){
+      const left = normalizeCostBreakdown(a);
+      const right = normalizeCostBreakdown(b);
+      if (left && right) return applyCostMeta(result, { type: "op", op: "+", a: left, b: right });
+    }
+    return result;
   }
   if (isQty(a) && !isQty(b)){
     if (!isScalarKind(a.kind)) throw new Error("Cannot add scalar to a unit quantity without a unit.");
@@ -358,7 +395,13 @@ export function sub(a, b){
   if (isQty(a) && isQty(b)){
     if (!sameDimension(a, b)) throw new Error(`Unit mismatch: ${a.kind} - ${b.kind}`);
     const kind = kindFromDim(dimFromKind(a.kind));
-    return makeQty(a.value - b.value, kind);
+    const result = makeQty(a.value - b.value, kind);
+    if (isCostQty(result)){
+      const left = normalizeCostBreakdown(a);
+      const right = normalizeCostBreakdown(b);
+      if (left && right) return applyCostMeta(result, { type: "op", op: "-", a: left, b: right });
+    }
+    return result;
   }
   if (isQty(a) && !isQty(b)){
     if (!isScalarKind(a.kind)) throw new Error("Cannot subtract scalar from a unit quantity without a unit.");
@@ -374,15 +417,33 @@ export function sub(a, b){
 export function mul(a, b){
   if (isQty(a) && isQty(b)){
     const dim = combineDims(dimFromKind(a.kind), dimFromKind(b.kind), 1);
-    return makeQty(a.value * b.value, kindFromDim(dim));
+    const resultKind = kindFromDim(dim);
+    const result = makeQty(a.value * b.value, resultKind);
+    if (isCostQty(result)){
+      const left = normalizeCostBreakdown(a);
+      const right = normalizeCostBreakdown(b);
+      if (left && !right) return applyCostMeta(result, { type: "scale", factor: b.value, inner: left });
+      if (!left && right) return applyCostMeta(result, { type: "scale", factor: a.value, inner: right });
+    }
+    return result;
   }
   if (isQty(a) && !isQty(b)){
     const dim = dimFromKind(a.kind);
-    return makeQty(a.value * b, kindFromDim(dim));
+    const result = makeQty(a.value * b, kindFromDim(dim));
+    if (isCostQty(result)){
+      const left = normalizeCostBreakdown(a);
+      if (left) return applyCostMeta(result, { type: "scale", factor: b, inner: left });
+    }
+    return result;
   }
   if (!isQty(a) && isQty(b)){
     const dim = dimFromKind(b.kind);
-    return makeQty(a * b.value, kindFromDim(dim));
+    const result = makeQty(a * b.value, kindFromDim(dim));
+    if (isCostQty(result)){
+      const right = normalizeCostBreakdown(b);
+      if (right) return applyCostMeta(result, { type: "scale", factor: a, inner: right });
+    }
+    return result;
   }
   return a * b;
 }
@@ -390,15 +451,33 @@ export function mul(a, b){
 export function div(a, b){
   if (isQty(a) && isQty(b)){
     const dim = combineDims(dimFromKind(a.kind), dimFromKind(b.kind), -1);
-    return makeQty(a.value / b.value, kindFromDim(dim));
+    const resultKind = kindFromDim(dim);
+    const result = makeQty(a.value / b.value, resultKind);
+    if (isCostQty(result)){
+      const left = normalizeCostBreakdown(a);
+      const right = normalizeCostBreakdown(b);
+      if (left && !right) return applyCostMeta(result, { type: "scale", factor: 1 / b.value, inner: left });
+      if (!left && right) return applyCostMeta(result, { type: "scale", factor: a.value, inner: right });
+    }
+    return result;
   }
   if (isQty(a) && !isQty(b)){
     const dim = dimFromKind(a.kind);
-    return makeQty(a.value / b, kindFromDim(dim));
+    const result = makeQty(a.value / b, kindFromDim(dim));
+    if (isCostQty(result)){
+      const left = normalizeCostBreakdown(a);
+      if (left) return applyCostMeta(result, { type: "scale", factor: 1 / b, inner: left });
+    }
+    return result;
   }
   if (!isQty(a) && isQty(b)){
     const dim = combineDims({}, dimFromKind(b.kind), -1);
-    return makeQty(a / b.value, kindFromDim(dim));
+    const result = makeQty(a / b.value, kindFromDim(dim));
+    if (isCostQty(result)){
+      const right = normalizeCostBreakdown(b);
+      if (right) return applyCostMeta(result, { type: "scale", factor: a, inner: right });
+    }
+    return result;
   }
   return a / b;
 }
@@ -408,14 +487,24 @@ export function pow(a, b){
     if (!isScalarKind(b.kind)) throw new Error("Exponent must be scalar.");
     const exp = b.value;
     if (!Number.isInteger(exp) && !isScalarKind(a.kind)){
-      throw new Error("Exponent must be integer for dimensioned quantities.");
+      if (exp !== 0.5) throw new Error("Exponent must be integer for dimensioned quantities.");
+      const dim = dimFromKind(a.kind);
+      for (const val of Object.values(dim)){
+        if (!Number.isInteger(val)) throw new Error("Invalid dimension exponent.");
+        if (val % 2 !== 0) throw new Error("sqrt() requires even dimension exponents.");
+      }
     }
     const dim = scaleDim(dimFromKind(a.kind), exp);
     return makeQty(Math.pow(a.value, exp), kindFromDim(dim));
   }
   if (isQty(a) && !isQty(b)){
     if (!Number.isInteger(b) && !isScalarKind(a.kind)){
-      throw new Error("Exponent must be integer for dimensioned quantities.");
+      if (b !== 0.5) throw new Error("Exponent must be integer for dimensioned quantities.");
+      const dim = dimFromKind(a.kind);
+      for (const val of Object.values(dim)){
+        if (!Number.isInteger(val)) throw new Error("Invalid dimension exponent.");
+        if (val % 2 !== 0) throw new Error("sqrt() requires even dimension exponents.");
+      }
     }
     const dim = scaleDim(dimFromKind(a.kind), b);
     return makeQty(Math.pow(a.value, b), kindFromDim(dim));
@@ -452,3 +541,11 @@ export function formatResult(value){
   }
   return { main: qtyToString(value), extra: "" };
 }
+
+export const __internal = {
+  dimFromKind,
+  dimKey,
+  kindFromDim,
+  combineDims,
+  scaleDim,
+};

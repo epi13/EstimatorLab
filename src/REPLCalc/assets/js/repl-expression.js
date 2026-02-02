@@ -1,4 +1,5 @@
-import { UNIT, add, div, isQty, isScalarKind, isUnitToken, makeQty, mul, pow, sameDimension, sub } from "./repl-units.js";
+import { add, div, mul, pow, sub } from "./repl-ops.js";
+import { UNIT, isQty, isScalarKind, isUnitToken, makeQty, sameDimension } from "./repl-units.js";
 
 const OPS = {
   "||": { prec: 0, assoc: "L", fn: (a, b) => (isTruthy(a) || isTruthy(b)) ? 1 : 0 },
@@ -56,12 +57,45 @@ export function tokenize(src){
   const isSpace = (c) => /\s/.test(c);
   const isDigit = (c) => /[0-9]/.test(c);
   const isIdentStart = (c) => /[A-Za-z_$%]/.test(c);
-  const isIdent = (c) => /[A-Za-z0-9_$%]/.test(c);
+  const isIdent = (c) => /[A-Za-z0-9_$%.]/.test(c);
 
   while (i < s.length){
     const c = s[i];
     if (isSpace(c)){
       i += 1;
+      continue;
+    }
+
+    if (c === "{"){
+      let j = i + 1;
+      let depth = 1;
+      let quote = null;
+      while (j < s.length){
+        const ch = s[j];
+        if (quote){
+          if (ch === "\\"){
+            j += 2;
+            continue;
+          }
+          if (ch === quote) quote = null;
+          j += 1;
+          continue;
+        }
+        if (ch === "\"" || ch === "'"){
+          quote = ch;
+          j += 1;
+          continue;
+        }
+        if (ch === "{") depth += 1;
+        else if (ch === "}"){
+          depth -= 1;
+          if (depth === 0) break;
+        }
+        j += 1;
+      }
+      if (s[j] !== "}") throw new Error("Unterminated object literal");
+      out.push({ type: "obj", value: s.slice(i, j + 1) });
+      i = j + 1;
       continue;
     }
 
@@ -181,19 +215,37 @@ export function toRPN(tokens){
 
   const isUnaryMinus = (t, prev) => t.type === "op" && t.value === "-" && (!prev || prev.type === "(" || prev.type === "," || (prev.type === "op"));
 
+  function markCallArgIfNeeded(){
+    for (let i = stack.length - 1; i >= 0; i--){
+      const entry = stack[i];
+      if (!entry || entry.type !== "(") continue;
+      if (!entry.call) return;
+      if (!entry.expectingValue) return;
+      entry.argc += 1;
+      entry.expectingValue = false;
+      return;
+    }
+  }
+
   let prev = null;
   for (let idx = 0; idx < tokens.length; idx++){
     const t = tokens[idx];
 
     if (t.type === "num"){
+      markCallArgIfNeeded();
       output.push(t);
     }else if (t.type === "str"){
+      markCallArgIfNeeded();
+      output.push(t);
+    }else if (t.type === "obj"){
+      markCallArgIfNeeded();
       output.push(t);
     }else if (t.type === "id"){
       const next = tokens[idx + 1];
       if (next && next.type === "("){
         stack.push({ type: "fn", value: t.value });
       }else{
+        markCallArgIfNeeded();
         output.push(t);
       }
     }else if (t.type === ","){
@@ -201,8 +253,16 @@ export function toRPN(tokens){
         output.push(stack.pop());
       }
       if (!stack.length) throw new Error("Misplaced comma");
+      for (let i = stack.length - 1; i >= 0; i--){
+        const entry = stack[i];
+        if (!entry || entry.type !== "(") continue;
+        if (!entry.call) break;
+        entry.expectingValue = true;
+        break;
+      }
     }else if (t.type === "op"){
       if (isUnaryMinus(t, prev)){
+        markCallArgIfNeeded();
         output.push({ type: "num", value: 0 });
       }
       const o1 = t.value;
@@ -221,16 +281,21 @@ export function toRPN(tokens){
       }
       stack.push(t);
     }else if (t.type === "("){
-      stack.push(t);
+      const isCall = stack.length && stack[stack.length - 1].type === "fn";
+      stack.push({ type: "(", call: Boolean(isCall), argc: 0, expectingValue: Boolean(isCall) });
     }else if (t.type === ")"){
       while (stack.length && stack[stack.length - 1].type !== "("){
         output.push(stack.pop());
       }
       if (!stack.length) throw new Error("Mismatched parentheses");
-      stack.pop();
+      const paren = stack.pop();
 
       if (stack.length && stack[stack.length - 1].type === "fn"){
-        output.push(stack.pop());
+        const fnTok = stack.pop();
+        if (paren && paren.call){
+          fnTok.argc = paren.argc;
+        }
+        output.push(fnTok);
       }
     }else{
       throw new Error("Unknown token");
@@ -289,6 +354,8 @@ export function evalRPN(rpn, ctx){
       st.push(t.value);
     }else if (t.type === "str"){
       st.push(t.value);
+    }else if (t.type === "obj"){
+      st.push({ __obj: true, raw: t.value });
     }else if (t.type === "id"){
       st.push(getVar(t.value));
     }else if (t.type === "op"){
@@ -302,14 +369,19 @@ export function evalRPN(rpn, ctx){
       const fn = ctx.fns[fnName];
       if (!fn) throw new Error(`Unknown function: ${fnName}()`);
 
-      const arity = fn.arity;
+      const declaredArity = fn.arity;
+      const arity = declaredArity < 0 ? (t.argc ?? 0) : declaredArity;
       const args = [];
       for (let i = 0; i < arity; i++){
         const v = st.pop();
         if (v === undefined) throw new Error(`Not enough args for ${fnName}()`);
         args.unshift(v);
       }
-      st.push(fn.impl(...args));
+      if (fn.ctx){
+        st.push(fn.impl(ctx, ...args));
+      }else{
+        st.push(fn.impl(...args));
+      }
     }else{
       throw new Error("Bad RPN token");
     }

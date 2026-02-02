@@ -98,22 +98,16 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       " i ",
       token("in", "out-keyword"),
       " ",
-      token("1..4", "out-number"),
-      ": ",
-      token("total", "out-var"),
+      token("1..5", "out-number"),
       " ",
-      token("=", "out-op"),
+      token("step", "out-keyword"),
       " ",
-      token("total", "out-var"),
-      " ",
-      token("+", "out-op"),
-      " i  |  ",
+      token("1", "out-number"),
+      ": expr   |   ",
       token("repeat", "out-keyword"),
       " ",
       token("3", "out-number"),
-      ": ",
-      token("waste", "out-fn"),
-      token("(100 sf, 5)", "out-op")
+      ": expr"
     ], "muted");
     writeLineRich([
       "  Solve: ",
@@ -238,6 +232,75 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       "  ",
       token("round_up", "out-fn"),
       token("(x,step)", "out-op")
+    ], "muted");
+    writeLineRich([token("Rate calculus:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("rate", "out-fn"),
+      token("(\"name\", base, {crew:2, eff:0.8})", "out-op"),
+      "  ",
+      token("rate_eff", "out-fn"),
+      token("(r)", "out-op"),
+      "  ",
+      token("prod", "out-fn"),
+      token("(r, 2 hr)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("time_for", "out-fn"),
+      token("(400 sf, r)", "out-op"),
+      "  ",
+      token("rate_inv", "out-fn"),
+      token("(r)", "out-op"),
+      "  ",
+      token("crew", "out-fn"),
+      token("(3, r)", "out-op"),
+      "  ",
+      token("learn", "out-fn"),
+      token("(r, 4, -0.5)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("rate_with", "out-fn"),
+      token("(r, {crew:3})", "out-op"),
+      "  ",
+      token("rate_factors", "out-fn"),
+      token("(r)", "out-op"),
+      "  ",
+      token("tsim", "out-fn"),
+      token("(1 hr, 15 min, \"dt\")", "out-op")
+    ], "muted");
+    writeLineRich([token("Scenarios (compare futures):", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("scenario", "out-fn"),
+      token("(\"base\", {qty: 100, unit: 2.5, total: qty*unit})", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("sc_eval", "out-fn"),
+      token("(sc, \"total\")", "out-op"),
+      "  ",
+      token("sc_get", "out-fn"),
+      token("(sc, \"qty\")", "out-op"),
+      "  ",
+      token("sc_resolve", "out-fn"),
+      token("(sc)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("sc_merge", "out-fn"),
+      token("(a, b)", "out-op"),
+      "  ",
+      token("sc_compare", "out-fn"),
+      token("(base, alt, \"total\", \"cmp\")", "out-op")
+    ], "muted");
+    writeLineRich([token("Unit + cost algebra:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("dimkey compat assert_dim simplify", "out-keyword"),
+      "  |  ",
+      token("cost_leaf cost_breakdown", "out-keyword")
     ], "muted");
     writeLineRich([
       "  ",
@@ -394,54 +457,28 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       " • focus gfx canvas for Space/Arrow controls"
     ], "muted");
     writeLineRich([token("Session commands:", "out-label")], "muted");
-    writeLineRich([
-      "  ",
-      token(":vars", "out-command"),
-      " list variables   ",
-      token(":methods", "out-command"),
-      " list user methods   ",
-      token(":reset", "out-command"),
-      " wipe session"
-    ], "muted");
-    writeLineRich([
-      "  ",
-      token(":save", "out-command"),
-      " name save profile   ",
-      token(":load", "out-command"),
-      " name load profile"
-    ], "muted");
-    writeLineRich([
-      "  ",
-      token(":profiles", "out-command"),
-      " list profiles"
-    ], "muted");
-    writeLineRich([
-      "  ",
-      token(":export", "out-command"),
-      " copy JSON      ",
-      token(":import", "out-command"),
-      " load JSON from clipboard"
-    ], "muted");
-    writeLineRich([
-      "  ",
-      token(":theme", "out-command"),
-      " ",
-      token("default", "out-keyword"),
-      token("|", "out-op"),
-      token("amber", "out-keyword"),
-      token("|", "out-op"),
-      token("matrix", "out-keyword")
-    ], "muted");
-    writeLineRich([
-      "  ",
-      token(":test", "out-command"),
-      " run REPL tests"
-    ], "muted");
-    writeLineRich([
-      "  ",
-      token(":doom", "out-command"),
-      " run gfx loop demo"
-    ], "muted");
+    writeLineRich(["  ", token(":help", "out-command"), " quick help (see :docs)"] , "muted");
+    writeLineRich(["  ", token(":docs", "out-command"), " show this page"], "muted");
+    writeLineRich(["  ", token(":clear", "out-command"), " clear terminal output"], "muted");
+    writeLineRich(["  ", token(":vars", "out-command"), " list variables"], "muted");
+    writeLineRich(["  ", token(":methods", "out-command"), " list user methods"], "muted");
+    writeLineRich(["  ", token(":reset", "out-command"), " reset vars + history"], "muted");
+    writeLineRich(["  ", token(":save", "out-command"), " name [...] save modular profile"], "muted");
+    writeLineRich(["  ", token(":mux", "out-command"), " name merge loaded profiles"], "muted");
+    writeLineRich(["  ", token(":load", "out-command"), " name load saved profile"], "muted");
+    writeLineRich(["  ", token(":profiles", "out-command"), " list saved profiles"], "muted");
+    writeLineRich(["  ", token(":pin", "out-command"), " name always include symbol when saving"], "muted");
+    writeLineRich(["  ", token(":unpin", "out-command"), " name remove pin"], "muted");
+    writeLineRich(["  ", token(":which", "out-command"), " name show resolved symbol origin"], "muted");
+    writeLineRich(["  ", token(":use", "out-command"), " name@profile force symbol selection"], "muted");
+    writeLineRich(["  ", token(":diff", "out-command"), " name compare symbol versions"], "muted");
+    writeLineRich(["  ", token(":export", "out-command"), " copy profile JSON to clipboard"], "muted");
+    writeLineRich(["  ", token(":import", "out-command"), " load profile JSON from clipboard"], "muted");
+    writeLineRich(["  ", token(":upload", "out-command"), " name upload a file into a variable (json auto-parsed)"], "muted");
+    writeLineRich(["  ", token(":download", "out-command"), " name [csv|json] [filename] download a variable"], "muted");
+    writeLineRich(["  ", token(":theme", "out-command"), " default|amber|matrix"], "muted");
+    writeLineRich(["  ", token(":test", "out-command"), " run the built-in test suite"], "muted");
+    writeLineRich(["  ", token(":doom", "out-command"), " run the gfx loop demo"], "muted");
     writeLineRich([token("Tips:", "out-label")], "muted");
     writeLineRich([
       "  - Shift+Enter inserts a new line. Enter runs when the statement is complete."

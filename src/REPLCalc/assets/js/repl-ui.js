@@ -13,7 +13,11 @@ export function createUi(state){
   const btnMethods = document.getElementById('btnMethods');
   const btnExport = document.getElementById('btnExport');
   const btnImport = document.getElementById('btnImport');
+  const btnUpload = document.getElementById('btnUpload');
+  const btnDownload = document.getElementById('btnDownload');
   const btnReset = document.getElementById('btnReset');
+
+  const fileImport = document.getElementById('fileImport');
 
   const fnNameInput = document.getElementById('fnName');
   const fnParamsInput = document.getElementById('fnParams');
@@ -102,7 +106,10 @@ export function createUi(state){
     btnMethods,
     btnExport,
     btnImport,
+    btnUpload,
+    btnDownload,
     btnReset,
+    fileImport,
     fnNameInput,
     fnParamsInput,
     fnExprInput,

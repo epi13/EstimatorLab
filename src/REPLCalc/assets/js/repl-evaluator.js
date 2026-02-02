@@ -28,6 +28,7 @@ export function createEvaluator({
   formatResult,
   ensureSymbolsLoaded,
   usageTracker,
+  cmdRunner,
 }){
   function collectIdentifierNames(tokens){
     const names = new Set();
@@ -198,6 +199,11 @@ export function createEvaluator({
       vars,
       fns,
       aliases: aliasMap,
+      evalString: (innerExpr, overrides = null) => {
+        const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
+        return runExpressionWithContext(innerExpr, merged);
+      },
+      cmdRunner,
       ...getUsageHooks(),
     });
   }
@@ -217,6 +223,11 @@ export function createEvaluator({
       fns,
       aliases: resolvedAliases,
       unitOverrides,
+      evalString: (innerExpr, overrides = null) => {
+        const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
+        return runExpressionWithOverrides(innerExpr, merged, unitOverrides, null);
+      },
+      cmdRunner,
       ...getUsageHooks(),
     });
   }

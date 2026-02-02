@@ -1142,7 +1142,18 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         if (!mapObj || typeof mapObj !== "object" || !mapObj.__map || !mapObj.data){
           throw new Error("raycast expects a map() as the first argument");
         }
-        if (![px, py, yaw, fov, viewH, maxD, step, steps, colStep].every(Number.isFinite)){
+
+        const toNum = (v) => (isQty(v) ? v.value : v);
+        const nPx = toNum(px);
+        const nPy = toNum(py);
+        const nYaw = toNum(yaw);
+        const nFov = toNum(fov);
+        const nViewH = toNum(viewH);
+        const nMaxD = toNum(maxD);
+        const nStep = toNum(step);
+        const nStepsIn = toNum(steps);
+        const nColStep = toNum(colStep);
+        if (![nPx, nPy, nYaw, nFov, nViewH, nMaxD, nStep, nStepsIn, nColStep].every(Number.isFinite)){
           throw new Error("raycast expects numeric arguments");
         }
         const mapW = mapObj.w | 0;
@@ -1150,11 +1161,11 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         const data = mapObj.data;
         const w = buffer.width | 0;
         const h = buffer.height | 0;
-        const vh = Math.max(1, Math.min(h, Math.floor(viewH)));
-        const md = Math.max(0.1, maxD);
-        const st = Math.max(0.001, step);
-        const nSteps = Math.max(1, Math.floor(steps));
-        const cs = Math.max(1, Math.floor(colStep));
+        const vh = Math.max(1, Math.min(h, Math.floor(nViewH)));
+        const md = Math.max(0.1, nMaxD);
+        const st = Math.max(0.001, nStep);
+        const nSteps = Math.max(1, Math.floor(nStepsIn));
+        const cs = Math.max(1, Math.floor(nColStep));
 
         function sampleTile(x, y){
           const ix = x | 0;
@@ -1173,33 +1184,112 @@ fn fs(in: VSOut) -> @location(0) vec4f {
           }
         }
 
+        const isSpriteTile = (t) => t === 3 || t === 4 || t === 5 || t === 6 || t === 7 || t === 8 || t === 9 || t === 10 || t === 11;
+
+        function lightAt(worldX, worldY){
+          const cx = Math.floor(worldX);
+          const cy = Math.floor(worldY);
+          let light = 0;
+          const r = 4;
+          for (let oy = -r; oy <= r; oy++){
+            const ty = cy + oy;
+            if (ty < 0 || ty >= mapH) continue;
+            for (let ox = -r; ox <= r; ox++){
+              const tx = cx + ox;
+              if (tx < 0 || tx >= mapW) continue;
+              const tt = data[ty * mapW + tx] | 0;
+              if (tt !== 8 && tt !== 9) continue;
+              const lx = tx + 0.5;
+              const ly = ty + 0.5;
+              const dx = worldX - lx;
+              const dy = worldY - ly;
+              const d2 = dx * dx + dy * dy;
+              const intensity = tt === 8 ? 1.15 : 0.85;
+              light += intensity / (1 + d2 * 0.9);
+            }
+          }
+          return light;
+        }
+
+        function shadeByBrightness(bright, base){
+          if (base === "warn"){
+            if (bright < 0.32) return "muted";
+            if (bright < 0.68) return "warn";
+            return "text";
+          }
+          if (bright < 0.28) return "muted";
+          if (bright < 0.55) return "accent-2";
+          if (bright < 0.82) return base;
+          return "text";
+        }
+
         for (let x = 0; x < w; x += cs){
           const cam = x / w - 0.5;
-          const ray = yaw + cam * fov;
+          const ray = nYaw + cam * nFov;
           const rc = Math.cos(ray);
           const rs = Math.sin(ray);
           let bestD = md;
           let bestT = 0;
+          let spriteD = md + 1;
+          let spriteT = 0;
           for (let i = 1; i <= nSteps; i++){
             const d = i * st;
-            const rx = px + rc * d;
-            const ry = py + rs * d;
+            const rx = nPx + rc * d;
+            const ry = nPy + rs * d;
             const tt = sampleTile(Math.floor(rx), Math.floor(ry));
+            if (spriteT === 0 && isSpriteTile(tt)){
+              spriteT = tt;
+              spriteD = d;
+            }
             if (tt === 1 || tt === 2){
               bestT = tt;
               bestD = d;
               break;
             }
           }
-          const corr = bestD * Math.cos(ray - yaw);
+          const corr = bestD * Math.cos(ray - nYaw);
           const dd = Math.max(0.2, corr);
           const slice = Math.floor(vh / dd);
           const y0 = Math.floor((vh - slice) / 2);
           const y1 = y0 + slice;
-          const dark = dd > 7 ? "muted" : (dd > 4.5 ? "accent-2" : "accent");
-          const shade = bestT === 2 ? "warn" : dark;
+
+          const hx = nPx + rc * bestD;
+          const hy = nPy + rs * bestD;
+          const fog = Math.max(0, Math.min(1, (bestD - 1.6) / Math.max(0.001, (md - 1.6))));
+          const ambient = 0.16;
+          const localLight = lightAt(hx, hy);
+          const bright = Math.max(0, Math.min(1, ambient + localLight - fog * 0.62));
+          const texJitter = (((Math.floor(hx * 3) + Math.floor(hy * 2)) & 1) ? 0.08 : 0);
+          const brightTex = Math.max(0, Math.min(1, bright - texJitter));
+          const base = bestT === 2 ? "warn" : "accent";
+          const shade = shadeByBrightness(brightTex, base);
           for (let dx = 0; dx < cs; dx++){
             drawColumn(x + dx, y0, y1, shade);
+          }
+
+          const spriteCorr = spriteD * Math.cos(ray - nYaw);
+          if (spriteT !== 0 && spriteCorr > 0.1 && spriteCorr < dd){
+            const sd = Math.max(0.25, spriteCorr);
+            const sh = Math.floor(vh / sd);
+            const sy0 = Math.floor((vh - sh) / 2);
+            const sy1 = sy0 + sh;
+            const sx = nPx + rc * spriteD;
+            const sy = nPy + rs * spriteD;
+            const sFog = Math.max(0, Math.min(1, (spriteD - 1.2) / Math.max(0.001, (md - 1.2))));
+            const sBright = Math.max(0, Math.min(1, 0.22 + lightAt(sx, sy) - sFog * 0.55));
+            const spriteColor = (() => {
+              if (spriteT === 5) return shadeByBrightness(sBright, "err");
+              if (spriteT === 6) return shadeByBrightness(sBright, "ok");
+              if (spriteT === 7) return shadeByBrightness(sBright, "accent-2");
+              if (spriteT === 3) return shadeByBrightness(sBright, "warn");
+              if (spriteT === 4) return shadeByBrightness(sBright, "ok");
+              if (spriteT === 8 || spriteT === 9) return shadeByBrightness(sBright, "warn");
+              if (spriteT === 10 || spriteT === 11) return shadeByBrightness(sBright, "accent");
+              return shadeByBrightness(sBright, "accent");
+            })();
+            for (let dx = 0; dx < cs; dx++){
+              drawColumn(x + dx, sy0, sy1, spriteColor);
+            }
           }
         }
         markGfxDirty();

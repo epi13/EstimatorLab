@@ -688,6 +688,451 @@ export function createTests({
         ],
         expect: 1,
       },
+
+      {
+        name: "line item total with meta",
+        steps: [
+          "l = line(\"studs\", 100 lf, 2.5 $, {trade: \"framing\", csi: \"06 11 16\", waste: 10%, markup: 5%})",
+          "field(l, \"trade\")",
+        ],
+        expect: "framing",
+      },
+      {
+        name: "rollup by trade",
+        steps: [
+          "a = line(\"a\", 10 ea, 5 $, {trade: \"t1\"})",
+          "b = line(\"b\", 20 ea, 2 $, {trade: \"t1\"})",
+          "c = line(\"c\", 1 ea, 100 $, {trade: \"t2\"})",
+          "r = rollup(a, b, c)",
+          "to( field(r, \"total\"), usd )",
+        ],
+        expect: 190,
+      },
+      {
+        name: "json roundtrip preserves qty",
+        steps: [
+          "x = 12 ft",
+          "j = to_json(x)",
+          "y = from_json(j)",
+          "to_in(y)",
+        ],
+        expect: 144,
+      },
+      {
+        name: "mc dist returns summary assy",
+        steps: [
+          "d = dist.normal(100, 10)",
+          "s = mc(200, d)",
+          "check = if(field(s, \"p10\") < field(s, \"p50\") && field(s, \"p50\") < field(s, \"p90\"), 1, 0)",
+          "check",
+        ],
+        expect: 1,
+      },
+      {
+        name: "gcalc gtotal accumulates into sinks",
+        steps: [
+          "g = graph(\"g\")",
+          "gnode(g, \"a\", 10 $)",
+          "gnode(g, \"b\", 5 $)",
+          "gnode(g, \"c\", 0 $)",
+          "gedge(g, \"a\", \"c\")",
+          "gedge(g, \"b\", \"c\")",
+          "gcalc(g)",
+          "to(gtotal(g), usd)",
+        ],
+        expect: 15,
+      },
+      {
+        name: "gcalc detects cycles",
+        steps: [
+          "g = graph(\"cyc\")",
+          "gnode(g, \"a\", 1 $)",
+          "gnode(g, \"b\", 1 $)",
+          "gedge(g, \"a\", \"b\")",
+          "gedge(g, \"b\", \"a\")",
+          "gcalc(g)",
+        ],
+        expect: expectError(/cycle/),
+      },
+
+      {
+        name: "unit-aware sqrt reduces len^2 to len",
+        steps: [
+          "a = 3 ft",
+          "b = 4 ft",
+          "c2 = a^2 + b^2",
+          "c = sqrt(c2)",
+          "to_ft(c)",
+        ],
+        expect: expectNear(5, 1e-6),
+      },
+      {
+        name: "geometry distance uses units",
+        steps: [
+          "p = pt(0 ft, 0 ft)",
+          "q = pt(3 ft, 4 ft)",
+          "to_ft(dist(p, q))",
+        ],
+        expect: 5,
+      },
+      {
+        name: "polygon area",
+        steps: [
+          "p1 = pt(0 ft, 0 ft)",
+          "p2 = pt(10 ft, 0 ft)",
+          "p3 = pt(10 ft, 5 ft)",
+          "p4 = pt(0 ft, 5 ft)",
+          "shape = poly(p1, p2, p3, p4)",
+          "to_sf(poly_area(shape))",
+        ],
+        expect: 50,
+      },
+      {
+        name: "material density weight chaining",
+        steps: [
+          "conc = material(\"concrete\", {density: 150 pcf, unit_cost: 125 $/cy})",
+          "v = 1 cy",
+          "w = weight(v, conc)",
+          "to_lb(w)",
+        ],
+        expect: expectNear(4050, 1e-6),
+      },
+      {
+        name: "material cost from qty",
+        steps: [
+          "conc = material(\"concrete\", {density: 150 pcf, unit_cost: 125 $/cy})",
+          "c = cost(2 cy, conc)",
+          "to(c, usd)",
+        ],
+        expect: 250,
+      },
+
+      {
+        name: "cmd reset clears vars",
+        steps: [
+          "a = 123",
+          "cmd(\"reset\")",
+          "has(\"a\")",
+        ],
+        expect: 0,
+      },
+      {
+        name: "linear coefficient extraction",
+        steps: [
+          "c = lin_coeff(\"2*x + 3\", \"x\")",
+          "field(c, \"a\") + field(c, \"b\")",
+        ],
+        expect: 5,
+      },
+      {
+        name: "solve_linear solves ax+b=c",
+        steps: [
+          "solve_linear(\"2*x + 3\", \"11\", \"x\")",
+        ],
+        expect: 4,
+      },
+      {
+        name: "argmin finds minimum on grid",
+        steps: [
+          "r = argmin(\"x\", -5, 5, 1, \"(x-2)^2\")",
+          "field(r, \"x\")",
+        ],
+        expect: 2,
+      },
+
+      {
+        name: "rate object computes effective rate",
+        steps: [
+          "r = rate(\"place\", 100 sfph, {crew: 2, eff: 0.8})",
+          "to_sf(rate_eff(r) * (1 hr))",
+        ],
+        expect: expectNear(160, 1e-6),
+      },
+      {
+        name: "prod(rate, duration)",
+        steps: [
+          "r = rate(\"place\", 50 sfph, {crew: 3})",
+          "to_sf(prod(r, 2 hr))",
+        ],
+        expect: expectNear(300, 1e-6),
+      },
+      {
+        name: "time_for(qty, rate) computes duration",
+        steps: [
+          "r = rate(\"place\", 100 sfph, {crew: 2})",
+          "t = time_for(400 sf, r)",
+          "to_hr(t)",
+        ],
+        expect: expectNear(2, 1e-6),
+      },
+      {
+        name: "rate_inv(rate) inverts a rate object",
+        steps: [
+          "r = rate(\"place\", 100 sfph, {crew: 2})",
+          "rinv = rate_inv(r)",
+          "to_hr( prod(rinv, 200 sf) )",
+        ],
+        expect: expectNear(1, 1e-6),
+      },
+      {
+        name: "crew(count, rate) scales rate object",
+        steps: [
+          "r = rate(\"place\", 50 sfph, {crew: 2})",
+          "r2 = crew(3, r)",
+          "to_sf(prod(r2, 1 hr))",
+        ],
+        expect: expectNear(300, 1e-6),
+      },
+      {
+        name: "learn(rate, n, exp) applies learning curve to rate",
+        steps: [
+          "r = rate(\"place\", 100 sfph, {crew: 1})",
+          "r2 = learn(r, 4, -0.5)",
+          "to_sf(prod(r2, 1 hr))",
+        ],
+        expect: expectNear(50, 1e-6),
+      },
+      {
+        name: "rate_factors returns assembly",
+        steps: [
+          "r = rate(\"place\", 100 sfph, {crew: 2, eff: 0.8})",
+          "field(rate_factors(r), \"crew\")",
+        ],
+        expect: 2,
+      },
+      {
+        name: "rate_factor returns factor or 1",
+        steps: [
+          "r = rate(\"place\", 100 sfph, {crew: 2})",
+          "rate_factor(r, \"crew\") + rate_factor(r, \"missing\")",
+        ],
+        expect: 3,
+      },
+      {
+        name: "rate_with overrides factors",
+        steps: [
+          "r = rate(\"place\", 100 sfph, {crew: 2, eff: 0.8})",
+          "r2 = rate_with(r, {crew: 3})",
+          "to_sf(prod(r2, 1 hr))",
+        ],
+        expect: expectNear(240, 1e-6),
+      },
+      {
+        name: "tsim integrates expression over time steps",
+        steps: [
+          "s = tsim(1 hr, 15 min, \"dt\")",
+          "to_hr(field(s, \"sum\"))",
+        ],
+        expect: expectNear(1, 1e-6),
+      },
+      {
+        name: "scenario resolve returns assembly of evaluated keys",
+        steps: [
+          "sc = scenario(\"base\", {a: 1, b: 2, c: a + b})",
+          "s = sc_resolve(sc)",
+          "field(s, \"c\")",
+        ],
+        expect: 3,
+      },
+      {
+        name: "scenario get returns a resolved value",
+        steps: [
+          "sc = scenario(\"base\", {a: 10, b: a + 5})",
+          "sc_get(sc, \"b\")",
+        ],
+        expect: 15,
+      },
+      {
+        name: "scenario merge stacks entries (later can override at eval time)",
+        steps: [
+          "a = scenario(\"a\", {x: 1, y: 2})",
+          "b = scenario(\"b\", {y: 5, z: x + y})",
+          "m = sc_merge(a, b)",
+          "sc_eval(m, \"z\")",
+        ],
+        expect: 6,
+      },
+      {
+        name: "scenario compare returns delta",
+        steps: [
+          "base = scenario(\"base\", {qty: 100, unit: 2.5, total: qty * unit})",
+          "alt = scenario(\"alt\", {qty: 120, unit: 2.5, total: qty * unit})",
+          "cmp = sc_compare(base, alt, \"total\", \"cmp\")",
+          "field(cmp, \"delta\")",
+        ],
+        expect: 50,
+      },
+      {
+        name: "project schedule and cost rollup",
+        steps: [
+          "p = project(\"demo\")",
+          "ptask(p, \"A\", {dur: 2 hr, cost: 1000 $})",
+          "ptask(p, \"B\", {dur: 1 hr, cost: 500 $})",
+          "pdep(p, \"A\", \"B\")",
+          "sch = pschedule(p)",
+          "to_hr(field(sch, \"total_time\"))",
+        ],
+        expect: expectNear(3, 1e-6),
+      },
+      {
+        name: "pcost sums task costs",
+        steps: [
+          "p = project(\"demo\")",
+          "ptask(p, \"A\", {dur: 2 hr, cost: 1000 $})",
+          "ptask(p, \"B\", {dur: 1 hr, cost: 500 $})",
+          "to(pcost(p), usd)",
+        ],
+        expect: 1500,
+      },
+
+      {
+        name: "unit algebra kind() recognizes qty and objects",
+        steps: [
+          "a = 3 ft",
+          "b = graph(\"g\")",
+          "kind(a) + ',' + kind(b)",
+        ],
+        expect: "len,graph",
+      },
+      {
+        name: "unit algebra dimkey supports qty and kind strings",
+        steps: [
+          "k1 = dimkey(3 ft)",
+          "k2 = dimkey(\"len\")",
+          "k1 == k2",
+        ],
+        expect: 1,
+      },
+      {
+        name: "unit algebra compat detects dimensional compatibility",
+        steps: [
+          "compat(3 ft, 12 in) + compat(3 ft, 1 sf)",
+        ],
+        expect: 1,
+      },
+      {
+        name: "unit algebra assert_dim returns value on match",
+        steps: [
+          "x = assert_dim(3 ft, \"len\")",
+          "to_in(x)",
+        ],
+        expect: 36,
+      },
+      {
+        name: "unit algebra assert_dim errors on mismatch",
+        expr: "assert_dim(3 ft, \"area\")",
+        expect: expectError(/Unit mismatch/),
+      },
+      {
+        name: "unit algebra simplify reduces len*len to area",
+        steps: [
+          "a = 3 ft * 4 ft",
+          "kind(a)",
+        ],
+        expect: "area",
+      },
+      {
+        name: "unit algebra uqty makes quantities from kind string",
+        steps: [
+          "x = uqty(2, \"len\")",
+          "to_in(x)",
+        ],
+        expect: 24,
+      },
+      {
+        name: "unit algebra uqty rejects non-numeric",
+        expr: "uqty(\"nope\", \"len\")",
+        expect: expectError("uqty expects a numeric value"),
+      },
+      {
+        name: "unit algebra udiv/umul build composite kinds",
+        steps: [
+          "r = udiv(1 $, 2 sf)",
+          "kind(r)",
+        ],
+        expect: "cur*len^-2",
+      },
+      {
+        name: "unit algebra uadd/usub enforce dimension match",
+        steps: [
+          "a = uadd(1 ft, 12 in)",
+          "b = usub(2 ft, 6 in)",
+          "to_in(a) + to_in(b)",
+        ],
+        expect: 42,
+      },
+      {
+        name: "unit algebra uadd errors on mismatch",
+        expr: "uadd(1 ft, 1 sf)",
+        expect: expectError(/Unit mismatch/),
+      },
+      {
+        name: "unit algebra ucmp orders compatible quantities",
+        steps: [
+          "ucmp(12 in, 1 ft)",
+        ],
+        expect: 0,
+      },
+      {
+        name: "unit algebra uerr returns mismatch message",
+        steps: [
+          "uerr(1 ft, 1 sf)",
+        ],
+        expect: "Unit mismatch: len vs area",
+      },
+
+      {
+        name: "cost algebra cost_leaf creates labeled cost and is_cost detects it",
+        steps: [
+          "c = cost_leaf(\"labor\", 100)",
+          "is_cost(c)",
+        ],
+        expect: 1,
+      },
+      {
+        name: "cost algebra cost_total returns numeric dollars",
+        steps: [
+          "c = cost_leaf(\"labor\", 100)",
+          "cost_total(c)",
+        ],
+        expect: 100,
+      },
+      {
+        name: "cost algebra cost_breakdown sums leaves after add/scale",
+        steps: [
+          "a = cost_leaf(\"labor\", 100)",
+          "b = cost_leaf(\"mat\", 50)",
+          "t = markup(a + b, 10%)",
+          "bd = cost_breakdown(t)",
+          "to(field(bd, \"total\"), usd)",
+        ],
+        expect: 165,
+      },
+      {
+        name: "cost algebra breakdown fields include per-label rollups",
+        steps: [
+          "a = cost_leaf(\"labor\", 100)",
+          "b = cost_leaf(\"mat\", 50)",
+          "t = markup(a + b, 10%)",
+          "bd = cost_breakdown(t)",
+          "to(field(bd, \"labor\"), usd)",
+        ],
+        expect: 110,
+      },
+      {
+        name: "cost algebra cost_label relabels leaf",
+        steps: [
+          "c = cost_label(cost_leaf(\"labor\", 100), \"crew\")",
+          "bd = cost_breakdown(markup(c, 10%))",
+          "to(field(bd, \"crew\"), usd)",
+        ],
+        expect: 110,
+      },
+      {
+        name: "cost algebra cost_breakdown errors on non-cost",
+        expr: "cost_breakdown(5 ft)",
+        expect: expectError("cost_breakdown expects a currency quantity"),
+      },
     ];
   }
 
