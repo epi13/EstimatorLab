@@ -1,11 +1,17 @@
 import { splitStatements, findTopLevelEquals } from "./repl-parser.js";
 import { isQty } from "./repl-units.js";
 
-const GFX_LIMIT = 160;
+const GFX_LIMIT = 512;
 const GFX_DEFAULT_SCALE = 6;
 const GFX_LOOP_DEFAULT_FPS = 12;
 const GFX_LOOP_MIN_FPS = 1;
 const GFX_LOOP_MAX_FPS = 60;
+const GFX_BACKENDS = [
+  "auto",
+  "2d",
+  "webgl2",
+  "webgpu",
+];
 export const GFX_COLOR_TOKENS = [
   "transparent",
   "accent",
@@ -23,9 +29,22 @@ export function createGfxTools({ state, terminalEl, writeLine }){
   let gfxColorContext = null;
   let runExpressionWithContext = null;
   let runLoopStatement = null;
+  let gfxBackend = "auto";
+  let pointerLockListenerAttached = false;
+  let webgpuAdapter = null;
+  let webgpuDevice = null;
+  let webgpuInitPromise = null;
+  let webgl2Supported = null;
 
   const keyState = {
     down: Object.create(null),
+  };
+
+  const mouseState = {
+    dx: 0,
+    dy: 0,
+    buttons: Object.create(null),
+    locked: false,
   };
 
   const loopState = {
@@ -43,6 +62,177 @@ export function createGfxTools({ state, terminalEl, writeLine }){
       gfxColorContext = canvas.getContext("2d");
     }
     return gfxColorContext;
+  }
+
+  function align256(n){
+    return (n + 255) & ~255;
+  }
+
+  function initWebgpu(buffer, canvas){
+    if (!webgpuDevice){
+      ensureWebgpu();
+      throw new Error("WebGPU device not ready");
+    }
+    if (buffer.gpuDevice === webgpuDevice && buffer.gpuCanvas === canvas && buffer.gpuContext){
+      return;
+    }
+
+    buffer.gpuDevice = webgpuDevice;
+    buffer.gpuCanvas = canvas;
+    buffer.gpuContext = canvas.getContext("webgpu");
+    if (!buffer.gpuContext) throw new Error("WebGPU canvas context unavailable");
+    buffer.gpuFormat = navigator.gpu.getPreferredCanvasFormat();
+    buffer.gpuContext.configure({
+      device: webgpuDevice,
+      format: buffer.gpuFormat,
+      alphaMode: "premultiplied",
+    });
+
+    const device = webgpuDevice;
+    buffer.gpuSampler = device.createSampler({
+      magFilter: "nearest",
+      minFilter: "nearest",
+      mipmapFilter: "nearest",
+      addressModeU: "clamp-to-edge",
+      addressModeV: "clamp-to-edge",
+    });
+
+    const shader = device.createShaderModule({
+      code: `
+struct VSOut {
+  @builtin(position) pos: vec4f,
+  @location(0) uv: vec2f,
+};
+
+@vertex
+fn vs(@builtin(vertex_index) idx: u32) -> VSOut {
+  var positions = array<vec2f, 6>(
+    vec2f(-1.0, -1.0),
+    vec2f( 1.0, -1.0),
+    vec2f(-1.0,  1.0),
+    vec2f(-1.0,  1.0),
+    vec2f( 1.0, -1.0),
+    vec2f( 1.0,  1.0)
+  );
+  var uvs = array<vec2f, 6>(
+    vec2f(0.0, 1.0),
+    vec2f(1.0, 1.0),
+    vec2f(0.0, 0.0),
+    vec2f(0.0, 0.0),
+    vec2f(1.0, 1.0),
+    vec2f(1.0, 0.0)
+  );
+  var out: VSOut;
+  out.pos = vec4f(positions[idx], 0.0, 1.0);
+  out.uv = uvs[idx];
+  return out;
+}
+
+@group(0) @binding(0) var samp: sampler;
+@group(0) @binding(1) var tex: texture_2d<f32>;
+
+@fragment
+fn fs(in: VSOut) -> @location(0) vec4f {
+  return textureSample(tex, samp, in.uv);
+}
+      `,
+    });
+
+    buffer.gpuPipeline = device.createRenderPipeline({
+      layout: "auto",
+      vertex: { module: shader, entryPoint: "vs" },
+      fragment: {
+        module: shader,
+        entryPoint: "fs",
+        targets: [{ format: buffer.gpuFormat }],
+      },
+      primitive: { topology: "triangle-list" },
+    });
+
+    buffer.gpuTexW = 0;
+    buffer.gpuTexH = 0;
+    buffer.gpuTexture = null;
+    buffer.gpuTextureView = null;
+    buffer.gpuBindGroup = null;
+    buffer.gpuUpload = null;
+    buffer.gpuUploadPitch = 0;
+  }
+
+  function ensureWebgpuTexture(buffer, w, h){
+    const device = buffer.gpuDevice;
+    if (!device) throw new Error("WebGPU device missing");
+
+    if (buffer.gpuTexture && buffer.gpuTexW === w && buffer.gpuTexH === h) return;
+    buffer.gpuTexW = w;
+    buffer.gpuTexH = h;
+    buffer.gpuTexture = device.createTexture({
+      size: { width: w, height: h, depthOrArrayLayers: 1 },
+      format: "rgba8unorm",
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    });
+    buffer.gpuTextureView = buffer.gpuTexture.createView();
+
+    buffer.gpuBindGroup = device.createBindGroup({
+      layout: buffer.gpuPipeline.getBindGroupLayout(0),
+      entries: [
+        { binding: 0, resource: buffer.gpuSampler },
+        { binding: 1, resource: buffer.gpuTextureView },
+      ],
+    });
+
+    const pitch = align256(w * 4);
+    buffer.gpuUploadPitch = pitch;
+    buffer.gpuUpload = new Uint8Array(pitch * h);
+  }
+
+  function uploadWebgpuTexture(buffer, rgba){
+    const w = buffer.gpuTexW | 0;
+    const h = buffer.gpuTexH | 0;
+    const pitch = buffer.gpuUploadPitch | 0;
+    const upload = buffer.gpuUpload;
+    if (!upload) throw new Error("WebGPU upload buffer missing");
+
+    for (let y = 0; y < h; y++){
+      const srcStart = y * w * 4;
+      const srcEnd = srcStart + w * 4;
+      upload.set(rgba.subarray(srcStart, srcEnd), y * pitch);
+    }
+
+    buffer.gpuDevice.queue.writeTexture(
+      { texture: buffer.gpuTexture },
+      upload,
+      { bytesPerRow: pitch, rowsPerImage: h },
+      { width: w, height: h, depthOrArrayLayers: 1 },
+    );
+  }
+
+  function renderWebgpu(buffer, canvas){
+    initWebgpu(buffer, canvas);
+    const device = buffer.gpuDevice;
+    const context = buffer.gpuContext;
+    if (!device || !context || !buffer.gpuPipeline) throw new Error("WebGPU not initialized");
+
+    const w = buffer.width | 0;
+    const h = buffer.height | 0;
+    ensureWebgpuTexture(buffer, w, h);
+    const rgba = buildRgba(buffer);
+    uploadWebgpuTexture(buffer, rgba);
+
+    const encoder = device.createCommandEncoder();
+    const view = context.getCurrentTexture().createView();
+    const pass = encoder.beginRenderPass({
+      colorAttachments: [{
+        view,
+        clearValue: { r: 0, g: 0, b: 0, a: 0 },
+        loadOp: "clear",
+        storeOp: "store",
+      }],
+    });
+    pass.setPipeline(buffer.gpuPipeline);
+    pass.setBindGroup(0, buffer.gpuBindGroup);
+    pass.draw(6, 1, 0, 0);
+    pass.end();
+    device.queue.submit([encoder.finish()]);
   }
 
   function parseCssColor(value){
@@ -95,6 +285,302 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     return colors;
   }
 
+  function normalizeGfxBackend(value){
+    if (typeof value !== "string") return "auto";
+    const name = value.trim().toLowerCase();
+    if (!name) return "auto";
+    if (!GFX_BACKENDS.includes(name)) throw new Error(`Unknown gfx backend: ${name}`);
+    return name;
+  }
+
+  function pickDefaultBackend(){
+    if (webgpuDevice) return "webgpu";
+    if (typeof navigator !== "undefined" && navigator.gpu && !webgpuInitPromise){
+      ensureWebgpu();
+    }
+    if (isWebgl2Supported()) return "webgl2";
+    return "2d";
+  }
+
+  function isWebgl2Supported(){
+    if (webgl2Supported !== null) return webgl2Supported;
+    try{
+      const canvas = document.createElement("canvas");
+      webgl2Supported = Boolean(canvas.getContext("webgl2"));
+    }catch{
+      webgl2Supported = false;
+    }
+    return webgl2Supported;
+  }
+
+  function ensureWebgpu(){
+    if (webgpuDevice) return;
+    if (typeof navigator === "undefined" || !navigator.gpu) return;
+    if (webgpuInitPromise) return;
+
+    webgpuInitPromise = (async () => {
+      const adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) throw new Error("WebGPU adapter unavailable");
+      const device = await adapter.requestDevice();
+      webgpuAdapter = adapter;
+      webgpuDevice = device;
+    })()
+      .then(() => {
+        markGfxDirty();
+        flushGfxOutput();
+      })
+      .catch(() => {
+        webgpuAdapter = null;
+        webgpuDevice = null;
+      });
+  }
+
+  function getActiveBackend(){
+    const configured = normalizeGfxBackend(state.gfxBackend || gfxBackend);
+    if (configured === "auto") return pickDefaultBackend();
+    if (configured === "webgpu"){
+      if (webgpuDevice) return "webgpu";
+      if (typeof navigator !== "undefined" && navigator.gpu) ensureWebgpu();
+      return isWebgl2Supported() ? "webgl2" : "2d";
+    }
+    if (configured === "webgl2"){
+      return isWebgl2Supported() ? "webgl2" : "2d";
+    }
+    return configured;
+  }
+
+  function setActiveBackend(name){
+    const normalized = normalizeGfxBackend(name);
+    gfxBackend = normalized;
+    state.gfxBackend = normalized;
+    markGfxDirty();
+    flushGfxOutput();
+    return getActiveBackend();
+  }
+
+  function attachCanvasEvents(canvas){
+    canvas.className = "gfx-canvas";
+    canvas.tabIndex = 0;
+    canvas.setAttribute("role", "application");
+    canvas.setAttribute("aria-label", "GFX canvas");
+    canvas.addEventListener("pointerdown", (event) => {
+      canvas.focus();
+      mouseState.buttons[event.button] = 1;
+      if (loopState.expr && canvas.requestPointerLock){
+        canvas.requestPointerLock();
+      }
+    });
+    canvas.addEventListener("pointerup", (event) => {
+      mouseState.buttons[event.button] = 0;
+    });
+    canvas.addEventListener("pointermove", (event) => {
+      if (document.pointerLockElement === canvas){
+        mouseState.dx += Number.isFinite(event.movementX) ? event.movementX : 0;
+        mouseState.dy += Number.isFinite(event.movementY) ? event.movementY : 0;
+      }
+    });
+    canvas.addEventListener("keydown", (event) => {
+      const key = normalizeGfxKey(event.key);
+      if (key) keyState.down[key] = 1;
+      if (handleGfxKeydown(event)){
+        event.preventDefault();
+      }
+    });
+    canvas.addEventListener("keyup", (event) => {
+      const key = normalizeGfxKey(event.key);
+      if (key) keyState.down[key] = 0;
+    });
+    canvas.addEventListener("blur", () => {
+      keyState.down = Object.create(null);
+      mouseState.buttons = Object.create(null);
+    });
+  }
+
+  function ensurePointerLockListener(){
+    if (pointerLockListenerAttached) return;
+    pointerLockListenerAttached = true;
+    document.addEventListener("pointerlockchange", () => {
+      const canvas = state.gfx?.canvasEl || null;
+      mouseState.locked = Boolean(canvas && document.pointerLockElement === canvas);
+      if (!mouseState.locked){
+        mouseState.dx = 0;
+        mouseState.dy = 0;
+      }
+    });
+  }
+
+  function compileShader(gl, type, src){
+    const shader = gl.createShader(type);
+    if (!shader) throw new Error("Failed to create shader");
+    gl.shaderSource(shader, src);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)){
+      const log = gl.getShaderInfoLog(shader) || "";
+      gl.deleteShader(shader);
+      throw new Error(`WebGL shader compile failed: ${log}`);
+    }
+    return shader;
+  }
+
+  function createProgram(gl, vsSrc, fsSrc){
+    const vs = compileShader(gl, gl.VERTEX_SHADER, vsSrc);
+    const fs = compileShader(gl, gl.FRAGMENT_SHADER, fsSrc);
+    const program = gl.createProgram();
+    if (!program) throw new Error("Failed to create WebGL program");
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)){
+      const log = gl.getProgramInfoLog(program) || "";
+      gl.deleteProgram(program);
+      throw new Error(`WebGL program link failed: ${log}`);
+    }
+    return program;
+  }
+
+  function initWebgl2(buffer, canvas){
+    if (buffer.gl && buffer.glCanvas === canvas) return;
+    buffer.gl = null;
+    buffer.glCanvas = null;
+    buffer.glProgram = null;
+    buffer.glVao = null;
+    buffer.glVbo = null;
+    buffer.glTex = null;
+    buffer.glSizeW = 0;
+    buffer.glSizeH = 0;
+    buffer.glRgba = null;
+
+    const gl = canvas.getContext("webgl2", {
+      alpha: true,
+      premultipliedAlpha: false,
+      antialias: false,
+      depth: false,
+      stencil: false,
+      preserveDrawingBuffer: false,
+    });
+    if (!gl) throw new Error("WebGL2 not available");
+
+    const vsSrc = `#version 300 es\n` +
+      `in vec2 a_pos;\n` +
+      `in vec2 a_uv;\n` +
+      `out vec2 v_uv;\n` +
+      `void main(){\n` +
+      `  v_uv = a_uv;\n` +
+      `  gl_Position = vec4(a_pos, 0.0, 1.0);\n` +
+      `}`;
+    const fsSrc = `#version 300 es\n` +
+      `precision highp float;\n` +
+      `uniform sampler2D u_tex;\n` +
+      `in vec2 v_uv;\n` +
+      `out vec4 outColor;\n` +
+      `void main(){\n` +
+      `  outColor = texture(u_tex, v_uv);\n` +
+      `}`;
+
+    const program = createProgram(gl, vsSrc, fsSrc);
+    const vao = gl.createVertexArray();
+    const vbo = gl.createBuffer();
+    const tex = gl.createTexture();
+    if (!vao || !vbo || !tex) throw new Error("Failed to allocate WebGL resources");
+
+    gl.bindVertexArray(vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    const data = new Float32Array([
+      -1, -1, 0, 1,
+       1, -1, 1, 1,
+      -1,  1, 0, 0,
+      -1,  1, 0, 0,
+       1, -1, 1, 1,
+       1,  1, 1, 0,
+    ]);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+
+    const aPos = gl.getAttribLocation(program, "a_pos");
+    const aUv = gl.getAttribLocation(program, "a_uv");
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 16, 0);
+    gl.enableVertexAttribArray(aUv);
+    gl.vertexAttribPointer(aUv, 2, gl.FLOAT, false, 16, 8);
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindVertexArray(null);
+
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    buffer.gl = gl;
+    buffer.glCanvas = canvas;
+    buffer.glProgram = program;
+    buffer.glVao = vao;
+    buffer.glVbo = vbo;
+    buffer.glTex = tex;
+  }
+
+  function buildRgba(buffer){
+    const w = buffer.width | 0;
+    const h = buffer.height | 0;
+    const needed = w * h * 4;
+    if (!buffer.rgba || buffer.rgba.length !== needed){
+      buffer.rgba = new Uint8Array(needed);
+    }
+    const out = buffer.rgba;
+    const palette = getGfxPalette();
+    for (let i = 0; i < buffer.pixels.length; i++){
+      const color = buffer.pixels[i] || "transparent";
+      const rgba = palette[color] || palette.transparent;
+      const o = i * 4;
+      out[o] = rgba[0];
+      out[o + 1] = rgba[1];
+      out[o + 2] = rgba[2];
+      out[o + 3] = rgba[3];
+    }
+    return out;
+  }
+
+  function renderWebgl2(buffer, canvas, dpr){
+    initWebgl2(buffer, canvas);
+    const gl = buffer.gl;
+    if (!gl || !buffer.glProgram || !buffer.glVao || !buffer.glTex) return;
+
+    const w = buffer.width | 0;
+    const h = buffer.height | 0;
+    if (buffer.glSizeW !== w || buffer.glSizeH !== h){
+      buffer.glSizeW = w;
+      buffer.glSizeH = h;
+      gl.bindTexture(gl.TEXTURE_2D, buffer.glTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+    }
+
+    const rgba = buildRgba(buffer);
+    gl.bindTexture(gl.TEXTURE_2D, buffer.glTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    gl.useProgram(buffer.glProgram);
+    const uTex = gl.getUniformLocation(buffer.glProgram, "u_tex");
+    gl.uniform1i(uTex, 0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, buffer.glTex);
+    gl.bindVertexArray(buffer.glVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.bindVertexArray(null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.useProgram(null);
+  }
+
   function writeGfx(buffer){
     if (!buffer) return;
     let wrapper = buffer.outputEl;
@@ -113,25 +599,8 @@ export function createGfxTools({ state, terminalEl, writeLine }){
       panel = document.createElement("div");
       panel.className = "gfx-panel";
       canvas = document.createElement("canvas");
-      canvas.className = "gfx-canvas";
-      canvas.tabIndex = 0;
-      canvas.setAttribute("role", "application");
-      canvas.setAttribute("aria-label", "GFX canvas");
-      canvas.addEventListener("pointerdown", () => canvas.focus());
-      canvas.addEventListener("keydown", (event) => {
-        const key = normalizeGfxKey(event.key);
-        if (key) keyState.down[key] = 1;
-        if (handleGfxKeydown(event)){
-          event.preventDefault();
-        }
-      });
-      canvas.addEventListener("keyup", (event) => {
-        const key = normalizeGfxKey(event.key);
-        if (key) keyState.down[key] = 0;
-      });
-      canvas.addEventListener("blur", () => {
-        keyState.down = Object.create(null);
-      });
+      attachCanvasEvents(canvas);
+      ensurePointerLockListener();
       panel.appendChild(canvas);
       wrapper.append(label, hint, panel);
       terminalEl.appendChild(wrapper);
@@ -143,38 +612,88 @@ export function createGfxTools({ state, terminalEl, writeLine }){
       buffer.canvasEl = canvas;
     }
 
+    const desiredBackend = getActiveBackend();
+    if (buffer.backend !== desiredBackend){
+      buffer.backend = desiredBackend;
+      if (buffer.canvasEl && buffer.panelEl){
+        buffer.canvasEl.remove();
+        buffer.canvasEl = document.createElement("canvas");
+        attachCanvasEvents(buffer.canvasEl);
+        buffer.panelEl.appendChild(buffer.canvasEl);
+      }
+      canvas = buffer.canvasEl;
+    }
+
     const loopLabel = loopState.expr
       ? ` • loop ${loopState.playing ? "playing" : "paused"} @ ${loopState.fps} fps • frame ${loopState.frame}`
       : "";
     label.textContent = `gfx ${buffer.width}x${buffer.height} • scale ${buffer.scale}${loopLabel}`;
     hint.textContent = loopState.expr
-      ? "Space play/pause • ←/→ step • ↑/↓ speed • R reset"
+      ? "P play/pause • ←/→ step • ↑/↓ speed • R reset"
       : "";
     if (buffer.bg && buffer.bg !== "transparent"){
       panel.style.setProperty("--gfx-bg", `var(--${buffer.bg})`);
     }else{
       panel.style.removeProperty("--gfx-bg");
     }
-    if (canvas.width !== buffer.width) canvas.width = buffer.width;
-    if (canvas.height !== buffer.height) canvas.height = buffer.height;
-    canvas.style.width = `${buffer.width * buffer.scale}px`;
-    canvas.style.height = `${buffer.height * buffer.scale}px`;
-    const ctx = canvas.getContext("2d");
-    if (ctx){
-      ctx.imageSmoothingEnabled = false;
-      const imageData = ctx.createImageData(buffer.width, buffer.height);
-      const data = imageData.data;
-      const palette = getGfxPalette();
-      for (let i = 0; i < buffer.pixels.length; i++){
-        const color = buffer.pixels[i] || "transparent";
-        const rgba = palette[color] || palette.transparent;
-        const offset = i * 4;
-        data[offset] = rgba[0];
-        data[offset + 1] = rgba[1];
-        data[offset + 2] = rgba[2];
-        data[offset + 3] = rgba[3];
+    const displayWidth = buffer.width * buffer.scale;
+    const displayHeight = buffer.height * buffer.scale;
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+
+    const dpr = Math.max(1, Math.min(4, window.devicePixelRatio || 1));
+    const targetWidth = Math.max(1, Math.round(displayWidth * dpr));
+    const targetHeight = Math.max(1, Math.round(displayHeight * dpr));
+    if (canvas.width !== targetWidth) canvas.width = targetWidth;
+    if (canvas.height !== targetHeight) canvas.height = targetHeight;
+
+    if (buffer.backend === "webgpu"){
+      try{
+        renderWebgpu(buffer, canvas);
+        return;
+      }catch{
+        buffer.backend = "webgl2";
       }
-      ctx.putImageData(imageData, 0, 0);
+    }
+
+    if (buffer.backend === "webgl2"){
+      try{
+        renderWebgl2(buffer, canvas, dpr);
+      }catch{
+        buffer.backend = "2d";
+      }
+      return;
+    }
+
+    if (!buffer.offscreenCanvas){
+      buffer.offscreenCanvas = document.createElement("canvas");
+      buffer.offscreenCtx = buffer.offscreenCanvas.getContext("2d");
+    }
+    const offscreen = buffer.offscreenCanvas;
+    const offCtx = buffer.offscreenCtx;
+    if (offCtx){
+      if (offscreen.width !== buffer.width) offscreen.width = buffer.width;
+      if (offscreen.height !== buffer.height) offscreen.height = buffer.height;
+      if (!buffer.imageData || buffer.imageData.width !== buffer.width || buffer.imageData.height !== buffer.height){
+        buffer.imageData = offCtx.createImageData(buffer.width, buffer.height);
+      }
+      const data = buffer.imageData.data;
+      const rgba = buildRgba(buffer);
+      data.set(rgba);
+      offCtx.putImageData(buffer.imageData, 0, 0);
+    }
+
+    const ctx = canvas.getContext("2d");
+    if (ctx && buffer.offscreenCanvas){
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = false;
+      if (typeof ctx.imageSmoothingQuality === "string"){
+        ctx.imageSmoothingQuality = "high";
+      }
+      ctx.setTransform(dpr * buffer.scale, 0, 0, dpr * buffer.scale, 0, 0);
+      ctx.drawImage(buffer.offscreenCanvas, 0, 0);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
   }
 
@@ -217,6 +736,33 @@ export function createGfxTools({ state, terminalEl, writeLine }){
       scale,
       pixels: Array.from({ length: width * height }, () => null),
       bg: null,
+      backend: null,
+      rgba: null,
+      imageData: null,
+      offscreenCanvas: null,
+      offscreenCtx: null,
+      gl: null,
+      glCanvas: null,
+      glProgram: null,
+      glVao: null,
+      glVbo: null,
+      glTex: null,
+      glSizeW: 0,
+      glSizeH: 0,
+      glRgba: null,
+      gpuDevice: null,
+      gpuCanvas: null,
+      gpuContext: null,
+      gpuFormat: null,
+      gpuPipeline: null,
+      gpuSampler: null,
+      gpuBindGroup: null,
+      gpuTexture: null,
+      gpuTextureView: null,
+      gpuTexW: 0,
+      gpuTexH: 0,
+      gpuUpload: null,
+      gpuUploadPitch: 0,
       outputEl: null,
       labelEl: null,
       hintEl: null,
@@ -359,6 +905,14 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     state.vars.key_down = keyState.down.arrowdown ? 1 : 0;
     state.vars.key_left = keyState.down.arrowleft ? 1 : 0;
     state.vars.key_right = keyState.down.arrowright ? 1 : 0;
+    state.vars.mouse_dx = mouseState.dx;
+    state.vars.mouse_dy = mouseState.dy;
+    state.vars.mouse_btn0 = mouseState.buttons[0] ? 1 : 0;
+    state.vars.mouse_btn1 = mouseState.buttons[1] ? 1 : 0;
+    state.vars.mouse_btn2 = mouseState.buttons[2] ? 1 : 0;
+    state.vars.mouse_locked = mouseState.locked ? 1 : 0;
+    mouseState.dx = 0;
+    mouseState.dy = 0;
     try{
       runLoopScript();
       flushGfxOutput();
@@ -470,8 +1024,11 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     if (!loopState.expr) return false;
     const key = event.key;
     if (key === " "){
-      toggleLoop();
-      return true;
+      if (!mouseState.locked){
+        toggleLoop();
+        return true;
+      }
+      return false;
     }
     if (key === "ArrowRight"){
       advanceLoop(event.shiftKey ? 10 : 1);
@@ -580,6 +1137,74 @@ export function createGfxTools({ state, terminalEl, writeLine }){
         markGfxDirty();
         return 1;
       }),
+      raycast: defFn("raycast", 10, (mapObj, px, py, yaw, fov, viewH, maxD, step, steps, colStep) => {
+        const buffer = requireGfxBuffer();
+        if (!mapObj || typeof mapObj !== "object" || !mapObj.__map || !mapObj.data){
+          throw new Error("raycast expects a map() as the first argument");
+        }
+        if (![px, py, yaw, fov, viewH, maxD, step, steps, colStep].every(Number.isFinite)){
+          throw new Error("raycast expects numeric arguments");
+        }
+        const mapW = mapObj.w | 0;
+        const mapH = mapObj.h | 0;
+        const data = mapObj.data;
+        const w = buffer.width | 0;
+        const h = buffer.height | 0;
+        const vh = Math.max(1, Math.min(h, Math.floor(viewH)));
+        const md = Math.max(0.1, maxD);
+        const st = Math.max(0.001, step);
+        const nSteps = Math.max(1, Math.floor(steps));
+        const cs = Math.max(1, Math.floor(colStep));
+
+        function sampleTile(x, y){
+          const ix = x | 0;
+          const iy = y | 0;
+          if (ix < 0 || iy < 0 || ix >= mapW || iy >= mapH) return 1;
+          return data[iy * mapW + ix] | 0;
+        }
+
+        function drawColumn(x, y0, y1, color){
+          const xi = x | 0;
+          if (xi < 0 || xi >= w) return;
+          const yy0 = Math.max(0, y0 | 0);
+          const yy1 = Math.min(vh - 1, y1 | 0);
+          for (let y = yy0; y <= yy1; y++){
+            buffer.pixels[y * w + xi] = color;
+          }
+        }
+
+        for (let x = 0; x < w; x += cs){
+          const cam = x / w - 0.5;
+          const ray = yaw + cam * fov;
+          const rc = Math.cos(ray);
+          const rs = Math.sin(ray);
+          let bestD = md;
+          let bestT = 0;
+          for (let i = 1; i <= nSteps; i++){
+            const d = i * st;
+            const rx = px + rc * d;
+            const ry = py + rs * d;
+            const tt = sampleTile(Math.floor(rx), Math.floor(ry));
+            if (tt === 1 || tt === 2){
+              bestT = tt;
+              bestD = d;
+              break;
+            }
+          }
+          const corr = bestD * Math.cos(ray - yaw);
+          const dd = Math.max(0.2, corr);
+          const slice = Math.floor(vh / dd);
+          const y0 = Math.floor((vh - slice) / 2);
+          const y1 = y0 + slice;
+          const dark = dd > 7 ? "muted" : (dd > 4.5 ? "accent-2" : "accent");
+          const shade = bestT === 2 ? "warn" : dark;
+          for (let dx = 0; dx < cs; dx++){
+            drawColumn(x + dx, y0, y1, shade);
+          }
+        }
+        markGfxDirty();
+        return 1;
+      }),
       plot: defFn("plot", 4, (x0, y0, points, color) => {
         const buffer = requireGfxBuffer();
         if (typeof points !== "string") throw new Error("plot expects a string of dx,dy pairs");
@@ -626,6 +1251,7 @@ export function createGfxTools({ state, terminalEl, writeLine }){
         return loopState.frame;
       }),
       gfxfps: defFn("gfxfps", 1, (fps) => setLoopFps(fps)),
+      gfxbackend: defFn("gfxbackend", 1, (name) => setActiveBackend(name)),
     };
   }
 

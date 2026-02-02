@@ -72,8 +72,13 @@ export function createEvaluator({
       if (fns && fns.has(name)) continue;
       if (isUnitToken(name)){
         if (isBareUnitToken(tokens, i)){
-          const unit = UNIT[name];
-          unknowns.push({ name, kind: unit.kind, toBase: unit.toBase, unitToken: true });
+          const nextId = tokens[i + 1];
+          if (nextId && nextId.type === "id" && isUnitToken(nextId.value)){
+            unknowns.push({ name, kind: "scalar", unitToken: false });
+          }else{
+            const unit = UNIT[name];
+            unknowns.push({ name, kind: unit.kind, toBase: unit.toBase, unitToken: true });
+          }
         }
         continue;
       }
@@ -83,19 +88,8 @@ export function createEvaluator({
   }
 
   function diffValues(left, right){
-    if (isQty(left) && isQty(right)){
-      if (left.kind !== right.kind) throw new Error(`Unit mismatch: ${left.kind} vs ${right.kind}`);
-      return left.value - right.value;
-    }
-    if (isQty(left) && !isQty(right)){
-      if (left.kind !== "scalar") throw new Error("Unit mismatch between quantity and scalar.");
-      return left.value - right;
-    }
-    if (!isQty(left) && isQty(right)){
-      if (right.kind !== "scalar") throw new Error("Unit mismatch between scalar and quantity.");
-      return left - right.value;
-    }
-    return left - right;
+    const [lv, rv] = normalizeCompare(left, right);
+    return lv - rv;
   }
 
   function solveEquation(leftExpr, rightExpr){

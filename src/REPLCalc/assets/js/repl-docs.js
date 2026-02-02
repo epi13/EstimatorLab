@@ -15,6 +15,12 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("(3,2)", "out-op")
     ], "muted");
     writeLineRich([
+      "  Constants: ",
+      token("pi", "out-number"),
+      ", ",
+      token("e", "out-number")
+    ], "muted");
+    writeLineRich([
       "  Assignment: ",
       token("x", "out-var"),
       " ",
@@ -37,6 +43,17 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("(a,b)", "out-op"),
       " = expression  (call with ",
       token("name(1,2)", "out-op"),
+      ")"
+    ], "muted");
+    writeLineRich([
+      "  Also accepts: ",
+      token("def", "out-keyword"),
+      ", ",
+      token("fn", "out-keyword"),
+      ", ",
+      token("function", "out-keyword"),
+      " (same as ",
+      token("so", "out-keyword"),
       ")"
     ], "muted");
     writeLineRich([
@@ -66,6 +83,14 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("=", "out-op"),
       " ",
       token("0", "out-number")
+    ], "muted");
+    writeLineRich([
+      "  Blocks: end a line with ",
+      token(":", "out-op"),
+      " then indent the next line(s): ",
+      token("if x > 0:", "out-op"),
+      " ↳ ",
+      token("total = total + 1", "out-op")
     ], "muted");
     writeLineRich([
       "  Loop: ",
@@ -111,7 +136,7 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
     writeLineRich([token("Units:", "out-label")], "muted");
     writeLineRich([
       "  Supported: ",
-      token("in, ft, lf, yd, sf, sy, cf, cy, lb, ton, layer", "out-unit"),
+      token("in, ft, lf, yd, mi, sf, sy, cf, cy, lb, ton, hr, psi, psf, ksi, %, $", "out-unit"),
       "."
     ], "muted");
     writeLineRich([
@@ -263,6 +288,9 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("get", "out-fn"),
       token("(\"name\")", "out-op"),
       " ",
+      token("has", "out-fn"),
+      token("(\"name\")", "out-op"),
+      " ",
       token("unset", "out-fn"),
       token("(\"name\")", "out-op")
     ], "muted");
@@ -287,10 +315,31 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("gfxs", "out-fn"),
       token("(scale)", "out-op"),
       " ",
+      token("gfxbackend", "out-fn"),
+      token("(\"auto\"|\"2d\"|\"webgl2\"|\"webgpu\")", "out-op"),
+      " ",
       token("bg", "out-fn"),
       token("(color)", "out-op"),
       " ",
       token("cls()", "out-fn")
+    ], "muted");
+    writeLineRich([token("Maps + raycasting:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("map", "out-fn"),
+      token("(\"####|#S.#|####\")", "out-op"),
+      " ",
+      token("mw/mh", "out-fn"),
+      " ",
+      token("mget/mset", "out-fn"),
+      " ",
+      token("mspawnx/mspawny", "out-fn")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("raycast", "out-fn"),
+      token("(map, px, py, yaw, fov, viewH, maxD, step, steps, colStep)", "out-op"),
+      " (draws into gfx buffer)"
     ], "muted");
     writeLineRich([
       "  ",

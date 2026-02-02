@@ -1,4 +1,4 @@
-import { add, div, isQty, makeQty, mul, pow, qtyToString } from "./repl-units.js";
+import { add, convert, div, isQty, makeQty, mul, pow, qtyToString } from "./repl-units.js";
 import { isTruthy, normalizeCompare } from "./repl-expression.js";
 
 export function defFn(name, arity, impl){
@@ -48,17 +48,16 @@ export function createBaseFns(){
   baseFns.if = defFn("if", 3, (cond, a, b) => (isTruthy(cond) ? a : b));
 
   baseFns.waste = defFn("waste", 2, (qty, pct) => {
-    const p = isQty(pct) ? pct.value : pct;
-    const factor = 1 + (p / 100);
+    const factor = isQty(pct) ? (1 + pct.value) : (1 + (pct / 100));
     return mul(qty, factor);
   });
   baseFns.markup = defFn("markup", 2, (cost, pct) => {
-    const p = isQty(pct) ? pct.value : pct;
-    return mul(cost, 1 + (p / 100));
+    const factor = isQty(pct) ? (1 + pct.value) : (1 + (pct / 100));
+    return mul(cost, factor);
   });
   baseFns.burden = defFn("burden", 2, (labor, pct) => {
-    const p = isQty(pct) ? pct.value : pct;
-    return mul(labor, 1 + (p / 100));
+    const factor = isQty(pct) ? (1 + pct.value) : (1 + (pct / 100));
+    return mul(labor, factor);
   });
   baseFns.unit = defFn("unit", 2, (cost, qty) => div(cost, qty));
   baseFns.qty = defFn("qty", 2, (assy, length) => {
@@ -179,6 +178,10 @@ export function createBaseFns(){
     if (q.kind !== "len") throw new Error("to_in expects length");
     return q.value * 12;
   });
+  baseFns.to = defFn("to", 2, (x, unit) => {
+    const q = isQty(x) ? x : makeQty(x, "scalar");
+    return convert(q, unit);
+  });
   baseFns.to_ft = defFn("to_ft", 1, (x) => {
     const q = isQty(x) ? x : makeQty(x, "len");
     if (q.kind !== "len") throw new Error("to_ft expects length");
@@ -213,6 +216,87 @@ export function createBaseFns(){
     const q = isQty(x) ? x : makeQty(x, "wt");
     if (q.kind !== "wt") throw new Error("to_ton expects weight");
     return q.value / 2000;
+  });
+
+  function requireMap(value, label){
+    if (!value || typeof value !== "object" || !value.__map){
+      throw new Error(`${label} expects a map as the first argument.`);
+    }
+    return value;
+  }
+
+  baseFns.map = defFn("map", 1, (text) => {
+    if (typeof text !== "string") throw new Error("map expects a string");
+    const rawRows = text.split("|").map((row) => row.trimEnd()).filter((row) => row.length);
+    if (!rawRows.length) throw new Error("map expects at least one row");
+    const width = rawRows[0].length;
+    if (!width) throw new Error("map expects non-empty rows");
+    const height = rawRows.length;
+    const data = new Uint8Array(width * height);
+    let spawnX = 1.5;
+    let spawnY = 1.5;
+    let foundSpawn = false;
+    for (let y = 0; y < height; y++){
+      const row = rawRows[y];
+      if (row.length !== width){
+        throw new Error("map rows must all be the same width");
+      }
+      for (let x = 0; x < width; x++){
+        const ch = row[x];
+        let v = 0;
+        if (ch === "#") v = 1;
+        else if (ch === ".") v = 0;
+        else if (ch === "D") v = 2;
+        else if (ch === "K") v = 3;
+        else if (ch === "E") v = 4;
+        else if (ch === "M") v = 5;
+        else if (ch === "H") v = 6;
+        else if (ch === "A") v = 7;
+        else if (ch === "S"){
+          v = 0;
+          if (!foundSpawn){
+            spawnX = x + 0.5;
+            spawnY = y + 0.5;
+            foundSpawn = true;
+          }
+        }else{
+          throw new Error(`map contains unsupported tile '${ch}' (use # . D K E S M H A)`);
+        }
+        data[y * width + x] = v;
+      }
+    }
+    return {
+      __map: true,
+      w: width,
+      h: height,
+      data,
+      spawnX,
+      spawnY,
+    };
+  });
+
+  baseFns.mw = defFn("mw", 1, (m) => requireMap(m, "mw").w);
+  baseFns.mh = defFn("mh", 1, (m) => requireMap(m, "mh").h);
+  baseFns.mspawnx = defFn("mspawnx", 1, (m) => requireMap(m, "mspawnx").spawnX);
+  baseFns.mspawny = defFn("mspawny", 1, (m) => requireMap(m, "mspawny").spawnY);
+  baseFns.mget = defFn("mget", 3, (m, x, y) => {
+    const mapObj = requireMap(m, "mget");
+    const ix = Math.floor(isQty(x) ? x.value : x);
+    const iy = Math.floor(isQty(y) ? y.value : y);
+    if (!Number.isFinite(ix) || !Number.isFinite(iy)) return 1;
+    if (ix < 0 || iy < 0 || ix >= mapObj.w || iy >= mapObj.h) return 1;
+    return mapObj.data[iy * mapObj.w + ix];
+  });
+  baseFns.mset = defFn("mset", 4, (m, x, y, value) => {
+    const mapObj = requireMap(m, "mset");
+    const ix = Math.floor(isQty(x) ? x.value : x);
+    const iy = Math.floor(isQty(y) ? y.value : y);
+    const v = Math.floor(isQty(value) ? value.value : value);
+    if (!Number.isFinite(ix) || !Number.isFinite(iy)) return 0;
+    if (ix < 0 || iy < 0 || ix >= mapObj.w || iy >= mapObj.h) return 0;
+    if (!Number.isFinite(v) || v < 0 || v > 255) throw new Error("mset value must be 0..255");
+    mapObj.data[iy * mapObj.w + ix] = v;
+    return 1;
   });
 
   return baseFns;

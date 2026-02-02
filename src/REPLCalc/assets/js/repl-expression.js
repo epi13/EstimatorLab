@@ -55,8 +55,8 @@ export function tokenize(src){
 
   const isSpace = (c) => /\s/.test(c);
   const isDigit = (c) => /[0-9]/.test(c);
-  const isIdentStart = (c) => /[A-Za-z_]/.test(c);
-  const isIdent = (c) => /[A-Za-z0-9_]/.test(c);
+  const isIdentStart = (c) => /[A-Za-z_$%]/.test(c);
+  const isIdent = (c) => /[A-Za-z0-9_$%]/.test(c);
 
   while (i < s.length){
     const c = s[i];
@@ -266,12 +266,6 @@ export function evalRPN(rpn, ctx){
       return ctx.unitOverrides[name];
     }
 
-    if (isUnitToken(name)){
-      const unit = UNIT[name];
-      recordResolve(name);
-      return makeQty(unit.toBase, unit.kind);
-    }
-
     if (Object.prototype.hasOwnProperty.call(ctx.aliases, name)){
       const resolved = ctx.aliases[name];
       recordResolve(name, resolved);
@@ -280,6 +274,12 @@ export function evalRPN(rpn, ctx){
     if (Object.prototype.hasOwnProperty.call(ctx.vars, name)){
       recordResolve(name);
       return ctx.vars[name];
+    }
+
+    if (isUnitToken(name)){
+      const unit = UNIT[name];
+      recordResolve(name);
+      return makeQty(unit.toBase, unit.kind);
     }
     throw new Error(`Unknown identifier: ${name}`);
   }
@@ -327,13 +327,13 @@ export function buildAliasMap(tokens, vars, fnNames){
     const name = t.value;
     const next = tokens[i + 1];
     if (next && next.type === "(") continue;
-    if (isUnitToken(name) || name === "pi" || name === "e") continue;
-    if (fnNames && fnNames.has(name)) continue;
     if (Object.prototype.hasOwnProperty.call(vars, name)){
       referenced.add(name);
-    }else{
-      unknown.push(name);
+      continue;
     }
+    if (isUnitToken(name) || name === "pi" || name === "e") continue;
+    if (fnNames && fnNames.has(name)) continue;
+    unknown.push(name);
   }
 
   const available = Object.keys(vars).filter((name) => !referenced.has(name));
