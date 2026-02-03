@@ -4,7 +4,7 @@ body[data-page="weight-rebar-calculator"] {
   --panel-muted: rgba(22, 31, 52, 0.95);
   padding: clamp(1.5rem, 3vw, 2.75rem);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   background:
     radial-gradient(circle at 12% 8%, rgba(var(--accent-rgb), 0.32), transparent 55%),
@@ -20,7 +20,7 @@ body[data-page="weight-rebar-calculator"] > *:not(script):not(style) {
 .rebar-shell {
   width: min(1180px, 100%);
   min-height: calc(100vh - clamp(2rem, 4vw, 5rem));
-  height: calc(100vh - clamp(2rem, 4vw, 5rem));
+  height: auto;
   display: grid;
   grid-template-rows: auto 1fr;
   gap: var(--spacing-lg);
@@ -29,7 +29,7 @@ body[data-page="weight-rebar-calculator"] > *:not(script):not(style) {
   border: 1px solid var(--panel-border);
   box-shadow: var(--shadow-lg);
   padding: clamp(1.25rem, 2.5vw, 2.25rem);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .shell-header {
@@ -88,7 +88,7 @@ body[data-page="weight-rebar-calculator"] > *:not(script):not(style) {
 .panel-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
