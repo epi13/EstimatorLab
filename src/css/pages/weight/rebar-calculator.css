@@ -19,7 +19,8 @@ body[data-page="weight-rebar-calculator"] > *:not(script):not(style) {
 
 .rebar-shell {
   width: min(1180px, 100%);
-  max-height: calc(100vh - clamp(2rem, 4vw, 5rem));
+  min-height: calc(100vh - clamp(2rem, 4vw, 5rem));
+  height: calc(100vh - clamp(2rem, 4vw, 5rem));
   display: grid;
   grid-template-rows: auto 1fr;
   gap: var(--spacing-lg);
@@ -77,6 +78,10 @@ body[data-page="weight-rebar-calculator"] > *:not(script):not(style) {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  min-height: 0;
+}
+
+.form-panel {
   min-height: 0;
 }
 
@@ -222,7 +227,7 @@ button.calculate:active {
   }
 
   .rebar-shell {
-    max-height: none;
+    min-height: auto;
     height: auto;
   }
 
