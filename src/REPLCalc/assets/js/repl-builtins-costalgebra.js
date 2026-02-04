@@ -11,7 +11,9 @@ export function attachCostAlgebraBuiltins(baseFns, {
 
   function isCostKind(kind){
     const dim = UNITS_INTERNAL.dimFromKind(kind);
-    return Boolean(dim && dim.cur === 1);
+    if (!dim) return false;
+    if (Array.isArray(dim)) return dim[3] === 1;
+    return Boolean(dim.cur === 1);
   }
 
   function requireCostQty(value, label){
@@ -69,12 +71,21 @@ export function attachCostAlgebraBuiltins(baseFns, {
     }
   }
 
-  baseFns.is_cost = defFn("is_cost", 1, (x) => {
+  baseFns.is_cost = defFn("is_cost", 1, {
+    args: [{ label: "x", kinds: ["any"] }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => {
     if (!isQty(x)) return 0;
     return isCostKind(x.kind) ? 1 : 0;
   });
 
-  baseFns.cost_leaf = defFn("cost_leaf", 2, (label, amount) => {
+  baseFns.cost_leaf = defFn("cost_leaf", 2, {
+    args: [
+      { label: "label", kinds: ["string"] },
+      { label: "amount", kinds: ["scalar", "dim"] },
+    ],
+    returns: { kinds: ["dim"] },
+  }, (label, amount) => {
     const name = requireString(label, "cost_leaf");
     const n = Number(isQty(amount) ? amount.value : amount);
     if (!Number.isFinite(n)) throw new Error("cost_leaf expects numeric amount");
@@ -84,7 +95,13 @@ export function attachCostAlgebraBuiltins(baseFns, {
     return q;
   });
 
-  baseFns.cost_label = defFn("cost_label", 2, (cost, label) => {
+  baseFns.cost_label = defFn("cost_label", 2, {
+    args: [
+      { label: "cost", kinds: ["dim"] },
+      { label: "label", kinds: ["string"] },
+    ],
+    returns: { kinds: ["dim"] },
+  }, (cost, label) => {
     const c = requireCostQty(cost, "cost_label");
     const name = requireString(label, "cost_label");
     const node = c.breakdown || { type: "leaf", value: c.value, label: "" };
@@ -96,12 +113,17 @@ export function attachCostAlgebraBuiltins(baseFns, {
     return out;
   });
 
-  baseFns.cost_total = defFn("cost_total", 1, (cost) => {
+  baseFns.cost_total = defFn("cost_total", 1, {
+    args: [{ label: "cost", kinds: ["dim"] }],
+    returns: { kinds: ["scalar"] },
+  }, (cost) => {
     const c = requireCostQty(cost, "cost_total");
     return c.value;
   });
 
-  baseFns.cost_breakdown = defFn("cost_breakdown", 1, (cost) => {
+  baseFns.cost_breakdown = defFn("cost_breakdown", 1, {
+    args: [{ label: "cost", kinds: ["dim"] }],
+  }, (cost) => {
     const c = requireCostQty(cost, "cost_breakdown");
     const node = c.breakdown || { type: "leaf", value: c.value, label: "" };
     const out = Object.create(null);

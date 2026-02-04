@@ -67,12 +67,27 @@ export function attachCsiBuiltins(baseFns, {
     return safe ? `csi_${safe}` : "csi_unassigned";
   }
 
-  baseFns.csi_norm = defFn("csi_norm", 1, (code) => csiNorm(code));
-  baseFns.csi_div = defFn("csi_div", 1, (code) => csiDiv(code));
-  baseFns.csi_section = defFn("csi_section", 1, (code) => csiSection(code));
-  baseFns.csi_item = defFn("csi_item", 1, (code) => csiItem(code));
+  baseFns.csi_norm = defFn("csi_norm", 1, {
+    args: [{ label: "code", kinds: ["any"] }],
+    returns: { kinds: ["string"] },
+  }, (code) => csiNorm(code));
+  baseFns.csi_div = defFn("csi_div", 1, {
+    args: [{ label: "code", kinds: ["any"] }],
+    returns: { kinds: ["string"] },
+  }, (code) => csiDiv(code));
+  baseFns.csi_section = defFn("csi_section", 1, {
+    args: [{ label: "code", kinds: ["any"] }],
+    returns: { kinds: ["string"] },
+  }, (code) => csiSection(code));
+  baseFns.csi_item = defFn("csi_item", 1, {
+    args: [{ label: "code", kinds: ["any"] }],
+    returns: { kinds: ["string"] },
+  }, (code) => csiItem(code));
 
-  baseFns.csi_rollup = defFn("csi_rollup", -1, (...lines) => {
+  baseFns.csi_rollup = defFn("csi_rollup", -1, {
+    args: [],
+    returns: { kinds: ["assy"] },
+  }, (...lines) => {
     if (!lines.length) throw new Error("csi_rollup expects at least one line");
     let grand = null;
     let n = 0;

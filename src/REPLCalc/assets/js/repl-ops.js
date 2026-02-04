@@ -8,22 +8,35 @@ import {
   isScalarKind,
   sameDimension,
 } from "./repl-units.js";
+import {
+  box,
+  isBool,
+  isNull,
+  isScalar,
+  isString,
+  scalar,
+  toScalarNumber,
+} from "./repl-values.js";
 
 function isNumber(value){
   return typeof value === "number";
 }
 
 function isScalarValue(value){
-  if (isNumber(value)) return true;
-  if (isQty(value)) return isScalarKind(value.kind);
+  const v = box(value);
+  if (isScalar(v) || isBool(v) || isNull(v)) return true;
+  if (isNumber(v)) return true;
+  if (isQty(v)) return isScalarKind(v.kind);
   return false;
 }
 
 function scalarNumber(value){
-  if (isNumber(value)) return value;
-  if (isQty(value)){
-    if (!isScalarKind(value.kind)) throw new Error("Expected scalar quantity");
-    return value.value;
+  const v = box(value);
+  if (isNumber(v)) return v;
+  if (isScalar(v) || isBool(v) || isNull(v)) return toScalarNumber(v, "scalar", { allowBool: true, allowDimlessDim: true });
+  if (isQty(v)){
+    if (!isScalarKind(v.kind)) throw new Error("Expected scalar quantity");
+    return v.value;
   }
   throw new Error("Expected scalar");
 }
@@ -70,40 +83,54 @@ function toRange(value){
 }
 
 function valueKey(value){
-  if (isQty(value)) return value.value;
-  return value;
+  const v = box(value);
+  if (isQty(v)) return v.value;
+  if (isScalar(v) || isBool(v) || isNull(v)) return scalarNumber(v);
+  return v;
 }
 
 function minValue(a, b){
-  if (isQty(a) && isQty(b)){
-    if (!sameDimension(a, b)) throw new Error(`Unit mismatch: ${a.kind} vs ${b.kind}`);
-    return a.value <= b.value ? a : b;
+  const av = box(a);
+  const bv = box(b);
+  if (isQty(av) && isQty(bv)){
+    if (!sameDimension(av, bv)) throw new Error(`Unit mismatch: ${av.kind} vs ${bv.kind}`);
+    return av.value <= bv.value ? av : bv;
   }
-  if (isQty(a) && !isQty(b)){
-    if (!isScalarKind(a.kind)) throw new Error("Cannot compare unit quantity to scalar.");
-    return a.value <= b ? a : b;
+  if (isQty(av) && !isQty(bv)){
+    if (!isScalarKind(av.kind)) throw new Error("Cannot compare unit quantity to scalar.");
+    const n = scalarNumber(bv);
+    return av.value <= n ? av : bv;
   }
-  if (!isQty(a) && isQty(b)){
-    if (!isScalarKind(b.kind)) throw new Error("Cannot compare scalar to unit quantity.");
-    return a <= b.value ? a : b;
+  if (!isQty(av) && isQty(bv)){
+    if (!isScalarKind(bv.kind)) throw new Error("Cannot compare scalar to unit quantity.");
+    const n = scalarNumber(av);
+    return n <= bv.value ? av : bv;
   }
-  return a <= b ? a : b;
+  const an = scalarNumber(av);
+  const bn = scalarNumber(bv);
+  return an <= bn ? av : bv;
 }
 
 function maxValue(a, b){
-  if (isQty(a) && isQty(b)){
-    if (!sameDimension(a, b)) throw new Error(`Unit mismatch: ${a.kind} vs ${b.kind}`);
-    return a.value >= b.value ? a : b;
+  const av = box(a);
+  const bv = box(b);
+  if (isQty(av) && isQty(bv)){
+    if (!sameDimension(av, bv)) throw new Error(`Unit mismatch: ${av.kind} vs ${bv.kind}`);
+    return av.value >= bv.value ? av : bv;
   }
-  if (isQty(a) && !isQty(b)){
-    if (!isScalarKind(a.kind)) throw new Error("Cannot compare unit quantity to scalar.");
-    return a.value >= b ? a : b;
+  if (isQty(av) && !isQty(bv)){
+    if (!isScalarKind(av.kind)) throw new Error("Cannot compare unit quantity to scalar.");
+    const n = scalarNumber(bv);
+    return av.value >= n ? av : bv;
   }
-  if (!isQty(a) && isQty(b)){
-    if (!isScalarKind(b.kind)) throw new Error("Cannot compare scalar to unit quantity.");
-    return a >= b.value ? a : b;
+  if (!isQty(av) && isQty(bv)){
+    if (!isScalarKind(bv.kind)) throw new Error("Cannot compare scalar to unit quantity.");
+    const n = scalarNumber(av);
+    return n >= bv.value ? av : bv;
   }
-  return a >= b ? a : b;
+  const an = scalarNumber(av);
+  const bn = scalarNumber(bv);
+  return an >= bn ? av : bv;
 }
 
 function rangeAdd(a, b){
@@ -245,54 +272,86 @@ function matMatMul(a, b){
 }
 
 function assertNoStringOperands(a, b, op){
-  if (typeof a === "string" || typeof b === "string"){
+  const av = box(a);
+  const bv = box(b);
+  if (typeof av === "string" || typeof bv === "string" || isString(av) || isString(bv)){
     throw new Error(`Cannot apply ${op} to strings.`);
   }
 }
 
 export function add(a, b){
-  if (isRange(a) || isRange(b)) return rangeAdd(a, b);
-  if (isVec(a) || isVec(b)) return vecAdd(a, b);
-  assertNoStringOperands(a, b, "+");
-  if (isQty(a) || isQty(b)) return unitAdd(a, b);
-  if (isNumber(a) && isNumber(b)) return a + b;
-  return a + b;
+  const av = box(a);
+  const bv = box(b);
+  if (isRange(av) || isRange(bv)) return rangeAdd(av, bv);
+  if (isVec(av) || isVec(bv)) return vecAdd(av, bv);
+  assertNoStringOperands(av, bv, "+");
+  if (isQty(av) || isQty(bv)){
+    const ua = isQty(av) ? av : scalarNumber(av);
+    const ub = isQty(bv) ? bv : scalarNumber(bv);
+    return unitAdd(ua, ub);
+  }
+  if (isScalarValue(av) && isScalarValue(bv)) return scalar(scalarNumber(av) + scalarNumber(bv));
+  return scalarNumber(av) + scalarNumber(bv);
 }
 
 export function sub(a, b){
-  if (isRange(a) || isRange(b)) return rangeSub(a, b);
-  if (isVec(a) || isVec(b)) return vecSub(a, b);
-  assertNoStringOperands(a, b, "-");
-  if (isQty(a) || isQty(b)) return unitSub(a, b);
-  if (isNumber(a) && isNumber(b)) return a - b;
-  return a - b;
+  const av = box(a);
+  const bv = box(b);
+  if (isRange(av) || isRange(bv)) return rangeSub(av, bv);
+  if (isVec(av) || isVec(bv)) return vecSub(av, bv);
+  assertNoStringOperands(av, bv, "-");
+  if (isQty(av) || isQty(bv)){
+    const ua = isQty(av) ? av : scalarNumber(av);
+    const ub = isQty(bv) ? bv : scalarNumber(bv);
+    return unitSub(ua, ub);
+  }
+  if (isScalarValue(av) && isScalarValue(bv)) return scalar(scalarNumber(av) - scalarNumber(bv));
+  return scalarNumber(av) - scalarNumber(bv);
 }
 
 export function mul(a, b){
-  if (isRange(a) || isRange(b)) return rangeMul(a, b);
-  if (isVec(a) && isScalarValue(b)) return vecScale(a, b);
-  if (isScalarValue(a) && isVec(b)) return vecScale(b, a);
-  if (isMat(a) && isVec(b)) return matVecMul(a, b);
-  if (isMat(a) && isMat(b)) return matMatMul(a, b);
-  assertNoStringOperands(a, b, "*");
-  if (isQty(a) || isQty(b)) return unitMul(a, b);
-  if (isNumber(a) && isNumber(b)) return a * b;
-  return a * b;
+  const av = box(a);
+  const bv = box(b);
+  if (isRange(av) || isRange(bv)) return rangeMul(av, bv);
+  if (isVec(av) && isScalarValue(bv)) return vecScale(av, bv);
+  if (isScalarValue(av) && isVec(bv)) return vecScale(bv, av);
+  if (isMat(av) && isVec(bv)) return matVecMul(av, bv);
+  if (isMat(av) && isMat(bv)) return matMatMul(av, bv);
+  assertNoStringOperands(av, bv, "*");
+  if (isQty(av) || isQty(bv)){
+    const ua = isQty(av) ? av : scalarNumber(av);
+    const ub = isQty(bv) ? bv : scalarNumber(bv);
+    return unitMul(ua, ub);
+  }
+  if (isScalarValue(av) && isScalarValue(bv)) return scalar(scalarNumber(av) * scalarNumber(bv));
+  return scalarNumber(av) * scalarNumber(bv);
 }
 
 export function div(a, b){
-  if (isRange(a) || isRange(b)) return rangeDiv(a, b);
-  assertNoStringOperands(a, b, "/");
-  if (isQty(a) || isQty(b)) return unitDiv(a, b);
-  if (isNumber(a) && isNumber(b)) return a / b;
-  return a / b;
+  const av = box(a);
+  const bv = box(b);
+  if (isRange(av) || isRange(bv)) return rangeDiv(av, bv);
+  assertNoStringOperands(av, bv, "/");
+  if (isQty(av) || isQty(bv)){
+    const ua = isQty(av) ? av : scalarNumber(av);
+    const ub = isQty(bv) ? bv : scalarNumber(bv);
+    return unitDiv(ua, ub);
+  }
+  if (isScalarValue(av) && isScalarValue(bv)) return scalar(scalarNumber(av) / scalarNumber(bv));
+  return scalarNumber(av) / scalarNumber(bv);
 }
 
 export function pow(a, b){
-  assertNoStringOperands(a, b, "^");
-  if (isQty(a) || isQty(b)) return unitPow(a, b);
-  if (isNumber(a) && isNumber(b)) return Math.pow(a, b);
-  return Math.pow(a, b);
+  const av = box(a);
+  const bv = box(b);
+  assertNoStringOperands(av, bv, "^");
+  if (isQty(av) || isQty(bv)){
+    const ua = isQty(av) ? av : scalarNumber(av);
+    const ub = isQty(bv) ? bv : scalarNumber(bv);
+    return unitPow(ua, ub);
+  }
+  if (isScalarValue(av) && isScalarValue(bv)) return scalar(Math.pow(scalarNumber(av), scalarNumber(bv)));
+  return scalar(Math.pow(scalarNumber(av), scalarNumber(bv)));
 }
 
 export const __internal = {

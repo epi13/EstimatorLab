@@ -557,6 +557,48 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
     writeLineRich(["  ", token(":theme", "out-command"), " default|amber|matrix"], "muted");
     writeLineRich(["  ", token(":test", "out-command"), " run the built-in test suite"], "muted");
     writeLineRich(["  ", token(":doom", "out-command"), " run the gfx loop demo"], "muted");
+
+    writeLineRich([token("Effects + determinism:", "out-label")], "muted");
+    writeLineRich([
+      "  Some functions are side-effecting and are blocked in pure contexts.",
+    ], "muted");
+    writeLineRich([
+      "  Errors are prefixed with ",
+      token("ERR[E_EFFECT]", "out-op"),
+      " when a disallowed effect is used.",
+    ], "muted");
+    writeLineRich([
+      "  Effect groups: ",
+      token("PURE", "out-keyword"),
+      " | ",
+      token("IO_GFX", "out-keyword"),
+      " | ",
+      token("STATE", "out-keyword"),
+      " | ",
+      token("RNG", "out-keyword"),
+      " | ",
+      token("TIME", "out-keyword"),
+      ".",
+    ], "muted");
+    writeLineRich([
+      "  Seeded randomness: ",
+      token("seed", "out-fn"),
+      token("(123)", "out-op"),
+      " makes random sampling deterministic for the session.",
+    ], "muted");
+    writeLineRich([
+      "  Expression if is lazy: ",
+      token("if", "out-fn"),
+      token("(cond, thenExpr, elseExpr)", "out-op"),
+      " only evaluates the chosen branch.",
+    ], "muted");
+    writeLineRich([
+      "  Type/unit errors use ",
+      token("ERR[E_TYPE]", "out-op"),
+      " and ",
+      token("ERR[E_DIM]", "out-op"),
+      " (expected vs got).",
+    ], "muted");
     writeLineRich([token("Tips:", "out-label")], "muted");
     writeLineRich([
       "  - Shift+Enter inserts a new line. Enter runs when the statement is complete."

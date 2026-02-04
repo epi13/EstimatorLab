@@ -1,3 +1,5 @@
+import { EFFECT } from "./repl-effects.js";
+
 export function attachMapBuiltins(baseFns, { defFn, isQty }){
   function requireMap(value, label){
     if (!value || typeof value !== "object" || !value.__map){
@@ -6,7 +8,10 @@ export function attachMapBuiltins(baseFns, { defFn, isQty }){
     return value;
   }
 
-  baseFns.map = defFn("map", 1, (text) => {
+  baseFns.map = defFn("map", 1, {
+    args: [{ label: "text", kinds: ["string"] }],
+    returns: { kinds: ["map"] },
+  }, (text) => {
     if (typeof text !== "string") throw new Error("map expects a string");
     const rawRows = text.split("|").map((row) => row.trimEnd()).filter((row) => row.length);
     if (!rawRows.length) throw new Error("map expects at least one row");
@@ -60,7 +65,15 @@ export function attachMapBuiltins(baseFns, { defFn, isQty }){
     };
   });
 
-  baseFns.dungeon = defFn("dungeon", 4, (seed, width, height, difficulty) => {
+  baseFns.dungeon = defFn("dungeon", 4, {
+    args: [
+      { label: "seed", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "width", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "height", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "difficulty", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["map"] },
+  }, (seed, width, height, difficulty) => {
     const w = Math.max(7, Math.min(64, Math.floor(isQty(width) ? width.value : width)));
     const h = Math.max(7, Math.min(64, Math.floor(isQty(height) ? height.value : height)));
     const diff = Math.max(0, Math.min(10, Math.floor(isQty(difficulty) ? difficulty.value : difficulty)));
@@ -168,11 +181,30 @@ export function attachMapBuiltins(baseFns, { defFn, isQty }){
     };
   });
 
-  baseFns.mw = defFn("mw", 1, (m) => requireMap(m, "mw").w);
-  baseFns.mh = defFn("mh", 1, (m) => requireMap(m, "mh").h);
-  baseFns.mspawnx = defFn("mspawnx", 1, (m) => requireMap(m, "mspawnx").spawnX);
-  baseFns.mspawny = defFn("mspawny", 1, (m) => requireMap(m, "mspawny").spawnY);
-  baseFns.mget = defFn("mget", 3, (m, x, y) => {
+  baseFns.mw = defFn("mw", 1, {
+    args: [{ label: "m", kinds: ["map"] }],
+    returns: { kinds: ["scalar"] },
+  }, (m) => requireMap(m, "mw").w);
+  baseFns.mh = defFn("mh", 1, {
+    args: [{ label: "m", kinds: ["map"] }],
+    returns: { kinds: ["scalar"] },
+  }, (m) => requireMap(m, "mh").h);
+  baseFns.mspawnx = defFn("mspawnx", 1, {
+    args: [{ label: "m", kinds: ["map"] }],
+    returns: { kinds: ["scalar"] },
+  }, (m) => requireMap(m, "mspawnx").spawnX);
+  baseFns.mspawny = defFn("mspawny", 1, {
+    args: [{ label: "m", kinds: ["map"] }],
+    returns: { kinds: ["scalar"] },
+  }, (m) => requireMap(m, "mspawny").spawnY);
+  baseFns.mget = defFn("mget", 3, {
+    args: [
+      { label: "m", kinds: ["map"] },
+      { label: "x", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "y", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (m, x, y) => {
     const mapObj = requireMap(m, "mget");
     const ix = Math.floor(isQty(x) ? x.value : x);
     const iy = Math.floor(isQty(y) ? y.value : y);
@@ -180,7 +212,16 @@ export function attachMapBuiltins(baseFns, { defFn, isQty }){
     if (ix < 0 || iy < 0 || ix >= mapObj.w || iy >= mapObj.h) return 1;
     return mapObj.data[iy * mapObj.w + ix];
   });
-  baseFns.mset = defFn("mset", 4, (m, x, y, value) => {
+  baseFns.mset = defFn("mset", 4, {
+    args: [
+      { label: "m", kinds: ["map"] },
+      { label: "x", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "y", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "value", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+    effects: EFFECT.STATE,
+  }, (m, x, y, value) => {
     const mapObj = requireMap(m, "mset");
     const ix = Math.floor(isQty(x) ? x.value : x);
     const iy = Math.floor(isQty(y) ? y.value : y);

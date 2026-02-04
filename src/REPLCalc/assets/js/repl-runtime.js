@@ -1,4 +1,6 @@
-export function createRuntime({ state, baseFns, defFn, renderUserFunctions, parseParams, gfxFns }){
+import { EFFECT } from "./repl-effects.js";
+
+export function createRuntime({ state, baseFns, defFn, defFnCtx, renderUserFunctions, parseParams, gfxFns }){
   let runExpressionWithContext = null;
   const callStack = [];
 
@@ -24,8 +26,14 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
         arity: -1,
         ctx: true,
         impl: (ctx, ...args) => {
-          if (args.length && typeof args[0] === "string"){
+          const first = args.length ? args[0] : null;
+          if (typeof first === "string" || (first && typeof first === "object" && first.__kind === "string")){
             return baseFns.line.impl(ctx, ...args);
+          }
+          const allowed = typeof ctx?.allowedEffects === "number" ? ctx.allowedEffects : EFFECT.ALL;
+          const need = typeof metaFns.line.effects === "number" ? metaFns.line.effects : EFFECT.IO_GFX;
+          if ((need & ~allowed) !== 0){
+            throw new Error(`ERR[E_EFFECT] line(): effect IO_GFX not allowed in this context`);
           }
           return metaFns.line.impl(...args);
         },
@@ -38,7 +46,8 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
     if (Object.prototype.hasOwnProperty.call(baseFns, name) || Object.prototype.hasOwnProperty.call(metaFns, name)){
       throw new Error(`Cannot redefine built-in function: ${name}`);
     }
-    const defn = defFn(name, params.length, (...args) => {
+    if (typeof defFnCtx !== "function") throw new Error("Runtime missing defFnCtx");
+    const defn = defFnCtx(name, params.length, (ctx, ...args) => {
       if (callStack.includes(name)){
         const cycle = [...callStack, name].join(" -> ");
         throw new Error(`Circular function call: ${cycle}`);
@@ -53,7 +62,8 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
         throw new Error("Expression engine not ready.");
       }
       try{
-        return runExpressionWithContext(expr, scoped);
+        const allowed = typeof ctx?.allowedEffects === "number" ? ctx.allowedEffects : EFFECT.PURE;
+        return runExpressionWithContext(expr, scoped, { allowedEffects: allowed });
       }finally{
         callStack.pop();
       }
@@ -68,21 +78,34 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
     }
   }
 
-  metaFns.eval = defFn("eval", 1, (expr) => {
+  metaFns.eval = defFn("eval", 1, {
+    args: [{ label: "expr", kinds: ["string"] }],
+    returns: { kinds: ["any"] },
+  }, (expr) => {
     if (typeof expr !== "string") throw new Error("eval expects a string expression");
     if (!runExpressionWithContext) throw new Error("Expression engine not ready.");
     return runExpressionWithContext(expr, state.vars);
   });
-  metaFns.get = defFn("get", 1, (name) => {
+  metaFns.get = defFn("get", 1, {
+    args: [{ label: "name", kinds: ["string"] }],
+    returns: { kinds: ["any"] },
+  }, (name) => {
     const key = normalizeMetaName(name, "get");
     if (!Object.prototype.hasOwnProperty.call(state.vars, key)) throw new Error(`Unknown variable: ${key}`);
     return state.vars[key];
   });
-  metaFns.has = defFn("has", 1, (name) => {
+  metaFns.has = defFn("has", 1, {
+    args: [{ label: "name", kinds: ["string"] }],
+    returns: { kinds: ["scalar"] },
+  }, (name) => {
     const key = normalizeMetaName(name, "has");
     return Object.prototype.hasOwnProperty.call(state.vars, key) ? 1 : 0;
   });
-  metaFns.set = defFn("set", 2, (name, value) => {
+  metaFns.set = defFn("set", 2, {
+    args: [{ label: "name", kinds: ["string"] }, { label: "value", kinds: ["any"] }],
+    returns: { kinds: ["any"] },
+    effects: EFFECT.STATE,
+  }, (name, value) => {
     const key = normalizeMetaName(name, "set");
     state.vars[key] = value;
     if (typeof state.onVarDefined === "function"){
@@ -90,7 +113,11 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
     }
     return value;
   });
-  metaFns.unset = defFn("unset", 1, (name) => {
+  metaFns.unset = defFn("unset", 1, {
+    args: [{ label: "name", kinds: ["string"] }],
+    returns: { kinds: ["scalar"] },
+    effects: EFFECT.STATE,
+  }, (name) => {
     const key = normalizeMetaName(name, "unset");
     const existed = Object.prototype.hasOwnProperty.call(state.vars, key);
     if (existed) delete state.vars[key];
@@ -99,16 +126,32 @@ export function createRuntime({ state, baseFns, defFn, renderUserFunctions, pars
     }
     return existed ? 1 : 0;
   });
-  metaFns.vars = defFn("vars", 0, () => Object.keys(state.vars).sort().join(", "));
-  metaFns.methods = defFn("methods", 0, () => Object.keys(state.userFns).sort().join(", "));
-  metaFns.define = defFn("define", 3, (name, params, expr) => {
+  metaFns.vars = defFn("vars", 0, {
+    returns: { kinds: ["string"] },
+  }, () => Object.keys(state.vars).sort().join(", "));
+  metaFns.methods = defFn("methods", 0, {
+    returns: { kinds: ["string"] },
+  }, () => Object.keys(state.userFns).sort().join(", "));
+  metaFns.define = defFn("define", 3, {
+    args: [
+      { label: "name", kinds: ["string"] },
+      { label: "params", kinds: ["string"] },
+      { label: "expr", kinds: ["string"] },
+    ],
+    returns: { kinds: ["string"] },
+    effects: EFFECT.STATE,
+  }, (name, params, expr) => {
     const fnName = normalizeMetaName(name, "define");
     const paramList = normalizeMetaParams(params);
     if (typeof expr !== "string") throw new Error("define expects an expression string");
     defineUserFn(fnName, paramList, expr);
     return fnName;
   });
-  metaFns.undefine = defFn("undefine", 1, (name) => {
+  metaFns.undefine = defFn("undefine", 1, {
+    args: [{ label: "name", kinds: ["string"] }],
+    returns: { kinds: ["scalar"] },
+    effects: EFFECT.STATE,
+  }, (name) => {
     const fnName = normalizeMetaName(name, "undefine");
     if (!Object.prototype.hasOwnProperty.call(state.userFns, fnName)) return 0;
     delete state.userFns[fnName];

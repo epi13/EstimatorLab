@@ -23,7 +23,7 @@ export function attachRateBuiltins(baseFns, {
 
   function requireScalar(value, label){
     if (isQty(value)){
-      if (value.kind !== "scalar") throw new Error(`${label} expects a scalar value`);
+      if (value.kind !== "scalar") throw new Error(`${label} expects a dimensionless scalar value`);
       return value.value;
     }
     const n = Number(value);
@@ -41,7 +41,14 @@ export function attachRateBuiltins(baseFns, {
     return n;
   }
 
-  baseFns.rate = defFnCtx("rate", -1, (ctx, ...args) => {
+  baseFns.rate = defFnCtx("rate", -1, {
+    args: [
+      { label: "name", kinds: ["string"] },
+      { label: "base", kinds: ["any"] },
+      { label: "factors", kinds: ["any"] },
+    ],
+    returns: { kinds: ["rate"] },
+  }, (ctx, ...args) => {
     if (args.length < 2) throw new Error("rate expects (name, base[, {factors}])");
     const name = args[0];
     const base = args[1];
@@ -78,11 +85,22 @@ export function attachRateBuiltins(baseFns, {
     };
   });
 
-  baseFns.is_rate = defFn("is_rate", 1, (value) => isRate(value) ? 1 : 0);
-  baseFns.rate_name = defFn("rate_name", 1, (r) => requireRate(r, "rate_name").name);
-  baseFns.rate_base = defFn("rate_base", 1, (r) => requireRate(r, "rate_base").base);
+  baseFns.is_rate = defFn("is_rate", 1, {
+    args: [{ label: "value", kinds: ["any"] }],
+    returns: { kinds: ["scalar"] },
+  }, (value) => isRate(value) ? 1 : 0);
+  baseFns.rate_name = defFn("rate_name", 1, {
+    args: [{ label: "r", kinds: ["rate"] }],
+    returns: { kinds: ["string"] },
+  }, (r) => requireRate(r, "rate_name").name);
+  baseFns.rate_base = defFn("rate_base", 1, {
+    args: [{ label: "r", kinds: ["rate"] }],
+  }, (r) => requireRate(r, "rate_base").base);
 
-  baseFns.rate_factors = defFn("rate_factors", 1, (r) => {
+  baseFns.rate_factors = defFn("rate_factors", 1, {
+    args: [{ label: "r", kinds: ["rate"] }],
+    returns: { kinds: ["assy"] },
+  }, (r) => {
     const rate = requireRate(r, "rate_factors");
     const fields = Object.create(null);
     const keys = Object.keys(rate.factors || {}).sort();
@@ -92,7 +110,9 @@ export function attachRateBuiltins(baseFns, {
     return buildAssy("factors", fields);
   });
 
-  baseFns.rate_factor = defFn("rate_factor", 2, (r, key) => {
+  baseFns.rate_factor = defFn("rate_factor", 2, {
+    args: [{ label: "r", kinds: ["rate"] }, { label: "key", kinds: ["string"] }],
+  }, (r, key) => {
     const rate = requireRate(r, "rate_factor");
     if (typeof key !== "string") throw new Error("rate_factor expects key as string");
     const k = key.trim();
@@ -100,7 +120,10 @@ export function attachRateBuiltins(baseFns, {
     return Object.prototype.hasOwnProperty.call(rate.factors || {}, k) ? rate.factors[k] : 1;
   });
 
-  baseFns.rate_with = defFnCtx("rate_with", 2, (ctx, r, overridesRaw) => {
+  baseFns.rate_with = defFnCtx("rate_with", 2, {
+    args: [{ label: "r", kinds: ["rate"] }, { label: "overrides", kinds: ["any"] }],
+    returns: { kinds: ["rate"] },
+  }, (ctx, r, overridesRaw) => {
     const rate = requireRate(r, "rate_with");
     const factors = Object.assign(Object.create(null), rate.factors || Object.create(null));
     if (overridesRaw){
@@ -128,22 +151,30 @@ export function attachRateBuiltins(baseFns, {
     };
   });
 
-  baseFns.rate_eff = defFn("rate_eff", 1, (r) => {
+  baseFns.rate_eff = defFn("rate_eff", 1, {
+    args: [{ label: "r", kinds: ["rate"] }],
+  }, (r) => {
     if (!isRate(r)) throw new Error("rate_eff expects a rate");
     return r.eff;
   });
 
-  baseFns.prod = defFn("prod", 2, (rate, duration) => {
+  baseFns.prod = defFn("prod", 2, {
+    args: [{ label: "rate", kinds: ["rate"] }, { label: "duration", kinds: ["scalar", "dim"] }],
+  }, (rate, duration) => {
     if (!isRate(rate)) throw new Error("prod expects (rate, duration)");
     return mul(rate.eff, duration);
   });
 
-  baseFns.time_for = defFn("time_for", 2, (qty, rate) => {
+  baseFns.time_for = defFn("time_for", 2, {
+    args: [{ label: "qty", kinds: ["scalar", "dim"] }, { label: "rate", kinds: ["rate"] }],
+  }, (qty, rate) => {
     const r = requireRate(rate, "time_for");
     return div(qty, r.eff);
   });
 
-  baseFns.rate_inv = defFn("rate_inv", 1, (value) => {
+  baseFns.rate_inv = defFn("rate_inv", 1, {
+    args: [{ label: "value", kinds: ["any"] }],
+  }, (value) => {
     if (isRate(value)){
       const r = value;
       return {
@@ -157,7 +188,12 @@ export function attachRateBuiltins(baseFns, {
     return div(1, value);
   });
 
-  baseFns.crew = defFn("crew", 2, (count, value) => {
+  baseFns.crew = defFn("crew", 2, {
+    args: [
+      { label: "count", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "value", kinds: ["any"] },
+    ],
+  }, (count, value) => {
     const n = requireScalar(count, "crew");
     if (isRate(value)){
       const r = value;
@@ -172,7 +208,13 @@ export function attachRateBuiltins(baseFns, {
     return mul(value, n);
   });
 
-  baseFns.learn = defFn("learn", 3, (value, n, exponent) => {
+  baseFns.learn = defFn("learn", 3, {
+    args: [
+      { label: "value", kinds: ["any"] },
+      { label: "n", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "exponent", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+  }, (value, n, exponent) => {
     const nv = requireScalar(n, "learn");
     const ev = requireScalar(exponent, "learn");
     const factor = Math.pow(nv, ev);
@@ -189,7 +231,14 @@ export function attachRateBuiltins(baseFns, {
     return mul(value, factor);
   });
 
-  baseFns.tsim = defFnCtx("tsim", 3, (ctx, duration, dt, expr) => {
+  baseFns.tsim = defFnCtx("tsim", 3, {
+    args: [
+      { label: "duration", kinds: ["scalar", "dim"], dim: "time" },
+      { label: "dt", kinds: ["scalar", "dim"], dim: "time" },
+      { label: "expr", kinds: ["string"] },
+    ],
+    returns: { kinds: ["assy"] },
+  }, (ctx, duration, dt, expr) => {
     if (!ctx || typeof ctx.evalString !== "function") throw new Error("tsim requires evalString support");
     if (typeof expr !== "string") throw new Error("tsim expects expression string");
 

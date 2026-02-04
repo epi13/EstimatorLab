@@ -30,6 +30,12 @@ export function createEvaluator({
   usageTracker,
   cmdRunner,
 }){
+  function normalizeEvalOptions(options){
+    if (!options || typeof options !== "object") return null;
+    const out = Object.create(null);
+    if (typeof options.allowedEffects === "number") out.allowedEffects = options.allowedEffects;
+    return out;
+  }
   function collectIdentifierNames(tokens){
     const names = new Set();
     for (let i = 0; i < tokens.length; i++){
@@ -189,19 +195,21 @@ export function createEvaluator({
     throw new Error("Could not solve equation (no convergence).");
   }
 
-  function runExpressionWithContext(expr, vars){
+  function runExpressionWithContext(expr, vars, options = null){
     const tokens = insertImplicitMultiplication(tokenize(expr));
     maybeEnsureSymbols(tokens);
     const fns = getFns();
     const aliasMap = buildAliasMap(tokens, vars, new Set(Object.keys(fns)));
     const rpn = toRPN(tokens);
+    const opts = normalizeEvalOptions(options);
     return evalRPN(rpn, {
       vars,
       fns,
       aliases: aliasMap,
+      allowedEffects: opts?.allowedEffects,
       evalString: (innerExpr, overrides = null) => {
         const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
-        return runExpressionWithContext(innerExpr, merged);
+        return runExpressionWithContext(innerExpr, merged, opts);
       },
       cmdRunner,
       ...getUsageHooks(),
@@ -212,20 +220,22 @@ export function createEvaluator({
     return runExpressionWithContext(expr, state.vars);
   }
 
-  function runExpressionWithOverrides(expr, vars, unitOverrides, aliasMap = null){
+  function runExpressionWithOverrides(expr, vars, unitOverrides, aliasMap = null, options = null){
     const tokens = insertImplicitMultiplication(tokenize(expr));
     maybeEnsureSymbols(tokens);
     const fns = getFns();
     const resolvedAliases = aliasMap || buildAliasMap(tokens, vars, new Set(Object.keys(fns)));
     const rpn = toRPN(tokens);
+    const opts = normalizeEvalOptions(options);
     return evalRPN(rpn, {
       vars,
       fns,
       aliases: resolvedAliases,
       unitOverrides,
+      allowedEffects: opts?.allowedEffects,
       evalString: (innerExpr, overrides = null) => {
         const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
-        return runExpressionWithOverrides(innerExpr, merged, unitOverrides, null);
+        return runExpressionWithOverrides(innerExpr, merged, unitOverrides, null, opts);
       },
       cmdRunner,
       ...getUsageHooks(),
@@ -310,7 +320,8 @@ export function createEvaluator({
   }
 
   function evaluate(line){
-    const src = line.trim();
+    const raw = line.trimEnd();
+    const src = raw.trim();
     if (!src) return null;
 
     if (src.startsWith(":")){
@@ -321,15 +332,15 @@ export function createEvaluator({
     }
 
     if (/^if\s+/i.test(src)){
-      return parseIfStatement(src);
+      return parseIfStatement(raw);
     }
 
     if (/^for\s+/i.test(src)){
-      return parseForStatement(src);
+      return parseForStatement(raw);
     }
 
     if (/^repeat\s+/i.test(src)){
-      return parseRepeatStatement(src);
+      return parseRepeatStatement(raw);
     }
 
     if (/^assy\b/i.test(src)){

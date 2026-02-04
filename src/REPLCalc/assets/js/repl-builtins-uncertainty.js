@@ -1,3 +1,6 @@
+import { EFFECT } from "./repl-effects.js";
+import { random } from "./repl-rng.js";
+
 export const __internal = {
   distNormal: null,
   distTri: null,
@@ -23,6 +26,11 @@ export function attachUncertaintyBuiltins(baseFns, {
   }
 
   function scalarOrQty(value, label){
+    if (value && typeof value === "object" && typeof value.__kind === "string"){
+      if (value.__kind === "scalar") return value.value;
+      if (value.__kind === "bool") return value.value ? 1 : 0;
+      if (value.__kind === "string") value = value.value;
+    }
     if (isQty(value)) return value;
     const num = Number(value);
     if (!Number.isFinite(num)) throw new Error(`${label} must be numeric`);
@@ -61,17 +69,31 @@ export function attachUncertaintyBuiltins(baseFns, {
   }
 
   function distUniform(lo, hi){
-    const l0 = scalarOrQty(lo, "lo");
-    const h0 = scalarOrQty(hi, "hi");
-    if (isQty(l0) !== isQty(h0)) throw new Error("dist.uniform lo/hi must both be quantities or both be scalars");
-    if (isQty(l0)){
-      if (l0.kind !== h0.kind) throw new Error("dist.uniform bounds must have same units");
-      if (!(l0.value <= h0.value)) throw new Error("dist.uniform requires lo <= hi");
-      return { __dist: true, kind: "uniform", lo: l0, hi: h0 };
+    const normalizeBound = (value, label) => {
+      const v0 = scalarOrQty(value, label);
+      if (isQty(v0)){
+        if (v0.kind === "scalar" && !v0.unit) return { scalar: v0.value };
+        return { qty: v0 };
+      }
+      return { scalar: v0 };
+    };
+
+    const l = normalizeBound(lo, "lo");
+    const h = normalizeBound(hi, "hi");
+
+    const lIsQty = Object.prototype.hasOwnProperty.call(l, "qty");
+    const hIsQty = Object.prototype.hasOwnProperty.call(h, "qty");
+    if (lIsQty !== hIsQty) throw new Error("dist.uniform lo/hi must both be quantities or both be scalars");
+
+    if (lIsQty){
+      if (l.qty.kind !== h.qty.kind || l.qty.unit !== h.qty.unit) throw new Error("dist.uniform bounds must have same units");
+      if (!(l.qty.value <= h.qty.value)) throw new Error("dist.uniform requires lo <= hi");
+      return { __dist: true, kind: "uniform", lo: l.qty, hi: h.qty };
     }
-    if (!(Number.isFinite(l0) && Number.isFinite(h0))) throw new Error("dist.uniform bounds must be numeric");
-    if (!(l0 <= h0)) throw new Error("dist.uniform requires lo <= hi");
-    return { __dist: true, kind: "uniform", lo: l0, hi: h0 };
+
+    if (!(Number.isFinite(l.scalar) && Number.isFinite(h.scalar))) throw new Error("dist.uniform bounds must be numeric");
+    if (!(l.scalar <= h.scalar)) throw new Error("dist.uniform requires lo <= hi");
+    return { __dist: true, kind: "uniform", lo: l.scalar, hi: h.scalar };
   }
 
   function erf(x){
@@ -157,8 +179,8 @@ export function attachUncertaintyBuiltins(baseFns, {
   function randn(){
     let u = 0;
     let v = 0;
-    while (u === 0) u = Math.random();
-    while (v === 0) v = Math.random();
+    while (u === 0) u = random();
+    while (v === 0) v = random();
     return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
   }
 
@@ -172,7 +194,7 @@ export function attachUncertaintyBuiltins(baseFns, {
       return dist.mu + z * dist.sigma;
     }
     if (dist.kind === "tri"){
-      const u = Math.random();
+      const u = random();
       const a0 = dist.a;
       const b0 = dist.b;
       const c0 = dist.c;
@@ -193,7 +215,7 @@ export function attachUncertaintyBuiltins(baseFns, {
     if (dist.kind === "uniform"){
       const lo0 = dist.lo;
       const hi0 = dist.hi;
-      const u = Math.random();
+      const u = random();
       if (isQty(lo0)){
         const lo = lo0.value;
         const hi = hi0.value;
@@ -257,11 +279,16 @@ export function attachUncertaintyBuiltins(baseFns, {
     });
   }
 
-  baseFns.range = defFn("range", 2, (lo, hi) => {
+  baseFns.range = defFn("range", 2, {
+    args: [{ label: "lo", kinds: ["scalar", "dim"] }, { label: "hi", kinds: ["scalar", "dim"] }],
+    returns: { kinds: ["range"] },
+  }, (lo, hi) => {
     return OPS_INTERNAL.makeRange(lo, hi);
   });
 
-  baseFns.mean = defFn("mean", 1, (x) => {
+  baseFns.mean = defFn("mean", 1, {
+    args: [{ label: "x", kinds: ["range"] }],
+  }, (x) => {
     if (OPS_INTERNAL.isRange(x)){
       const lo = x.fields?.lo?.value;
       const hi = x.fields?.hi?.value;
@@ -270,20 +297,55 @@ export function attachUncertaintyBuiltins(baseFns, {
     throw new Error("mean expects a range");
   });
 
-  baseFns["dist.normal"] = defFn("dist.normal", 2, (mu, sigma) => distNormal(mu, sigma));
-  baseFns["dist.tri"] = defFn("dist.tri", 3, (a, b, c) => distTri(a, b, c));
-  baseFns["dist.uniform"] = defFn("dist.uniform", 2, (lo, hi) => distUniform(lo, hi));
-  baseFns.sample = defFn("sample", 1, (dist) => distSample(dist));
-  baseFns.cdf = defFn("cdf", 2, (dist, x) => distCdf(dist, x));
-  baseFns.pvalue = defFn("pvalue", 2, (dist, x) => {
+  baseFns["dist.normal"] = defFn("dist.normal", 2, {
+    args: [{ label: "mu", kinds: ["scalar", "dim"] }, { label: "sigma", kinds: ["scalar", "dim"] }],
+    returns: { kinds: ["dist"] },
+  }, (mu, sigma) => distNormal(mu, sigma));
+  baseFns["dist.tri"] = defFn("dist.tri", 3, {
+    args: [
+      { label: "a", kinds: ["scalar", "dim"] },
+      { label: "b", kinds: ["scalar", "dim"] },
+      { label: "c", kinds: ["scalar", "dim"] },
+    ],
+    returns: { kinds: ["dist"] },
+  }, (a, b, c) => distTri(a, b, c));
+  baseFns["dist.uniform"] = defFn("dist.uniform", 2, {
+    args: [{ label: "lo", kinds: ["scalar", "dim"] }, { label: "hi", kinds: ["scalar", "dim"] }],
+    returns: { kinds: ["dist"] },
+  }, (lo, hi) => distUniform(lo, hi));
+  baseFns.sample = defFn("sample", 1, {
+    args: [{ label: "dist", kinds: ["dist"] }],
+    effects: EFFECT.RNG,
+  }, (dist) => distSample(dist));
+  baseFns.cdf = defFn("cdf", 2, {
+    args: [{ label: "dist", kinds: ["dist"] }, { label: "x", kinds: ["scalar", "dim"] }],
+    returns: { kinds: ["scalar"] },
+  }, (dist, x) => distCdf(dist, x));
+  baseFns.pvalue = defFn("pvalue", 2, {
+    args: [{ label: "dist", kinds: ["dist"] }, { label: "x", kinds: ["scalar", "dim"] }],
+    returns: { kinds: ["scalar"] },
+  }, (dist, x) => {
     const p = distCdf(dist, x);
     const twoSided = 2 * Math.min(p, 1 - p);
     return twoSided;
   });
-  baseFns.prob_gt = defFn("prob_gt", 2, (dist, x) => 1 - distCdf(dist, x));
-  baseFns.prob_lt = defFn("prob_lt", 2, (dist, x) => distCdf(dist, x));
+  baseFns.prob_gt = defFn("prob_gt", 2, {
+    args: [{ label: "dist", kinds: ["dist"] }, { label: "x", kinds: ["scalar", "dim"] }],
+    returns: { kinds: ["scalar"] },
+  }, (dist, x) => 1 - distCdf(dist, x));
+  baseFns.prob_lt = defFn("prob_lt", 2, {
+    args: [{ label: "dist", kinds: ["dist"] }, { label: "x", kinds: ["scalar", "dim"] }],
+    returns: { kinds: ["scalar"] },
+  }, (dist, x) => distCdf(dist, x));
 
-  baseFns.mc = defFnCtx("mc", 2, (ctx, n, exprOrRange) => {
+  baseFns.mc = defFnCtx("mc", 2, {
+    args: [
+      { label: "n", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "exprOrRange", kinds: ["any"] },
+    ],
+    returns: { kinds: ["assy"] },
+    effects: EFFECT.RNG,
+  }, (ctx, n, exprOrRange) => {
     const count = Math.max(1, Math.min(100000, Math.floor(requireScalarArg(n, "mc"))));
     if (OPS_INTERNAL.isRange(exprOrRange)){
       const lo = exprOrRange.fields?.lo?.value;
@@ -297,7 +359,7 @@ export function attachUncertaintyBuiltins(baseFns, {
         if (hiNum < loNum) throw new Error("mc range hi must be >= lo");
         const samples = [];
         for (let i = 0; i < count; i++){
-          const v = loNum + (hiNum - loNum) * Math.random();
+          const v = loNum + (hiNum - loNum) * random();
           samples.push(makeQty(v, lo.kind));
         }
         return summarizeSamples(samples);
@@ -308,7 +370,7 @@ export function attachUncertaintyBuiltins(baseFns, {
       if (hiNum < loNum) throw new Error("mc range hi must be >= lo");
       const samples = [];
       for (let i = 0; i < count; i++){
-        samples.push(loNum + (hiNum - loNum) * Math.random());
+        samples.push(loNum + (hiNum - loNum) * random());
       }
       return summarizeSamples(samples);
     }
@@ -333,7 +395,7 @@ export function attachUncertaintyBuiltins(baseFns, {
 
   function requireScalarArg(value, label){
     if (isQty(value) && value.kind !== "scalar"){
-      throw new Error(`${label} expects a scalar value`);
+      throw new Error(`${label} expects a dimensionless scalar value`);
     }
     return isQty(value) ? value.value : value;
   }

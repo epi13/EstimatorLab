@@ -12,7 +12,7 @@ export function attachLinAlgBuiltins(baseFns, {
 }){
   function requireScalarArg(value, label){
     if (isQty(value) && value.kind !== "scalar"){
-      throw new Error(`${label} expects a scalar value`);
+      throw new Error(`${label} expects a dimensionless scalar value`);
     }
     return isQty(value) ? value.value : value;
   }
@@ -37,8 +37,12 @@ export function attachLinAlgBuiltins(baseFns, {
 
   function scalarNumber(value, label){
     if (typeof value === "number") return value;
+    if (value && typeof value === "object" && typeof value.__kind === "string"){
+      if (value.__kind === "scalar") return value.value;
+      if (value.__kind === "bool") return value.value ? 1 : 0;
+    }
     if (isQty(value)){
-      if (value.kind !== "scalar") throw new Error(`${label} expects scalar values`);
+      if (value.kind !== "scalar") throw new Error(`${label} expects dimensionless scalar values`);
       return value.value;
     }
     const n = Number(value);
@@ -46,11 +50,20 @@ export function attachLinAlgBuiltins(baseFns, {
     return n;
   }
 
-  baseFns.vec = defFn("vec", -1, (...args) => {
+  baseFns.vec = defFn("vec", -1, {
+    args: [],
+    returns: { kinds: ["vec"] },
+  }, (...args) => {
     return OPS_INTERNAL.makeVec("vec", args);
   });
 
-  baseFns.mat = defFn("mat", -1, (...args) => {
+  baseFns.mat = defFn("mat", -1, {
+    args: [
+      { label: "rows_or_text", kinds: ["scalar", "dim", "string"] },
+      { label: "cols", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["mat"] },
+  }, (...args) => {
     if (args.length === 1 && typeof args[0] === "string"){
       const text = args[0].trim();
       if (!text) throw new Error("mat expects a non-empty string");
@@ -83,7 +96,9 @@ export function attachLinAlgBuiltins(baseFns, {
     return OPS_INTERNAL.makeMat("mat", rows, cols, elements);
   });
 
-  baseFns.vec_len = defFn("vec_len", 1, (vec) => {
+  baseFns.vec_len = defFn("vec_len", 1, {
+    args: [{ label: "vec", kinds: ["vec"] }],
+  }, (vec) => {
     const v = requireVec(vec, "vec_len");
     const data = Array.isArray(v.data) ? v.data : [];
     let acc = null;
@@ -94,7 +109,9 @@ export function attachLinAlgBuiltins(baseFns, {
     return pow(acc === null ? 0 : acc, 0.5);
   });
 
-  baseFns.vec_dot = defFn("vec_dot", 2, (a, b) => {
+  baseFns.vec_dot = defFn("vec_dot", 2, {
+    args: [{ label: "a", kinds: ["vec"] }, { label: "b", kinds: ["vec"] }],
+  }, (a, b) => {
     const va = requireVec(a, "vec_dot");
     const vb = requireVec(b, "vec_dot");
     if ((va.data || []).length !== (vb.data || []).length) throw new Error("vec_dot size mismatch");
@@ -106,7 +123,10 @@ export function attachLinAlgBuiltins(baseFns, {
     return acc === null ? 0 : acc;
   });
 
-  baseFns.mat_T = defFn("mat_T", 1, (m) => {
+  baseFns.mat_T = defFn("mat_T", 1, {
+    args: [{ label: "m", kinds: ["mat"] }],
+    returns: { kinds: ["mat"] },
+  }, (m) => {
     const mat = requireMat(m, "mat_T");
     const rows = mat.rows;
     const cols = mat.cols;
@@ -119,7 +139,10 @@ export function attachLinAlgBuiltins(baseFns, {
     return OPS_INTERNAL.makeMat("mat", cols, rows, out);
   });
 
-  baseFns.mat_shape = defFn("mat_shape", 1, (m) => {
+  baseFns.mat_shape = defFn("mat_shape", 1, {
+    args: [{ label: "m", kinds: ["mat"] }],
+    returns: { kinds: ["assy"] },
+  }, (m) => {
     const mat = requireMat(m, "mat_shape");
     return { __assy: true, name: "shape", fields: {
       rows: { value: mat.rows, note: "", raw: "" },
@@ -127,7 +150,10 @@ export function attachLinAlgBuiltins(baseFns, {
     } };
   });
 
-  baseFns.mat_solve = defFn("mat_solve", 2, (A, b) => {
+  baseFns.mat_solve = defFn("mat_solve", 2, {
+    args: [{ label: "A", kinds: ["mat"] }, { label: "b", kinds: ["vec"] }],
+    returns: { kinds: ["vec"] },
+  }, (A, b) => {
     const mat = requireMat(A, "mat_solve");
     const vec = requireVec(b, "mat_solve");
     const n = mat.rows;
@@ -176,7 +202,14 @@ export function attachLinAlgBuiltins(baseFns, {
     return OPS_INTERNAL.makeVec("vec", y);
   });
 
-  baseFns.nsolve = defFnCtx("nsolve", 3, (ctx, expr, varName, guess) => {
+  baseFns.nsolve = defFnCtx("nsolve", 3, {
+    args: [
+      { label: "expr", kinds: ["string"] },
+      { label: "varName", kinds: ["string"] },
+      { label: "guess", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (ctx, expr, varName, guess) => {
     if (!ctx || typeof ctx.evalString !== "function") throw new Error("nsolve requires evalString support");
     if (typeof expr !== "string") throw new Error("nsolve expects expression string");
     if (typeof varName !== "string") throw new Error("nsolve expects variable name string");

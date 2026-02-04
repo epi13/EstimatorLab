@@ -46,21 +46,29 @@ export function attachScenarioBuiltins(baseFns, {
     return resolved;
   }
 
-  baseFns.scenario = defFn("scenario", 2, (name, overrides) => {
+  baseFns.scenario = defFn("scenario", 2, {
+    args: [{ label: "name", kinds: ["string", "scalar"] }, { label: "overrides", kinds: ["string", "any"] }],
+    returns: { kinds: ["scenario"] },
+  }, (name, overrides) => {
     const scName = typeof name === "string" ? name.trim() : String(name || "scenario");
     if (!scName) throw new Error("scenario expects non-empty name");
     const entries = parseEntries(overrides);
     return { __scenario: true, name: scName, entries };
   });
 
-  baseFns.sc_eval = defFnCtx("sc_eval", 2, (ctx, scenario, expr) => {
+  baseFns.sc_eval = defFnCtx("sc_eval", 2, {
+    args: [{ label: "scenario", kinds: ["scenario"] }, { label: "expr", kinds: ["string"] }],
+  }, (ctx, scenario, expr) => {
     const sc = requireScenario(scenario, "sc_eval");
     if (typeof expr !== "string") throw new Error("sc_eval expects expression string");
     const resolved = resolveScenario(ctx, sc);
     return ctx.evalString(expr, resolved);
   });
 
-  baseFns.sc_resolve = defFnCtx("sc_resolve", 1, (ctx, scenario) => {
+  baseFns.sc_resolve = defFnCtx("sc_resolve", 1, {
+    args: [{ label: "scenario", kinds: ["scenario"] }],
+    returns: { kinds: ["assy"] },
+  }, (ctx, scenario) => {
     const sc = requireScenario(scenario, "sc_resolve");
     const resolved = resolveScenario(ctx, sc);
     const fields = Object.create(null);
@@ -72,7 +80,9 @@ export function attachScenarioBuiltins(baseFns, {
     return buildAssy("scenario", fields);
   });
 
-  baseFns.sc_get = defFnCtx("sc_get", 2, (ctx, scenario, key) => {
+  baseFns.sc_get = defFnCtx("sc_get", 2, {
+    args: [{ label: "scenario", kinds: ["scenario"] }, { label: "key", kinds: ["string"] }],
+  }, (ctx, scenario, key) => {
     const sc = requireScenario(scenario, "sc_get");
     const k = requireString(key, "sc_get");
     const resolved = resolveScenario(ctx, sc);
@@ -80,7 +90,10 @@ export function attachScenarioBuiltins(baseFns, {
     return resolved[k];
   });
 
-  baseFns.sc_merge = defFn("sc_merge", -1, (...scenarios) => {
+  baseFns.sc_merge = defFn("sc_merge", -1, {
+    args: [],
+    returns: { kinds: ["scenario"] },
+  }, (...scenarios) => {
     if (scenarios.length < 1) throw new Error("sc_merge expects at least one scenario");
     const merged = [];
     const seen = new Set();
@@ -94,7 +107,15 @@ export function attachScenarioBuiltins(baseFns, {
     return { __scenario: true, name: "merge", entries: merged };
   });
 
-  baseFns.sc_compare = defFnCtx("sc_compare", 4, (ctx, a, b, expr, label) => {
+  baseFns.sc_compare = defFnCtx("sc_compare", 4, {
+    args: [
+      { label: "a", kinds: ["scenario"] },
+      { label: "b", kinds: ["scenario"] },
+      { label: "expr", kinds: ["string"] },
+      { label: "label", kinds: ["string", "null", "scalar"] },
+    ],
+    returns: { kinds: ["assy"] },
+  }, (ctx, a, b, expr, label) => {
     const sa = requireScenario(a, "sc_compare");
     const sb = requireScenario(b, "sc_compare");
     if (typeof expr !== "string") throw new Error("sc_compare expects expression string");

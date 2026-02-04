@@ -9,21 +9,47 @@ export function attachConstructionBuiltins(baseFns, {
   div,
   mul,
 }){
-  baseFns.waste = defFn("waste", 2, (qty, pct) => {
+  baseFns.waste = defFn("waste", 2, {
+    args: [
+      { label: "qty", kinds: ["scalar", "dim"] },
+      { label: "pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+  }, (qty, pct) => {
     const factor = isQty(pct) ? (1 + pct.value) : (1 + (pct / 100));
     return mul(qty, factor);
   });
-  baseFns.markup = defFn("markup", 2, (cost, pct) => {
+  baseFns.markup = defFn("markup", 2, {
+    args: [
+      { label: "cost", kinds: ["scalar", "dim"] },
+      { label: "pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+  }, (cost, pct) => {
     const factor = isQty(pct) ? (1 + pct.value) : (1 + (pct / 100));
     return mul(cost, factor);
   });
-  baseFns.burden = defFn("burden", 2, (labor, pct) => {
+  baseFns.burden = defFn("burden", 2, {
+    args: [
+      { label: "labor", kinds: ["scalar", "dim"] },
+      { label: "pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+  }, (labor, pct) => {
     const factor = isQty(pct) ? (1 + pct.value) : (1 + (pct / 100));
     return mul(labor, factor);
   });
-  baseFns.unit = defFn("unit", 2, (cost, qty) => div(cost, qty));
+  baseFns.unit = defFn("unit", 2, {
+    args: [
+      { label: "cost", kinds: ["scalar", "dim"] },
+      { label: "qty", kinds: ["scalar", "dim"] },
+    ],
+  }, (cost, qty) => div(cost, qty));
 
-  baseFns.qty = defFn("qty", 2, (assy, length) => {
+  baseFns.qty = defFn("qty", 2, {
+    args: [
+      { label: "assy", kinds: ["assy"] },
+      { label: "length", kinds: ["scalar", "dim"], dim: "len" },
+    ],
+    returns: { kinds: ["string"] },
+  }, (assy, length) => {
     if (!assy || typeof assy !== "object" || !assy.__assy) throw new Error("qty expects an assembly as the first argument.");
     const lenQty = isQty(length) ? length : makeQty(length, "len");
     if (lenQty.kind !== "len") throw new Error("qty expects a length quantity as the second argument.");
@@ -53,6 +79,14 @@ export function attachConstructionBuiltins(baseFns, {
       if (sheathing !== undefined){
         const layerCount = (() => {
           if (isQty(sheathing)) return sheathing.value;
+          if (sheathing && typeof sheathing === "object" && typeof sheathing.__kind === "string"){
+            if (sheathing.__kind === "scalar") return sheathing.value;
+            if (sheathing.__kind === "bool") return sheathing.value ? 1 : 0;
+            if (sheathing.__kind === "string"){
+              const parsed = Number.parseFloat(sheathing.value);
+              if (Number.isFinite(parsed)) return parsed;
+            }
+          }
           if (typeof sheathing === "string"){
             const parsed = Number.parseFloat(sheathing);
             if (Number.isFinite(parsed)) return parsed;
@@ -69,28 +103,48 @@ export function attachConstructionBuiltins(baseFns, {
     return parts.join(" | ");
   });
 
-  baseFns.round_up = defFn("round_up", 2, (x, step) => {
+  baseFns.round_up = defFn("round_up", 2, {
+    args: [
+      { label: "x", kinds: ["scalar", "dim"] },
+      { label: "step", kinds: ["scalar", "dim"] },
+    ],
+  }, (x, step) => {
     const xv = isQty(x) ? x.value : x;
     const sv = isQty(step) ? step.value : step;
     const r = Math.ceil(xv / sv) * sv;
     return isQty(x) ? makeQty(r, x.kind) : r;
   });
 
-  baseFns.area_rect = defFn("area_rect", 2, (a, b) => {
+  baseFns.area_rect = defFn("area_rect", 2, {
+    args: [
+      { label: "a", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "b", kinds: ["scalar", "dim"], dim: "len" },
+    ],
+    returns: { kinds: ["dim"], dim: "area" },
+  }, (a, b) => {
     const aa = isQty(a) ? a : makeQty(a, "len");
     const bb = isQty(b) ? b : makeQty(b, "len");
     if (aa.kind !== "len" || bb.kind !== "len") throw new Error("area_rect expects (len, len)");
     return makeQty(aa.value * bb.value, "area");
   });
 
-  baseFns.area_circle = defFn("area_circle", 1, (diam) => {
+  baseFns.area_circle = defFn("area_circle", 1, {
+    args: [{ label: "diam", kinds: ["scalar", "dim"], dim: "len" }],
+    returns: { kinds: ["dim"], dim: "area" },
+  }, (diam) => {
     const d = isQty(diam) ? diam : makeQty(diam, "len");
     if (d.kind !== "len") throw new Error("area_circle expects diameter (len)");
     const r = d.value / 2;
     return makeQty(Math.PI * r * r, "area");
   });
 
-  baseFns.vol_rect = defFn("vol_rect", 2, (area, thickness_in) => {
+  baseFns.vol_rect = defFn("vol_rect", 2, {
+    args: [
+      { label: "area", kinds: ["scalar", "dim"], dim: "area" },
+      { label: "thickness_in", kinds: ["scalar", "dim"], dim: "len" },
+    ],
+    returns: { kinds: ["dim"], dim: "vol" },
+  }, (area, thickness_in) => {
     const a = isQty(area) ? area : makeQty(area, "area");
     if (a.kind !== "area") throw new Error("vol_rect expects area as first arg");
     let t;
@@ -103,12 +157,26 @@ export function attachConstructionBuiltins(baseFns, {
     return makeQty(a.value * t, "vol");
   });
 
-  baseFns.concrete_cy = defFn("concrete_cy", 2, (area, thickness_in) => {
+  baseFns.concrete_cy = defFn("concrete_cy", 2, {
+    args: [
+      { label: "area", kinds: ["scalar", "dim"], dim: "area" },
+      { label: "thickness_in", kinds: ["scalar", "dim"], dim: "len" },
+    ],
+    returns: { kinds: ["dim"], dim: "vol" },
+  }, (area, thickness_in) => {
     const vol = baseFns.vol_rect.impl(area, thickness_in);
     return makeQty(vol.value, "vol");
   });
 
-  baseFns.bf = defFn("bf", 4, (t_in, w_in, len_ft, qty) => {
+  baseFns.bf = defFn("bf", 4, {
+    args: [
+      { label: "t_in", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "w_in", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "len_ft", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "qty", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (t_in, w_in, len_ft, qty) => {
     const t = isQty(t_in) ? t_in.value : t_in;
     const w = isQty(w_in) ? w_in.value : w_in;
     const L = isQty(len_ft) ? len_ft.value : len_ft;
@@ -128,7 +196,14 @@ export function attachConstructionBuiltins(baseFns, {
     "4": { "40": 10.79, "80": 14.98 },
   };
 
-  baseFns.pipe_wt = defFn("pipe_wt", 3, (nps_in, schedule, len_ft) => {
+  baseFns.pipe_wt = defFn("pipe_wt", 3, {
+    args: [
+      { label: "nps_in", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "schedule", kinds: ["scalar", "dim", "string"] },
+      { label: "len_ft", kinds: ["scalar", "dim"], dim: "len" },
+    ],
+    returns: { kinds: ["dim"], dim: "wt" },
+  }, (nps_in, schedule, len_ft) => {
     const nps = String(isQty(nps_in) ? nps_in.value : nps_in);
     const sch = String(isQty(schedule) ? schedule.value : schedule);
     const L = isQty(len_ft) ? len_ft.value : len_ft;
@@ -138,82 +213,132 @@ export function attachConstructionBuiltins(baseFns, {
     return makeQty(lb_per_ft * L, "wt");
   });
 
-  baseFns.to_in = defFn("to_in", 1, (x) => {
+  baseFns.to_in = defFn("to_in", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"], dim: "len" }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => {
     const q = isQty(x) ? x : makeQty(x, "len");
     if (q.kind !== "len") throw new Error("to_in expects length");
     return q.value * 12;
   });
 
-  baseFns.to = defFn("to", 2, (x, unit) => {
+  baseFns.to = defFn("to", 2, {
+    args: [
+      { label: "x", kinds: ["scalar", "dim"] },
+      { label: "unit", kinds: ["string", "dim"] },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (x, unit) => {
     const q = isQty(x) ? x : makeQty(x, "scalar");
     return convert(q, unit);
   });
 
-  baseFns.to_ft = defFn("to_ft", 1, (x) => {
+  baseFns.to_ft = defFn("to_ft", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"], dim: "len" }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => {
     const q = isQty(x) ? x : makeQty(x, "len");
     if (q.kind !== "len") throw new Error("to_ft expects length");
     return q.value;
   });
 
-  baseFns.to_sf = defFn("to_sf", 1, (x) => {
+  baseFns.to_sf = defFn("to_sf", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"] }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => {
     const q = isQty(x) ? x : makeQty(x, "area");
     if (q.kind !== "area") throw new Error("to_sf expects area");
     return q.value;
   });
 
-  baseFns.to_sy = defFn("to_sy", 1, (x) => {
+  baseFns.to_sy = defFn("to_sy", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"], dim: "area" }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => {
     const q = isQty(x) ? x : makeQty(x, "area");
     if (q.kind !== "area") throw new Error("to_sy expects area");
     return q.value / 9;
   });
 
-  baseFns.to_cf = defFn("to_cf", 1, (x) => {
+  baseFns.to_cf = defFn("to_cf", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"], dim: "vol" }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => {
     const q = isQty(x) ? x : makeQty(x, "vol");
     if (q.kind !== "vol") throw new Error("to_cf expects volume");
     return q.value;
   });
 
-  baseFns.to_cy = defFn("to_cy", 1, (x) => {
+  baseFns.to_cy = defFn("to_cy", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"], dim: "vol" }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => {
     const q = isQty(x) ? x : makeQty(x, "vol");
     if (q.kind !== "vol") throw new Error("to_cy expects volume");
     return q.value / 27;
   });
 
-  baseFns.to_lb = defFn("to_lb", 1, (x) => {
+  baseFns.to_lb = defFn("to_lb", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"], dim: "wt" }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => {
     const q = isQty(x) ? x : makeQty(x, "wt");
     if (q.kind !== "wt") throw new Error("to_lb expects weight");
     return q.value;
   });
 
-  baseFns.to_ton = defFn("to_ton", 1, (x) => {
+  baseFns.to_ton = defFn("to_ton", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"], dim: "wt" }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => {
     const q = isQty(x) ? x : makeQty(x, "wt");
     if (q.kind !== "wt") throw new Error("to_ton expects weight");
     return q.value / 2000;
   });
 
-  baseFns.to_sec = defFn("to_sec", 1, (x) => {
+  baseFns.to_sec = defFn("to_sec", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"], dim: "time" }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => {
     const q = isQty(x) ? x : makeQty(x, "time");
     if (q.kind !== "time") throw new Error("to_sec expects time");
     return q.value;
   });
 
-  baseFns.to_min = defFn("to_min", 1, (x) => {
+  baseFns.to_min = defFn("to_min", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"], dim: "time" }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => {
     const q = isQty(x) ? x : makeQty(x, "time");
     if (q.kind !== "time") throw new Error("to_min expects time");
     return q.value / 60;
   });
 
-  baseFns.to_hr = defFn("to_hr", 1, (x) => {
+  baseFns.to_hr = defFn("to_hr", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"], dim: "time" }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => {
     const q = isQty(x) ? x : makeQty(x, "time");
     if (q.kind !== "time") throw new Error("to_hr expects time");
     return q.value / 3600;
   });
 
-  baseFns.not = defFn("not", 1, (x) => (isTruthy(x) ? 0 : 1));
-  baseFns.and = defFn("and", 2, (a, b) => (isTruthy(a) && isTruthy(b)) ? 1 : 0);
-  baseFns.or = defFn("or", 2, (a, b) => (isTruthy(a) || isTruthy(b)) ? 1 : 0);
+  baseFns.not = defFn("not", 1, {
+    args: [{ label: "x", kinds: ["any"] }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => (isTruthy(x) ? 0 : 1));
+  baseFns.and = defFn("and", 2, {
+    args: [{ label: "a", kinds: ["any"] }, { label: "b", kinds: ["any"] }],
+    returns: { kinds: ["scalar"] },
+  }, (a, b) => (isTruthy(a) && isTruthy(b)) ? 1 : 0);
+  baseFns.or = defFn("or", 2, {
+    args: [{ label: "a", kinds: ["any"] }, { label: "b", kinds: ["any"] }],
+    returns: { kinds: ["scalar"] },
+  }, (a, b) => (isTruthy(a) || isTruthy(b)) ? 1 : 0);
 
-  baseFns.sum = defFn("sum", -1, (...values) => {
+  baseFns.sum = defFn("sum", -1, {
+    args: [],
+  }, (...values) => {
     let acc = null;
     for (const v of values){
       acc = acc === null ? v : add(acc, v);

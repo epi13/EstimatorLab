@@ -11,16 +11,26 @@ export function attachGraphBuiltins(baseFns, {
   function ensureNode(g, id){
     const key = typeof id === "string" ? id.trim() : String(id);
     if (!key) throw new Error("graph node id cannot be empty");
-    if (!g.nodes[key]) g.nodes[key] = { id: key, cost: 0 };
+    if (!g.nodes[key]) g.nodes[key] = { id: key };
     return key;
   }
 
-  baseFns.graph = defFn("graph", 1, (name) => {
+  baseFns.graph = defFn("graph", 1, {
+    args: [{ label: "name", kinds: ["string", "null", "scalar"] }],
+    returns: { kinds: ["graph"] },
+  }, (name) => {
     const gname = typeof name === "string" ? name.trim() : "graph";
     return { __graph: true, name: gname || "graph", nodes: Object.create(null), edges: [] };
   });
 
-  baseFns.gnode = defFn("gnode", 3, (g, id, cost) => {
+  baseFns.gnode = defFn("gnode", 3, {
+    args: [
+      { label: "g", kinds: ["graph"] },
+      { label: "id", kinds: ["string", "scalar"] },
+      { label: "cost", kinds: ["any"] },
+    ],
+    returns: { kinds: ["graph"] },
+  }, (g, id, cost) => {
     const graph = requireGraph(g, "gnode");
     const key = typeof id === "string" ? id.trim() : String(id);
     if (!key) throw new Error("gnode expects a node id");
@@ -28,7 +38,14 @@ export function attachGraphBuiltins(baseFns, {
     return graph;
   });
 
-  baseFns.gexpr = defFn("gexpr", 3, (g, id, expr) => {
+  baseFns.gexpr = defFn("gexpr", 3, {
+    args: [
+      { label: "g", kinds: ["graph"] },
+      { label: "id", kinds: ["string", "scalar"] },
+      { label: "expr", kinds: ["string"] },
+    ],
+    returns: { kinds: ["graph"] },
+  }, (g, id, expr) => {
     const graph = requireGraph(g, "gexpr");
     const key = typeof id === "string" ? id.trim() : String(id);
     if (!key) throw new Error("gexpr expects a node id");
@@ -37,7 +54,14 @@ export function attachGraphBuiltins(baseFns, {
     return graph;
   });
 
-  baseFns.gedge = defFn("gedge", 3, (g, from, to) => {
+  baseFns.gedge = defFn("gedge", 3, {
+    args: [
+      { label: "g", kinds: ["graph"] },
+      { label: "from", kinds: ["string", "scalar"] },
+      { label: "to", kinds: ["string", "scalar"] },
+    ],
+    returns: { kinds: ["graph"] },
+  }, (g, from, to) => {
     const graph = requireGraph(g, "gedge");
     const a = typeof from === "string" ? from.trim() : String(from);
     const b = typeof to === "string" ? to.trim() : String(to);
@@ -46,7 +70,10 @@ export function attachGraphBuiltins(baseFns, {
     return graph;
   });
 
-  baseFns.gsum = defFn("gsum", 1, (g) => {
+  baseFns.gsum = defFn("gsum", 1, {
+    args: [{ label: "g", kinds: ["graph"] }],
+    returns: { kinds: ["any"] },
+  }, (g) => {
     const graph = requireGraph(g, "gsum");
     let acc = null;
     for (const node of Object.values(graph.nodes || {})){
@@ -57,7 +84,10 @@ export function attachGraphBuiltins(baseFns, {
     return acc === null ? 0 : acc;
   });
 
-  baseFns.gcalc = defFn("gcalc", 1, (g) => {
+  baseFns.gcalc = defFn("gcalc", 1, {
+    args: [{ label: "g", kinds: ["graph"] }],
+    returns: { kinds: ["graph"] },
+  }, (g) => {
     const graph = requireGraph(g, "gcalc");
     graph.nodes = graph.nodes || Object.create(null);
     graph.edges = Array.isArray(graph.edges) ? graph.edges : [];
@@ -102,17 +132,29 @@ export function attachGraphBuiltins(baseFns, {
     const totals = Object.create(null);
     for (const id of order){
       const base = graph.nodes[id]?.cost;
-      totals[id] = base === undefined || base === null ? 0 : base;
+      totals[id] = (base === undefined || base === null) ? null : base;
     }
 
-    for (const id of Object.keys(totals)){
-      graph.nodes[id].total = totals[id];
+    for (const from of order){
+      const fromTotal = totals[from];
+      if (fromTotal === null || fromTotal === undefined) continue;
+      for (const to of out[from] || []){
+        totals[to] = (totals[to] === null || totals[to] === undefined) ? fromTotal : add(totals[to], fromTotal);
+      }
+    }
+
+    for (const id of Object.keys(graph.nodes || {})){
+      const v = totals[id];
+      graph.nodes[id].total = (v === null || v === undefined) ? 0 : v;
     }
     graph.__calced = true;
     return graph;
   });
 
-  baseFns.gcalcx = defFnCtx("gcalcx", 1, (ctx, g) => {
+  baseFns.gcalcx = defFnCtx("gcalcx", 1, {
+    args: [{ label: "g", kinds: ["graph"] }],
+    returns: { kinds: ["graph"] },
+  }, (ctx, g) => {
     const graph = requireGraph(g, "gcalcx");
     if (!ctx || typeof ctx.evalString !== "function") throw new Error("gcalcx requires evalString support");
 
@@ -155,28 +197,25 @@ export function attachGraphBuiltins(baseFns, {
     for (const id of order){
       const node = graph.nodes[id] || {};
       let base = node.cost;
-      if (base === undefined && typeof node.expr === "string" && node.expr.trim()){
+      if ((base === undefined || base === null) && typeof node.expr === "string" && node.expr.trim()){
         base = ctx.evalString(node.expr, Object.assign(Object.create(null), totals));
       }
-      totals[id] = base === undefined || base === null ? 0 : base;
+      totals[id] = (base === undefined || base === null) ? null : base;
     }
 
-    for (const from of order){
-      const fromTotal = totals[from];
-      for (const to of out[from] || []){
-        totals[to] = totals[to] === undefined ? fromTotal : add(totals[to], fromTotal);
-      }
-    }
-
-    for (const id of Object.keys(totals)){
-      graph.nodes[id].total = totals[id];
+    for (const id of Object.keys(graph.nodes || {})){
+      const v = totals[id];
+      graph.nodes[id].total = (v === null || v === undefined) ? 0 : v;
     }
     graph.__calced = true;
     graph.__calcedx = true;
     return graph;
   });
 
-  baseFns.gtotal = defFn("gtotal", 1, (g) => {
+  baseFns.gtotal = defFn("gtotal", 1, {
+    args: [{ label: "g", kinds: ["graph"] }],
+    returns: { kinds: ["any"] },
+  }, (g) => {
     const graph = requireGraph(g, "gtotal");
     if (!graph.__calced) baseFns.gcalc.impl(graph);
     const outdeg = Object.create(null);

@@ -1,8 +1,24 @@
+import {
+  DIM_INDEX,
+  dimVecFromKindString,
+  dimVecAdd,
+  dimVecEqual,
+  dimVecIsZero,
+  dimVecKey,
+  dimVecScale,
+  isBool,
+  isDim,
+  isNull,
+  isScalar,
+  isString,
+  kindFromDimVec,
+} from "./repl-values.js";
+
 export const UNIT = Object.create(null);
 
-function defineUnit(name, kind, toBase, aliases = []){
+function defineUnit(name, kind, toBase, aliases = []) {
   UNIT[name] = { kind, toBase };
-  for (const alias of aliases){
+  for (const alias of aliases) {
     UNIT[alias] = { kind, toBase };
   }
 }
@@ -148,35 +164,52 @@ defineUnit("o.c.", "scalar", 1, ["oc", "o.c", "on_center", "oncenter"]);
 
 defineUnit("layer", "layer", 1);
 
-export function isUnitToken(token){
+export function isUnitToken(token) {
   return Object.prototype.hasOwnProperty.call(UNIT, token);
 }
 
-export function makeQty(value, kind = "scalar"){
-  const qty = { value, kind };
-  const dim = dimFromKind(kind);
-  if (dim && dim.cur === 1){
+export function makeQty(value, kind = "scalar", unit = null) {
+  const vec = dimVecFromKindString(kind);
+  const qty = {
+    __kind: "dim",
+    value,
+    kind: kindFromDimVec(vec),
+    dim: vec,
+    unit: unit ? String(unit) : null,
+  };
+  const curExp = qty.dim?.[DIM_INDEX.$] || 0;
+  if (curExp === 1) {
     qty.__cost = true;
-    qty.breakdown = { type: "leaf", value };
+    qty.breakdown = { type: "leaf", value: qty.value };
   }
   return qty;
 }
 
-export function isQty(value){
-  return value && typeof value === "object" && typeof value.value === "number" && typeof value.kind === "string";
+export function isQty(value) {
+  if (isDim(value)) return true;
+  return (
+    value &&
+    typeof value === "object" &&
+    typeof value.value === "number" &&
+    typeof value.kind === "string"
+  );
 }
 
-export function isCostQty(value){
+export function isCostQty(value) {
   if (!isQty(value)) return false;
-  const dim = dimFromKind(value.kind);
-  return Boolean(dim && dim.cur === 1);
+  if (isDim(value)) {
+    const exp = value.dim?.[DIM_INDEX.$] || 0;
+    return exp === 1;
+  }
+  const vec = dimVecFromKindString(value.kind);
+  return (vec?.[DIM_INDEX.$] || 0) === 1;
 }
 
-function costLeaf(value){
+function costLeaf(value) {
   return { type: "leaf", value };
 }
 
-function normalizeCostBreakdown(value){
+function normalizeCostBreakdown(value) {
   if (!value || typeof value !== "object") return null;
   if (!isCostQty(value)) return null;
   if (value.breakdown) return value.breakdown;
@@ -208,69 +241,30 @@ function cloneDim(dim){
 }
 
 function dimFromKind(kind){
-  if (!kind || kind === "scalar") return {};
-  if (Object.prototype.hasOwnProperty.call(DIMENSIONS, kind)) return cloneDim(DIMENSIONS[kind]);
-  if (typeof kind !== "string") return {};
-  const dim = {};
-  for (const part of kind.split("*")){
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-    const [base, expRaw] = trimmed.split("^");
-    if (!base) continue;
-    const exp = expRaw ? Number(expRaw) : 1;
-    if (!Number.isFinite(exp)) continue;
-    dim[base] = (dim[base] || 0) + exp;
-    if (dim[base] === 0) delete dim[base];
-  }
-  return dim;
+  return dimVecFromKindString(kind);
 }
 
 function dimKey(dim){
-  const entries = Object.entries(dim).filter(([, val]) => val !== 0);
-  if (!entries.length) return "scalar";
-  entries.sort(([a], [b]) => a.localeCompare(b));
-  return entries.map(([key, exp]) => (exp === 1 ? key : `${key}^${exp}`)).join("*");
+  return dimVecKey(dim);
 }
 
 function kindFromDim(dim){
-  const len = dim.len || 0;
-  const wt = dim.wt || 0;
-  const time = dim.time || 0;
-  const force = dim.force || 0;
-  const count = dim.count || 0;
-  const cur = dim.cur || 0;
-  if (len === 0 && wt === 0 && time === 0 && force === 0 && count === 0 && cur === 0) return "scalar";
-  if (len === 1 && wt === 0 && time === 0 && force === 0 && count === 0 && cur === 0) return "len";
-  if (len === 2 && wt === 0 && time === 0 && force === 0 && count === 0 && cur === 0) return "area";
-  if (len === 3 && wt === 0 && time === 0 && force === 0 && count === 0 && cur === 0) return "vol";
-  if (len === 0 && wt === 1 && time === 0 && force === 0 && count === 0 && cur === 0) return "wt";
-  if (len === 0 && wt === 0 && time === 1 && force === 0 && count === 0 && cur === 0) return "time";
-  if (len === 0 && wt === 0 && time === 0 && force === 1 && count === 0 && cur === 0) return "force";
-  if (len === 0 && wt === 0 && time === 0 && force === 0 && count === 1 && cur === 0) return "count";
-  if (len === 0 && wt === 0 && time === 0 && force === 0 && count === 0 && cur === 1) return "cur";
-  return dimKey(dim);
+  return kindFromDimVec(dim);
 }
 
 function combineDims(a, b, sign = 1){
-  const dim = cloneDim(a);
-  for (const [key, val] of Object.entries(b)){
-    dim[key] = (dim[key] || 0) + val * sign;
-    if (dim[key] === 0) delete dim[key];
-  }
-  return dim;
+  return dimVecAdd(a, b, sign);
 }
 
 function scaleDim(dim, power){
-  const out = {};
-  for (const [key, val] of Object.entries(dim)){
-    const next = val * power;
-    if (next !== 0) out[key] = next;
-  }
-  return out;
+  return dimVecScale(dim, power);
 }
 
 export function sameDimension(a, b){
-  return dimKey(dimFromKind(a.kind)) === dimKey(dimFromKind(b.kind));
+  if (!a || !b) return false;
+  const da = isDim(a) ? a.dim : dimFromKind(a.kind);
+  const db = isDim(b) ? b.dim : dimFromKind(b.kind);
+  return dimVecEqual(da, db);
 }
 
 export function qtyToString(qty){
@@ -283,72 +277,92 @@ export function qtyToString(qty){
     if (abs !== 0 && (abs >= 1e6 || abs < 1e-4)) return num.toExponential(6);
     return (Math.round(num * 1e6) / 1e6).toString();
   };
-  const formatDimUnit = (dim) => {
-    const unitForKeyExp = (key, expAbs) => {
-      if (key === "len"){
-        if (expAbs === 1) return "ft";
-        if (expAbs === 2) return "sf";
-        if (expAbs === 3) return "cf";
-        return `ft^${expAbs}`;
-      }
-      if (key === "wt"){
-        if (expAbs === 1) return "lb";
-        return `lb^${expAbs}`;
-      }
-      if (key === "time"){
-        if (expAbs === 1) return "s";
-        return `s^${expAbs}`;
-      }
-      if (key === "force"){
-        if (expAbs === 1) return "lbf";
-        return `lbf^${expAbs}`;
-      }
-      if (key === "count"){
-        if (expAbs === 1) return "ea";
-        return `ea^${expAbs}`;
-      }
-      return expAbs === 1 ? key : `${key}^${expAbs}`;
-    };
 
-    const num = [];
-    const den = [];
-    const entries = Object.entries(dim).filter(([k, v]) => k !== "cur" && v !== 0);
-    entries.sort(([a], [b]) => a.localeCompare(b));
-    for (const [k, v] of entries){
-      const abs = Math.abs(v);
-      const label = unitForKeyExp(k, abs);
-      if (v > 0) num.push(label);
-      else den.push(label);
+  if (isBool(qty)) return qty.value ? "1" : "0";
+  if (isNull(qty)) return "null";
+  if (isString(qty)) return String(qty.value);
+  if (isScalar(qty)) return fmt(qty.value);
+
+  if (qty && typeof qty === "object" && typeof qty.unit === "string" && isUnitToken(qty.unit)){
+    const unit = UNIT[qty.unit];
+    const denom = (typeof unit.toBase === "number") ? unit.toBase : unit.value;
+    const rendered = value / denom;
+    if (qty.unit === "$" || qty.unit === "usd"){
+      return `${rendered < 0 ? "-" : ""}$${fmt(Math.abs(rendered))}`;
     }
-    if (!num.length && !den.length) return "";
-    if (!den.length) return num.join("*");
-    if (!num.length) return `/ ${den.join("*")}`;
-    return `${num.join("*")} / ${den.join("*")}`;
-  };
+    return `${fmt(rendered)} ${qty.unit}`;
+  }
 
-  const dim = dimFromKind(kind);
-  if (dim.cur){
+  const dim = isDim(qty) ? qty.dim : dimFromKind(kind);
+  const curExp = dim?.[DIM_INDEX.$] || 0;
+  if (curExp){
     const absValue = Math.abs(value);
     const sign = value < 0 ? "-" : "";
-    const restDim = Object.assign({}, dim);
-    delete restDim.cur;
-    const rest = formatDimUnit(restDim);
+    const restDim = dim.slice();
+    restDim[DIM_INDEX.$] = 0;
+    const rest = formatDimUnitFromVec(restDim);
     return `${sign}$${fmt(absValue)}${rest ? ` ${rest}` : ""}`;
   }
-  if (kind === "scalar") return fmt(value);
-  if (kind === "len") return `${fmt(value)} ft`;
-  if (kind === "area") return `${fmt(value)} sf`;
-  if (kind === "vol") return `${fmt(value)} cf`;
-  if (kind === "wt") return `${fmt(value)} lb`;
-  if (kind === "time") return `${fmt(value)} s`;
-  if (kind === "force") return `${fmt(value)} lbf`;
-  if (kind === "count") return `${fmt(value)} ea`;
-  if (kind === "cur") return `${value < 0 ? "-" : ""}$${fmt(Math.abs(value))}`;
-  return `${fmt(value)} ${kind}`;
+
+  if (!dim || dimVecIsZero(dim)) return fmt(value);
+  const suffix = formatDimUnitFromVec(dim);
+  return suffix ? `${fmt(value)} ${suffix}` : fmt(value);
+}
+
+function formatDimUnitFromVec(dim){
+  const unitForIdx = (idx, expAbs) => {
+    if (idx === DIM_INDEX.L){
+      if (expAbs === 1) return "ft";
+      if (expAbs === 2) return "sf";
+      if (expAbs === 3) return "cf";
+      return `ft^${expAbs}`;
+    }
+    if (idx === DIM_INDEX.M){
+      if (expAbs === 1) return "lb";
+      return `lb^${expAbs}`;
+    }
+    if (idx === DIM_INDEX.T){
+      if (expAbs === 1) return "s";
+      return `s^${expAbs}`;
+    }
+    if (idx === DIM_INDEX.F){
+      if (expAbs === 1) return "lbf";
+      return `lbf^${expAbs}`;
+    }
+    if (idx === DIM_INDEX.N){
+      if (expAbs === 1) return "ea";
+      return `ea^${expAbs}`;
+    }
+    if (idx === DIM_INDEX.A){
+      if (expAbs === 1) return "rad";
+      return `rad^${expAbs}`;
+    }
+    if (idx === DIM_INDEX.Y){
+      if (expAbs === 1) return "layer";
+      return `layer^${expAbs}`;
+    }
+    return expAbs === 1 ? "unit" : `unit^${expAbs}`;
+  };
+
+  const num = [];
+  const den = [];
+  for (let idx = 0; idx < dim.length; idx++){
+    if (idx === DIM_INDEX.$) continue;
+    const exp = dim[idx] || 0;
+    if (!exp) continue;
+    const abs = Math.abs(exp);
+    const label = unitForIdx(idx, abs);
+    if (exp > 0) num.push(label);
+    else den.push(label);
+  }
+  if (!num.length && !den.length) return "";
+  if (!den.length) return num.join("*");
+  if (!num.length) return `/ ${den.join("*")}`;
+  return `${num.join("*")} / ${den.join("*")}`;
 }
 
 export function isScalarKind(kind){
-  return dimKey(dimFromKind(kind)) === "scalar";
+  return dimVecIsZero(dimFromKind(kind));
 }
 
 export function convert(qty, toUnit){
@@ -362,9 +376,11 @@ export function convert(qty, toUnit){
   }else{
     throw new Error("convert() expects a unit token (string) or a unit quantity");
   }
-  const qtyDim = dimFromKind(qty.kind);
-  const unitDim = dimFromKind(unit.kind);
-  if (dimKey(qtyDim) !== dimKey(unitDim)) throw new Error(`Unit mismatch: cannot convert ${qty.kind} -> ${unit.kind}`);
+  const qtyKind = qty.kind || "scalar";
+  const unitKind = unit.kind || "scalar";
+  const qtyDim = isDim(qty) ? qty.dim : dimFromKind(qtyKind);
+  const unitDim = isDim(unit) ? unit.dim : dimFromKind(unitKind);
+  if (dimKey(qtyDim) !== dimKey(unitDim)) throw new Error(`Unit mismatch: cannot convert ${qtyKind} -> ${unitKind}`);
   const base = qty.value;
   const denom = (typeof unit.toBase === "number") ? unit.toBase : unit.value;
   return base / denom;
@@ -374,7 +390,9 @@ export function add(a, b){
   if (isQty(a) && isQty(b)){
     if (!sameDimension(a, b)) throw new Error(`Unit mismatch: ${a.kind} + ${b.kind}`);
     const kind = kindFromDim(dimFromKind(a.kind));
-    const result = makeQty(a.value + b.value, kind);
+    const leftUnit = isDim(a) ? a.unit : null;
+    const rightUnit = isDim(b) ? b.unit : null;
+    const result = makeQty(a.value + b.value, kind, leftUnit || rightUnit);
     if (isCostQty(result)){
       const left = normalizeCostBreakdown(a);
       const right = normalizeCostBreakdown(b);
@@ -384,11 +402,13 @@ export function add(a, b){
   }
   if (isQty(a) && !isQty(b)){
     if (!isScalarKind(a.kind)) throw new Error("Cannot add scalar to a unit quantity without a unit.");
-    return makeQty(a.value + b, "scalar");
+    const leftUnit = isDim(a) ? a.unit : null;
+    return makeQty(a.value + b, "scalar", leftUnit);
   }
   if (!isQty(a) && isQty(b)){
     if (!isScalarKind(b.kind)) throw new Error("Cannot add scalar to a unit quantity without a unit.");
-    return makeQty(a + b.value, "scalar");
+    const rightUnit = isDim(b) ? b.unit : null;
+    return makeQty(a + b.value, "scalar", rightUnit);
   }
   return a + b;
 }
@@ -397,7 +417,9 @@ export function sub(a, b){
   if (isQty(a) && isQty(b)){
     if (!sameDimension(a, b)) throw new Error(`Unit mismatch: ${a.kind} - ${b.kind}`);
     const kind = kindFromDim(dimFromKind(a.kind));
-    const result = makeQty(a.value - b.value, kind);
+    const leftUnit = isDim(a) ? a.unit : null;
+    const rightUnit = isDim(b) ? b.unit : null;
+    const result = makeQty(a.value - b.value, kind, leftUnit || rightUnit);
     if (isCostQty(result)){
       const left = normalizeCostBreakdown(a);
       const right = normalizeCostBreakdown(b);
@@ -407,11 +429,13 @@ export function sub(a, b){
   }
   if (isQty(a) && !isQty(b)){
     if (!isScalarKind(a.kind)) throw new Error("Cannot subtract scalar from a unit quantity without a unit.");
-    return makeQty(a.value - b, "scalar");
+    const leftUnit = isDim(a) ? a.unit : null;
+    return makeQty(a.value - b, "scalar", leftUnit);
   }
   if (!isQty(a) && isQty(b)){
     if (!isScalarKind(b.kind)) throw new Error("Cannot subtract unit quantity from scalar.");
-    return makeQty(a - b.value, "scalar");
+    const rightUnit = isDim(b) ? b.unit : null;
+    return makeQty(a - b.value, "scalar", rightUnit);
   }
   return a - b;
 }
@@ -420,7 +444,11 @@ export function mul(a, b){
   if (isQty(a) && isQty(b)){
     const dim = combineDims(dimFromKind(a.kind), dimFromKind(b.kind), 1);
     const resultKind = kindFromDim(dim);
-    const result = makeQty(a.value * b.value, resultKind);
+    const leftDim = isDim(a) ? a.dim : dimFromKind(a.kind);
+    const leftUnit = isDim(a) ? a.unit : null;
+    const rightUnit = isDim(b) ? b.unit : null;
+    const keepUnit = dimVecEqual(dim, leftDim);
+    const result = makeQty(a.value * b.value, resultKind, keepUnit ? (leftUnit || rightUnit) : null);
     if (isCostQty(result)){
       const left = normalizeCostBreakdown(a);
       const right = normalizeCostBreakdown(b);
@@ -431,7 +459,8 @@ export function mul(a, b){
   }
   if (isQty(a) && !isQty(b)){
     const dim = dimFromKind(a.kind);
-    const result = makeQty(a.value * b, kindFromDim(dim));
+    const leftUnit = isDim(a) ? a.unit : null;
+    const result = makeQty(a.value * b, kindFromDim(dim), leftUnit);
     if (isCostQty(result)){
       const left = normalizeCostBreakdown(a);
       if (left) return applyCostMeta(result, { type: "scale", factor: b, inner: left });
@@ -440,7 +469,8 @@ export function mul(a, b){
   }
   if (!isQty(a) && isQty(b)){
     const dim = dimFromKind(b.kind);
-    const result = makeQty(a * b.value, kindFromDim(dim));
+    const rightUnit = isDim(b) ? b.unit : null;
+    const result = makeQty(a * b.value, kindFromDim(dim), rightUnit);
     if (isCostQty(result)){
       const right = normalizeCostBreakdown(b);
       if (right) return applyCostMeta(result, { type: "scale", factor: a, inner: right });
@@ -454,7 +484,10 @@ export function div(a, b){
   if (isQty(a) && isQty(b)){
     const dim = combineDims(dimFromKind(a.kind), dimFromKind(b.kind), -1);
     const resultKind = kindFromDim(dim);
-    const result = makeQty(a.value / b.value, resultKind);
+    const leftDim = isDim(a) ? a.dim : dimFromKind(a.kind);
+    const leftUnit = isDim(a) ? a.unit : null;
+    const keepUnit = dimVecEqual(dim, leftDim);
+    const result = makeQty(a.value / b.value, resultKind, keepUnit ? leftUnit : null);
     if (isCostQty(result)){
       const left = normalizeCostBreakdown(a);
       const right = normalizeCostBreakdown(b);
@@ -465,7 +498,8 @@ export function div(a, b){
   }
   if (isQty(a) && !isQty(b)){
     const dim = dimFromKind(a.kind);
-    const result = makeQty(a.value / b, kindFromDim(dim));
+    const leftUnit = isDim(a) ? a.unit : null;
+    const result = makeQty(a.value / b, kindFromDim(dim), leftUnit);
     if (isCostQty(result)){
       const left = normalizeCostBreakdown(a);
       if (left) return applyCostMeta(result, { type: "scale", factor: 1 / b, inner: left });
@@ -473,8 +507,8 @@ export function div(a, b){
     return result;
   }
   if (!isQty(a) && isQty(b)){
-    const dim = combineDims({}, dimFromKind(b.kind), -1);
-    const result = makeQty(a / b.value, kindFromDim(dim));
+    const dim = combineDims(dimFromKind("scalar"), dimFromKind(b.kind), -1);
+    const result = makeQty(a / b.value, kindFromDim(dim), null);
     if (isCostQty(result)){
       const right = normalizeCostBreakdown(b);
       if (right) return applyCostMeta(result, { type: "scale", factor: a, inner: right });
@@ -496,8 +530,11 @@ export function pow(a, b){
         if (val % 2 !== 0) throw new Error("sqrt() requires even dimension exponents.");
       }
     }
-    const dim = scaleDim(dimFromKind(a.kind), exp);
-    return makeQty(Math.pow(a.value, exp), kindFromDim(dim));
+    const baseDim = dimFromKind(a.kind);
+    const dim = scaleDim(baseDim, exp);
+    const baseUnit = isDim(a) ? a.unit : null;
+    const keepUnit = dimVecEqual(dim, baseDim);
+    return makeQty(Math.pow(a.value, exp), kindFromDim(dim), keepUnit ? baseUnit : null);
   }
   if (isQty(a) && !isQty(b)){
     if (!Number.isInteger(b) && !isScalarKind(a.kind)){
@@ -508,8 +545,11 @@ export function pow(a, b){
         if (val % 2 !== 0) throw new Error("sqrt() requires even dimension exponents.");
       }
     }
-    const dim = scaleDim(dimFromKind(a.kind), b);
-    return makeQty(Math.pow(a.value, b), kindFromDim(dim));
+    const baseDim = dimFromKind(a.kind);
+    const dim = scaleDim(baseDim, b);
+    const baseUnit = isDim(a) ? a.unit : null;
+    const keepUnit = dimVecEqual(dim, baseDim);
+    return makeQty(Math.pow(a.value, b), kindFromDim(dim), keepUnit ? baseUnit : null);
   }
   if (!isQty(a) && isQty(b)){
     if (!isScalarKind(b.kind)) throw new Error("Exponent must be scalar.");

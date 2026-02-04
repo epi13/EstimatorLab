@@ -163,7 +163,7 @@ if doom_regen == 1:
   doom_py = mspawny(doom_map)
   doom_vx = 0
   doom_vy = 0
-  unset("doom_regen")
+  doom_regen = 0
 else:
   0
 

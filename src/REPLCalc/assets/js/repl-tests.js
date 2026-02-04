@@ -1242,7 +1242,17 @@ export function createTests({
     ];
   }
 
+  function unboxTestValue(value){
+    if (!value || typeof value !== "object") return value;
+    if (value.__kind === "scalar") return value.value;
+    if (value.__kind === "bool") return value.value ? 1 : 0;
+    if (value.__kind === "string") return value.value;
+    if (value.__kind === "null") return null;
+    return value;
+  }
+
   function formatTestValue(value){
+    if (value && typeof value === "object" && typeof value.__kind === "string") return qtyToString(value);
     if (isQty(value)) return qtyToString(value);
     if (value && value.__assy) return formatAssemblySummary(value);
     return String(value);
@@ -1348,6 +1358,7 @@ export function createTests({
 
   function matchExpected(actual, expected){
     const tol = 1e-9;
+    const actualUnboxed = unboxTestValue(actual);
     if (expected && typeof expected === "object" && expected.type === "error"){
       return { pass: false, message: "expected error, got value" };
     }
@@ -1359,20 +1370,20 @@ export function createTests({
       return { pass: true };
     }
     if (expected && typeof expected === "object" && expected.type === "scalar"){
-      const actualValue = isQty(actual) ? actual.value : actual;
+      const actualValue = isQty(actual) ? actual.value : actualUnboxed;
       const delta = Math.abs(actualValue - expected.value);
       if (delta > expected.tol) return { pass: false, message: `expected ${expected.value}, got ${actualValue}` };
       return { pass: true };
     }
     if (typeof expected === "number"){
-      const actualValue = isQty(actual) ? actual.value : actual;
+      const actualValue = isQty(actual) ? actual.value : actualUnboxed;
       if (Math.abs(actualValue - expected) > tol){
         return { pass: false, message: `expected ${expected}, got ${actualValue}` };
       }
       return { pass: true };
     }
-    if (Object.is(actual, expected)) return { pass: true };
-    return { pass: false, message: `expected ${String(expected)}, got ${formatTestValue(actual)}` };
+    if (Object.is(actualUnboxed, expected)) return { pass: true };
+    return { pass: false, message: `expected ${String(expected)}, got ${formatTestValue(actualUnboxed)}` };
   }
 
   function matchExpectedError(err, expected){

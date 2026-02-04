@@ -1,5 +1,6 @@
 import { runDoomDemo } from "./repl-doom.js";
 import { parseParams, splitStatements } from "./repl-parser.js";
+import { EFFECT } from "./repl-effects.js";
 
 export function createInputHandlers({
   state,
@@ -82,6 +83,7 @@ export function createInputHandlers({
   const {
     evaluate,
     runExpression,
+    runExpressionWithContext,
     solveEquation,
     createAssembly,
     formatValueDisplay,
@@ -125,6 +127,7 @@ export function createInputHandlers({
   }
 
   async function handleLine(line){
+    const runExpressionAll = (expr) => runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL });
     const statementList = splitStatements(line);
     if (!statementList.length) return;
 
@@ -272,7 +275,7 @@ export function createInputHandlers({
         }
 
         if (parsed.type === "assign"){
-          const val = runExpression(parsed.expr);
+          const val = runExpressionAll(parsed.expr);
           state.vars[parsed.name] = val;
           recordSymbolDefinition({
             name: parsed.name,
@@ -308,7 +311,7 @@ export function createInputHandlers({
         }
 
         if (parsed.type === "if"){
-          const cond = runExpression(parsed.condition);
+          const cond = runExpressionAll(parsed.condition);
           if (isTruthy(cond)){
             await handleLine(parsed.thenBody);
           }else if (parsed.elseBody){
@@ -318,9 +321,9 @@ export function createInputHandlers({
         }
 
         if (parsed.type === "for"){
-          const startVal = runExpression(parsed.startExpr);
-          const endVal = runExpression(parsed.endExpr);
-          const stepVal = parsed.stepExpr ? runExpression(parsed.stepExpr) : 1;
+          const startVal = runExpressionAll(parsed.startExpr);
+          const endVal = runExpressionAll(parsed.endExpr);
+          const stepVal = parsed.stepExpr ? runExpressionAll(parsed.stepExpr) : 1;
           let start;
           let end;
           let step;
@@ -364,7 +367,7 @@ export function createInputHandlers({
         }
 
         if (parsed.type === "repeat"){
-          const countVal = runExpression(parsed.countExpr);
+          const countVal = runExpressionAll(parsed.countExpr);
           const count = normalizeCompare(countVal, 0)[0];
           if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
           const n = Math.floor(count);
@@ -378,7 +381,7 @@ export function createInputHandlers({
         }
 
         if (parsed.type === "expr"){
-          const val = runExpression(parsed.expr);
+          const val = runExpressionAll(parsed.expr);
           const fr = formatValueDisplay(val);
           writeLine(fr.main, "out");
           if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");

@@ -1,5 +1,6 @@
 import { splitStatements, findTopLevelEquals } from "./repl-parser.js";
 import { isQty } from "./repl-units.js";
+import { EFFECT } from "./repl-effects.js";
 
 const GFX_LIMIT = 512;
 const GFX_DEFAULT_SCALE = 6;
@@ -731,6 +732,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
 
   function createGfxBuffer(width, height, scale){
     return {
+      __gfx: true,
       width,
       height,
       scale,
@@ -1068,39 +1070,75 @@ fn fs(in: VSOut) -> @location(0) vec4f {
 
   function buildGfxMetaFns(defFn){
     return {
-      gfx: defFn("gfx", 2, (width, height) => {
+      gfx: defFn("gfx", 2, {
+        args: [
+          { label: "width", kinds: ["scalar"] },
+          { label: "height", kinds: ["scalar"] },
+        ],
+        returns: { kinds: ["string"] },
+        effects: EFFECT.IO_GFX,
+      }, (width, height) => {
         const w = normalizeGfxDimension(width, "width");
         const h = normalizeGfxDimension(height, "height");
         state.gfx = createGfxBuffer(w, h, GFX_DEFAULT_SCALE);
         markGfxDirty();
         return `gfx ${w}x${h}`;
       }),
-      gfxs: defFn("gfxs", 1, (scale) => {
+      gfxs: defFn("gfxs", 1, {
+        args: [{ label: "scale", kinds: ["scalar"] }],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, (scale) => {
         const buffer = requireGfxBuffer();
         buffer.scale = normalizeGfxScale(scale);
         markGfxDirty();
         return buffer.scale;
       }),
-      cls: defFn("cls", 0, () => {
+      cls: defFn("cls", 0, {
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, () => {
         const buffer = requireGfxBuffer();
         buffer.pixels.fill(null);
         buffer.bg = null;
         markGfxDirty();
         return 1;
       }),
-      bg: defFn("bg", 1, (color) => {
+      bg: defFn("bg", 1, {
+        args: [{ label: "color", kinds: ["string", "scalar"] }],
+        returns: { kinds: ["string"] },
+        effects: EFFECT.IO_GFX,
+      }, (color) => {
         const buffer = requireGfxBuffer();
         buffer.bg = normalizeGfxColor(color);
         markGfxDirty();
         return buffer.bg || "transparent";
       }),
-      pix: defFn("pix", 3, (x, y, color) => {
+      pix: defFn("pix", 3, {
+        args: [
+          { label: "x", kinds: ["scalar"] },
+          { label: "y", kinds: ["scalar"] },
+          { label: "color", kinds: ["string", "scalar"] },
+        ],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, (x, y, color) => {
         const buffer = requireGfxBuffer();
         setPixel(buffer, x, y, normalizeGfxColor(color));
         markGfxDirty();
         return 1;
       }),
-      line: defFn("line", 5, function(x0, y0, x1, y1, color){
+      line: defFn("line", 5, {
+        args: [
+          { label: "x0", kinds: ["scalar"] },
+          { label: "y0", kinds: ["scalar"] },
+          { label: "x1", kinds: ["scalar"] },
+          { label: "y1", kinds: ["scalar"] },
+          { label: "color", kinds: ["string", "scalar"] },
+        ],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, function(x0, y0, x1, y1, color){
         const buffer = requireGfxBuffer();
         // Validate arguments for better error messages
         if (arguments.length !== 5) {
@@ -1113,7 +1151,17 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         markGfxDirty();
         return 1;
       }),
-      rect: defFn("rect", 5, function(x, y, w, h, color){
+      rect: defFn("rect", 5, {
+        args: [
+          { label: "x", kinds: ["scalar"] },
+          { label: "y", kinds: ["scalar"] },
+          { label: "w", kinds: ["scalar"] },
+          { label: "h", kinds: ["scalar"] },
+          { label: "color", kinds: ["string", "scalar"] },
+        ],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, function(x, y, w, h, color){
         const buffer = requireGfxBuffer();
         if (arguments.length !== 5) {
           throw new Error(`rect() requires exactly 5 arguments: x, y, w, h, color (got ${arguments.length})`);
@@ -1125,7 +1173,17 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         markGfxDirty();
         return 1;
       }),
-      fill: defFn("fill", 5, function(x, y, w, h, color){
+      fill: defFn("fill", 5, {
+        args: [
+          { label: "x", kinds: ["scalar"] },
+          { label: "y", kinds: ["scalar"] },
+          { label: "w", kinds: ["scalar"] },
+          { label: "h", kinds: ["scalar"] },
+          { label: "color", kinds: ["string", "scalar"] },
+        ],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, function(x, y, w, h, color){
         const buffer = requireGfxBuffer();
         if (arguments.length !== 5) {
           throw new Error(`fill() requires exactly 5 arguments: x, y, w, h, color (got ${arguments.length})`);
@@ -1137,7 +1195,22 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         markGfxDirty();
         return 1;
       }),
-      raycast: defFn("raycast", 10, (mapObj, px, py, yaw, fov, viewH, maxD, step, steps, colStep) => {
+      raycast: defFn("raycast", 10, {
+        args: [
+          { label: "map", kinds: ["map"] },
+          { label: "px", kinds: ["scalar"] },
+          { label: "py", kinds: ["scalar"] },
+          { label: "yaw", kinds: ["scalar"] },
+          { label: "fov", kinds: ["scalar"] },
+          { label: "viewH", kinds: ["scalar"] },
+          { label: "maxD", kinds: ["scalar"] },
+          { label: "step", kinds: ["scalar"] },
+          { label: "steps", kinds: ["scalar"] },
+          { label: "colStep", kinds: ["scalar"] },
+        ],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, (mapObj, px, py, yaw, fov, viewH, maxD, step, steps, colStep) => {
         const buffer = requireGfxBuffer();
         if (!mapObj || typeof mapObj !== "object" || !mapObj.__map || !mapObj.data){
           throw new Error("raycast expects a map() as the first argument");
@@ -1295,7 +1368,16 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         markGfxDirty();
         return 1;
       }),
-      plot: defFn("plot", 4, (x0, y0, points, color) => {
+      plot: defFn("plot", 4, {
+        args: [
+          { label: "x0", kinds: ["scalar"] },
+          { label: "y0", kinds: ["scalar"] },
+          { label: "points", kinds: ["string"] },
+          { label: "color", kinds: ["string", "scalar"] },
+        ],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, (x0, y0, points, color) => {
         const buffer = requireGfxBuffer();
         if (typeof points !== "string") throw new Error("plot expects a string of dx,dy pairs");
         const entries = points.split("|").map((pair) => pair.trim()).filter(Boolean);
@@ -1316,32 +1398,58 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         markGfxDirty();
         return 1;
       }),
-      gfxloop: defFn("gfxloop", 1, (expr) => {
+      gfxloop: defFn("gfxloop", 1, {
+        args: [{ label: "expr", kinds: ["string"] }],
+        returns: { kinds: ["string"] },
+        effects: EFFECT.IO_GFX,
+      }, (expr) => {
         configureLoop(expr);
         return "gfx loop ready";
       }),
-      gfxplay: defFn("gfxplay", 0, () => {
+      gfxplay: defFn("gfxplay", 0, {
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, () => {
         playLoop();
         return 1;
       }),
-      gfxpause: defFn("gfxpause", 0, () => {
+      gfxpause: defFn("gfxpause", 0, {
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, () => {
         pauseLoop();
         return 1;
       }),
-      gfxstep: defFn("gfxstep", 1, (count) => {
+      gfxstep: defFn("gfxstep", 1, {
+        args: [{ label: "count", kinds: ["scalar"] }],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, (count) => {
         const steps = Math.round(isQty(count) ? count.value : count);
         if (!Number.isFinite(steps)) throw new Error("gfxstep expects a numeric step");
         advanceLoop(steps);
         return loopState.frame;
       }),
-      gfxrewind: defFn("gfxrewind", 1, (count) => {
+      gfxrewind: defFn("gfxrewind", 1, {
+        args: [{ label: "count", kinds: ["scalar"] }],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, (count) => {
         const steps = Math.round(isQty(count) ? count.value : count);
         if (!Number.isFinite(steps)) throw new Error("gfxrewind expects a numeric step");
         advanceLoop(-steps);
         return loopState.frame;
       }),
-      gfxfps: defFn("gfxfps", 1, (fps) => setLoopFps(fps)),
-      gfxbackend: defFn("gfxbackend", 1, (name) => setActiveBackend(name)),
+      gfxfps: defFn("gfxfps", 1, {
+        args: [{ label: "fps", kinds: ["scalar"] }],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, (fps) => setLoopFps(fps)),
+      gfxbackend: defFn("gfxbackend", 1, {
+        args: [{ label: "name", kinds: ["string"] }],
+        returns: { kinds: ["string"] },
+        effects: EFFECT.IO_GFX,
+      }, (name) => setActiveBackend(name)),
     };
   }
 

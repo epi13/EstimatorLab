@@ -3,6 +3,20 @@ import { convert, isQty, makeQty, qtyToString } from "./repl-units.js";
 import { isTruthy, normalizeCompare } from "./repl-expression.js";
 import { __internal as OPS_INTERNAL } from "./repl-ops.js";
 import { __internal as UNITS_INTERNAL } from "./repl-units.js";
+import { EFFECT } from "./repl-effects.js";
+import { seedRng } from "./repl-rng.js";
+import {
+  box,
+  dimVecEqual,
+  dimVecFromKindString,
+  dimVecIsZero,
+  kindFromDimVec,
+  isBool,
+  isDim,
+  scalar,
+  unbox,
+  valueKind,
+} from "./repl-values.js";
 import { attachMapBuiltins } from "./repl-builtins-map.js";
 import { attachConstructionBuiltins } from "./repl-builtins-construction.js";
 import { attachRateBuiltins } from "./repl-builtins-rate.js";
@@ -17,12 +31,134 @@ import { attachLinAlgBuiltins } from "./repl-builtins-linalg.js";
 import { attachUncertaintyBuiltins } from "./repl-builtins-uncertainty.js";
 import { attachCsiBuiltins } from "./repl-builtins-csi.js";
 
-export function defFn(name, arity, impl){
-  return { arity, impl };
+function normalizeKindList(spec){
+  if (!spec) return null;
+  if (typeof spec === "string") return [spec];
+  if (Array.isArray(spec)) return spec.slice();
+  if (Array.isArray(spec.kinds)) return spec.kinds.slice();
+  if (typeof spec.kinds === "string") return [spec.kinds];
+  return null;
 }
 
-export function defFnCtx(name, arity, impl){
-  return { arity, impl, ctx: true };
+function describeValueForError(v){
+  if (isDim(v)){
+    const unit = v.unit ? ` (${v.unit})` : "";
+    return `Dim[${v.kind}]${unit}`;
+  }
+  const k = valueKind(v);
+  if (k) return k;
+  return typeof v;
+}
+
+function coerceArg(fnName, idx, value, spec){
+  const v = box(value);
+  const kinds = normalizeKindList(spec);
+  if (!kinds || !kinds.length) return v;
+
+  const allow = (k) => kinds.includes(k) || kinds.includes("any");
+  const k0 = valueKind(v);
+
+  if (allow(k0)){
+    return enforceDimConstraints(fnName, idx, v, spec);
+  }
+
+  if (isBool(v) && allow("scalar")){
+    return scalar(v.value ? 1 : 0);
+  }
+
+  if (isDim(v) && allow("scalar") && dimVecIsZero(v.dim)){
+    return scalar(v.value);
+  }
+
+  const label = spec?.label ? String(spec.label) : `arg${idx + 1}`;
+  throw new Error(`ERR[E_TYPE] ${fnName}(): ${label} expected ${kinds.join("|")}, got ${describeValueForError(v)}`);
+}
+
+function enforceDimConstraints(fnName, idx, v, spec){
+  if (!spec) return v;
+  if (!isDim(v)){
+    return v;
+  }
+
+  if (spec.unit){
+    const allowedUnits = Array.isArray(spec.unit) ? spec.unit.map(String) : [String(spec.unit)];
+    if (!v.unit || !allowedUnits.includes(v.unit)){
+      const label = idx < 0 ? "return" : (spec?.label ? String(spec.label) : `arg${idx + 1}`);
+      throw new Error(`${fnName}(): ${label} expected unit ${allowedUnits.join("|")}`);
+    }
+  }
+
+  if (spec.dim !== undefined && spec.dim !== null){
+    const want = Array.isArray(spec.dim) ? spec.dim : dimVecFromKindString(spec.dim);
+    if (!dimVecEqual(v.dim, want)){
+      const label = idx < 0 ? "return" : (spec?.label ? String(spec.label) : `arg${idx + 1}`);
+      throw new Error(`ERR[E_DIM] ${fnName}(): ${label} expected dim ${String(spec.dim)}, got ${describeValueForError(v)}`);
+    }
+  }
+
+  return v;
+}
+
+function coerceArgs(fnName, sig, args){
+  if (!sig || !Array.isArray(sig.args)) return args;
+  const out = args.slice();
+  for (let i = 0; i < out.length; i++){
+    const spec = sig.args[i];
+    if (!spec) continue;
+    out[i] = coerceArg(fnName, i, out[i], spec);
+  }
+  return out;
+}
+
+function validateReturn(fnName, sig, ret){
+  const r = box(ret);
+  if (!sig || !sig.returns) return r;
+  const kinds = normalizeKindList(sig.returns);
+  if (kinds && kinds.length){
+    const k = valueKind(r);
+    const ok = kinds.includes("any") || kinds.includes(k);
+    if (!ok){
+      throw new Error(`ERR[E_TYPE] ${fnName}(): return expected ${kinds.join("|")}, got ${describeValueForError(r)}`);
+    }
+  }
+  return enforceDimConstraints(fnName, -1, r, sig.returns);
+}
+
+export function defFn(name, arity, sigOrImpl, maybeImpl){
+  const sig = typeof sigOrImpl === "function" ? null : (sigOrImpl || null);
+  const impl = typeof sigOrImpl === "function" ? sigOrImpl : maybeImpl;
+  if (typeof impl !== "function") throw new Error("defFn() expects an implementation function");
+  const effects = sig && typeof sig.effects === "number" ? sig.effects : EFFECT.PURE;
+  return {
+    arity,
+    sig,
+    effects,
+    impl: (...args) => {
+      const boxedArgs = args.map((a) => box(a));
+      const coerced = coerceArgs(name, sig, boxedArgs);
+      const result = impl(...coerced.map((a) => unbox(a)));
+      return validateReturn(name, sig, result);
+    },
+  };
+}
+
+export function defFnCtx(name, arity, sigOrImpl, maybeImpl){
+  const sig = typeof sigOrImpl === "function" ? null : (sigOrImpl || null);
+  const impl = typeof sigOrImpl === "function" ? sigOrImpl : maybeImpl;
+  if (typeof impl !== "function") throw new Error("defFnCtx() expects an implementation function");
+  const effects = sig && typeof sig.effects === "number" ? sig.effects : EFFECT.PURE;
+  return {
+    arity,
+    ctx: true,
+    sig,
+    effects,
+    impl: (ctx, ...args) => {
+      const boxedArgs = args.map((a) => box(a));
+      const coerced = coerceArgs(name, sig, boxedArgs);
+      const result = impl(ctx, ...coerced.map((a) => unbox(a)));
+      return validateReturn(name, sig, result);
+    },
+  };
 }
 
 export function createBaseFns(){
@@ -30,7 +166,7 @@ export function createBaseFns(){
 
   function requireScalarArg(value, label){
     if (isQty(value) && value.kind !== "scalar"){
-      throw new Error(`${label} expects a scalar value`);
+      throw new Error(`${label} expects a dimensionless scalar value`);
     }
     return isQty(value) ? value.value : value;
   }
@@ -58,32 +194,94 @@ export function createBaseFns(){
     return makeQty(num, "cur");
   }
 
-  baseFns.abs = defFn("abs", 1, (x) => isQty(x) ? makeQty(Math.abs(x.value), x.kind) : Math.abs(x));
-  baseFns.min = defFn("min", 2, (a, b) => {
+  baseFns.seed = defFn("seed", 1, {
+    args: [{ label: "n", kinds: ["scalar", "dim"], dim: "scalar" }],
+    returns: { kinds: ["scalar"] },
+    effects: EFFECT.RNG,
+  }, (n) => {
+    const v = requireScalarArg(n, "seed");
+    seedRng(v);
+    return v;
+  });
+
+  baseFns.abs = defFn("abs", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"] }],
+  }, (x) => isQty(x) ? makeQty(Math.abs(x.value), x.kind) : Math.abs(x));
+  baseFns.min = defFn("min", 2, {
+    args: [{ label: "a", kinds: ["any"] }, { label: "b", kinds: ["any"] }],
+    returns: { kinds: ["any"] },
+  }, (a, b) => {
     const [av, bv] = normalizeCompare(a, b);
     return av <= bv ? a : b;
   });
-  baseFns.max = defFn("max", 2, (a, b) => {
+  baseFns.max = defFn("max", 2, {
+    args: [{ label: "a", kinds: ["any"] }, { label: "b", kinds: ["any"] }],
+    returns: { kinds: ["any"] },
+  }, (a, b) => {
     const [av, bv] = normalizeCompare(a, b);
     return av >= bv ? a : b;
   });
-  baseFns.round = defFn("round", 1, (x) => isQty(x) ? makeQty(Math.round(x.value), x.kind) : Math.round(x));
-  baseFns.ceil = defFn("ceil", 1, (x) => isQty(x) ? makeQty(Math.ceil(x.value), x.kind) : Math.ceil(x));
-  baseFns.floor = defFn("floor", 1, (x) => isQty(x) ? makeQty(Math.floor(x.value), x.kind) : Math.floor(x));
-  baseFns.sqrt = defFn("sqrt", 1, (x) => pow(x, 0.5));
-  baseFns.pow = defFn("pow", 2, (a, b) => pow(a, b));
-  baseFns.exp = defFn("exp", 1, (x) => Math.exp(requireScalarArg(x, "exp")));
-  baseFns.log = defFn("log", 1, (x) => Math.log(requireScalarArg(x, "log")));
-  baseFns.log10 = defFn("log10", 1, (x) => Math.log10(requireScalarArg(x, "log10")));
-  baseFns.sin = defFn("sin", 1, (x) => Math.sin(requireScalarArg(x, "sin")));
-  baseFns.cos = defFn("cos", 1, (x) => Math.cos(requireScalarArg(x, "cos")));
-  baseFns.tan = defFn("tan", 1, (x) => Math.tan(requireScalarArg(x, "tan")));
-  baseFns.asin = defFn("asin", 1, (x) => Math.asin(requireScalarArg(x, "asin")));
-  baseFns.acos = defFn("acos", 1, (x) => Math.acos(requireScalarArg(x, "acos")));
-  baseFns.atan = defFn("atan", 1, (x) => Math.atan(requireScalarArg(x, "atan")));
-  baseFns.atan2 = defFn("atan2", 2, (y, x) => Math.atan2(requireScalarArg(y, "atan2"), requireScalarArg(x, "atan2")));
+  baseFns.round = defFn("round", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"] }],
+  }, (x) => isQty(x) ? makeQty(Math.round(x.value), x.kind) : Math.round(x));
+  baseFns.ceil = defFn("ceil", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"] }],
+  }, (x) => isQty(x) ? makeQty(Math.ceil(x.value), x.kind) : Math.ceil(x));
+  baseFns.floor = defFn("floor", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"] }],
+  }, (x) => isQty(x) ? makeQty(Math.floor(x.value), x.kind) : Math.floor(x));
+  baseFns.sqrt = defFn("sqrt", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"] }],
+  }, (x) => pow(x, 0.5));
+  baseFns.pow = defFn("pow", 2, {
+    args: [{ label: "a", kinds: ["scalar", "dim"] }, { label: "b", kinds: ["scalar"] }],
+  }, (a, b) => pow(a, b));
+  baseFns.exp = defFn("exp", 1, {
+    args: [{ label: "x", kinds: ["scalar"] }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => Math.exp(requireScalarArg(x, "exp")));
+  baseFns.log = defFn("log", 1, {
+    args: [{ label: "x", kinds: ["scalar"] }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => Math.log(requireScalarArg(x, "log")));
+  baseFns.log10 = defFn("log10", 1, {
+    args: [{ label: "x", kinds: ["scalar"] }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => Math.log10(requireScalarArg(x, "log10")));
 
-  baseFns.usd = defFn("usd", 1, (x) => normalizeMoney(x));
+  baseFns.sin = defFn("sin", 1, {
+    args: [{ label: "x", kinds: ["scalar"] }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => Math.sin(requireScalarArg(x, "sin")));
+  baseFns.cos = defFn("cos", 1, {
+    args: [{ label: "x", kinds: ["scalar"] }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => Math.cos(requireScalarArg(x, "cos")));
+  baseFns.tan = defFn("tan", 1, {
+    args: [{ label: "x", kinds: ["scalar"] }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => Math.tan(requireScalarArg(x, "tan")));
+  baseFns.asin = defFn("asin", 1, {
+    args: [{ label: "x", kinds: ["scalar"] }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => Math.asin(requireScalarArg(x, "asin")));
+  baseFns.acos = defFn("acos", 1, {
+    args: [{ label: "x", kinds: ["scalar"] }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => Math.acos(requireScalarArg(x, "acos")));
+  baseFns.atan = defFn("atan", 1, {
+    args: [{ label: "x", kinds: ["scalar"] }],
+    returns: { kinds: ["scalar"] },
+  }, (x) => Math.atan(requireScalarArg(x, "atan")));
+  baseFns.atan2 = defFn("atan2", 2, {
+    args: [{ label: "y", kinds: ["scalar"] }, { label: "x", kinds: ["scalar"] }],
+    returns: { kinds: ["scalar"] },
+  }, (y, x) => Math.atan2(requireScalarArg(y, "atan2"), requireScalarArg(x, "atan2")));
+
+  baseFns.usd = defFn("usd", 1, {
+    args: [{ label: "x", kinds: ["scalar", "dim"], dim: "cur" }],
+    returns: { kinds: ["dim"], dim: "cur" },
+  }, (x) => normalizeMoney(x));
 
 
   function buildAssy(name, fields){
@@ -236,10 +434,13 @@ export function createBaseFns(){
   }
 
 
-  baseFns.to_json = defFn("to_json", 1, (value) => {
+  baseFns.to_json = defFn("to_json", 1, {
+    args: [{ label: "value", kinds: ["any"] }],
+    returns: { kinds: ["string"] },
+  }, (value) => {
     const encode = (v) => {
       if (isQty(v)){
-        return { __type: "qty", value: v.value, kind: v.kind };
+        return { __type: "qty", value: v.value, kind: v.kind, unit: v.unit || null };
       }
       if (v && typeof v === "object"){
         if (v.__assy){
@@ -295,13 +496,16 @@ export function createBaseFns(){
     return JSON.stringify(encode(value), null, 2);
   });
 
-  baseFns.from_json = defFn("from_json", 1, (text) => {
+  baseFns.from_json = defFn("from_json", 1, {
+    args: [{ label: "text", kinds: ["string"] }],
+    returns: { kinds: ["any"] },
+  }, (text) => {
     if (typeof text !== "string") throw new Error("from_json expects a string");
     const raw = JSON.parse(text);
     const decode = (v) => {
       if (!v || typeof v !== "object") return v;
       if (Array.isArray(v)) return v.map(decode);
-      if (v.__type === "qty") return makeQty(Number(v.value), String(v.kind || "scalar"));
+      if (v.__type === "qty") return makeQty(Number(v.value), String(v.kind || "scalar"), v.unit || null);
       if (v.__type === "assy"){
         const fields = Object.create(null);
         for (const [k, info] of Object.entries(v.fields || {})){
@@ -358,7 +562,10 @@ export function createBaseFns(){
     return s;
   }
 
-  baseFns.to_csv = defFn("to_csv", 1, (value) => {
+  baseFns.to_csv = defFn("to_csv", 1, {
+    args: [{ label: "value", kinds: ["any"] }],
+    returns: { kinds: ["string"] },
+  }, (value) => {
     if (value && typeof value === "object" && value.__graph){
       const lines = [];
       lines.push("nodes:id,cost,total");
@@ -388,7 +595,10 @@ export function createBaseFns(){
     return `value\n${csvEscape(value)}`;
   });
 
-  baseFns.from_csv = defFn("from_csv", 1, (text) => {
+  baseFns.from_csv = defFn("from_csv", 1, {
+    args: [{ label: "text", kinds: ["string"] }],
+    returns: { kinds: ["assy"] },
+  }, (text) => {
     if (typeof text !== "string") throw new Error("from_csv expects a string");
     const rows = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length);
     if (!rows.length) throw new Error("from_csv empty");
@@ -408,7 +618,15 @@ export function createBaseFns(){
     throw new Error("from_csv currently supports only key,value tables");
   });
 
-  baseFns.line = defFnCtx("line", -1, (ctx, ...args) => {
+  baseFns.line = defFnCtx("line", -1, {
+    args: [
+      { label: "name", kinds: ["string"] },
+      { label: "qty", kinds: ["any"] },
+      { label: "unit_cost", kinds: ["any"] },
+      { label: "meta", kinds: ["any"] },
+    ],
+    returns: { kinds: ["assy"] },
+  }, (ctx, ...args) => {
     if (args.length < 3) throw new Error("line expects (name, qty, unit_cost[, meta])");
     const name = args[0];
     if (typeof name !== "string") throw new Error("line name must be a string");
@@ -430,16 +648,38 @@ export function createBaseFns(){
       }
     }
 
-    const trade = typeof meta.trade === "string" ? meta.trade : "";
-    const csi = typeof meta.csi === "string" ? meta.csi : "";
+    const tradeRaw = meta.trade;
+    const csiRaw = meta.csi;
+    const trade = typeof tradeRaw === "string"
+      ? tradeRaw
+      : (tradeRaw && typeof tradeRaw === "object" && tradeRaw.__kind === "string" ? tradeRaw.value : "");
+    const csi = typeof csiRaw === "string"
+      ? csiRaw
+      : (csiRaw && typeof csiRaw === "object" && csiRaw.__kind === "string" ? csiRaw.value : "");
     const wastePct = meta.waste;
     const markupPct = meta.markup;
     const laborRate = meta.labor_rate;
     const laborHours = meta.hours;
 
     const adjQty = wastePct !== undefined ? baseFns.waste.impl(qty, wastePct) : qty;
-    const ext = mul(adjQty, unitCost);
-    const labor = (laborRate !== undefined && laborHours !== undefined) ? mul(laborRate, laborHours) : 0;
+    const ext = (() => {
+      if (isQty(adjQty) && isQty(unitCost)){
+        const qDim = isDim(adjQty) ? adjQty.dim : dimVecFromKindString(adjQty.kind);
+        const unitDim = isDim(unitCost) ? unitCost.dim : dimVecFromKindString(unitCost.kind);
+        const isPureCurrency = (unitDim?.[3] || 0) === 1 && unitDim.every((e, i) => i === 3 ? e === 1 : e === 0);
+        const isNonScalarQty = !dimVecIsZero(qDim);
+        if (isPureCurrency && isNonScalarQty){
+          const perUnitDim = qDim.map((e, i) => (i === 3 ? 1 : -e));
+          const perUnitKind = kindFromDimVec(perUnitDim);
+          const perUnit = makeQty(unitCost.value, perUnitKind, unitCost.unit || null);
+          return mul(adjQty, perUnit);
+        }
+      }
+      return mul(adjQty, unitCost);
+    })();
+    const labor = (laborRate !== undefined && laborHours !== undefined)
+      ? mul(laborRate, laborHours)
+      : (isQty(ext) ? makeQty(0, ext.kind) : 0);
     const subtotal = add(ext, labor);
     const total = markupPct !== undefined ? baseFns.markup.impl(subtotal, markupPct) : subtotal;
 
@@ -460,7 +700,10 @@ export function createBaseFns(){
     };
   });
 
-  baseFns.rollup = defFn("rollup", -1, (...lines) => {
+  baseFns.rollup = defFn("rollup", -1, {
+    args: [{ label: "lines", kinds: ["assy"] }],
+    returns: { kinds: ["assy"] },
+  }, (...lines) => {
     if (!lines.length) throw new Error("rollup expects at least one line");
     let grand = null;
     const byTrade = Object.create(null);
@@ -484,7 +727,13 @@ export function createBaseFns(){
     return { __assy: true, name: "rollup", fields, __rollup: true };
   });
 
-  baseFns.cmd = defFnCtx("cmd", -1, (ctx, ...args) => {
+  baseFns.cmd = defFnCtx("cmd", -1, {
+    args: [
+      { label: "cmd", kinds: ["string"] },
+      { label: "arg", kinds: ["string"] },
+    ],
+    returns: { kinds: ["any"] },
+  }, (ctx, ...args) => {
     if (!ctx || typeof ctx.cmdRunner !== "function"){
       throw new Error("cmd() is not available in this context");
     }
@@ -497,7 +746,13 @@ export function createBaseFns(){
     return ctx.cmdRunner(cmdName.trim(), (cmdArg || "").trim());
   });
 
-  baseFns.lin_coeff = defFnCtx("lin_coeff", 2, (ctx, expr, varName) => {
+  baseFns.lin_coeff = defFnCtx("lin_coeff", 2, {
+    args: [
+      { label: "expr", kinds: ["string"] },
+      { label: "var", kinds: ["string"] },
+    ],
+    returns: { kinds: ["assy"] },
+  }, (ctx, expr, varName) => {
     if (!ctx || typeof ctx.evalString !== "function") throw new Error("lin_coeff requires evalString support");
     if (typeof expr !== "string") throw new Error("lin_coeff expects expression string");
     if (typeof varName !== "string") throw new Error("lin_coeff expects variable name string");
@@ -514,7 +769,14 @@ export function createBaseFns(){
     });
   });
 
-  baseFns.solve_linear = defFnCtx("solve_linear", 3, (ctx, leftExpr, rightExpr, varName) => {
+  baseFns.solve_linear = defFnCtx("solve_linear", 3, {
+    args: [
+      { label: "left", kinds: ["string"] },
+      { label: "right", kinds: ["string"] },
+      { label: "var", kinds: ["string"] },
+    ],
+    returns: { kinds: ["scalar", "dim"] },
+  }, (ctx, leftExpr, rightExpr, varName) => {
     if (!ctx || typeof ctx.evalString !== "function") throw new Error("solve_linear requires evalString support");
     if (typeof leftExpr !== "string" || typeof rightExpr !== "string") throw new Error("solve_linear expects expression strings");
     if (typeof varName !== "string") throw new Error("solve_linear expects variable name string");
@@ -592,22 +854,60 @@ export function createBaseFns(){
     });
   }
 
-  baseFns.argmin = defFnCtx("argmin", 5, (ctx, name, lo, hi, step, expr) => {
+  baseFns.argmin = defFnCtx("argmin", 5, {
+    args: [
+      { label: "name", kinds: ["string"] },
+      { label: "lo", kinds: ["scalar", "dim"] },
+      { label: "hi", kinds: ["scalar", "dim"] },
+      { label: "step", kinds: ["scalar", "dim"] },
+      { label: "expr", kinds: ["string"] },
+    ],
+    returns: { kinds: ["assy"] },
+  }, (ctx, name, lo, hi, step, expr) => {
     return gridSearch(ctx, "argmin", name, lo, hi, step, expr);
   });
-  baseFns.argmax = defFnCtx("argmax", 5, (ctx, name, lo, hi, step, expr) => {
+  baseFns.argmax = defFnCtx("argmax", 5, {
+    args: [
+      { label: "name", kinds: ["string"] },
+      { label: "lo", kinds: ["scalar", "dim"] },
+      { label: "hi", kinds: ["scalar", "dim"] },
+      { label: "step", kinds: ["scalar", "dim"] },
+      { label: "expr", kinds: ["string"] },
+    ],
+    returns: { kinds: ["assy"] },
+  }, (ctx, name, lo, hi, step, expr) => {
     return gridSearch(ctx, "argmax", name, lo, hi, step, expr);
   });
 
-  baseFns.clamp = defFn("clamp", 3, (x, min, max) => {
+  baseFns.clamp = defFn("clamp", 3, {
+    args: [
+      { label: "x", kinds: ["any"] },
+      { label: "min", kinds: ["any"] },
+      { label: "max", kinds: ["any"] },
+    ],
+    returns: { kinds: ["any"] },
+  }, (x, min, max) => {
     const [xv, minv] = normalizeCompare(x, min);
     const [, maxv] = normalizeCompare(x, max);
     const v = Math.min(Math.max(xv, minv), maxv);
     return isQty(x) ? makeQty(v, x.kind) : v;
   });
-  baseFns.if = defFn("if", 3, (cond, a, b) => (isTruthy(cond) ? a : b));
+  baseFns.if = defFn("if", 3, {
+    args: [
+      { label: "cond", kinds: ["any"] },
+      { label: "then", kinds: ["any"] },
+      { label: "else", kinds: ["any"] },
+    ],
+    returns: { kinds: ["any"] },
+  }, (cond, a, b) => (isTruthy(cond) ? a : b));
 
-  baseFns.field = defFn("field", 2, (assy, name) => {
+  baseFns.field = defFn("field", 2, {
+    args: [
+      { label: "assy", kinds: ["assy", "vec", "mat", "range"] },
+      { label: "name", kinds: ["string"] },
+    ],
+    returns: { kinds: ["any"] },
+  }, (assy, name) => {
     const a = requireAssemblyArg(assy, "field");
     if (typeof name !== "string") throw new Error("field expects the field name as a string");
     const key = name.trim();

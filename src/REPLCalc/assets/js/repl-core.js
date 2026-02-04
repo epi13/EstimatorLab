@@ -1,4 +1,5 @@
-import { createBaseFns, defFn } from "./repl-builtins.js";
+import { createBaseFns, defFn, defFnCtx } from "./repl-builtins.js";
+import { EFFECT } from "./repl-effects.js";
 import {
   buildAliasMap,
   evalRPN,
@@ -82,6 +83,7 @@ export function initRepl(){
     state,
     baseFns,
     defFn,
+    defFnCtx,
     renderUserFunctions: userFnUi.renderUserFunctions,
     parseParams,
     gfxFns,
@@ -135,6 +137,7 @@ export function initRepl(){
   });
 
   const runLoopStatements = (source) => {
+    const loopOptions = { allowedEffects: EFFECT.ALL };
     const statementList = splitStatements(source);
     for (const stmt of statementList){
       if (!stmt) continue;
@@ -157,7 +160,7 @@ export function initRepl(){
       }
 
       if (parsed.type === "assign"){
-        state.vars[parsed.name] = evaluator.runExpression(parsed.expr);
+        state.vars[parsed.name] = evaluator.runExpressionWithContext(parsed.expr, state.vars, loopOptions);
         continue;
       }
 
@@ -170,7 +173,7 @@ export function initRepl(){
       }
 
       if (parsed.type === "if"){
-        const cond = evaluator.runExpression(parsed.condition);
+        const cond = evaluator.runExpressionWithContext(parsed.condition, state.vars, loopOptions);
         if (isTruthy(cond)){
           runLoopStatements(parsed.thenBody);
         }else if (parsed.elseBody){
@@ -180,9 +183,9 @@ export function initRepl(){
       }
 
       if (parsed.type === "for"){
-        const startVal = evaluator.runExpression(parsed.startExpr);
-        const endVal = evaluator.runExpression(parsed.endExpr);
-        const stepVal = parsed.stepExpr ? evaluator.runExpression(parsed.stepExpr) : 1;
+        const startVal = evaluator.runExpressionWithContext(parsed.startExpr, state.vars, loopOptions);
+        const endVal = evaluator.runExpressionWithContext(parsed.endExpr, state.vars, loopOptions);
+        const stepVal = parsed.stepExpr ? evaluator.runExpressionWithContext(parsed.stepExpr, state.vars, loopOptions) : 1;
         let start;
         let end;
         let step;
@@ -226,7 +229,7 @@ export function initRepl(){
       }
 
       if (parsed.type === "repeat"){
-        const countVal = evaluator.runExpression(parsed.countExpr);
+        const countVal = evaluator.runExpressionWithContext(parsed.countExpr, state.vars, loopOptions);
         const count = normalizeCompare(countVal, 0)[0];
         if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
         const n = Math.floor(count);
@@ -240,13 +243,13 @@ export function initRepl(){
       }
 
       if (parsed.type === "expr"){
-        evaluator.runExpression(parsed.expr);
+        evaluator.runExpressionWithContext(parsed.expr, state.vars, loopOptions);
       }
     }
   };
 
   runtime.setRunExpressionWithContext(evaluator.runExpressionWithContext);
-  gfx.setRunExpressionWithContext(evaluator.runExpressionWithContext);
+  gfx.setRunExpressionWithContext((expr, vars) => evaluator.runExpressionWithContext(expr, vars, { allowedEffects: EFFECT.ALL }));
   gfx.setRunLoopStatementRunner(runLoopStatements);
 
   editor = createEditor({
@@ -280,7 +283,7 @@ export function initRepl(){
     writeLine: ui.writeLine,
     renderUserFunctions: userFnUi.renderUserFunctions,
     evaluate: evaluator.evaluate,
-    runExpression: evaluator.runExpression,
+    runExpression: (expr) => evaluator.runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL }),
     solveEquation: evaluator.solveEquation,
     defineUserFn: runtime.defineUserFn,
     createAssembly: evaluator.createAssembly,

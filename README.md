@@ -62,6 +62,21 @@ open 08_Mechanical.html
 
 or drag the file directly into your browser window.
 
+### REPLCalc (Estimator REPL)
+
+EstimatorLab includes an interactive, browser-based REPL for unit-aware calculations, scripting, and graphics demos.
+
+- Open: `src/REPLCalc/estimator-repl.html`
+- In the REPL, run `:docs` for the built-in help page.
+- Run `:doom` to launch the gfx loop demo.
+
+Runtime notes:
+
+- Some functions are side-effecting and are categorized by effect groups: `PURE`, `IO_GFX`, `STATE`, `RNG`, `TIME`.
+- Disallowed effects throw errors prefixed with `ERR[E_EFFECT]`.
+- Random sampling can be made deterministic for the session with `seed(n)`.
+- Type/unit errors are prefixed with `ERR[E_TYPE]` and `ERR[E_DIM]`.
+
 ### Host Online
 EstimatorLab can be hosted directly via **GitHub Pages** or any static web host.  
 To enable Pages:

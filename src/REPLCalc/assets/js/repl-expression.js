@@ -1,9 +1,22 @@
 import { add, div, mul, pow, sub } from "./repl-ops.js";
 import { UNIT, isQty, isScalarKind, isUnitToken, makeQty, sameDimension } from "./repl-units.js";
+import { EFFECT, effectNames } from "./repl-effects.js";
+import {
+  box,
+  isBool,
+  isDim,
+  isNull,
+  isScalar,
+  isString,
+  scalar,
+  string,
+  toBool,
+  toScalarNumber,
+} from "./repl-values.js";
 
 const OPS = {
-  "||": { prec: 0, assoc: "L", fn: (a, b) => (isTruthy(a) || isTruthy(b)) ? 1 : 0 },
-  "&&": { prec: 1, assoc: "L", fn: (a, b) => (isTruthy(a) && isTruthy(b)) ? 1 : 0 },
+  "||": { prec: 0, assoc: "L", fn: (a, b) => scalar((isTruthy(a) || isTruthy(b)) ? 1 : 0) },
+  "&&": { prec: 1, assoc: "L", fn: (a, b) => scalar((isTruthy(a) && isTruthy(b)) ? 1 : 0) },
   "==": { prec: 2, assoc: "L", fn: (a, b) => compareValues(a, b, "==") },
   "!=": { prec: 2, assoc: "L", fn: (a, b) => compareValues(a, b, "!=") },
   "<": { prec: 2, assoc: "L", fn: (a, b) => compareValues(a, b, "<") },
@@ -18,35 +31,46 @@ const OPS = {
 };
 
 export function isTruthy(value){
-  if (isQty(value)) return value.value !== 0;
-  return Boolean(value);
+  return toBool(box(value));
 }
 
 export function normalizeCompare(a, b){
-  if (isQty(a) && isQty(b)){
-    if (!sameDimension(a, b)) throw new Error(`Unit mismatch: ${a.kind} vs ${b.kind}`);
-    return [a.value, b.value];
+  const av = box(a);
+  const bv = box(b);
+
+  if (isQty(av) && isQty(bv)){
+    if (!sameDimension(av, bv)) throw new Error(`Unit mismatch: ${av.kind} vs ${bv.kind}`);
+    return [av.value, bv.value];
   }
-  if (isQty(a) && !isQty(b)){
-    if (!isScalarKind(a.kind)) throw new Error("Cannot compare unit quantity to scalar.");
-    return [a.value, b];
+  if (isQty(av) && !isQty(bv)){
+    if (!isScalarKind(av.kind)) throw new Error("Cannot compare unit quantity to scalar.");
+    const n = toScalarNumber(bv, "compare", { allowBool: true, allowDimlessDim: true });
+    return [av.value, n];
   }
-  if (!isQty(a) && isQty(b)){
-    if (!isScalarKind(b.kind)) throw new Error("Cannot compare scalar to unit quantity.");
-    return [a, b.value];
+  if (!isQty(av) && isQty(bv)){
+    if (!isScalarKind(bv.kind)) throw new Error("Cannot compare scalar to unit quantity.");
+    const n = toScalarNumber(av, "compare", { allowBool: true, allowDimlessDim: true });
+    return [n, bv.value];
   }
-  return [a, b];
+
+  if (isString(av) || isString(bv)){
+    return [isString(av) ? av.value : String(isNull(av) ? "" : av.value), isString(bv) ? bv.value : String(isNull(bv) ? "" : bv.value)];
+  }
+
+  const left = (isScalar(av) || isBool(av) || isDim(av)) ? toScalarNumber(av, "compare", { allowBool: true, allowDimlessDim: true }) : av;
+  const right = (isScalar(bv) || isBool(bv) || isDim(bv)) ? toScalarNumber(bv, "compare", { allowBool: true, allowDimlessDim: true }) : bv;
+  return [left, right];
 }
 
 function compareValues(a, b, op){
   const [left, right] = normalizeCompare(a, b);
-  if (op === "==") return left === right ? 1 : 0;
-  if (op === "!=") return left !== right ? 1 : 0;
-  if (op === "<") return left < right ? 1 : 0;
-  if (op === "<=") return left <= right ? 1 : 0;
-  if (op === ">") return left > right ? 1 : 0;
-  if (op === ">=") return left >= right ? 1 : 0;
-  return 0;
+  if (op === "==") return scalar(left === right ? 1 : 0);
+  if (op === "!=") return scalar(left !== right ? 1 : 0);
+  if (op === "<") return scalar(left < right ? 1 : 0);
+  if (op === "<=") return scalar(left <= right ? 1 : 0);
+  if (op === ">") return scalar(left > right ? 1 : 0);
+  if (op === ">=") return scalar(left >= right ? 1 : 0);
+  return scalar(0);
 }
 
 export function tokenize(src){
@@ -164,6 +188,79 @@ export function tokenize(src){
       let j = i + 1;
       while (j < s.length && isIdent(s[j])) j += 1;
       const name = s.slice(i, j);
+      if (name === "if"){
+        let k = j;
+        while (k < s.length && isSpace(s[k])) k += 1;
+        if (s[k] === "("){
+          let depth = 1;
+          let braceDepth = 0;
+          let quote = null;
+          let m = k + 1;
+          while (m < s.length){
+            const ch = s[m];
+            if (quote){
+              if (ch === "\\"){
+                m += 2;
+                continue;
+              }
+              if (ch === quote) quote = null;
+              m += 1;
+              continue;
+            }
+            if (ch === "\"" || ch === "'"){
+              quote = ch;
+              m += 1;
+              continue;
+            }
+            if (ch === "{") braceDepth += 1;
+            else if (ch === "}") braceDepth = Math.max(0, braceDepth - 1);
+            else if (ch === "(") depth += 1;
+            else if (ch === ")"){
+              depth -= 1;
+              if (depth === 0) break;
+            }
+            m += 1;
+          }
+          if (s[m] !== ")") throw new Error("Unterminated if() call");
+          const inner = s.slice(k + 1, m);
+
+          const args = [];
+          let start = 0;
+          let argDepth = 0;
+          let argBraceDepth = 0;
+          let argQuote = null;
+          for (let p = 0; p < inner.length; p++){
+            const ch = inner[p];
+            if (argQuote){
+              if (ch === "\\"){
+                p += 1;
+                continue;
+              }
+              if (ch === argQuote) argQuote = null;
+              continue;
+            }
+            if (ch === "\"" || ch === "'"){
+              argQuote = ch;
+              continue;
+            }
+            if (ch === "{") argBraceDepth += 1;
+            else if (ch === "}") argBraceDepth = Math.max(0, argBraceDepth - 1);
+            else if (ch === "(") argDepth += 1;
+            else if (ch === ")") argDepth = Math.max(0, argDepth - 1);
+            if (ch === "," && argDepth === 0 && argBraceDepth === 0){
+              args.push(inner.slice(start, p).trim());
+              start = p + 1;
+            }
+          }
+          args.push(inner.slice(start).trim());
+
+          if (args.length !== 3) throw new Error("if() expects 3 arguments");
+          out.push({ type: "lazy_if", cond: args[0], then: args[1], else: args[2] });
+          i = m + 1;
+          continue;
+        }
+      }
+
       out.push({ type: "id", value: name });
       i = j;
       continue;
@@ -193,8 +290,8 @@ export function tokenize(src){
 
 export function insertImplicitMultiplication(tokens){
   const out = [];
-  const canMultiplyLeft = (t) => t.type === "num" || t.type === "id" || t.type === ")";
-  const canMultiplyRight = (t) => t.type === "num" || t.type === "id" || t.type === "(";
+  const canMultiplyLeft = (t) => t.type === "num" || t.type === "id" || t.type === ")" || t.type === "lazy_if";
+  const canMultiplyRight = (t) => t.type === "num" || t.type === "id" || t.type === "(" || t.type === "lazy_if";
 
   for (let i = 0; i < tokens.length; i++){
     const t = tokens[i];
@@ -238,6 +335,9 @@ export function toRPN(tokens){
       markCallArgIfNeeded();
       output.push(t);
     }else if (t.type === "obj"){
+      markCallArgIfNeeded();
+      output.push(t);
+    }else if (t.type === "lazy_if"){
       markCallArgIfNeeded();
       output.push(t);
     }else if (t.type === "id"){
@@ -316,6 +416,8 @@ export function evalRPN(rpn, ctx){
   const st = [];
   const onResolve = typeof ctx.onResolve === "function" ? ctx.onResolve : null;
   const onCall = typeof ctx.onCall === "function" ? ctx.onCall : null;
+  const allowedEffects = typeof ctx.allowedEffects === "number" ? ctx.allowedEffects : EFFECT.PURE;
+  const evalString = typeof ctx.evalString === "function" ? ctx.evalString : null;
 
   function recordResolve(name, resolvedName = null){
     if (!onResolve) return;
@@ -323,8 +425,8 @@ export function evalRPN(rpn, ctx){
   }
 
   function getVar(name){
-    if (name === "pi") return Math.PI;
-    if (name === "e") return Math.E;
+    if (name === "pi") return scalar(Math.PI);
+    if (name === "e") return scalar(Math.E);
 
     if (ctx.unitOverrides && Object.prototype.hasOwnProperty.call(ctx.unitOverrides, name)){
       recordResolve(name);
@@ -344,18 +446,23 @@ export function evalRPN(rpn, ctx){
     if (isUnitToken(name)){
       const unit = UNIT[name];
       recordResolve(name);
-      return makeQty(unit.toBase, unit.kind);
+      return makeQty(unit.toBase, unit.kind, name);
     }
     throw new Error(`Unknown identifier: ${name}`);
   }
 
   for (const t of rpn){
     if (t.type === "num"){
-      st.push(t.value);
+      st.push(scalar(t.value));
     }else if (t.type === "str"){
-      st.push(t.value);
+      st.push(string(t.value));
     }else if (t.type === "obj"){
       st.push({ __obj: true, raw: t.value });
+    }else if (t.type === "lazy_if"){
+      if (!evalString) throw new Error("Lazy if() requires evalString support");
+      const condVal = evalString(t.cond);
+      const branch = isTruthy(condVal) ? t.then : t.else;
+      st.push(evalString(branch));
     }else if (t.type === "id"){
       st.push(getVar(t.value));
     }else if (t.type === "op"){
@@ -368,6 +475,13 @@ export function evalRPN(rpn, ctx){
       if (onCall) onCall(fnName);
       const fn = ctx.fns[fnName];
       if (!fn) throw new Error(`Unknown function: ${fnName}()`);
+
+      const need = typeof fn.effects === "number" ? fn.effects : EFFECT.PURE;
+      if ((need & ~allowedEffects) !== 0){
+        const needNames = effectNames(need).join("|");
+        const allowNames = effectNames(allowedEffects).join("|");
+        throw new Error(`ERR[E_EFFECT] ${fnName}(): effect ${needNames} not allowed in this context (allowed: ${allowNames})`);
+      }
 
       const declaredArity = fn.arity;
       const arity = declaredArity < 0 ? (t.argc ?? 0) : declaredArity;
@@ -407,6 +521,8 @@ export function buildAliasMap(tokens, vars, fnNames){
     if (fnNames && fnNames.has(name)) continue;
     unknown.push(name);
   }
+
+  if (!unknown.length) return Object.create(null);
 
   const available = Object.keys(vars).filter((name) => !referenced.has(name));
   const remaining = new Set(available);

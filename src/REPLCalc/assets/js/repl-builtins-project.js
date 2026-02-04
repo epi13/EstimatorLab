@@ -32,12 +32,22 @@ export function attachProjectBuiltins(baseFns, {
     return n;
   }
 
-  baseFns.project = defFn("project", 1, (name) => {
+  baseFns.project = defFn("project", 1, {
+    args: [{ label: "name", kinds: ["string", "scalar", "null"] }],
+    returns: { kinds: ["project"] },
+  }, (name) => {
     const n = typeof name === "string" ? name.trim() : String(name || "project");
     return { __project: true, name: n || "project", tasks: Object.create(null), deps: [] };
   });
 
-  baseFns.ptask = defFnCtx("ptask", 3, (ctx, p, id, propsRaw) => {
+  baseFns.ptask = defFnCtx("ptask", 3, {
+    args: [
+      { label: "project", kinds: ["project"] },
+      { label: "id", kinds: ["string", "scalar"] },
+      { label: "props", kinds: ["any"] },
+    ],
+    returns: { kinds: ["project"] },
+  }, (ctx, p, id, propsRaw) => {
     if (!isProject(p)) throw new Error("ptask expects a project");
     const key = ensureTask(p, id);
 
@@ -60,7 +70,14 @@ export function attachProjectBuiltins(baseFns, {
     return p;
   });
 
-  baseFns.pdep = defFn("pdep", 3, (p, from, to) => {
+  baseFns.pdep = defFn("pdep", 3, {
+    args: [
+      { label: "project", kinds: ["project"] },
+      { label: "from", kinds: ["string", "scalar"] },
+      { label: "to", kinds: ["string", "scalar"] },
+    ],
+    returns: { kinds: ["project"] },
+  }, (p, from, to) => {
     if (!isProject(p)) throw new Error("pdep expects a project");
     const a = ensureTask(p, from);
     const b = ensureTask(p, to);
@@ -68,7 +85,10 @@ export function attachProjectBuiltins(baseFns, {
     return p;
   });
 
-  baseFns.pschedule = defFn("pschedule", 1, (p) => {
+  baseFns.pschedule = defFn("pschedule", 1, {
+    args: [{ label: "project", kinds: ["project"] }],
+    returns: { kinds: ["assy"] },
+  }, (p) => {
     if (!isProject(p)) throw new Error("pschedule expects a project");
 
     const ids = Object.keys(p.tasks);
@@ -140,7 +160,10 @@ export function attachProjectBuiltins(baseFns, {
     });
   });
 
-  baseFns.pcost = defFn("pcost", 1, (p) => {
+  baseFns.pcost = defFn("pcost", 1, {
+    args: [{ label: "project", kinds: ["project"] }],
+    returns: { kinds: ["any"] },
+  }, (p) => {
     if (!isProject(p)) throw new Error("pcost expects a project");
     let acc = null;
     for (const t of Object.values(p.tasks)){
