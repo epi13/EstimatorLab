@@ -5,6 +5,104 @@ export function splitStatements(source){
   const isComment = (t) => t.trim().startsWith("#");
   const lineIndent = (l) => (l.match(/^\s*/) || [""])[0].length;
 
+  function hasOpenQuote(text){
+    let quote = null;
+    let escaped = false;
+    for (let i = 0; i < text.length; i++){
+      const c = text[i];
+      if (quote){
+        if (escaped){
+          escaped = false;
+          continue;
+        }
+        if (c === "\\"){
+          escaped = true;
+          continue;
+        }
+        if (c === quote){
+          quote = null;
+          continue;
+        }
+        continue;
+      }
+      if (c === "\"" || c === "'"){
+        quote = c;
+      }
+    }
+    return Boolean(quote);
+  }
+
+  function splitInlineFlow(stmt){
+    const pieces = [];
+    let depth = 0;
+    let braceDepth = 0;
+    let quote = null;
+    let escaped = false;
+    let start = 0;
+    let atStmtStart = true;
+    let pendingFlowColon = false;
+    let inFlowBody = false;
+
+    const isWs = (c) => /\s/.test(c);
+
+    for (let i = 0; i < stmt.length; i++){
+      const c = stmt[i];
+
+      if (quote){
+        if (escaped){
+          escaped = false;
+          continue;
+        }
+        if (c === "\\"){
+          escaped = true;
+          continue;
+        }
+        if (c === quote) quote = null;
+        continue;
+      }
+
+      if (c === "\"" || c === "'"){
+        quote = c;
+        continue;
+      }
+
+      if (c === "(") depth += 1;
+      else if (c === ")") depth = Math.max(0, depth - 1);
+      else if (c === "{") braceDepth += 1;
+      else if (c === "}") braceDepth = Math.max(0, braceDepth - 1);
+
+      if (depth !== 0 || braceDepth !== 0) continue;
+
+      if (atStmtStart){
+        if (isWs(c)) continue;
+        const rest = stmt.slice(i).toLowerCase();
+        if (rest.startsWith("if") && isWs(stmt[i + 2] || "")) pendingFlowColon = true;
+        else if (rest.startsWith("for") && isWs(stmt[i + 3] || "")) pendingFlowColon = true;
+        else if (rest.startsWith("repeat") && isWs(stmt[i + 6] || "")) pendingFlowColon = true;
+        atStmtStart = false;
+      }
+
+      if (pendingFlowColon && c === ":"){
+        pendingFlowColon = false;
+        inFlowBody = true;
+        continue;
+      }
+
+      if (!inFlowBody && c === ";"){
+        const piece = stmt.slice(start, i).trim();
+        if (piece) pieces.push(piece);
+        start = i + 1;
+        atStmtStart = true;
+        pendingFlowColon = false;
+        inFlowBody = false;
+      }
+    }
+
+    const tail = stmt.slice(start).trim();
+    if (tail) pieces.push(tail);
+    return pieces;
+  }
+
   function readStatement(startIdx){
     const baseIndent = lineIndent(lines[startIdx]);
     const stmtLines = [lines[startIdx].trimEnd()];
@@ -12,7 +110,15 @@ export function splitStatements(source){
     const isBlock = firstTrim.endsWith(":");
     let i = startIdx + 1;
 
-    if (!isBlock) return { stmt: stmtLines.join("\n"), next: i };
+    if (!isBlock){
+      let rendered = stmtLines.join("\n");
+      while (i < lines.length && hasOpenQuote(rendered)){
+        stmtLines.push(lines[i].trimEnd());
+        i += 1;
+        rendered = stmtLines.join("\n");
+      }
+      return { stmt: stmtLines.join("\n"), next: i };
+    }
 
     while (i < lines.length){
       const raw = lines[i];
@@ -109,8 +215,10 @@ export function splitStatements(source){
     const { stmt, next } = readStatement(idx);
     const rendered = stmt.trimEnd();
     if (rendered.trim()){
-      if (rendered.includes("\n") || hasTopLevelColon(rendered)){
+      if (rendered.includes("\n")){
         out.push(rendered);
+      }else if (hasTopLevelColon(rendered)){
+        out.push(...splitInlineFlow(rendered));
       }else{
         out.push(...splitSimple(rendered));
       }

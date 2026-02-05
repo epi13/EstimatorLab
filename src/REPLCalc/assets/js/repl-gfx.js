@@ -7,6 +7,8 @@ const GFX_DEFAULT_SCALE = 6;
 const GFX_LOOP_DEFAULT_FPS = 12;
 const GFX_LOOP_MIN_FPS = 1;
 const GFX_LOOP_MAX_FPS = 60;
+const GFX_LOOP_MAX_CATCHUP_STEPS = 5;
+const GFX_LOOP_MAX_CATCHUP_MS = 250;
 const GFX_BACKENDS = [
   "auto",
   "2d",
@@ -32,6 +34,7 @@ export function createGfxTools({ state, terminalEl, writeLine }){
   let runLoopStatement = null;
   let gfxBackend = "auto";
   let pointerLockListenerAttached = false;
+  let visibilityListenerAttached = false;
   let webgpuAdapter = null;
   let webgpuDevice = null;
   let webgpuInitPromise = null;
@@ -50,11 +53,16 @@ export function createGfxTools({ state, terminalEl, writeLine }){
 
   const loopState = {
     expr: null,
+    statements: null,
     fps: GFX_LOOP_DEFAULT_FPS,
     playing: false,
+    wasPlayingBeforeHide: false,
     frame: 0,
     rafId: null,
     lastTick: 0,
+    fpsLastTs: 0,
+    fpsFrames: 0,
+    fpsMeasured: 0,
   };
 
   function getGfxColorContext(){
@@ -410,6 +418,22 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     });
   }
 
+  function ensureVisibilityListener(){
+    if (visibilityListenerAttached) return;
+    visibilityListenerAttached = true;
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden){
+        if (loopState.playing){
+          loopState.wasPlayingBeforeHide = true;
+          pauseLoop();
+        }
+      }else if (loopState.wasPlayingBeforeHide){
+        loopState.wasPlayingBeforeHide = false;
+        playLoop();
+      }
+    });
+  }
+
   function compileShader(gl, type, src){
     const shader = gl.createShader(type);
     if (!shader) throw new Error("Failed to create shader");
@@ -625,10 +649,11 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       canvas = buffer.canvasEl;
     }
 
+    const backendLabel = buffer.backend ? ` • ${buffer.backend}` : "";
     const loopLabel = loopState.expr
-      ? ` • loop ${loopState.playing ? "playing" : "paused"} @ ${loopState.fps} fps • frame ${loopState.frame}`
+      ? ` • loop ${loopState.playing ? "playing" : "paused"} @ ${loopState.fps} fps (${Math.round(loopState.fpsMeasured || 0)} actual) • frame ${loopState.frame}`
       : "";
-    label.textContent = `gfx ${buffer.width}x${buffer.height} • scale ${buffer.scale}${loopLabel}`;
+    label.textContent = `gfx ${buffer.width}x${buffer.height} • scale ${buffer.scale}${backendLabel}${loopLabel}`;
     hint.textContent = loopState.expr
       ? "P play/pause • ←/→ step • ↑/↓ speed • R reset"
       : "";
@@ -855,29 +880,34 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     if (!runLoopStatement && !runExpressionWithContext){
       throw new Error("Loop runner not ready.");
     }
-    const statements = splitStatements(loopState.expr);
+    if (runLoopStatement){
+      try{
+        runLoopStatement(loopState.expr);
+      }catch(err){
+        throw new Error(`GFX loop error: ${err.message || String(err)}`);
+      }
+      return;
+    }
+
+    const statements = loopState.statements || splitStatements(loopState.expr);
     // Use a persistent scope for gfx loops so scripts can maintain state across frames.
     const vars = state.vars;
-    
+
     for (const stmt of statements){
       if (!stmt) continue;
       if (stmt.trim().startsWith("#")) continue;
       try{
-        if (runLoopStatement){
-          runLoopStatement(stmt);
+        // Check if this is an assignment statement
+        const equalsIdx = findTopLevelEquals(stmt);
+        if (equalsIdx >= 0){
+          // Handle assignment: update frameVars
+          const name = stmt.slice(0, equalsIdx).trim();
+          const expr = stmt.slice(equalsIdx + 1).trim();
+          const val = runExpressionWithContext(expr, vars);
+          vars[name] = val;
         }else{
-          // Check if this is an assignment statement
-          const equalsIdx = findTopLevelEquals(stmt);
-          if (equalsIdx >= 0){
-            // Handle assignment: update frameVars
-            const name = stmt.slice(0, equalsIdx).trim();
-            const expr = stmt.slice(equalsIdx + 1).trim();
-            const val = runExpressionWithContext(expr, vars);
-            vars[name] = val;
-          }else{
-            // Handle regular expression
-            runExpressionWithContext(stmt, vars);
-          }
+          // Handle regular expression
+          runExpressionWithContext(stmt, vars);
         }
       }catch(err){
         // Enhance error with statement context for debugging
@@ -938,13 +968,26 @@ fn fs(in: VSOut) -> @location(0) vec4f {
 
   function tickLoop(timestamp){
     if (!loopState.playing) return;
+
+    if (!loopState.fpsLastTs) loopState.fpsLastTs = timestamp;
+    const fpsWindow = timestamp - loopState.fpsLastTs;
+    if (fpsWindow >= 500){
+      loopState.fpsMeasured = (loopState.fpsFrames * 1000) / fpsWindow;
+      loopState.fpsFrames = 0;
+      loopState.fpsLastTs = timestamp;
+    }
+
     if (!loopState.lastTick) loopState.lastTick = timestamp;
     const interval = 1000 / loopState.fps;
     if (timestamp - loopState.lastTick >= interval){
-      const steps = Math.max(1, Math.floor((timestamp - loopState.lastTick) / interval));
-      loopState.lastTick += steps * interval;
+      const elapsed = timestamp - loopState.lastTick;
+      const rawSteps = Math.max(1, Math.floor(elapsed / interval));
+      const capped = elapsed > GFX_LOOP_MAX_CATCHUP_MS;
+      const steps = capped ? 1 : Math.min(rawSteps, GFX_LOOP_MAX_CATCHUP_STEPS);
+      loopState.lastTick = capped ? timestamp : (loopState.lastTick + steps * interval);
       for (let i = 0; i < steps; i++){
         loopState.frame += 1;
+        loopState.fpsFrames += 1;
         runLoopFrame();
         if (!loopState.playing) return;
       }
@@ -958,9 +1001,15 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     if (!script) throw new Error("gfxloop requires a non-empty script");
     requireGfxBuffer();
     loopState.expr = script;
+    loopState.statements = splitStatements(script);
     loopState.frame = 0;
     loopState.playing = false;
     loopState.lastTick = 0;
+    loopState.wasPlayingBeforeHide = false;
+    loopState.fpsLastTs = 0;
+    loopState.fpsFrames = 0;
+    loopState.fpsMeasured = 0;
+    ensureVisibilityListener();
     if (fps !== undefined){
       loopState.fps = normalizeLoopFps(fps);
     }
@@ -972,6 +1021,8 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     if (loopState.playing) return;
     loopState.playing = true;
     loopState.lastTick = 0;
+    loopState.fpsLastTs = 0;
+    loopState.fpsFrames = 0;
     loopState.rafId = window.requestAnimationFrame(tickLoop);
     markGfxDirty();
     flushGfxOutput();
@@ -980,6 +1031,8 @@ fn fs(in: VSOut) -> @location(0) vec4f {
   function pauseLoop(){
     loopState.playing = false;
     loopState.lastTick = 0;
+    loopState.fpsLastTs = 0;
+    loopState.fpsFrames = 0;
     if (loopState.rafId){
       window.cancelAnimationFrame(loopState.rafId);
       loopState.rafId = null;
@@ -1263,7 +1316,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
           const cx = Math.floor(worldX);
           const cy = Math.floor(worldY);
           let light = 0;
-          const r = 4;
+          const r = 3;
           for (let oy = -r; oy <= r; oy++){
             const ty = cy + oy;
             if (ty < 0 || ty >= mapH) continue;
@@ -1286,11 +1339,11 @@ fn fs(in: VSOut) -> @location(0) vec4f {
 
         function shadeByBrightness(bright, base){
           if (base === "warn"){
-            if (bright < 0.32) return "muted";
+            if (bright < 0.22) return "warn";
             if (bright < 0.68) return "warn";
             return "text";
           }
-          if (bright < 0.28) return "muted";
+          if (bright < 0.20) return "accent-2";
           if (bright < 0.55) return "accent-2";
           if (bright < 0.82) return base;
           return "text";
@@ -1329,9 +1382,9 @@ fn fs(in: VSOut) -> @location(0) vec4f {
           const hx = nPx + rc * bestD;
           const hy = nPy + rs * bestD;
           const fog = Math.max(0, Math.min(1, (bestD - 1.6) / Math.max(0.001, (md - 1.6))));
-          const ambient = 0.16;
+          const ambient = 0.34;
           const localLight = lightAt(hx, hy);
-          const bright = Math.max(0, Math.min(1, ambient + localLight - fog * 0.62));
+          const bright = Math.max(0, Math.min(1, ambient + localLight - fog * 0.45));
           const texJitter = (((Math.floor(hx * 3) + Math.floor(hy * 2)) & 1) ? 0.08 : 0);
           const brightTex = Math.max(0, Math.min(1, bright - texJitter));
           const base = bestT === 2 ? "warn" : "accent";
@@ -1349,7 +1402,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
             const sx = nPx + rc * spriteD;
             const sy = nPy + rs * spriteD;
             const sFog = Math.max(0, Math.min(1, (spriteD - 1.2) / Math.max(0.001, (md - 1.2))));
-            const sBright = Math.max(0, Math.min(1, 0.22 + lightAt(sx, sy) - sFog * 0.55));
+            const sBright = Math.max(0, Math.min(1, 0.34 + lightAt(sx, sy) - sFog * 0.45));
             const spriteColor = (() => {
               if (spriteT === 5) return shadeByBrightness(sBright, "err");
               if (spriteT === 6) return shadeByBrightness(sBright, "ok");
@@ -1464,6 +1517,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     resetLoop,
     setLoopFps,
     getLoopStatus,
+    setActiveBackend,
     setRunExpressionWithContext,
     setRunLoopStatementRunner,
     handleGfxKeydown,

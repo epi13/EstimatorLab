@@ -1,9 +1,10 @@
 // Doom demo - Pure EST DSL showcase
 // This demonstrates the EST DSL capabilities for graphics and animation
 
-const DOOM_W = 160;
-const DOOM_H = 90;
-const DOOM_SCALE = 5;
+const DOOM_W = 256;
+const DOOM_H = 144;
+const DOOM_SCALE = 3;
+const DOOM_DEFAULT_FPS = 18;
 
 export const DOOM_DEMO_SCRIPT = `
 # Doom level - playable raycaster in EST DSL
@@ -237,10 +238,10 @@ if t_under == 4 && doom_key == 1 && doom_dead == 0: doom_win = if(doom_level >= 
 # Camera / rendering params
 mid = floor(view_h / 2)
 fov = 1.05
-max_d = 10
+max_d = 14
 ray_step = 0.08
-ray_steps = 90
-ray_col_step = 2
+ray_steps = ceil(max_d / ray_step)
+ray_col_step = 1
 
 # Floor + ceiling
 fill(0, 0, w, mid, "muted")
@@ -281,15 +282,18 @@ fill(w - 7, hy + 3, 5, 7, badge)
 mm_s = 2
 mm_x = 2
 mm_y = 2
-mw0 = mw(doom_map)
-mh0 = mh(doom_map)
-for my in 0..(mh0 - 1):
-  for mx in 0..(mw0 - 1):
+mm_r = 6
+mx0 = floor(doom_px) - mm_r
+my0 = floor(doom_py) - mm_r
+for my in my0..(my0 + mm_r * 2):
+  for mx in mx0..(mx0 + mm_r * 2):
     tt = mget(doom_map, mx, my)
     cc = if(tt == 1, "muted", if(tt == 2, "warn", if(tt == 4, "ok", if(tt == 3, "warn", if(tt == 5, "err", if(tt == 6, "ok", if(tt == 7, "accent-2", if(tt == 8 || tt == 9, "warn", if(tt == 10 || tt == 11, "accent", "transparent")))))))))
-    if cc != "transparent": fill(mm_x + mx * mm_s, mm_y + my * mm_s, mm_s, mm_s, cc) else: 0
-pxm = floor(mm_x + doom_px * mm_s)
-pym = floor(mm_y + doom_py * mm_s)
+    ix = mx - mx0
+    iy = my - my0
+    if cc != "transparent": fill(mm_x + ix * mm_s, mm_y + iy * mm_s, mm_s, mm_s, cc) else: 0
+pxm = floor(mm_x + (doom_px - mx0) * mm_s)
+pym = floor(mm_y + (doom_py - my0) * mm_s)
 fill(pxm, pym, 2, 2, "accent")
 
 # Export a deterministic hash for tests
@@ -302,9 +306,24 @@ export function runDoomDemo({ gfx, writeLine, writeInputEcho }) {
   writeLine("Click the canvas to capture the mouse.", "muted");
   writeLine("Controls: Mouse look • WASD move/strafe • Shift run • Space use • LMB shoot", "muted");
   writeLine("Loop UI: P play/pause (when mouse not captured) • Arrows step/fps • R reset", "muted");
+
+  if (typeof gfx.setActiveBackend === "function"){
+    try{
+      gfx.setActiveBackend("webgl2");
+    }catch{}
+  }
   
-  // Initialize graphics
-  gfx.initBuffer(DOOM_W, DOOM_H, DOOM_SCALE);
-  gfx.configureLoop(DOOM_DEMO_SCRIPT, 30);
+  const status = typeof gfx.getLoopStatus === "function" ? gfx.getLoopStatus() : null;
+  if (status?.playing && typeof gfx.pauseLoop === "function"){
+    gfx.pauseLoop();
+  }
+
+  const buf = typeof gfx.getBuffer === "function" ? gfx.getBuffer() : null;
+  const needsBuffer = !buf || buf.width !== DOOM_W || buf.height !== DOOM_H || buf.scale !== DOOM_SCALE;
+  if (needsBuffer && typeof gfx.initBuffer === "function"){
+    gfx.initBuffer(DOOM_W, DOOM_H, DOOM_SCALE);
+  }
+
+  gfx.configureLoop(DOOM_DEMO_SCRIPT, DOOM_DEFAULT_FPS);
   gfx.playLoop();
 }
