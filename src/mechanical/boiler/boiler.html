@@ -405,7 +405,7 @@
         </h1>
         <div class="subtitle">
             For closed-loop <b>hot water (non-steam) boilers</b>, residential through clinic/school scale.
-            Output includes Material, Shipping, Labor @ $92/hr Mechanical, and Total.
+            Output includes Material, Shipping, Labor (default $92/hr Mechanical), and Total.
         </div>
     </div>
 
@@ -518,6 +518,93 @@
             </div>
         </div>
 
+        <div class="panel-header" style="margin-top:.5rem;">
+            <div class="panel-title">
+                <span>Pricing Inputs</span>
+                <small>Edit material + labor assumptions</small>
+            </div>
+        </div>
+
+        <div class="grid-3">
+            <label>
+                Mechanical Labor Rate ($/hr)
+                <span class="desc">Anchorage base for boiler mechanic.</span>
+                <input type="number" id="mechRate" value="92" min="0" step="1" />
+            </label>
+            <label>
+                Shipping % of Material
+                <span class="desc">Freight/handling before remote multiplier.</span>
+                <input type="number" id="shipPct" value="12" min="0" step="0.5" />
+            </label>
+            <label>
+                Boiler Min Cost ($)
+                <span class="desc">Clamp floor for small boilers.</span>
+                <input type="number" id="boilerMin" value="4000" min="0" step="100" />
+            </label>
+        </div>
+
+        <div class="grid-3">
+            <label>
+                Boiler Curve A
+                <span class="desc">Curve coefficient for base boiler cost.</span>
+                <input type="number" id="boilerCurveA" value="28" min="0" step="0.1" />
+            </label>
+            <label>
+                Boiler Curve B
+                <span class="desc">Exponent for MBH scaling.</span>
+                <input type="number" id="boilerCurveB" value="0.88" min="0" step="0.01" />
+            </label>
+            <label>
+                Boiler Curve Scale
+                <span class="desc">Multiplier to convert curve output to $.</span>
+                <input type="number" id="boilerCurveScale" value="100" min="0" step="1" />
+            </label>
+        </div>
+
+        <div class="grid-3">
+            <label>
+                Zone Kit Cost ($/zone)
+                <span class="desc">Pump/valve kit per heating zone.</span>
+                <input type="number" id="zoneCostPer" value="650" min="0" step="10" />
+            </label>
+            <label>
+                Vent Cost PVC ($/LF)
+                <span class="desc">PVC/CPVC condensing vent.</span>
+                <input type="number" id="ventCostPvc" value="18" min="0" step="1" />
+            </label>
+            <label>
+                Vent Cost SS Cat IV ($/LF)
+                <span class="desc">Stainless high-temp vent.</span>
+                <input type="number" id="ventCostSs" value="45" min="0" step="1" />
+            </label>
+        </div>
+
+        <div class="grid-3">
+            <label>
+                Vent Cost Chimney ($/LF)
+                <span class="desc">Liner or retrofit allowance.</span>
+                <input type="number" id="ventCostChimney" value="28" min="0" step="1" />
+            </label>
+            <label>
+                Controls Cost Basic ($)
+                <span class="desc">Aquastat / basic controls.</span>
+                <input type="number" id="controlCostBasic" value="800" min="0" step="50" />
+            </label>
+            <label>
+                Controls Cost Lead/Lag ($)
+                <span class="desc">Multiple boiler staging.</span>
+                <input type="number" id="controlCostLeadLag" value="2500" min="0" step="50" />
+            </label>
+        </div>
+
+        <div class="grid-3">
+            <label>
+                Controls Cost BMS ($)
+                <span class="desc">Full BMS integration.</span>
+                <input type="number" id="controlCostBms" value="4000" min="0" step="50" />
+            </label>
+        </div>
+
         <div class="actions-row">
             <button class="calc-btn" onclick="runCalc()">Calculate</button>
             <button class="reset-btn" onclick="resetForm()">Reset</button>
@@ -599,11 +686,11 @@
     <div>
         Material boiler cost scales non-linearly with size (smaller units have higher $/MBH).
         Zones add circulators/valves. Venting cost is based on vent type. Controls escalate with tier.
-        Shipping assumes ~12% base freight/handling on material, multiplied by <code>remoteFactor</code>.
+        Shipping assumes the base freight/handling percentage set above, multiplied by <code>remoteFactor</code>.
     </div>
     <div>
         Labor hours are based on Anchorage baseline plus remote handling factor. Demo adds removal hours.
-        After Hours adds 20% labor premium. Mechanical labor rate = $92/hr.
+        After Hours adds 20% labor premium. Mechanical labor rate comes from the pricing inputs.
     </div>
     <div>
         This is a <b>budgetary tool</b>, not stamped engineering. For steam boilers, different code path (not included).
@@ -697,27 +784,55 @@ function resetForm() {
     document.getElementById("remoteFactor").value = 1.15;
     document.getElementById("includeDemo").checked = false;
     document.getElementById("afterHours").checked = false;
+    document.getElementById("mechRate").value = 92;
+    document.getElementById("shipPct").value = 12;
+    document.getElementById("boilerMin").value = 4000;
+    document.getElementById("boilerCurveA").value = 28;
+    document.getElementById("boilerCurveB").value = 0.88;
+    document.getElementById("boilerCurveScale").value = 100;
+    document.getElementById("zoneCostPer").value = 650;
+    document.getElementById("ventCostPvc").value = 18;
+    document.getElementById("ventCostSs").value = 45;
+    document.getElementById("ventCostChimney").value = 28;
+    document.getElementById("controlCostBasic").value = 800;
+    document.getElementById("controlCostLeadLag").value = 2500;
+    document.getElementById("controlCostBms").value = 4000;
     runCalc();
 }
 
 function runCalc() {
+    const numFrom = (id, fallback = 0) => {
+        const val = parseFloat(document.getElementById(id).value);
+        return Number.isFinite(val) ? val : fallback;
+    };
     // INPUTS
-    const MBH = parseFloat(document.getElementById("boilerMBH").value) || 0;
-    const eff = parseFloat(document.getElementById("efficiency").value) || 0;
+    const MBH = numFrom("boilerMBH");
+    const eff = numFrom("efficiency");
     const fuelType = document.getElementById("fuelType").value;
-    const zones = parseFloat(document.getElementById("zoneCount").value) || 0;
-    const ventLF = parseFloat(document.getElementById("ventLength").value) || 0;
+    const zones = numFrom("zoneCount");
+    const ventLF = numFrom("ventLength");
     const ventType = document.getElementById("ventType").value;
     const controlTier = document.getElementById("controlTier").value;
-    const remoteFactor = parseFloat(document.getElementById("remoteFactor").value) || 1.0;
+    const remoteFactor = numFrom("remoteFactor", 1.0);
     const includeDemo = document.getElementById("includeDemo").checked;
     const afterHours = document.getElementById("afterHours").checked;
+    const mechRate = numFrom("mechRate", 92);
+    const shipBasePct = numFrom("shipPct", 12) / 100;
+    const boilerMin = numFrom("boilerMin", 4000);
+    const boilerCurveA = numFrom("boilerCurveA", 28);
+    const boilerCurveB = numFrom("boilerCurveB", 0.88);
+    const boilerCurveScale = numFrom("boilerCurveScale", 100);
+    const zoneCostPer = numFrom("zoneCostPer", 650);
+    const ventCostPvc = numFrom("ventCostPvc", 18);
+    const ventCostSs = numFrom("ventCostSs", 45);
+    const ventCostChimney = numFrom("ventCostChimney", 28);
+    const controlCostBasic = numFrom("controlCostBasic", 800);
+    const controlCostLeadLag = numFrom("controlCostLeadLag", 2500);
+    const controlCostBms = numFrom("controlCostBms", 4000);
 
     // --- 1. Boiler major equipment cost ---
     // Boiler curve base
-    let A = 28;
-    let B = 0.88;
-    let boilerBase = A * Math.pow(MBH, B) * 100;
+    let boilerBase = boilerCurveA * Math.pow(MBH, boilerCurveB) * boilerCurveScale;
     // Explanation:
     // A * MBH^B gives ~cost/MBH, multiply by 100 to get total $
     // Tuned for rough budgetary shape:
@@ -737,23 +852,22 @@ function runCalc() {
     let boilerCostRaw = boilerBase * fuelMult * effMult;
 
     // clamp minimum to $4,000
-    if (boilerCostRaw < 4000) boilerCostRaw = 4000;
+    if (boilerCostRaw < boilerMin) boilerCostRaw = boilerMin;
 
     // --- 2. Ancillary material ---
     // Zones
-    const zoneCostPer = 650;
     const zoneMat = zones * zoneCostPer;
 
     // Venting cost per LF
-    let ventCostPerLF = 18;
-    if (ventType === "sscat4") ventCostPerLF = 45;
-    else if (ventType === "chimney") ventCostPerLF = 28;
+    let ventCostPerLF = ventCostPvc;
+    if (ventType === "sscat4") ventCostPerLF = ventCostSs;
+    else if (ventType === "chimney") ventCostPerLF = ventCostChimney;
     const ventMat = ventLF * ventCostPerLF;
 
     // Controls tier
-    let controlMat = 800;
-    if (controlTier === "leadlag") controlMat = 2500;
-    else if (controlTier === "bms") controlMat = 4000;
+    let controlMat = controlCostBasic;
+    if (controlTier === "leadlag") controlMat = controlCostLeadLag;
+    else if (controlTier === "bms") controlMat = controlCostBms;
 
     // Ancillary subtotal
     const ancillaryMatRaw = zoneMat + ventMat + controlMat;
@@ -763,12 +877,9 @@ function runCalc() {
     const matSubtotalRemoteAdj = matSubtotalRaw * remoteFactor;
 
     // --- 3. Shipping / Handling ---
-    const shipBasePct = 0.12; // 12%
     const shippingCost = matSubtotalRemoteAdj * shipBasePct;
 
     // --- 4. Labor hours ---
-    const mechRate = 92; // $/hr Mechanical (Anchorage base)
-
     // Task 1: Set Boiler & Primary Piping
     // hrs = 6 + (MBH/500)*2
     let hrs_setBoiler = 6 + (MBH / 500) * 2;
