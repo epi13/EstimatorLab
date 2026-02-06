@@ -3,6 +3,8 @@ import { isUnitToken } from "./repl-units.js";
 
 export function createSession({ state, setTheme, writeLine, setStatus, renderUserFunctions, defineUserFn }){
   const PROFILE_STORAGE_KEY = "replcalc_profiles_v2";
+  const AUTOSAVE_PROFILE_NAME = "autosave";
+  const AUTOSAVE_META_STORAGE_KEY = "replcalc_autosave_meta_v1";
   const RECENT_USAGE_LIMIT = 50;
 
   async function copyText(text){
@@ -587,15 +589,49 @@ export function createSession({ state, setTheme, writeLine, setStatus, renderUse
     writeLine(`Saved profile "${profileName}" (${Object.keys(payload.index).length} symbols).`, "ok");
   }
 
+  function saveAutosave(){
+    const payload = buildProfilePayload(AUTOSAVE_PROFILE_NAME, { mode: "touched", includeGlobals: true, roots: [] });
+    const store = loadProfileStore();
+    store.profiles[AUTOSAVE_PROFILE_NAME] = payload;
+    saveProfileStore(store);
+    state.lastSaveSeq = state.usageSeq;
+  }
+
+  function saveAutosaveMeta(meta){
+    try{
+      localStorage.setItem(AUTOSAVE_META_STORAGE_KEY, JSON.stringify(meta || null));
+    }catch{}
+  }
+
+  function loadAutosaveMeta(){
+    try{
+      const raw = localStorage.getItem(AUTOSAVE_META_STORAGE_KEY);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== "object") return null;
+      return obj;
+    }catch{
+      return null;
+    }
+  }
+
+  function clearAutosave(){
+    const store = loadProfileStore();
+    if (store.profiles && Object.prototype.hasOwnProperty.call(store.profiles, AUTOSAVE_PROFILE_NAME)){
+      delete store.profiles[AUTOSAVE_PROFILE_NAME];
+      saveProfileStore(store);
+    }
+    try{
+      localStorage.removeItem(AUTOSAVE_META_STORAGE_KEY);
+    }catch{}
+  }
+
   function muxProfile(arg){
     saveProfile(arg);
   }
 
-  function loadProfile(arg){
-    const profileName = normalizeProfileName(arg);
-    const store = loadProfileStore();
-    const payload = store.profiles[profileName];
-    if (!payload) throw new Error(`No saved profile named "${profileName}".`);
+  function applyProfilePayload(profileName, payload, { silent = false } = {}){
+    if (!payload || typeof payload !== "object") throw new Error("Invalid profile");
     for (const pinned of payload.pinned || []){
       state.pinnedSymbols.add(pinned);
     }
@@ -621,7 +657,23 @@ export function createSession({ state, setTheme, writeLine, setStatus, renderUse
       state.depGraph.set(name, new Set(entry.deps || []));
       addToShadow(def);
     }
-    writeLine(`Loaded profile "${profileName}".`, "ok");
+    if (!silent) writeLine(`Loaded profile "${profileName}".`, "ok");
+  }
+
+  function loadProfile(arg){
+    const profileName = normalizeProfileName(arg);
+    const store = loadProfileStore();
+    const payload = store.profiles[profileName];
+    if (!payload) throw new Error(`No saved profile named "${profileName}".`);
+    applyProfilePayload(profileName, payload, { silent: false });
+  }
+
+  function loadAutosave(){
+    const store = loadProfileStore();
+    const payload = store.profiles[AUTOSAVE_PROFILE_NAME];
+    if (!payload) return false;
+    applyProfilePayload(AUTOSAVE_PROFILE_NAME, payload, { silent: true });
+    return true;
   }
 
   function listProfiles(){
@@ -792,8 +844,13 @@ export function createSession({ state, setTheme, writeLine, setStatus, renderUse
     exportSession,
     importSession,
     saveProfile,
+    saveAutosave,
+    saveAutosaveMeta,
+    loadAutosaveMeta,
+    clearAutosave,
     muxProfile,
     loadProfile,
+    loadAutosave,
     listProfiles,
     resetAll,
     beginUsage,

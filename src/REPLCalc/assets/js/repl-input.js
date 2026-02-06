@@ -78,6 +78,10 @@ export function createInputHandlers({
     muxProfile,
     recordSymbolDefinition,
     resetAll,
+    saveAutosave,
+    saveAutosaveMeta,
+    loadAutosaveMeta,
+    clearAutosave,
   } = session;
   const { runTestSuite } = tests;
   const {
@@ -131,6 +135,257 @@ export function createInputHandlers({
     const statementList = splitStatements(line);
     if (!statementList.length) return;
 
+    const executeParsed = async (parsed, stmt) => {
+      if (parsed.type === "cmd"){
+        const {cmd,arg} = parsed;
+        if (cmd === "docs"){ showDocs(); return; }
+        if (cmd === "clear"){ clearTerminal(); return; }
+        if (cmd === "vars"){ listVars(); return; }
+        if (cmd === "methods"){ listMethods(); return; }
+        if (cmd === "reset"){
+          resetAll();
+          clearAutosave();
+          return;
+        }
+        if (cmd === "save"){ saveProfile(arg); return; }
+        if (cmd === "mux"){ muxProfile(arg); return; }
+        if (cmd === "load"){ loadProfile(arg); return; }
+        if (cmd === "profiles"){ listProfiles(); return; }
+        if (cmd === "pin"){ pinSymbol(arg); return; }
+        if (cmd === "unpin"){ unpinSymbol(arg); return; }
+        if (cmd === "which"){ whichSymbol(arg); return; }
+        if (cmd === "use"){ useSymbolFromProfile(arg); return; }
+        if (cmd === "diff"){ diffSymbol(arg); return; }
+        if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); return; }
+        if (cmd === "doom"){ runDoomDemo({ gfx, writeLine, writeInputEcho }); return; }
+        if (cmd === "test"){ runTestSuite(); return; }
+
+        if (cmd === "export"){
+          const text = exportSession();
+          await copyText(text);
+          return;
+        }
+        if (cmd === "import"){
+          const text = await readClipboard();
+          importSession(text);
+          writeLine("Imported profile from clipboard.", "ok");
+          return;
+        }
+
+        if (cmd === "upload"){
+          const name = (arg || "").trim() || "file";
+          if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error("upload expects a variable name");
+          if (!fileImport) throw new Error("File upload not available");
+          const file = await new Promise((resolve) => {
+            fileImport.value = "";
+            fileImport.onchange = () => resolve(fileImport.files && fileImport.files[0] ? fileImport.files[0] : null);
+            fileImport.click();
+          });
+          if (!file) throw new Error("No file selected");
+          const text = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error("Could not read file"));
+            reader.onload = () => resolve(String(reader.result || ""));
+            reader.readAsText(file);
+          });
+
+          if (file.name.toLowerCase().endsWith(".json")){
+            try{
+              const parsedJson = JSON.parse(text);
+              if (parsedJson && typeof parsedJson === "object" && parsedJson.version === 2 && parsedJson.profiles){
+                importSession(text);
+                writeLine(`Imported profile from ${file.name}.`, "ok");
+                return;
+              }
+            }catch{}
+          }
+
+          let stored = text;
+          if (file.name.toLowerCase().endsWith(".json")){
+            try{
+              stored = runExpression(`from_json(${JSON.stringify(text)})`);
+            }catch{
+              stored = text;
+            }
+          }
+          state.vars[name] = stored;
+          recordSymbolDefinition({ name, kind: "var", expr: `:upload ${file.name}`, value: stored });
+          writeLine(`Uploaded ${file.name} -> ${name}.`, "ok");
+          return;
+        }
+
+        if (cmd === "download"){
+          const parts = (arg || "").trim().split(/\s+/).filter(Boolean);
+          const name = parts[0];
+          const format = (parts[1] || "").toLowerCase();
+          const filename = parts[2] || "";
+          if (!name) throw new Error("download expects a variable name");
+          if (!Object.prototype.hasOwnProperty.call(state.vars, name)) throw new Error(`Unknown variable: ${name}`);
+          let mime = "text/plain";
+          let content;
+          if (format === "csv"){
+            mime = "text/csv";
+            content = runExpression(`to_csv(get(${JSON.stringify(name)}))`);
+          }else if (format === "json" || format === ""){
+            mime = "application/json";
+            const val = state.vars[name];
+            if (typeof val === "string" && format === ""){
+              content = val;
+              mime = "text/plain";
+            }else{
+              content = runExpression(`to_json(get(${JSON.stringify(name)}))`);
+            }
+          }else{
+            throw new Error("download format must be csv or json");
+          }
+          const outName = filename || (format === "csv" ? `${name}.csv` : `${name}.json`);
+          const blob = new Blob([String(content)], { type: mime });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = outName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          writeLine(`Downloaded ${name} -> ${outName}.`, "ok");
+          return;
+        }
+        throw new Error(`Unknown command: :${cmd}`);
+      }
+
+      if (parsed.type === "def"){
+        const existed = Object.prototype.hasOwnProperty.call(state.userFns, parsed.name);
+        defineUserFn(parsed.name, parsed.params, parsed.expr);
+        const verb = existed ? "Updated" : "Added";
+        writeLine(`${verb} function ${parsed.name}(${parsed.params.join(", ")}).`, "ok");
+        return;
+      }
+
+      if (parsed.type === "assy"){
+        const assembly = createAssembly(parsed.name, parsed.fields);
+        state.vars[parsed.name] = assembly;
+        recordSymbolDefinition({
+          name: parsed.name,
+          kind: "assy",
+          fields: parsed.fields,
+          value: assembly,
+        });
+        const fr = formatValueDisplay(assembly);
+        writeLine(`${parsed.name} = ${fr.main}`, "ok");
+        return;
+      }
+
+      if (parsed.type === "assign"){
+        const val = runExpressionAll(parsed.expr);
+        state.vars[parsed.name] = val;
+        recordSymbolDefinition({ name: parsed.name, kind: "var", expr: parsed.expr, value: val });
+        const fr = formatValueDisplay(val);
+        writeLine(`${parsed.name} = ${fr.main}`, "ok");
+        if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
+        return;
+      }
+
+      if (parsed.type === "equation"){
+        const solved = solveEquation(parsed.left, parsed.right);
+        let solvedValue;
+        if (solved.unknown.unitToken){
+          solvedValue = makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind);
+        }else{
+          solvedValue = solved.value;
+          state.vars[solved.unknown.name] = solvedValue;
+          recordSymbolDefinition({
+            name: solved.unknown.name,
+            kind: "var",
+            expr: `${parsed.left} = ${parsed.right}`,
+            value: solvedValue,
+          });
+        }
+        const fr = formatValueDisplay(solvedValue);
+        writeLine(`${solved.unknown.name} = ${fr.main}`, "ok");
+        if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
+        return;
+      }
+
+      if (parsed.type === "if"){
+        const cond = runExpressionAll(parsed.condition);
+        if (isTruthy(cond)){
+          await handleLine(parsed.thenBody);
+        }else if (parsed.elseBody){
+          await handleLine(parsed.elseBody);
+        }
+        return;
+      }
+
+      if (parsed.type === "for"){
+        const startVal = runExpressionAll(parsed.startExpr);
+        const endVal = runExpressionAll(parsed.endExpr);
+        const stepVal = parsed.stepExpr ? runExpressionAll(parsed.stepExpr) : 1;
+        let start;
+        let end;
+        let step;
+        let loopKind = null;
+        if (isQty(startVal) || isQty(endVal)){
+          if (!isQty(startVal) || !isQty(endVal)){
+            throw new Error("for loop range must use matching unit quantities");
+          }
+          if (startVal.kind !== endVal.kind){
+            throw new Error("for loop range units must match");
+          }
+          loopKind = startVal.kind;
+          start = startVal.value;
+          end = endVal.value;
+          if (isQty(stepVal)){
+            if (stepVal.kind !== loopKind) throw new Error("for loop step unit mismatch");
+            step = stepVal.value;
+          }else{
+            step = stepVal;
+          }
+        }else{
+          [start, end] = normalizeCompare(startVal, endVal);
+          step = normalizeCompare(stepVal, 0)[0];
+        }
+        if (step === 0) throw new Error("for loop step cannot be 0");
+        const hadVar = Object.prototype.hasOwnProperty.call(state.vars, parsed.varName);
+        const prevVal = state.vars[parsed.varName];
+        const forward = step > 0;
+        let iter = 0;
+        for (let i = start; forward ? i <= end : i >= end; i += step){
+          iter += 1;
+          if (iter > MAX_LOOP_ITERATIONS){
+            throw new Error(`for loop exceeded ${MAX_LOOP_ITERATIONS} iterations`);
+          }
+          state.vars[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
+          await handleLine(parsed.body);
+        }
+        if (hadVar) state.vars[parsed.varName] = prevVal;
+        else delete state.vars[parsed.varName];
+        return;
+      }
+
+      if (parsed.type === "repeat"){
+        const countVal = runExpressionAll(parsed.countExpr);
+        const count = normalizeCompare(countVal, 0)[0];
+        if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
+        const n = Math.floor(count);
+        if (n > MAX_LOOP_ITERATIONS){
+          throw new Error(`repeat exceeded ${MAX_LOOP_ITERATIONS} iterations`);
+        }
+        for (let i = 0; i < n; i++){
+          await handleLine(parsed.body);
+        }
+        return;
+      }
+
+      if (parsed.type === "expr"){
+        const val = runExpressionAll(parsed.expr);
+        const fr = formatValueDisplay(val);
+        writeLine(fr.main, "out");
+        if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
+        return;
+      }
+    };
+
     try{
       for (const stmt of statementList){
         const parsed = evaluate(stmt);
@@ -138,258 +393,16 @@ export function createInputHandlers({
         const usageEntry = beginUsage(parsed, stmt);
 
         try{
-          if (parsed.type === "cmd"){
-            const {cmd,arg} = parsed;
-            if (cmd === "docs"){ showDocs(); continue; }
-            if (cmd === "clear"){ clearTerminal(); continue; }
-            if (cmd === "vars"){ listVars(); continue; }
-            if (cmd === "methods"){ listMethods(); continue; }
-            if (cmd === "reset"){ resetAll(); continue; }
-            if (cmd === "save"){ saveProfile(arg); continue; }
-            if (cmd === "mux"){ muxProfile(arg); continue; }
-            if (cmd === "load"){ loadProfile(arg); continue; }
-            if (cmd === "profiles"){ listProfiles(); continue; }
-            if (cmd === "pin"){ pinSymbol(arg); continue; }
-            if (cmd === "unpin"){ unpinSymbol(arg); continue; }
-            if (cmd === "which"){ whichSymbol(arg); continue; }
-            if (cmd === "use"){ useSymbolFromProfile(arg); continue; }
-            if (cmd === "diff"){ diffSymbol(arg); continue; }
-            if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); continue; }
-            if (cmd === "doom"){ runDoomDemo({ gfx, writeLine, writeInputEcho }); continue; }
-            if (cmd === "test"){ runTestSuite(); continue; }
-
-            if (cmd === "export"){
-              const text = exportSession();
-              await copyText(text);
-              continue;
-            }
-            if (cmd === "import"){
-              const text = await readClipboard();
-              importSession(text);
-              writeLine("Imported profile from clipboard.", "ok");
-              continue;
-            }
-
-            if (cmd === "upload"){
-              const name = (arg || "").trim() || "file";
-              if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) throw new Error("upload expects a variable name");
-              if (!fileImport) throw new Error("File upload not available");
-              const file = await new Promise((resolve) => {
-                fileImport.value = "";
-                fileImport.onchange = () => resolve(fileImport.files && fileImport.files[0] ? fileImport.files[0] : null);
-                fileImport.click();
-              });
-              if (!file) throw new Error("No file selected");
-              const text = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onerror = () => reject(new Error("Could not read file"));
-                reader.onload = () => resolve(String(reader.result || ""));
-                reader.readAsText(file);
-              });
-
-              if (file.name.toLowerCase().endsWith(".json")){
-                try{
-                  const parsedJson = JSON.parse(text);
-                  if (parsedJson && typeof parsedJson === "object" && parsedJson.version === 2 && parsedJson.profiles){
-                    importSession(text);
-                    writeLine(`Imported profile from ${file.name}.`, "ok");
-                    continue;
-                  }
-                }catch{}
-              }
-
-              let stored = text;
-              if (file.name.toLowerCase().endsWith(".json")){
-                try{
-                  stored = runExpression(`from_json(${JSON.stringify(text)})`);
-                }catch{
-                  stored = text;
-                }
-              }
-              state.vars[name] = stored;
-              recordSymbolDefinition({ name, kind: "var", expr: `:upload ${file.name}`, value: stored });
-              writeLine(`Uploaded ${file.name} -> ${name}.`, "ok");
-              continue;
-            }
-
-            if (cmd === "download"){
-              const parts = (arg || "").trim().split(/\s+/).filter(Boolean);
-              const name = parts[0];
-              const format = (parts[1] || "").toLowerCase();
-              const filename = parts[2] || "";
-              if (!name) throw new Error("download expects a variable name");
-              if (!Object.prototype.hasOwnProperty.call(state.vars, name)) throw new Error(`Unknown variable: ${name}`);
-              let mime = "text/plain";
-              let content;
-              if (format === "csv"){
-                mime = "text/csv";
-                content = runExpression(`to_csv(get(${JSON.stringify(name)}))`);
-              }else if (format === "json" || format === ""){
-                mime = "application/json";
-                const val = state.vars[name];
-                if (typeof val === "string" && format === ""){
-                  content = val;
-                  mime = "text/plain";
-                }else{
-                  content = runExpression(`to_json(get(${JSON.stringify(name)}))`);
-                }
-              }else{
-                throw new Error("download format must be csv or json");
-              }
-              const outName = filename || (format === "csv" ? `${name}.csv` : `${name}.json`);
-              const blob = new Blob([String(content)], { type: mime });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = outName;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-              writeLine(`Downloaded ${name} -> ${outName}.`, "ok");
-              continue;
-            }
-            throw new Error(`Unknown command: :${cmd}`);
-          }
-
-        if (parsed.type === "def"){
-          const existed = Object.prototype.hasOwnProperty.call(state.userFns, parsed.name);
-          defineUserFn(parsed.name, parsed.params, parsed.expr);
-          const verb = existed ? "Updated" : "Added";
-          writeLine(`${verb} function ${parsed.name}(${parsed.params.join(", ")}).`, "ok");
-          continue;
-        }
-
-        if (parsed.type === "assy"){
-          const assembly = createAssembly(parsed.name, parsed.fields);
-          state.vars[parsed.name] = assembly;
-          recordSymbolDefinition({
-            name: parsed.name,
-            kind: "assy",
-            fields: parsed.fields,
-            value: assembly,
-          });
-          const fr = formatValueDisplay(assembly);
-          writeLine(`${parsed.name} = ${fr.main}`, "ok");
-          continue;
-        }
-
-        if (parsed.type === "assign"){
-          const val = runExpressionAll(parsed.expr);
-          state.vars[parsed.name] = val;
-          recordSymbolDefinition({
-            name: parsed.name,
-            kind: "var",
-            expr: parsed.expr,
-            value: val,
-          });
-          const fr = formatValueDisplay(val);
-          writeLine(`${parsed.name} = ${fr.main}`, "ok");
-          if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
-          continue;
-        }
-
-        if (parsed.type === "equation"){
-          const solved = solveEquation(parsed.left, parsed.right);
-          let solvedValue;
-          if (solved.unknown.unitToken){
-            solvedValue = makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind);
-          }else{
-            solvedValue = solved.value;
-            state.vars[solved.unknown.name] = solvedValue;
-            recordSymbolDefinition({
-              name: solved.unknown.name,
-              kind: "var",
-              expr: `${parsed.left} = ${parsed.right}`,
-              value: solvedValue,
-            });
-          }
-          const fr = formatValueDisplay(solvedValue);
-          writeLine(`${solved.unknown.name} = ${fr.main}`, "ok");
-          if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
-          continue;
-        }
-
-        if (parsed.type === "if"){
-          const cond = runExpressionAll(parsed.condition);
-          if (isTruthy(cond)){
-            await handleLine(parsed.thenBody);
-          }else if (parsed.elseBody){
-            await handleLine(parsed.elseBody);
-          }
-          continue;
-        }
-
-        if (parsed.type === "for"){
-          const startVal = runExpressionAll(parsed.startExpr);
-          const endVal = runExpressionAll(parsed.endExpr);
-          const stepVal = parsed.stepExpr ? runExpressionAll(parsed.stepExpr) : 1;
-          let start;
-          let end;
-          let step;
-          let loopKind = null;
-          if (isQty(startVal) || isQty(endVal)){
-            if (!isQty(startVal) || !isQty(endVal)){
-              throw new Error("for loop range must use matching unit quantities");
-            }
-            if (startVal.kind !== endVal.kind){
-              throw new Error("for loop range units must match");
-            }
-            loopKind = startVal.kind;
-            start = startVal.value;
-            end = endVal.value;
-            if (isQty(stepVal)){
-              if (stepVal.kind !== loopKind) throw new Error("for loop step unit mismatch");
-              step = stepVal.value;
-            }else{
-              step = stepVal;
-            }
-          }else{
-            [start, end] = normalizeCompare(startVal, endVal);
-            step = normalizeCompare(stepVal, 0)[0];
-          }
-          if (step === 0) throw new Error("for loop step cannot be 0");
-          const hadVar = Object.prototype.hasOwnProperty.call(state.vars, parsed.varName);
-          const prevVal = state.vars[parsed.varName];
-          const forward = step > 0;
-          let iter = 0;
-          for (let i = start; forward ? i <= end : i >= end; i += step){
-            iter += 1;
-            if (iter > MAX_LOOP_ITERATIONS){
-              throw new Error(`for loop exceeded ${MAX_LOOP_ITERATIONS} iterations`);
-            }
-            state.vars[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
-            await handleLine(parsed.body);
-          }
-          if (hadVar) state.vars[parsed.varName] = prevVal;
-          else delete state.vars[parsed.varName];
-          continue;
-        }
-
-        if (parsed.type === "repeat"){
-          const countVal = runExpressionAll(parsed.countExpr);
-          const count = normalizeCompare(countVal, 0)[0];
-          if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
-          const n = Math.floor(count);
-          if (n > MAX_LOOP_ITERATIONS){
-            throw new Error(`repeat exceeded ${MAX_LOOP_ITERATIONS} iterations`);
-          }
-          for (let i = 0; i < n; i++){
-            await handleLine(parsed.body);
-          }
-          continue;
-        }
-
-        if (parsed.type === "expr"){
-          const val = runExpressionAll(parsed.expr);
-          const fr = formatValueDisplay(val);
-          writeLine(fr.main, "out");
-          if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
-          continue;
-        }
+          await executeParsed(parsed, stmt);
         }finally{
           endUsage(usageEntry);
         }
+
+        saveAutosave();
+        saveAutosaveMeta({
+          history: state.history.slice(),
+          theme: state.theme,
+        });
       }
     }catch(err){
       setStatus("Error", "err");
@@ -523,7 +536,10 @@ export function createInputHandlers({
   btnClear.addEventListener("click", clearTerminal);
   btnVars.addEventListener("click", listVars);
   btnMethods.addEventListener("click", listMethods);
-  btnReset.addEventListener("click", resetAll);
+  btnReset.addEventListener("click", () => {
+    resetAll();
+    clearAutosave();
+  });
 
   btnExport.addEventListener("click", async () => {
     const text = exportSession();
@@ -589,7 +605,9 @@ export function createInputHandlers({
   });
 
   function boot(){
-    setTheme("default");
+    const meta = loadAutosaveMeta();
+    const theme = meta?.theme ? String(meta.theme) : "default";
+    setTheme(theme);
     writeLine("Estimator REPL initialized.", "ok");
     writeLine("Type :docs for commands and examples.", "muted");
     writeLine("Try: concrete_cy(1200 sf, 4 in)", "muted");
@@ -600,6 +618,15 @@ export function createInputHandlers({
 
     state.vars.hr = 1;
     state.vars.pi = Math.PI;
+
+    try{
+      session.loadAutosave();
+    }catch{}
+
+    if (meta && Array.isArray(meta.history)){
+      state.history = meta.history.map((entry) => String(entry)).filter(Boolean);
+      state.histIdx = state.history.length;
+    }
 
     renderUserFunctions();
     updateHighlight();
