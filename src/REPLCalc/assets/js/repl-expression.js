@@ -262,15 +262,20 @@ export function tokenize(src){
       }
 
       if (!isUnitToken(name)){
-        const digitIdx = name.search(/[0-9]/);
-        if (digitIdx > 0){
-          const hasAlphaAfterDigit = /[A-Za-z_$%]/.test(name.slice(digitIdx + 1));
-          if (hasAlphaAfterDigit){
-            const head = name.slice(0, digitIdx);
-            if (isUnitToken(head)){
-              out.push({ type: "id", value: head });
-              i = i + digitIdx;
-              continue;
+        let p = i - 1;
+        while (p >= 0 && isSpace(s[p])) p -= 1;
+        const precededByDigit = p >= 0 && isDigit(s[p]);
+        if (precededByDigit){
+          const digitIdx = name.search(/[0-9]/);
+          if (digitIdx > 0){
+            const hasAlphaAfterDigit = /[A-Za-z_$%]/.test(name.slice(digitIdx + 1));
+            if (hasAlphaAfterDigit){
+              const head = name.slice(0, digitIdx);
+              if (isUnitToken(head)){
+                out.push({ type: "id", value: head });
+                i = i + digitIdx;
+                continue;
+              }
             }
           }
         }
