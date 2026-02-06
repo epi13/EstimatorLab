@@ -261,6 +261,21 @@ export function tokenize(src){
         }
       }
 
+      if (!isUnitToken(name)){
+        const digitIdx = name.search(/[0-9]/);
+        if (digitIdx > 0){
+          const hasAlphaAfterDigit = /[A-Za-z_$%]/.test(name.slice(digitIdx + 1));
+          if (hasAlphaAfterDigit){
+            const head = name.slice(0, digitIdx);
+            if (isUnitToken(head)){
+              out.push({ type: "id", value: head });
+              i = i + digitIdx;
+              continue;
+            }
+          }
+        }
+      }
+
       out.push({ type: "id", value: name });
       i = j;
       continue;
@@ -293,6 +308,18 @@ export function insertImplicitMultiplication(tokens){
   const canMultiplyLeft = (t) => t.type === "num" || t.type === "id" || t.type === ")" || t.type === "lazy_if";
   const canMultiplyRight = (t) => t.type === "num" || t.type === "id" || t.type === "(" || t.type === "lazy_if";
 
+  const approxEqual = (a, b, tol = 1e-12) => Math.abs(a - b) <= tol;
+  const isCompoundFeetInchesBoundary = (left, rightNum, rightUnit) => {
+    if (!left || !rightNum || !rightUnit) return false;
+    if (left.type !== "id" || rightNum.type !== "num" || rightUnit.type !== "id") return false;
+    if (!isUnitToken(left.value) || !isUnitToken(rightUnit.value)) return false;
+    const u1 = UNIT[left.value];
+    const u2 = UNIT[rightUnit.value];
+    if (!u1 || !u2) return false;
+    if (u1.kind !== "len" || u2.kind !== "len") return false;
+    return approxEqual(u1.toBase, 1) && approxEqual(u2.toBase, 1 / 12);
+  };
+
   for (let i = 0; i < tokens.length; i++){
     const t = tokens[i];
     out.push(t);
@@ -300,7 +327,12 @@ export function insertImplicitMultiplication(tokens){
     if (!next) continue;
     if (!canMultiplyLeft(t) || !canMultiplyRight(next)) continue;
     if (t.type === "id" && next.type === "(") continue;
-    out.push({ type: "op", value: "*" });
+    const next2 = tokens[i + 2];
+    if (isCompoundFeetInchesBoundary(t, next, next2)){
+      out.push({ type: "op", value: "+" });
+    }else{
+      out.push({ type: "op", value: "*" });
+    }
   }
 
   return out;
