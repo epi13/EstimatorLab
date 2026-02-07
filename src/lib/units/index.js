@@ -210,7 +210,10 @@ export function convert(value, category, from, to){
 
 export function formatSig(x, sigFigs=4){
   if(!isFinite(x)) return '—';
-  const ax=Math.abs(x);
   const digits = Math.max(2, Math.min(12, sigFigs|0));
-  return (ax>=1e6 || ax<1e-3) ? x.toExponential(digits-1) : x.toPrecision(digits);
+  const formatter = new Intl.NumberFormat('en-US', {
+    maximumSignificantDigits: digits,
+    useGrouping: true
+  });
+  return formatter.format(x === 0 ? 0 : x);
 }
