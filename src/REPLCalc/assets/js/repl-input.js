@@ -36,6 +36,10 @@ export function createInputHandlers({
     fnExprInput,
     btnFnSave,
     btnFnClear,
+    helperSearch,
+    helperClear,
+    helperList,
+    helperHint,
     writeLine,
     writeInputEcho,
     setStatus,
@@ -92,7 +96,7 @@ export function createInputHandlers({
     createAssembly,
     formatValueDisplay,
   } = evaluator;
-  const { defineUserFn } = runtime;
+  const { defineUserFn, getFns } = runtime;
   const { flushGfxOutput } = gfx;
 
   const MAX_LOOP_ITERATIONS = 100000;
@@ -604,6 +608,225 @@ export function createInputHandlers({
     fnNameInput.focus();
   });
 
+  const helperUi = (() => {
+    if (!helperSearch || !helperClear || !helperList) return null;
+
+    const normalizeText = (s) => String(s || "").toLowerCase();
+
+    const helperSpecs = [
+      { name: "waste", category: "Estimating", detail: "Apply waste percentage", insertText: "waste(" },
+      { name: "markup", category: "Estimating", detail: "Apply markup percentage", insertText: "markup(" },
+      { name: "burden", category: "Estimating", detail: "Apply labor burden percentage", insertText: "burden(" },
+      { name: "unit", category: "Estimating", detail: "Unit cost from total and quantity", insertText: "unit(" },
+      { name: "round_up", category: "Estimating", detail: "Round up to a step", insertText: "round_up(" },
+      { name: "line", category: "Estimating", detail: "Build a cost line item assembly", insertText: "line(" },
+      { name: "rollup", category: "Estimating", detail: "Roll up line totals", insertText: "rollup(" },
+
+      { name: "area_rect", category: "Layout / Geometry", detail: "Area from length and width", insertText: "area_rect(" },
+      { name: "area_circle", category: "Layout / Geometry", detail: "Area from diameter", insertText: "area_circle(" },
+      { name: "vol_rect", category: "Layout / Geometry", detail: "Volume from area and thickness", insertText: "vol_rect(" },
+      { name: "concrete_cy", category: "Layout / Geometry", detail: "Concrete volume quantity", insertText: "concrete_cy(" },
+
+      { name: "qty", category: "Assemblies", detail: "Quantity breakdown from an assembly", insertText: "qty(" },
+
+      { name: "bf", category: "Materials", detail: "Board feet", insertText: "bf(" },
+      { name: "pipe_wt", category: "Materials", detail: "Pipe weight from NPS/schedule", insertText: "pipe_wt(" },
+
+      { name: "to", category: "Conversions", detail: "Convert a value to a unit token", insertText: "to(" },
+      { name: "to_in", category: "Conversions", detail: "Convert length to inches", insertText: "to_in(" },
+      { name: "to_ft", category: "Conversions", detail: "Convert length to feet", insertText: "to_ft(" },
+      { name: "to_sf", category: "Conversions", detail: "Convert area to square feet", insertText: "to_sf(" },
+      { name: "to_sy", category: "Conversions", detail: "Convert area to square yards", insertText: "to_sy(" },
+      { name: "to_cf", category: "Conversions", detail: "Convert volume to cubic feet", insertText: "to_cf(" },
+      { name: "to_cy", category: "Conversions", detail: "Convert volume to cubic yards", insertText: "to_cy(" },
+      { name: "to_lb", category: "Conversions", detail: "Convert weight to pounds", insertText: "to_lb(" },
+      { name: "to_ton", category: "Conversions", detail: "Convert weight to tons", insertText: "to_ton(" },
+      { name: "to_min", category: "Conversions", detail: "Convert time to minutes", insertText: "to_min(" },
+      { name: "to_hr", category: "Conversions", detail: "Convert time to hours", insertText: "to_hr(" },
+    ];
+
+    const categoryOrder = ["Estimating", "Layout / Geometry", "Assemblies", "Materials", "Conversions"];
+    const categoryRank = new Map(categoryOrder.map((c, idx) => [c, idx]));
+
+    function usageForFn(name){
+      const fn = getFns && typeof getFns === "function" ? getFns()[name] : null;
+      const labels = Array.isArray(fn?.sig?.args) ? fn.sig.args.map((a, i) => String(a?.label || `arg${i + 1}`)) : null;
+      if (labels && labels.length){
+        return `${name}(${labels.join(", ")})`;
+      }
+      if (typeof fn?.arity === "number" && fn.arity >= 0){
+        const params = Array.from({ length: fn.arity }, (_, i) => `arg${i + 1}`);
+        return `${name}(${params.join(", ")})`;
+      }
+      return `${name}(`;
+    }
+
+    function buildItems(){
+      const fns = getFns && typeof getFns === "function" ? getFns() : {};
+      const out = [];
+      for (const spec of helperSpecs){
+        if (!Object.prototype.hasOwnProperty.call(fns, spec.name)) continue;
+        out.push({
+          name: spec.name,
+          category: spec.category,
+          detail: spec.detail,
+          insertText: spec.insertText || `${spec.name}(`,
+          usage: usageForFn(spec.name),
+        });
+      }
+      out.sort((a, b) => {
+        const ra = categoryRank.has(a.category) ? categoryRank.get(a.category) : 999;
+        const rb = categoryRank.has(b.category) ? categoryRank.get(b.category) : 999;
+        if (ra !== rb) return ra - rb;
+        return a.name.localeCompare(b.name);
+      });
+      return out;
+    }
+
+    const helperState = {
+      all: [],
+      visible: [],
+      index: 0,
+    };
+
+    function insertIntoEditor(text){
+      const value = inputEl.value;
+      const start = inputEl.selectionStart ?? value.length;
+      const end = inputEl.selectionEnd ?? value.length;
+      const nextValue = `${value.slice(0, start)}${text}${value.slice(end)}`;
+      inputEl.value = nextValue;
+      const cursorPos = start + text.length;
+      inputEl.focus();
+      inputEl.setSelectionRange(cursorPos, cursorPos);
+      updateHighlight();
+      syncEditorHeight();
+      scheduleLiveResult();
+    }
+
+    function matchesQuery(item, query){
+      const q = normalizeText(query).trim();
+      if (!q) return true;
+      const parts = q.split(/\s+/).filter(Boolean);
+      const hay = `${item.name} ${item.category} ${item.usage} ${item.detail}`.toLowerCase();
+      return parts.every((p) => hay.includes(p));
+    }
+
+    function clampIndex(){
+      if (!helperState.visible.length){
+        helperState.index = 0;
+        return;
+      }
+      helperState.index = Math.max(0, Math.min(helperState.index, helperState.visible.length - 1));
+    }
+
+    function render(){
+      helperList.innerHTML = "";
+      if (!helperState.visible.length){
+        const empty = document.createElement("div");
+        empty.className = "mini muted";
+        empty.textContent = "No helpers match your filter.";
+        helperList.appendChild(empty);
+        if (helperHint) helperHint.textContent = "Tip: type to filter • Enter inserts";
+        return;
+      }
+
+      if (helperHint){
+        const active = helperState.visible[helperState.index];
+        helperHint.textContent = active ? active.usage : "Tip: type to filter";
+      }
+
+      let lastCategory = null;
+      helperState.visible.forEach((item, idx) => {
+        if (item.category !== lastCategory){
+          lastCategory = item.category;
+          const group = document.createElement("div");
+          group.className = "helperGroup";
+          group.textContent = item.category;
+          helperList.appendChild(group);
+        }
+
+        const row = document.createElement("div");
+        row.className = `helperItem${idx === helperState.index ? " active" : ""}`;
+        row.setAttribute("role", "option");
+        row.dataset.idx = String(idx);
+        row.innerHTML = `<div class="name">${item.name}</div><div class="detail">${item.detail}</div>`;
+        row.addEventListener("mousedown", (event) => {
+          event.preventDefault();
+          helperState.index = idx;
+          insertIntoEditor(item.insertText);
+          helperSearch.value = "";
+          updateVisible();
+        });
+        helperList.appendChild(row);
+      });
+
+      const activeEl = helperList.querySelector(`.helperItem[data-idx="${helperState.index}"]`);
+      if (activeEl && typeof activeEl.scrollIntoView === "function"){
+        activeEl.scrollIntoView({ block: "nearest" });
+      }
+    }
+
+    function updateVisible(){
+      const q = helperSearch.value;
+      helperState.visible = helperState.all.filter((item) => matchesQuery(item, q));
+      clampIndex();
+      render();
+    }
+
+    function rebuild(){
+      helperState.all = buildItems();
+      updateVisible();
+    }
+
+    helperSearch.addEventListener("input", () => {
+      helperState.index = 0;
+      updateVisible();
+    });
+
+    helperSearch.addEventListener("keydown", (e) => {
+      if (!helperState.visible.length) return;
+
+      if (e.key === "ArrowDown"){
+        helperState.index = (helperState.index + 1) % helperState.visible.length;
+        render();
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "ArrowUp"){
+        helperState.index = (helperState.index - 1 + helperState.visible.length) % helperState.visible.length;
+        render();
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab"){
+        const active = helperState.visible[helperState.index];
+        if (active){
+          insertIntoEditor(active.insertText);
+          helperSearch.value = "";
+          updateVisible();
+        }
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "Escape"){
+        helperSearch.value = "";
+        updateVisible();
+        e.preventDefault();
+      }
+    });
+
+    helperClear.addEventListener("click", () => {
+      helperSearch.value = "";
+      helperSearch.focus();
+      helperState.index = 0;
+      updateVisible();
+    });
+
+    rebuild();
+
+    return { rebuild };
+  })();
+
   function boot(){
     const meta = loadAutosaveMeta();
     const theme = meta?.theme ? String(meta.theme) : "default";
@@ -629,6 +852,7 @@ export function createInputHandlers({
     }
 
     renderUserFunctions();
+    helperUi?.rebuild?.();
     updateHighlight();
     syncEditorHeight();
     scheduleLiveResult();

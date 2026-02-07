@@ -52,90 +52,197 @@
             </div>
           </div>
           <div class="scroll">
-            <div class="card">
-              <h4>Quick Examples</h4>
-              <div class="kv">
-                <div><code>2+2*5</code></div><div class="muted">math</div>
-                <div><code>x = 144</code></div><div class="muted">set var</div>
-                <div><code>area_rect(30 ft, 40 ft)</code></div><div class="muted">sf</div>
-                <div><code>concrete_cy(1200 sf, 4 in)</code></div><div class="muted">cy</div>
-                <div><code>waste(100, 12.5)</code></div><div class="muted">+waste</div>
-                <div><code>markup(25000, 35)</code></div><div class="muted">OH&P</div>
-                <div><code>bf(2, 6, 12, 40)</code></div><div class="muted">board ft</div>
-                <div><code>for i in 1..4: total = total + i</code></div><div class="muted">loop</div>
-                <div><code>repeat 3: waste(100 sf, 5)</code></div><div class="muted">repeat</div>
-                <div><code>if labor > 40: overtime = labor - 40</code></div><div class="muted">flow</div>
-                <div><code>:theme matrix</code></div><div class="muted">style</div>
-                <div><code>gfx(32, 16)</code></div><div class="muted">pixel grid</div>
-                <div><code>line(0,0,31,15,"accent")</code></div><div class="muted">vector draw</div>
-                <div><code>plot(16,8,"1,0|1,0|0,1|0,1", "ok")</code></div><div class="muted">pixel steps</div>
-                <div><code>:doom</code></div><div class="muted">gfx loop demo</div>
+            <details class="rSection" open>
+              <summary>
+                <span>Buttons</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="rBody">
+                <details class="rSub" open>
+                  <summary>
+                    <span>Session</span>
+                    <span class="chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="rSubBody">
+                    <div class="btnRow">
+                      <button class="btn" id="btnExport">Export</button>
+                      <button class="btn" id="btnImport">Import</button>
+                      <button class="btn" id="btnReset">Reset</button>
+                    </div>
+                    <div class="mini" style="margin-top:8px;">Export/Import uses clipboard. Reset clears vars + history.</div>
+                  </div>
+                </details>
+                <details class="rSub" open>
+                  <summary>
+                    <span>Files</span>
+                    <span class="chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="rSubBody">
+                    <div class="btnRow">
+                      <button class="btn" id="btnUpload">Upload</button>
+                      <button class="btn" id="btnDownload">Download</button>
+                    </div>
+                  </div>
+                </details>
               </div>
-            </div>
+            </details>
 
-            <div class="card">
-              <h4>Units</h4>
-              <div class="line muted" style="margin:0">
-Supported tokens: in, ft, yd, sf, sy, cf, cy, lb, ton.
-<br/>Examples:
-<br/><code>12 ft + 6 in</code>
-<br/><code>1200 sf * 4 in</code> (interprets as volume via unit multiply)
+            <details class="rSection" open>
+              <summary>
+                <span>Examples</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="rBody">
+                <details class="rSub" open>
+                  <summary>
+                    <span>Basics</span>
+                    <span class="chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="rSubBody">
+                    <div class="kv">
+                      <div><code>2+2*5</code></div><div class="muted">math</div>
+                      <div><code>x = 144</code></div><div class="muted">set var</div>
+                      <div><code>markup(25000, 35)</code></div><div class="muted">OH&amp;P</div>
+                      <div><code>waste(100, 12.5)</code></div><div class="muted">+waste</div>
+                    </div>
+                  </div>
+                </details>
+                <details class="rSub">
+                  <summary>
+                    <span>Construction</span>
+                    <span class="chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="rSubBody">
+                    <div class="kv">
+                      <div><code>area_rect(30 ft, 40 ft)</code></div><div class="muted">sf</div>
+                      <div><code>concrete_cy(1200 sf, 4 in)</code></div><div class="muted">vol</div>
+                      <div><code>bf(2, 6, 12, 40)</code></div><div class="muted">board ft</div>
+                      <div><code>pipe_wt(2, 40, 120 ft)</code></div><div class="muted">pipe wt</div>
+                    </div>
+                  </div>
+                </details>
+                <details class="rSub">
+                  <summary>
+                    <span>Flow</span>
+                    <span class="chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="rSubBody">
+                    <div class="kv">
+                      <div><code>for i in 1..4: total = total + i</code></div><div class="muted">loop</div>
+                      <div><code>repeat 3: waste(100 sf, 5)</code></div><div class="muted">repeat</div>
+                      <div><code>if labor &gt; 40: overtime = labor - 40</code></div><div class="muted">if</div>
+                    </div>
+                  </div>
+                </details>
+                <details class="rSub">
+                  <summary>
+                    <span>GFX</span>
+                    <span class="chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="rSubBody">
+                    <div class="kv">
+                      <div><code>:theme matrix</code></div><div class="muted">style</div>
+                      <div><code>gfx(32, 16)</code></div><div class="muted">buffer</div>
+                      <div><code>line(0,0,31,15,"accent")</code></div><div class="muted">line</div>
+                      <div><code>plot(16,8,"1,0|1,0|0,1|0,1", "ok")</code></div><div class="muted">plot</div>
+                      <div><code>:doom</code></div><div class="muted">demo</div>
+                    </div>
+                  </div>
+                </details>
               </div>
-            </div>
+            </details>
 
-            <div class="card">
-              <h4>User Solutions</h4>
-              <div class="fnForm">
-                <div class="field">
-                  <label class="mini" for="fnName">Name</label>
-                  <input class="inputField" id="fnName" type="text" placeholder="crew_cost" />
-                </div>
-                <div class="field">
-                  <label class="mini" for="fnParams">Params</label>
-                  <input class="inputField" id="fnParams" type="text" placeholder="rate, hours" />
-                </div>
-                <div class="field">
-                  <label class="mini" for="fnExpr">Expression</label>
-                  <input class="inputField" id="fnExpr" type="text" placeholder="rate * hours" />
-                </div>
-                <div class="btnRow">
-                  <button class="btn" id="btnFnSave">Save</button>
-                  <button class="btn" id="btnFnClear">Clear</button>
-                </div>
+            <details class="rSection" open>
+              <summary>
+                <span>Units</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="rBody">
+                <details class="rSub" open>
+                  <summary>
+                    <span>Tokens</span>
+                    <span class="chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="rSubBody">
+                    <div class="line muted" style="margin:0">Supported tokens: in, ft, yd, sf, sy, cf, cy, lb, ton.</div>
+                  </div>
+                </details>
+                <details class="rSub" open>
+                  <summary>
+                    <span>Examples</span>
+                    <span class="chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="rSubBody">
+                    <div class="kv">
+                      <div><code>12 ft + 6 in</code></div><div class="muted">length</div>
+                      <div><code>1200 sf * 4 in</code></div><div class="muted">volume</div>
+                      <div><code>to_cy(1200 sf * 4 in)</code></div><div class="muted">scalar cy</div>
+                    </div>
+                  </div>
+                </details>
               </div>
-              <div class="fnList" id="userFnList"></div>
-              <div class="mini muted" id="userFnEmpty">No user solutions yet.</div>
-              <div class="mini" style="margin-top:6px;">Use <code>so name(a,b) = expr</code> or the form above.</div>
-            </div>
+            </details>
 
-            <div class="card">
-              <h4>Buttons</h4>
-              <div class="btnRow">
-                <button class="btn" id="btnExport">Export</button>
-                <button class="btn" id="btnImport">Import</button>
-                <button class="btn" id="btnUpload">Upload</button>
-                <button class="btn" id="btnDownload">Download</button>
-                <button class="btn" id="btnReset">Reset</button>
+            <details class="rSection" open>
+              <summary>
+                <span>User Solutions</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="rBody">
+                <details class="rSub" open>
+                  <summary>
+                    <span>Create / Edit</span>
+                    <span class="chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="rSubBody">
+                    <div class="fnForm">
+                      <div class="field">
+                        <label class="mini" for="fnName">Name</label>
+                        <input class="inputField" id="fnName" type="text" placeholder="crew_cost" />
+                      </div>
+                      <div class="field">
+                        <label class="mini" for="fnParams">Params</label>
+                        <input class="inputField" id="fnParams" type="text" placeholder="rate, hours" />
+                      </div>
+                      <div class="field">
+                        <label class="mini" for="fnExpr">Expression</label>
+                        <input class="inputField" id="fnExpr" type="text" placeholder="rate * hours" />
+                      </div>
+                      <div class="btnRow">
+                        <button class="btn" id="btnFnSave">Save</button>
+                        <button class="btn" id="btnFnClear">Clear</button>
+                      </div>
+                    </div>
+                    <div class="mini" style="margin-top:6px;">Use <code>so name(a,b) = expr</code> or the form above.</div>
+                  </div>
+                </details>
+                <details class="rSub" open>
+                  <summary>
+                    <span>Saved</span>
+                    <span class="chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="rSubBody">
+                    <div class="fnList" id="userFnList"></div>
+                    <div class="mini muted" id="userFnEmpty">No user solutions yet.</div>
+                  </div>
+                </details>
               </div>
-              <div class="mini" style="margin-top:8px;">
-                Export/Import uses clipboard. Reset clears vars + history.
-              </div>
-            </div>
+            </details>
 
-            <div class="card">
-              <h4>Construction helpers</h4>
-              <div class="line muted" style="margin:0">
-<code>waste(qty, pct)</code>,
-<code>markup(cost, pct)</code>,
-<code>burden(labor, pct)</code>,
-<code>unit(cost, qty)</code>,
-<code>round_up(x, step)</code>
-<br/><code>concrete_cy(sf, thickness_in)</code>,
-<code>vol_rect(sf, thickness_in)</code>
-<br/><code>bf(t_in, w_in, len_ft, qty)</code>
-<br/><code>pipe_wt(nps_in, schedule, len_ft)</code> (rough)
+            <details class="rSection priority" open>
+              <summary>
+                <span>Construction Helpers</span>
+                <span class="chev" aria-hidden="true"></span>
+              </summary>
+              <div class="rBody">
+                <div class="helperSearchRow">
+                  <input class="inputField" id="helperSearch" type="text" autocomplete="off" spellcheck="false" placeholder="Filter helpers… (Enter to insert)" />
+                  <button class="btn" id="helperClear" type="button">Clear</button>
+                </div>
+                <div class="helperList" id="helperList" role="listbox" aria-label="Construction helpers"></div>
+                <div class="mini muted" id="helperHint">Tip: type to filter • ↑/↓ select • Enter/Tab insert</div>
               </div>
-            </div>
+            </details>
           </div>
         </div>
       </div>

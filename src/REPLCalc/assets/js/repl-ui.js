@@ -27,6 +27,11 @@ export function createUi(state){
   const userFnList = document.getElementById('userFnList');
   const userFnEmpty = document.getElementById('userFnEmpty');
 
+  const helperSearch = document.getElementById('helperSearch');
+  const helperClear = document.getElementById('helperClear');
+  const helperList = document.getElementById('helperList');
+  const helperHint = document.getElementById('helperHint');
+
   function nowStamp(){
     const d = new Date();
     const hh = String(d.getHours()).padStart(2,'0');
@@ -117,6 +122,10 @@ export function createUi(state){
     btnFnClear,
     userFnList,
     userFnEmpty,
+    helperSearch,
+    helperClear,
+    helperList,
+    helperHint,
     nowStamp,
     writeLine,
     writeLineRich,
