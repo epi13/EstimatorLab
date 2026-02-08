@@ -173,7 +173,8 @@ export function attachMapBuiltins(baseFns, { defFn, isQty }){
 
     const pickLightTile = () => {
       const p = rand01();
-      if (p < 0.42) return 8;
+      if (p < 0.32) return 8;
+      if (p < 0.46) return 9;
       if (p < 0.62) return 12;
       if (p < 0.74) return 13;
       if (p < 0.84) return 16;

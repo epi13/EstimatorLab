@@ -18,6 +18,8 @@ export const DOOM_DEMO_SCRIPT = `
 # - Space: use (open doors)
 # - Left click: shoot
 # - Right click: swap weapon
+# - F: buy rifle upgrade (150$)
+# - Q: toggle cost/schedule panel (blueprint view)
 # - P: play/pause loop (when mouse not captured)
 
 # Display setup
@@ -31,6 +33,8 @@ view_h = h - hud_h
 so sign(x) = if(x < 0, -1, if(x > 0, 1, 0));
 so frac(x) = x - floor(x);
 so lerp(a, b, t) = a + (b - a) * t;
+so clamp(x, lo, hi) = min(max(x, lo), hi);
+so smoothstep(a, b, x) = if(a == b, 0, clamp((x - a) / (b - a), 0, 1) * clamp((x - a) / (b - a), 0, 1) * (3 - 2 * clamp((x - a) / (b - a), 0, 1)));
 
 # Scene helpers
 so tile_solid(t) = if(t == 1 || t == 2, 1, 0);
@@ -54,12 +58,19 @@ if has("doom_init") == 0:
   doom_regen = 1
   doom_money = 0 $
   doom_view = 0
+  doom_panel = 0
   doom_metrics_dirty = 1
 
   doom_duct_shape = "rect"
   doom_duct_a = 24 in
   doom_duct_b = 12 in
   doom_duct_gauge = 26
+
+  doom_weapon_tier = 1
+  doom_armor = 30
+  doom_stamina = 100
+  doom_combo = 0
+  doom_combo_cd = 0
 
   wallFinish("DRYWALL_PRIMED")
   floorFinish("LVP_OAK_LIGHT")
@@ -71,6 +82,7 @@ if has("doom_init") == 0:
   assy doom_profile = { tile = 2 ft; walk = 5 mph; run = 9 mph; accel = 28 ft / (s^2); friction = 6 / s }
   assy pistol = { dmg = 18; range = 45 ft; cooldown = 0.18 s; spread = 2 deg }
   assy shotgun = { dmg = 42; range = 28 ft; cooldown = 0.42 s; spread = 7 deg }
+  assy rifle = { dmg = 28; range = 70 ft; cooldown = 0.12 s; spread = 1.1 deg }
   doom_weapon = pistol
 
   doom_map = dungeon(doom_seed + doom_level * 101, 30, 22, doom_level)
@@ -87,6 +99,16 @@ if has("doom_init") == 0:
   doom_dead = 0
   doom_use_cd = 0
   doom_shoot_cd = 0
+  doom_shop_cd = 0
+  doom_rifle_unlocked = 0
+
+if has("doom_mat_init") == 0:
+  doom_mat_init = 1
+  mat_concrete = material("CONCRETE", { density: 150 pcf; unit_cost: 145 $ / cy })
+  mat_gyp = material("GYP", { density: 52 pcf; unit_cost: 0.42 $ / sf })
+  mat_paint = material("PAINT", { density: 10 pcf; unit_cost: 0.12 $ / sf })
+  mat_duct = material("GALV", { density: 490 pcf; unit_cost: 1.8 $ / lb })
+  mat_trim = material("TRIM", { density: 35 pcf; unit_cost: 1.4 $ / lf })
 
 # Frame setup
 cls();
@@ -95,31 +117,53 @@ bg("transparent");
 # Timers
 doom_use_cd = max(0, doom_use_cd - 1)
 doom_shoot_cd = max(0, doom_shoot_cd - 1)
+doom_shop_cd = max(0, doom_shop_cd - 1)
+doom_combo_cd = max(0, doom_combo_cd - 1)
+if doom_combo_cd == 0: doom_combo = 0 else: 0
 
 if key_e == 1 && has("doom_view_toggle") == 0: doom_view_toggle = 1; doom_view = 1 - doom_view else: if key_e == 0: unset("doom_view_toggle")
+if key_q == 1 && has("doom_panel_toggle") == 0: doom_panel_toggle = 1; doom_panel = 1 - doom_panel else: if key_q == 0: unset("doom_panel_toggle")
 
 # Input
-sens = 0.0022
+sens = 0.0022 * (0.8 + 0.4 * smoothstep(0, 1, doom_stamina / 100))
 turn = mouse_dx * sens + (key_right - key_left) * 0.045
 doom_yaw = doom_yaw + turn
 
 # Weapon swap (RMB)
-if mouse_btn2 == 1 && has("doom_swap") == 0: doom_swap = 1; doom_weapon = if(doom_weapon == pistol, shotgun, pistol) else: if mouse_btn2 == 0: unset("doom_swap") else: 0
+if mouse_btn2 == 1 && has("doom_swap") == 0:
+  doom_swap = 1
+  doom_weapon = if(doom_weapon == pistol, shotgun, if(doom_rifle_unlocked == 1, rifle, pistol))
+else:
+  if mouse_btn2 == 0: unset("doom_swap") else: 0
+
+# Field upgrade (F)
+if key_f == 1 && doom_shop_cd == 0 && doom_money >= 150 $ && doom_rifle_unlocked == 0:
+  doom_money = doom_money - 150 $
+  doom_rifle_unlocked = 1
+  doom_weapon = rifle
+  doom_shop_cd = 20
+else:
+  0
 
 # Movement model (tiles/s) tuned via units + assemblies
-walk = field(doom_profile, "walk")
-run = field(doom_profile, "run")
-accel_u = field(doom_profile, "accel")
-fric_u = field(doom_profile, "friction")
-max_spd = to(if(key_shift == 1, run, walk), tile_per_s)
-accel = to(accel_u, tile_per_s2)
-fric = to(fric_u, per_s)
-
 fw = key_w - key_s
 st = key_d - key_a
 wish = sqrt(fw * fw + st * st)
 cx = cos(doom_yaw)
 sx = sin(doom_yaw)
+
+walk = field(doom_profile, "walk")
+run = field(doom_profile, "run")
+accel_u = field(doom_profile, "accel")
+fric_u = field(doom_profile, "friction")
+
+run_req = if(key_shift == 1 && wish > 0, 1, 0)
+doom_stamina = clamp(doom_stamina + (if(run_req == 1, -22, 14) * dt), 0, 100)
+run_ok = if(run_req == 1 && doom_stamina > 4, 1, 0)
+
+max_spd = to(if(run_ok == 1, run, walk), tile_per_s)
+accel = to(accel_u, tile_per_s2)
+fric = to(fric_u, per_s)
 
 ax = if(wish > 0, (cx * fw - sx * st) * (accel / wish), 0)
 ay = if(wish > 0, (sx * fw + cx * st) * (accel / wish), 0)
@@ -150,8 +194,18 @@ ftx = floor(doom_px)
 fty = floor(doom_py)
 t_under = mget(doom_map, ftx, fty)
 if t_under == 3: doom_key = 1; mset(doom_map, ftx, fty, 0) else: 0
-if t_under == 6: doom_hp = min(100, doom_hp + 25); mset(doom_map, ftx, fty, 0) else: 0
-if t_under == 7: doom_ammo = min(99, doom_ammo + 12); mset(doom_map, ftx, fty, 0) else: 0
+if t_under == 6:
+  doom_hp = min(100, doom_hp + 25)
+  doom_armor = min(100, doom_armor + 10)
+  mset(doom_map, ftx, fty, 0)
+else:
+  0
+if t_under == 7:
+  doom_ammo = min(99, doom_ammo + 12)
+  doom_stamina = min(100, doom_stamina + 20)
+  mset(doom_map, ftx, fty, 0)
+else:
+  0
 
 # Stairs depth
 if t_under == 10 && doom_dead == 0: doom_level = doom_level + 1; doom_key = 0; doom_regen = 1 else: 0
@@ -170,18 +224,29 @@ cooldown = field(doom_weapon, "cooldown")
 cd_frames = max(1, ceil(to(cooldown, s) / dt))
 spread = field(doom_weapon, "spread")
 range = to(field(doom_weapon, "range"), tile)
+dmg_base = field(doom_weapon, "dmg")
 
 if mouse_btn0 == 1 && doom_shoot_cd == 0 && doom_ammo > 0 && doom_dead == 0 && doom_win == 0:
   doom_ammo = doom_ammo - 1
   doom_shoot_cd = cd_frames
   hit = 0
+  crit = if(sample(dist.uniform(0, 1)) > (0.9 - 0.02 * min(4, doom_combo)), 1, 0)
+  dmg = dmg_base * (1 + 0.5 * crit + 0.1 * min(5, doom_combo))
   aim = doom_yaw + (rnd(frame * 7.1 + doom_kills * 11.7) - 0.5) * spread
   for i in 0..240:
     d = i * (range / 240)
     rx = doom_px + cos(aim) * d
     ry = doom_py + sin(aim) * d
     tt = mget(doom_map, rx, ry)
-    if hit == 0 && tt == 5: mset(doom_map, floor(rx), floor(ry), 0); doom_kills = doom_kills + 1; doom_money = doom_money + 25 $; hit = 1 else: 0
+    if hit == 0 && tt == 5:
+      mset(doom_map, floor(rx), floor(ry), 0)
+      doom_kills = doom_kills + 1
+      doom_money = doom_money + (20 + dmg) $
+      doom_combo = min(6, doom_combo + 1)
+      doom_combo_cd = 70
+      hit = 1
+    else:
+      0
     if hit == 0 && tile_solid(tt) == 1: hit = 2 else: 0
 
 # Monster behavior (sampled movement) + proximity pressure
@@ -209,7 +274,10 @@ for ox in -1..1:
   for oy in -1..1:
     if mget(doom_map, ftx + ox, fty + oy) == 5: near = 1 else: 0
 if near == 1 && doom_dead == 0 && doom_win == 0:
-  doom_hp = doom_hp - ((16 + 4 * min(6, doom_level)) * dt)
+  dmg = (16 + 4 * min(6, doom_level)) * dt
+  absorb = min(doom_armor, dmg * 0.55)
+  doom_armor = max(0, doom_armor - absorb)
+  doom_hp = doom_hp - (dmg - absorb)
 
 if doom_hp <= 0: doom_dead = 1 else: 0
 
@@ -220,8 +288,13 @@ if doom_metrics_dirty == 1:
   doom_wall_edges = 0
   doom_wall_line_tiles = 0
   doom_floor_tiles = 0
+  doom_doors = 0
+  doom_monsters = 0
+  doom_keys = 0
+  doom_exits = 0
   doom_lights = 0
   doom_light_2x4 = 0
+  doom_light_track = 0
   doom_light_2x2 = 0
   doom_light_dl = 0
   doom_light_lin = 0
@@ -238,7 +311,12 @@ if doom_metrics_dirty == 1:
     for x in 0..(mw0 - 1):
       tt = mget(doom_map, x, y)
       if tile_wallish(tt) == 0: doom_floor_tiles = doom_floor_tiles + 1 else: 0
+      if tt == 2: doom_doors = doom_doors + 1 else: 0
+      if tt == 3: doom_keys = doom_keys + 1 else: 0
+      if tt == 4: doom_exits = doom_exits + 1 else: 0
+      if tt == 5: doom_monsters = doom_monsters + 1 else: 0
       if tt == 8: doom_lights = doom_lights + 1; doom_light_2x4 = doom_light_2x4 + 1 else: 0
+      if tt == 9: doom_lights = doom_lights + 1; doom_light_track = doom_light_track + 1 else: 0
       if tt == 12: doom_lights = doom_lights + 1; doom_light_2x2 = doom_light_2x2 + 1 else: 0
       if tt == 13: doom_lights = doom_lights + 1; doom_light_dl = doom_light_dl + 1 else: 0
       if tt == 16: doom_lights = doom_lights + 1; doom_light_lin = doom_light_lin + 1 else: 0
@@ -289,7 +367,7 @@ if doom_metrics_dirty == 1:
   doom_lt_2x4 = field(light_takeoff(lf_2x4, doom_light_2x4, 5), "count")
   doom_lt_2x2 = field(light_takeoff(lf_2x2, doom_light_2x2, 5), "count")
   doom_lt_dl = field(light_takeoff(lf_dl, doom_light_dl, 5), "count")
-  doom_lt_lin = field(light_takeoff(lf_lin, doom_light_lin, 5), "count")
+  doom_lt_lin = field(light_takeoff(lf_lin, doom_light_lin + doom_light_track, 5), "count")
   doom_lt_hb = field(light_takeoff(lf_hb, doom_light_hb, 5), "count")
   doom_lt_wp = field(light_takeoff(lf_wp, doom_light_wp, 5), "count")
   doom_lt_exit = field(light_takeoff(lf_exit, doom_light_exit, 5), "count")
@@ -309,6 +387,79 @@ if doom_metrics_dirty == 1:
 
   doom_treads = stair_treads(doom_stairs * 11, 7)
   doom_risers = stair_risers(doom_stairs * 12, 7)
+
+  doom_rect_area = area_rect(mw0 * tile, mh0 * tile)
+  doom_rect_perim = perim_rect(mw0 * tile, mh0 * tile)
+  doom_shell_poly = poly(pt(0, 0), pt(mw0 * tile, 0), pt(mw0 * tile, mh0 * tile), pt(0, mh0 * tile))
+  doom_shell_area = poly_area(doom_shell_poly)
+  doom_shell_perim = poly_perim(doom_shell_poly)
+  doom_diag = vec_len(vec(mw0 * tile, mh0 * tile))
+
+  doom_slab_wt = weight(doom_slab_cy, mat_concrete)
+  doom_conc_cost = cost(doom_slab_cy, mat_concrete)
+  doom_gyp_cost = cost(doom_wall_area, mat_gyp)
+  doom_paint_cost = cost(doom_wall_area, mat_paint)
+  doom_trim_cost = cost(doom_wall_lf, mat_trim)
+  doom_duct_cost = cost(doom_duct_wt, mat_duct)
+
+  framing_rate = rate("framing", 55 sf / hr, { shift: 0.92; congestion: 0.9 })
+  drywall_rate = rate("drywall", 68 sf / hr, { shift: 0.95 })
+  mep_rate = rate("mep", 42 lf / hr, { lift: 0.88 })
+  crew_framing = crew(3, framing_rate)
+  crew_drywall = crew(4, drywall_rate)
+  crew_mep = crew(2, mep_rate)
+
+  framing_time = time_for(doom_wall_area, crew_framing)
+  drywall_time = time_for(doom_wall_area, crew_drywall)
+  mep_time = time_for(duct_len, crew_mep)
+  labor_hours = framing_time + drywall_time + mep_time
+  labor_rate = rate("labor", 48 $ / hr, { burden: 1.18; ovr: 1.05 })
+  labor_cost = labor_hours * rate_eff(labor_rate)
+
+  cost_shell = cost_leaf("Concrete", cost_total(doom_conc_cost)) + cost_leaf("Drywall", cost_total(doom_gyp_cost)) + cost_leaf("Paint", cost_total(doom_paint_cost))
+  cost_mep = cost_leaf("Ductwork", cost_total(doom_duct_cost)) + cost_leaf("Trim", cost_total(doom_trim_cost))
+  cost_labor = cost_leaf("Labor", cost_total(labor_cost))
+  cost_base = cost_shell + cost_mep + cost_labor
+  cost_final = ohp(contingency(cost_base, 5%), 8%, 6%)
+
+  sc_base = scenario("Base", { mat = cost_shell + cost_mep; labor = labor_cost; oh = 8%; profit = 6%; tax = 7% })
+  sc_prem = scenario("Premium", { mat = cost_shell + cost_mep * 1.18; labor = labor_cost * 1.1; oh = 10%; profit = 8%; tax = 7% })
+  doom_budget = sc_eval(sc_base, "tax(ohp(contingency(mat + labor, 5%), oh, profit), tax)")
+  doom_budget_hi = sc_eval(sc_prem, "tax(ohp(contingency(mat + labor, 7%), oh, profit), tax)")
+  doom_budget_cmp = sc_compare(sc_base, sc_prem, "tax(ohp(contingency(mat + labor, 6%), oh, profit), tax)", "budget")
+  doom_budget_delta = field(doom_budget_cmp, "delta")
+  doom_budget_pct = field(doom_budget_cmp, "pct")
+
+  cost_graph = graph("doom")
+  cost_graph = gnode(cost_graph, "shell", cost_shell)
+  cost_graph = gnode(cost_graph, "mep", cost_mep)
+  cost_graph = gnode(cost_graph, "labor", cost_labor)
+  cost_graph = gnode(cost_graph, "ohp", cost_final - cost_base)
+  cost_graph = gcalc(cost_graph)
+  doom_graph_total = gsum(cost_graph)
+
+  labor_dist = dist.tri(labor_hours * 0.85, labor_hours * 1.25, labor_hours * 1.05)
+  labor_mc = mc(80, labor_dist)
+  doom_labor_p50 = field(labor_mc, "p50")
+  doom_labor_p90 = field(labor_mc, "p90")
+  doom_cost_range = range(doom_budget * 0.9, doom_budget_hi * 1.05)
+  doom_cost_mean = mean(doom_cost_range)
+
+  sched = project("doom-level")
+  sched = ptask(sched, "framing", { dur = framing_time })
+  sched = ptask(sched, "mep", { dur = mep_time })
+  sched = ptask(sched, "drywall", { dur = drywall_time })
+  sched = ptask(sched, "finishes", { dur = time_for(doom_flooring, crew(3, rate("floor", 120 sf / hr, { eff: 0.9 }))) })
+  sched = pdep(sched, "framing", "mep")
+  sched = pdep(sched, "mep", "drywall")
+  sched = pdep(sched, "drywall", "finishes")
+  sched_out = pschedule(sched)
+  doom_total_time = field(sched_out, "total_time")
+
+  doom_csi_wall = csi_item("092900")
+  doom_csi_mep = csi_item("230000")
+  doom_csi_wall_title = csi_title(doom_csi_wall)
+  doom_csi_mep_title = csi_title(doom_csi_mep)
   doom_metrics_dirty = 0
 else:
   0
@@ -403,40 +554,67 @@ else:
   txt(lx + 62, ly + 22, "FRAME", "text", 1)
   fill(lx + 52, ly + 30, 6, 6, "text")
   txt(lx + 62, ly + 30, "DRYW", "text", 1)
+  fill(lx + 52, ly + 38, 6, 6, "accent-2")
+  txt(lx + 62, ly + 38, "LIGHT", "text", 1)
+  fill(lx + 52, ly + 46, 6, 6, "warn")
+  txt(lx + 62, ly + 46, "HVAC", "text", 1)
 
   tx = w - 124
   ty = 2
   fill(tx, ty, 122, 160, "muted")
   rect(tx, ty, 122, 160, "text")
-  txt(tx + 4, ty + 4, "TAKEOFF", "text", 1)
-  txt(tx + 4, ty + 14, cat("WALL ", str(doom_wall_lf)), "text", 1)
-  txt(tx + 4, ty + 22, cat("AREA ", str(doom_wall_area)), "text", 1)
-  txt(tx + 4, ty + 30, cat("STUD ", str(doom_studs)), "text", 1)
-  txt(tx + 4, ty + 38, cat("PLATE ", str(doom_plates)), "text", 1)
-  txt(tx + 4, ty + 46, cat("SHEATH ", str(doom_sheathing)), "text", 1)
-  txt(tx + 4, ty + 54, cat("DRYW ", str(doom_drywall)), "text", 1)
-  txt(tx + 4, ty + 62, cat("SCREW ", str(doom_screws)), "text", 1)
-  txt(tx + 4, ty + 70, cat("MUD ", round(doom_mud * 10) / 10, " gal"), "text", 1)
-  txt(tx + 64, ty + 70, cat("PAINT ", round(doom_paint * 10) / 10, " gal"), "text", 1)
-  txt(tx + 4, ty + 78, cat("SLAB ", round(doom_slab_cy * 100) / 100, " cy"), "text", 1)
-  txt(tx + 64, ty + 78, cat("FLOOR ", str(doom_flooring)), "text", 1)
-  txt(tx + 4, ty + 86, cat("BASE ", str(doom_base)), "text", 1)
-  txt(tx + 64, ty + 86, cat("LITE ", str(doom_light_fix)), "text", 1)
-  txt(tx + 4, ty + 94, cat("DUCT ", str(doom_duct)), "text", 1)
-  txt(tx + 64, ty + 94, cat("ELB ", str(doom_elbows)), "text", 1)
-  txt(tx + 4, ty + 102, cat("SUP ", str(doom_supply)), "text", 1)
-  txt(tx + 64, ty + 102, cat("RET ", str(doom_return)), "text", 1)
-  txt(tx + 4, ty + 110, cat("DWT ", str(doom_duct_wt)), "text", 1)
-  txt(tx + 4, ty + 118, cat("L24 ", str(doom_lt_2x4)), "text", 1)
-  txt(tx + 64, ty + 118, cat("L22 ", str(doom_lt_2x2)), "text", 1)
-  txt(tx + 4, ty + 126, cat("DL ", str(doom_lt_dl)), "text", 1)
-  txt(tx + 64, ty + 126, cat("LIN ", str(doom_lt_lin)), "text", 1)
-  txt(tx + 4, ty + 134, cat("HB ", str(doom_lt_hb)), "text", 1)
-  txt(tx + 64, ty + 134, cat("WP ", str(doom_lt_wp)), "text", 1)
-  txt(tx + 4, ty + 142, cat("EXIT ", str(doom_lt_exit)), "text", 1)
-  txt(tx + 64, ty + 142, cat("STAI ", str(doom_stairs)), "text", 1)
-  txt(tx + 4, ty + 150, cat("TRD ", str(doom_treads)), "text", 1)
-  txt(tx + 64, ty + 150, cat("RIS ", str(doom_risers)), "text", 1)
+  if doom_panel == 0:
+    txt(tx + 4, ty + 4, "TAKEOFF", "text", 1)
+    txt(tx + 4, ty + 14, cat("WALL ", str(doom_wall_lf)), "text", 1)
+    txt(tx + 4, ty + 22, cat("AREA ", str(doom_wall_area)), "text", 1)
+    txt(tx + 4, ty + 30, cat("STUD ", str(doom_studs)), "text", 1)
+    txt(tx + 4, ty + 38, cat("PLATE ", str(doom_plates)), "text", 1)
+    txt(tx + 4, ty + 46, cat("SHEATH ", str(doom_sheathing)), "text", 1)
+    txt(tx + 4, ty + 54, cat("DRYW ", str(doom_drywall)), "text", 1)
+    txt(tx + 4, ty + 62, cat("SCREW ", str(doom_screws)), "text", 1)
+    txt(tx + 4, ty + 70, cat("MUD ", round(doom_mud * 10) / 10, " gal"), "text", 1)
+    txt(tx + 64, ty + 70, cat("PAINT ", round(doom_paint * 10) / 10, " gal"), "text", 1)
+    txt(tx + 4, ty + 78, cat("SLAB ", round(doom_slab_cy * 100) / 100, " cy"), "text", 1)
+    txt(tx + 64, ty + 78, cat("FLOOR ", str(doom_flooring)), "text", 1)
+    txt(tx + 4, ty + 86, cat("BASE ", str(doom_base)), "text", 1)
+    txt(tx + 64, ty + 86, cat("LITE ", str(doom_light_fix)), "text", 1)
+    txt(tx + 4, ty + 94, cat("DUCT ", str(doom_duct)), "text", 1)
+    txt(tx + 64, ty + 94, cat("ELB ", str(doom_elbows)), "text", 1)
+    txt(tx + 4, ty + 102, cat("SUP ", str(doom_supply)), "text", 1)
+    txt(tx + 64, ty + 102, cat("RET ", str(doom_return)), "text", 1)
+    txt(tx + 4, ty + 110, cat("DWT ", str(doom_duct_wt)), "text", 1)
+    txt(tx + 4, ty + 118, cat("L24 ", str(doom_lt_2x4)), "text", 1)
+    txt(tx + 64, ty + 118, cat("L22 ", str(doom_lt_2x2)), "text", 1)
+    txt(tx + 4, ty + 126, cat("DL ", str(doom_lt_dl)), "text", 1)
+    txt(tx + 64, ty + 126, cat("LIN ", str(doom_lt_lin)), "text", 1)
+    txt(tx + 4, ty + 134, cat("HB ", str(doom_lt_hb)), "text", 1)
+    txt(tx + 64, ty + 134, cat("WP ", str(doom_lt_wp)), "text", 1)
+    txt(tx + 4, ty + 142, cat("EXIT ", str(doom_lt_exit)), "text", 1)
+    txt(tx + 64, ty + 142, cat("STAI ", str(doom_stairs)), "text", 1)
+    txt(tx + 4, ty + 150, cat("TRD ", str(doom_treads)), "text", 1)
+    txt(tx + 64, ty + 150, cat("RIS ", str(doom_risers)), "text", 1)
+  else:
+    txt(tx + 4, ty + 4, "COST/SCHED", "text", 1)
+    txt(tx + 4, ty + 14, cat("BUD ", round(doom_budget * 1) / 1), "text", 1)
+    txt(tx + 4, ty + 22, cat("HI ", round(doom_budget_hi * 1) / 1), "text", 1)
+    txt(tx + 4, ty + 30, cat("DELTA ", round(doom_budget_delta * 1) / 1), "text", 1)
+    txt(tx + 4, ty + 38, cat("PCT ", round(doom_budget_pct * 1000) / 10, "%"), "text", 1)
+    txt(tx + 4, ty + 46, cat("MEAN ", round(doom_cost_mean * 1) / 1), "text", 1)
+    txt(tx + 4, ty + 54, cat("LAB P50 ", round(doom_labor_p50 * 10) / 10, " hr"), "text", 1)
+    txt(tx + 4, ty + 62, cat("LAB P90 ", round(doom_labor_p90 * 10) / 10, " hr"), "text", 1)
+    txt(tx + 4, ty + 70, cat("SCHED ", round(doom_total_time * 10) / 10, " hr"), "text", 1)
+    txt(tx + 4, ty + 78, cat("GRAPH ", round(doom_graph_total * 1) / 1), "text", 1)
+    txt(tx + 4, ty + 86, cat("CSI ", doom_csi_wall), "text", 1)
+    txt(tx + 4, ty + 94, cat(" ", doom_csi_wall_title), "text", 1)
+    txt(tx + 4, ty + 102, cat("CSI ", doom_csi_mep), "text", 1)
+    txt(tx + 4, ty + 110, cat(" ", doom_csi_mep_title), "text", 1)
+    txt(tx + 4, ty + 118, cat("PERIM ", round(doom_shell_perim * 10) / 10), "text", 1)
+    txt(tx + 4, ty + 126, cat("AREA ", round(doom_shell_area * 10) / 10), "text", 1)
+    txt(tx + 4, ty + 134, cat("DIAG ", round(doom_diag * 10) / 10), "text", 1)
+    txt(tx + 4, ty + 142, cat("KEYS ", doom_keys), "text", 1)
+    txt(tx + 64, ty + 142, cat("DOOR ", doom_doors), "text", 1)
+    txt(tx + 4, ty + 150, cat("MOBS ", doom_monsters), "text", 1)
+    txt(tx + 64, ty + 150, cat("EXIT ", doom_exits), "text", 1)
 
 # HUD
 hy = view_h
@@ -446,8 +624,12 @@ rect(1, hy + 1, w - 2, hud_h - 2, "muted")
 # Health / ammo bars
 hpw = floor((w - 12) * (doom_hp / 100))
 amw = floor((w - 12) * (doom_ammo / 99))
+armw = floor((w - 12) * (doom_armor / 100))
+stamw = floor((w - 12) * (doom_stamina / 100))
+fill(6, hy + 1, armw, 1, "accent-2")
 fill(6, hy + 3, hpw, 3, if(doom_hp < 30, "err", "ok"))
 fill(6, hy + 8, amw, 2, if(doom_ammo < 8, "warn", "accent"))
+fill(6, hy + 10, stamw, 1, if(doom_stamina < 20, "warn", "accent"))
 
 # Key indicator
 fill(2, hy + 3, 3, 3, if(doom_key == 1, "warn", "muted"))
@@ -461,6 +643,7 @@ badge = if(doom_dead == 1, "err", if(doom_win == 1, "ok", if(doom_key == 1, "war
 fill(w - 7, hy + 3, 5, 7, badge)
 
 txt(w - 74, hy + 2, cat("E ", if(doom_view == 1, "BP", "3D")), "text", 1)
+txt(w - 32, hy + 2, cat("$", str(doom_money)), "text", 1)
 
 if doom_view == 0:
   # Mini-map (top-left)
@@ -491,7 +674,7 @@ set("doom_hash", doom_hash)
 export function runDoomDemo({ gfx, writeLine, writeInputEcho }) {
   writeLine("Doom level - playable EST DSL raycaster", "muted");
   writeLine("Click the canvas to capture the mouse.", "muted");
-  writeLine("Controls: Mouse look • WASD move/strafe • Shift run • Space use • LMB shoot • E view", "muted");
+  writeLine("Controls: Mouse look • WASD move/strafe • Shift run • Space use • LMB shoot • E view • Q panel • F upgrade", "muted");
   writeLine("Loop UI: P play/pause (when mouse not captured) • Arrows step/fps • R reset", "muted");
 
   if (typeof gfx.setActiveBackend === "function"){
