@@ -20,6 +20,7 @@ export function createTests({
   const expectQty = (value, kind, tol = 1e-6) => ({ type: "qty", value, kind, tol });
   const expectNear = (value, tol = 1e-6) => ({ type: "scalar", value, tol });
   const expectError = (message) => ({ type: "error", message });
+  const expectGfx = (w, h, scale = null) => ({ type: "gfx", w, h, scale });
 
   function createTestSuite(){
     return [
@@ -304,7 +305,7 @@ export function createTests({
         steps: ["wt = pipe_wt(2, 40, 120 ft)", "to_ton(wt)"],
         expect: expectNear(0.219),
       },
-      { name: "gfx create buffer", expr: "gfx(12, 8)", expect: "gfx 12x8" },
+      { name: "gfx create buffer", expr: "gfx(12, 8)", expect: expectGfx(12, 8) },
       {
         name: "gfx scale and background",
         steps: ["gfx(8, 6)", "gfxs(3)", "bg(\"accent\")"],
@@ -1445,6 +1446,21 @@ export function createTests({
     const actualUnboxed = unboxTestValue(actual);
     if (expected && typeof expected === "object" && expected.type === "error"){
       return { pass: false, message: "expected error, got value" };
+    }
+    if (expected && typeof expected === "object" && expected.type === "gfx"){
+      if (!actualUnboxed || typeof actualUnboxed !== "object" || !actualUnboxed.__gfx){
+        return { pass: false, message: "expected gfx" };
+      }
+      if (Number.isFinite(expected.w) && actualUnboxed.width !== expected.w){
+        return { pass: false, message: `expected gfx width ${expected.w}, got ${actualUnboxed.width}` };
+      }
+      if (Number.isFinite(expected.h) && actualUnboxed.height !== expected.h){
+        return { pass: false, message: `expected gfx height ${expected.h}, got ${actualUnboxed.height}` };
+      }
+      if (expected.scale !== null && expected.scale !== undefined && Number.isFinite(expected.scale) && actualUnboxed.scale !== expected.scale){
+        return { pass: false, message: `expected gfx scale ${expected.scale}, got ${actualUnboxed.scale}` };
+      }
+      return { pass: true };
     }
     if (expected && typeof expected === "object" && expected.type === "qty"){
       if (!isQty(actual)) return { pass: false, message: `expected quantity ${expected.kind}` };

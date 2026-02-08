@@ -1,6 +1,7 @@
 import { splitStatements, findTopLevelEquals } from "./repl-parser.js";
 import { isQty } from "./repl-units.js";
 import { EFFECT } from "./repl-effects.js";
+import { getFinishTexture, sampleFinishTexture, __internal as FIN_TEX_INTERNAL } from "./repl-textures-finishes.js";
 
 const GFX_LIMIT = 512;
 const GFX_DEFAULT_SCALE = 6;
@@ -29,6 +30,7 @@ export const GFX_COLOR_TOKENS = [
 
 export function createGfxTools({ state, terminalEl, writeLine }){
   let gfxPaletteCache = null;
+  let gfxPalettePackedCache = null;
   let gfxColorContext = null;
   let runExpressionWithContext = null;
   let runLoopStatement = null;
@@ -291,6 +293,25 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       colors[token] = parseCssColor(value);
     }
     gfxPaletteCache = { theme: state.theme, colors };
+    gfxPalettePackedCache = null;
+    return colors;
+  }
+
+  function packRgbaU32(r, g, b, a){
+    return (((a & 255) << 24) | ((b & 255) << 16) | ((g & 255) << 8) | (r & 255)) >>> 0;
+  }
+
+  function getGfxPalettePacked(){
+    if (gfxPalettePackedCache && gfxPalettePackedCache.theme === state.theme){
+      return gfxPalettePackedCache.colors;
+    }
+    const palette = getGfxPalette();
+    const colors = Object.create(null);
+    for (const key of Object.keys(palette)){
+      const rgba = palette[key];
+      colors[key] = packRgbaU32(rgba[0], rgba[1], rgba[2], rgba[3]);
+    }
+    gfxPalettePackedCache = { theme: state.theme, colors };
     return colors;
   }
 
@@ -550,6 +571,14 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     const w = buffer.width | 0;
     const h = buffer.height | 0;
     const needed = w * h * 4;
+    if (buffer.pixels instanceof Uint32Array){
+      if (buffer.rgba && buffer.rgba.buffer === buffer.pixels.buffer && buffer.rgba.length === needed){
+        return buffer.rgba;
+      }
+      const out = new Uint8Array(buffer.pixels.buffer, buffer.pixels.byteOffset, needed);
+      buffer.rgba = out;
+      return out;
+    }
     if (!buffer.rgba || buffer.rgba.length !== needed){
       buffer.rgba = new Uint8Array(needed);
     }
@@ -653,7 +682,12 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     const loopLabel = loopState.expr
       ? ` • loop ${loopState.playing ? "playing" : "paused"} @ ${loopState.fps} fps (${Math.round(loopState.fpsMeasured || 0)} actual) • frame ${loopState.frame}`
       : "";
-    label.textContent = `gfx ${buffer.width}x${buffer.height} • scale ${buffer.scale}${backendLabel}${loopLabel}`;
+    const pw = (buffer.presentWidth | 0) || (buffer.width | 0);
+    const ph = (buffer.presentHeight | 0) || (buffer.height | 0);
+    const ps = (buffer.presentScale | 0) || (buffer.scale | 0);
+    const showPresent = Boolean(buffer.presentLocked && (pw !== buffer.width || ph !== buffer.height || ps !== buffer.scale));
+    const presentLabel = showPresent ? ` → ${pw}x${ph} • scale ${ps}` : "";
+    label.textContent = `gfx ${buffer.width}x${buffer.height} • scale ${buffer.scale}${presentLabel}${backendLabel}${loopLabel}`;
     hint.textContent = loopState.expr
       ? "P play/pause • ←/→ step • ↑/↓ speed • R reset"
       : "";
@@ -662,8 +696,8 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     }else{
       panel.style.removeProperty("--gfx-bg");
     }
-    const displayWidth = buffer.width * buffer.scale;
-    const displayHeight = buffer.height * buffer.scale;
+    const displayWidth = pw * ps;
+    const displayHeight = ph * ps;
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
 
@@ -717,7 +751,11 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       if (typeof ctx.imageSmoothingQuality === "string"){
         ctx.imageSmoothingQuality = "high";
       }
-      ctx.setTransform(dpr * buffer.scale, 0, 0, dpr * buffer.scale, 0, 0);
+      const destW = canvas.width / dpr;
+      const destH = canvas.height / dpr;
+      const sx = buffer.width > 0 ? (destW / buffer.width) : 1;
+      const sy = buffer.height > 0 ? (destH / buffer.height) : 1;
+      ctx.setTransform(dpr * sx, 0, 0, dpr * sy, 0, 0);
       ctx.drawImage(buffer.offscreenCanvas, 0, 0);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
@@ -761,7 +799,11 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       width,
       height,
       scale,
-      pixels: Array.from({ length: width * height }, () => null),
+      presentWidth: width,
+      presentHeight: height,
+      presentScale: scale,
+      presentLocked: false,
+      pixels: new Uint32Array(width * height),
       bg: null,
       backend: null,
       rgba: null,
@@ -798,9 +840,45 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     };
   }
 
+  function resizeGfxBuffer(buffer, width, height, scale){
+    if (!buffer || !buffer.__gfx){
+      return createGfxBuffer(width, height, scale);
+    }
+    const w = width | 0;
+    const h = height | 0;
+    buffer.width = w;
+    buffer.height = h;
+    buffer.scale = scale;
+    if (!buffer.presentLocked){
+      buffer.presentWidth = w;
+      buffer.presentHeight = h;
+      buffer.presentScale = scale;
+    }
+    buffer.pixels = new Uint32Array(w * h);
+    buffer.rgba = null;
+    buffer.imageData = null;
+    buffer.offscreenCanvas = null;
+    buffer.offscreenCtx = null;
+    buffer.glSizeW = 0;
+    buffer.glSizeH = 0;
+    buffer.gpuTexW = 0;
+    buffer.gpuTexH = 0;
+    return buffer;
+  }
+
   function requireGfxBuffer(){
     if (!state.gfx) throw new Error("No gfx buffer. Use gfx(width, height, scale) first.");
     return state.gfx;
+  }
+
+  function normalizePixelColor(color){
+    if (color === null || color === undefined) return 0;
+    if (typeof color === "number") return color >>> 0;
+    if (typeof color === "string"){
+      const packed = getGfxPalettePacked();
+      return (packed[color] ?? packed.transparent ?? 0) >>> 0;
+    }
+    return 0;
   }
 
   function setPixel(buffer, x, y, color){
@@ -808,7 +886,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     const ix = Math.round(x);
     const iy = Math.round(y);
     if (ix < 0 || iy < 0 || ix >= buffer.width || iy >= buffer.height) return;
-    buffer.pixels[iy * buffer.width + ix] = color;
+    buffer.pixels[iy * buffer.width + ix] = normalizePixelColor(color);
   }
 
   function drawLine(buffer, x0, y0, x1, y1, color){
@@ -1005,6 +1083,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     state.vars.frame = frame;
     state.vars.time = frame / fps;
     state.vars.dt = 1 / fps;
+    state.vars.fps_actual = (loopState.fpsMeasured && Number.isFinite(loopState.fpsMeasured)) ? loopState.fpsMeasured : fps;
     state.vars.key_w = keyState.down.w ? 1 : 0;
     state.vars.key_a = keyState.down.a ? 1 : 0;
     state.vars.key_s = keyState.down.s ? 1 : 0;
@@ -1153,6 +1232,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       active: Boolean(loopState.expr),
       playing: loopState.playing,
       fps: loopState.fps,
+      fpsMeasured: loopState.fpsMeasured || 0,
       frame: loopState.frame,
     };
   }
@@ -1203,21 +1283,23 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     }
   }
 
-  function buildGfxMetaFns(defFn){
+  function buildGfxMetaFns(defFn, defFnCtx){
     return {
-      gfx: defFn("gfx", 2, {
+      gfx: defFn("gfx", -1, {
         args: [
-          { label: "width", kinds: ["scalar"] },
-          { label: "height", kinds: ["scalar"] },
+          { label: "w", kinds: ["scalar", "dim"], dim: "scalar" },
+          { label: "h", kinds: ["scalar", "dim"], dim: "scalar" },
+          { label: "scale", kinds: ["scalar", "dim"], dim: "scalar" },
         ],
-        returns: { kinds: ["string"] },
+        returns: { kinds: ["gfx"] },
         effects: EFFECT.IO_GFX,
-      }, (width, height) => {
-        const w = normalizeGfxDimension(width, "width");
-        const h = normalizeGfxDimension(height, "height");
-        state.gfx = createGfxBuffer(w, h, GFX_DEFAULT_SCALE);
+      }, (w, h, scale = null) => {
+        const width = normalizeGfxDimension(w, "width");
+        const height = normalizeGfxDimension(h, "height");
+        const sc = (scale === null || scale === undefined) ? GFX_DEFAULT_SCALE : normalizeGfxScale(isQty(scale) ? scale.value : scale);
+        state.gfx = resizeGfxBuffer(state.gfx, width, height, sc);
         markGfxDirty();
-        return `gfx ${w}x${h}`;
+        return state.gfx;
       }),
       gfxs: defFn("gfxs", 1, {
         args: [{ label: "scale", kinds: ["scalar"] }],
@@ -1234,8 +1316,300 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         effects: EFFECT.IO_GFX,
       }, () => {
         const buffer = requireGfxBuffer();
-        buffer.pixels.fill(null);
+        if (buffer.pixels && typeof buffer.pixels.fill === "function") buffer.pixels.fill(0);
         buffer.bg = null;
+        markGfxDirty();
+        return 1;
+      }),
+
+      raycast_tex: defFnCtx("raycast_tex", 11, {
+        args: [
+          { label: "map", kinds: ["map"] },
+          { label: "px", kinds: ["scalar"] },
+          { label: "py", kinds: ["scalar"] },
+          { label: "yaw", kinds: ["scalar"] },
+          { label: "fov", kinds: ["scalar"] },
+          { label: "viewH", kinds: ["scalar"] },
+          { label: "maxD", kinds: ["scalar"] },
+          { label: "step", kinds: ["scalar"] },
+          { label: "steps", kinds: ["scalar"] },
+          { label: "colStep", kinds: ["scalar"] },
+          { label: "opts", kinds: ["any"] },
+        ],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, (ctx, mapObj, px, py, yaw, fov, viewH, maxD, step, steps, colStep, opts) => {
+        const buffer = requireGfxBuffer();
+        if (!mapObj || typeof mapObj !== "object" || !mapObj.__map || !mapObj.data){
+          throw new Error("raycast_tex expects a map() as the first argument");
+        }
+
+        const toNum = (v) => (isQty(v) ? v.value : v);
+        const nPx = toNum(px);
+        const nPy = toNum(py);
+        const nYaw = toNum(yaw);
+        const nFov = toNum(fov);
+        const nViewH = toNum(viewH);
+        const nMaxD = toNum(maxD);
+        const nStep = toNum(step);
+        const nStepsIn = toNum(steps);
+        const nColStep = toNum(colStep);
+        if (![nPx, nPy, nYaw, nFov, nViewH, nMaxD, nStep, nStepsIn, nColStep].every(Number.isFinite)){
+          throw new Error("raycast_tex expects numeric arguments");
+        }
+
+        const mapW = mapObj.w | 0;
+        const mapH = mapObj.h | 0;
+        const data = mapObj.data;
+        const w = buffer.width | 0;
+        const h = buffer.height | 0;
+        const vh = Math.max(1, Math.min(h, Math.floor(nViewH)));
+        const md = Math.max(0.1, nMaxD);
+        const st = Math.max(0.001, nStep);
+        const nSteps = Math.max(1, Math.floor(nStepsIn));
+        const cs = Math.max(1, Math.floor(nColStep));
+
+        const vars = ctx?.vars || Object.create(null);
+        const wallFinish = typeof vars.doom_wall_finish === "string" ? vars.doom_wall_finish : "DRYWALL_PRIMED";
+        const floorFinish = typeof vars.doom_floor_finish === "string" ? vars.doom_floor_finish : "CONCRETE_TROWEL";
+        const ceilFinish = typeof vars.doom_ceiling_finish === "string" ? vars.doom_ceiling_finish : "ACT_2x2";
+
+        const wainscotFinish = typeof vars.doom_wainscot_finish === "string" ? vars.doom_wainscot_finish : "";
+        const wainscotH = (() => {
+          const v = vars.doom_wainscot_h;
+          const n = isQty(v) ? v.value : v;
+          return Number.isFinite(n) ? Math.max(0, n) : 0;
+        })();
+
+        const optObj = (opts && typeof opts === "object" && opts.__obj && typeof opts.raw === "string") ? opts.raw : null;
+        let floorStep = 2;
+        let ceilStep = 2;
+        let texRes = 1;
+        if (optObj && typeof ctx?.evalString === "function"){
+          try{
+            const parsed = parseObjectLiteral(optObj);
+            const values = Object.create(null);
+            for (const ent of parsed){
+              const k = String(ent.key || "").trim();
+              if (!k) continue;
+              values[k] = ctx.evalString(ent.expr);
+            }
+            const nfs = toNum(values.floor_step);
+            const ncs0 = toNum(values.ceil_step);
+            const ntr = toNum(values.tex_res);
+            if (Number.isFinite(nfs) && nfs >= 1) floorStep = Math.min(8, Math.floor(nfs));
+            if (Number.isFinite(ncs0) && ncs0 >= 1) ceilStep = Math.min(8, Math.floor(ncs0));
+            if (Number.isFinite(ntr) && ntr >= 1) texRes = Math.min(4, Math.floor(ntr));
+          }catch{}
+        }
+
+        function sampleTile(x, y){
+          const ix = x | 0;
+          const iy = y | 0;
+          if (ix < 0 || iy < 0 || ix >= mapW || iy >= mapH) return 1;
+          return data[iy * mapW + ix] | 0;
+        }
+
+        function lightAt(worldX, worldY){
+          const cx = Math.floor(worldX);
+          const cy = Math.floor(worldY);
+          let light = 0;
+
+          const paramsForTile = (tt) => {
+            if (tt === 8) return { i: 1.10, f: 0.85, p: 1.00 };
+            if (tt === 12) return { i: 0.95, f: 0.90, p: 1.00 };
+            if (tt === 13) return { i: 1.20, f: 1.25, p: 1.08 };
+            if (tt === 16) return { i: 1.00, f: 0.95, p: 1.00 };
+            if (tt === 17) return { i: 1.45, f: 1.05, p: 1.05 };
+            if (tt === 18) return { i: 0.90, f: 1.15, p: 1.12 };
+            if (tt === 19) return { i: 0.35, f: 1.60, p: 1.20 };
+            if (tt === 9) return { i: 0.85, f: 1.10, p: 1.05 };
+            return null;
+          };
+
+          const isOccluded = (lx, ly, wx, wy) => {
+            const dx = wx - lx;
+            const dy = wy - ly;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (!(dist > 0.75)) return false;
+            const steps = Math.min(12, Math.max(2, Math.ceil(dist / 0.25)));
+            const inv = 1 / steps;
+            for (let i = 1; i < steps; i++){
+              const sx = lx + dx * (i * inv);
+              const sy = ly + dy * (i * inv);
+              const tt = sampleTile(Math.floor(sx), Math.floor(sy));
+              if (tt === 1 || tt === 2) return true;
+            }
+            return false;
+          };
+
+          const r = 3;
+          for (let oy = -r; oy <= r; oy++){
+            const ty = cy + oy;
+            if (ty < 0 || ty >= mapH) continue;
+            for (let ox = -r; ox <= r; ox++){
+              const tx = cx + ox;
+              if (tx < 0 || tx >= mapW) continue;
+              const tt = data[ty * mapW + tx] | 0;
+              const lp = paramsForTile(tt);
+              if (!lp) continue;
+              const lx = tx + 0.5;
+              const ly = ty + 0.5;
+              const dx = worldX - lx;
+              const dy = worldY - ly;
+              const d2 = dx * dx + dy * dy;
+              if (isOccluded(lx, ly, worldX, worldY)) continue;
+              light += lp.i / Math.pow(1 + d2 * lp.f, lp.p);
+            }
+          }
+          return light;
+        }
+
+        function applyBrightnessToRgba(packed, bright){
+          const r = (packed >>> 24) & 255;
+          const g = (packed >>> 16) & 255;
+          const b = (packed >>> 8) & 255;
+          const a = packed & 255;
+          const br = bright < 0 ? 0 : bright > 1 ? 1 : bright;
+          const rr = (r * br) | 0;
+          const gg = (g * br) | 0;
+          const bb = (b * br) | 0;
+          return FIN_TEX_INTERNAL.packRgba(rr, gg, bb, a);
+        }
+
+        function rgbaBEToU32(packed){
+          const r = (packed >>> 24) & 255;
+          const g = (packed >>> 16) & 255;
+          const b = (packed >>> 8) & 255;
+          const a = packed & 255;
+          return packRgbaU32(r, g, b, a);
+        }
+
+        const floorTex = getFinishTexture(floorFinish) || getFinishTexture("CONCRETE_TROWEL");
+        const ceilTex = getFinishTexture(ceilFinish) || getFinishTexture("ACT_2x2");
+        const wallTexDefault = getFinishTexture(wallFinish) || getFinishTexture("DRYWALL_PRIMED");
+        const wainscotTex = wainscotFinish ? (getFinishTexture(wainscotFinish) || wallTexDefault) : null;
+
+        function sampleWallTex(worldX, worldY, wallY01){
+          const tex = (wainscotTex && wainscotH > 0 && wallY01 >= 0 && wallY01 <= 1 && (wallY01 * 8) <= wainscotH) ? wainscotTex : wallTexDefault;
+          if (!tex) return FIN_TEX_INTERNAL.packRgba(200, 0, 200, 255);
+          const fracX = worldX - Math.floor(worldX);
+          const fracY = worldY - Math.floor(worldY);
+          const u01 = Math.abs(fracX) > Math.abs(fracY) ? fracY : fracX;
+          const u = Math.floor((u01 * tex.w * tex.worldRepeat) / texRes);
+          const v = Math.floor(((1 - wallY01) * tex.h * tex.worldRepeat) / texRes);
+          return sampleFinishTexture(tex.id, u, v);
+        }
+
+        function drawColumn(x, y0, y1, colorToken){
+          const xi = x | 0;
+          if (xi < 0 || xi >= w) return;
+          const yy0 = Math.max(0, y0 | 0);
+          const yy1 = Math.min(vh - 1, y1 | 0);
+          const packed = normalizePixelColor(colorToken);
+          for (let y = yy0; y <= yy1; y++){
+            buffer.pixels[y * w + xi] = packed;
+          }
+        }
+
+        for (let x = 0; x < w; x += cs){
+          const cam = x / w - 0.5;
+          const ray = nYaw + cam * nFov;
+          const rc = Math.cos(ray);
+          const rs = Math.sin(ray);
+
+          let bestD = md;
+          let bestT = 0;
+          for (let i = 1; i <= nSteps; i++){
+            const d = i * st;
+            const rx = nPx + rc * d;
+            const ry = nPy + rs * d;
+            const tt = sampleTile(Math.floor(rx), Math.floor(ry));
+            if (tt === 1 || tt === 2){
+              bestT = tt;
+              bestD = d;
+              break;
+            }
+          }
+
+          const corr = bestD * Math.cos(ray - nYaw);
+          const dd = Math.max(0.2, corr);
+          const slice = Math.floor(vh / dd);
+          const y0 = Math.floor((vh - slice) / 2);
+          const y1 = y0 + slice;
+
+          const hx = nPx + rc * bestD;
+          const hy = nPy + rs * bestD;
+          const fog = Math.max(0, Math.min(1, (bestD - 1.6) / Math.max(0.001, (md - 1.6))));
+          const ambient = 0.34;
+          const localLight = lightAt(hx, hy);
+          const bright = Math.max(0, Math.min(1, ambient + localLight - fog * 0.45));
+
+          for (let dx = 0; dx < cs; dx++){
+            const xi = x + dx;
+            if (xi < 0 || xi >= w) continue;
+            const xiCam = xi / w - 0.5;
+            const xiRay = nYaw + xiCam * nFov;
+            const xrc = Math.cos(xiRay);
+            const xrs = Math.sin(xiRay);
+
+            let lastFloorPacked = 0;
+            let lastCeilPacked = 0;
+
+            for (let y = 0; y < vh; y++){
+              if (y >= y0 && y <= y1){
+                const wallY01 = (y - y0) / Math.max(1, (y1 - y0));
+                let packed = sampleWallTex(hx, hy, wallY01);
+                packed = applyBrightnessToRgba(packed, bestT === 2 ? Math.max(0.1, bright * 0.9) : bright);
+                buffer.pixels[y * w + xi] = rgbaBEToU32(packed);
+                continue;
+              }
+
+              if (y > y1){
+                if (!floorTex || floorStep <= 0){
+                  continue;
+                }
+                if (lastFloorPacked === 0 || (y % floorStep) === 0){
+                  const p = (y - (vh / 2)) / (vh / 2);
+                  const rowDist = 1 / Math.max(0.0001, p);
+                  const worldX = nPx + xrc * rowDist;
+                  const worldY = nPy + xrs * rowDist;
+                  const u = Math.floor(((worldX * floorTex.worldRepeat) * floorTex.w) / texRes);
+                  const v = Math.floor(((worldY * floorTex.worldRepeat) * floorTex.h) / texRes);
+                  let packed = sampleFinishTexture(floorTex.id, u, v);
+                  const fFog = Math.max(0, Math.min(1, (rowDist - 1.6) / Math.max(0.001, (md - 1.6))));
+                  const fBright = Math.max(0, Math.min(1, ambient + lightAt(worldX, worldY) - fFog * 0.55));
+                  packed = applyBrightnessToRgba(packed, fBright * 0.9);
+                  lastFloorPacked = rgbaBEToU32(packed);
+                }
+                buffer.pixels[y * w + xi] = lastFloorPacked;
+                continue;
+              }
+
+              if (y < y0){
+                if (!ceilTex || ceilStep <= 0){
+                  continue;
+                }
+                if (lastCeilPacked === 0 || (y % ceilStep) === 0){
+                  const p = ((vh / 2) - y) / (vh / 2);
+                  const rowDist = 1 / Math.max(0.0001, p);
+                  const worldX = nPx + xrc * rowDist;
+                  const worldY = nPy + xrs * rowDist;
+                  const u = Math.floor(((worldX * ceilTex.worldRepeat) * ceilTex.w) / texRes);
+                  const v = Math.floor(((worldY * ceilTex.worldRepeat) * ceilTex.h) / texRes);
+                  let packed = sampleFinishTexture(ceilTex.id, u, v);
+                  const cFog = Math.max(0, Math.min(1, (rowDist - 1.6) / Math.max(0.001, (md - 1.6))));
+                  const cBright = Math.max(0, Math.min(1, ambient + lightAt(worldX, worldY) - cFog * 0.55));
+                  packed = applyBrightnessToRgba(packed, cBright * 0.95);
+                  lastCeilPacked = rgbaBEToU32(packed);
+                }
+                buffer.pixels[y * w + xi] = lastCeilPacked;
+                continue;
+              }
+            }
+          }
+        }
+
         markGfxDirty();
         return 1;
       }),
@@ -1404,17 +1778,47 @@ fn fs(in: VSOut) -> @location(0) vec4f {
           if (xi < 0 || xi >= w) return;
           const yy0 = Math.max(0, y0 | 0);
           const yy1 = Math.min(vh - 1, y1 | 0);
+          const packed = normalizePixelColor(color);
           for (let y = yy0; y <= yy1; y++){
-            buffer.pixels[y * w + xi] = color;
+            buffer.pixels[y * w + xi] = packed;
           }
         }
 
-        const isSpriteTile = (t) => t === 3 || t === 4 || t === 5 || t === 6 || t === 7 || t === 8 || t === 9 || t === 10 || t === 11;
+        const isSpriteTile = (t) => t === 3 || t === 4 || t === 5 || t === 6 || t === 7 || t === 8 || t === 9 || t === 10 || t === 11 || t === 12 || t === 13 || t === 16 || t === 17 || t === 18 || t === 19;
 
         function lightAt(worldX, worldY){
           const cx = Math.floor(worldX);
           const cy = Math.floor(worldY);
           let light = 0;
+
+          const paramsForTile = (tt) => {
+            if (tt === 8) return { i: 1.10, f: 0.85, p: 1.00 };
+            if (tt === 12) return { i: 0.95, f: 0.90, p: 1.00 };
+            if (tt === 13) return { i: 1.20, f: 1.25, p: 1.08 };
+            if (tt === 16) return { i: 1.00, f: 0.95, p: 1.00 };
+            if (tt === 17) return { i: 1.45, f: 1.05, p: 1.05 };
+            if (tt === 18) return { i: 0.90, f: 1.15, p: 1.12 };
+            if (tt === 19) return { i: 0.35, f: 1.60, p: 1.20 };
+            if (tt === 9) return { i: 0.85, f: 1.10, p: 1.05 };
+            return null;
+          };
+
+          const isOccluded = (lx, ly, wx, wy) => {
+            const dx = wx - lx;
+            const dy = wy - ly;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (!(dist > 0.75)) return false;
+            const steps = Math.min(12, Math.max(2, Math.ceil(dist / 0.25)));
+            const inv = 1 / steps;
+            for (let i = 1; i < steps; i++){
+              const sx = lx + dx * (i * inv);
+              const sy = ly + dy * (i * inv);
+              const tt = sampleTile(Math.floor(sx), Math.floor(sy));
+              if (tt === 1 || tt === 2) return true;
+            }
+            return false;
+          };
+
           const r = 3;
           for (let oy = -r; oy <= r; oy++){
             const ty = cy + oy;
@@ -1423,14 +1827,15 @@ fn fs(in: VSOut) -> @location(0) vec4f {
               const tx = cx + ox;
               if (tx < 0 || tx >= mapW) continue;
               const tt = data[ty * mapW + tx] | 0;
-              if (tt !== 8 && tt !== 9) continue;
+              const lp = paramsForTile(tt);
+              if (!lp) continue;
               const lx = tx + 0.5;
               const ly = ty + 0.5;
               const dx = worldX - lx;
               const dy = worldY - ly;
               const d2 = dx * dx + dy * dy;
-              const intensity = tt === 8 ? 1.15 : 0.85;
-              light += intensity / (1 + d2 * 0.9);
+              if (isOccluded(lx, ly, worldX, worldY)) continue;
+              light += lp.i / Math.pow(1 + d2 * lp.f, lp.p);
             }
           }
           return light;
@@ -1508,7 +1913,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
               if (spriteT === 7) return shadeByBrightness(sBright, "accent-2");
               if (spriteT === 3) return shadeByBrightness(sBright, "warn");
               if (spriteT === 4) return shadeByBrightness(sBright, "ok");
-              if (spriteT === 8 || spriteT === 9) return shadeByBrightness(sBright, "warn");
+              if (spriteT === 8 || spriteT === 9 || spriteT === 12 || spriteT === 13 || spriteT === 16 || spriteT === 17 || spriteT === 18 || spriteT === 19) return shadeByBrightness(sBright, "warn");
               if (spriteT === 10 || spriteT === 11) return shadeByBrightness(sBright, "accent");
               return shadeByBrightness(sBright, "accent");
             })();
@@ -1626,9 +2031,10 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     initBuffer: (width, height, scale = GFX_DEFAULT_SCALE) => {
       const w = normalizeGfxDimension(width, "width");
       const h = normalizeGfxDimension(height, "height");
-      state.gfx = createGfxBuffer(w, h, normalizeGfxScale(scale));
+      state.gfx = resizeGfxBuffer(state.gfx, w, h, normalizeGfxScale(scale));
       markGfxDirty();
       flushGfxOutput();
+      return state.gfx;
     },
   };
 }

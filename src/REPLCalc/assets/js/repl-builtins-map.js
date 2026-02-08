@@ -40,6 +40,14 @@ export function attachMapBuiltins(baseFns, { defFn, isQty }){
         else if (ch === "A") v = 7;
         else if (ch === "T") v = 8;
         else if (ch === "L") v = 9;
+        else if (ch === "t") v = 12;
+        else if (ch === "d") v = 13;
+        else if (ch === "i") v = 16;
+        else if (ch === "h") v = 17;
+        else if (ch === "w") v = 18;
+        else if (ch === "x") v = 19;
+        else if (ch === "v") v = 20;
+        else if (ch === "r") v = 21;
         else if (ch === ">") v = 10;
         else if (ch === "<") v = 11;
         else if (ch === "S"){
@@ -50,7 +58,7 @@ export function attachMapBuiltins(baseFns, { defFn, isQty }){
             foundSpawn = true;
           }
         }else{
-          throw new Error(`map contains unsupported tile '${ch}' (use # . D K E S M H A T L > <)`);
+          throw new Error(`map contains unsupported tile '${ch}' (use # . D K E S M H A T L t d i h w x v r > <)`);
         }
         data[y * width + x] = v;
       }
@@ -163,8 +171,22 @@ export function attachMapBuiltins(baseFns, { defFn, isQty }){
       return false;
     };
 
+    const pickLightTile = () => {
+      const p = rand01();
+      if (p < 0.42) return 8;
+      if (p < 0.62) return 12;
+      if (p < 0.74) return 13;
+      if (p < 0.84) return 16;
+      if (p < 0.91) return 17;
+      if (p < 0.97) return 18;
+      return 19;
+    };
+
+    const hvacCount = Math.max(1, Math.floor((w * h) / 200));
+
     for (let i = 0; i < monsterCount; i++) placeOnFloor(5);
-    for (let i = 0; i < lightCount; i++) placeOnFloor(rand01() < 0.75 ? 8 : 9);
+    for (let i = 0; i < lightCount; i++) placeOnFloor(pickLightTile());
+    for (let i = 0; i < hvacCount; i++) placeOnFloor(rand01() < 0.65 ? 20 : 21);
     for (let i = 0; i < itemCount; i++) placeOnFloor(rand01() < 0.5 ? 6 : 7);
     placeOnFloor(3);
 

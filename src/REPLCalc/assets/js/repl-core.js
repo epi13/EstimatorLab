@@ -59,7 +59,7 @@ export function initRepl(){
 
   const ui = createUi(state);
   const gfx = createGfxTools({ state, terminalEl: ui.terminalEl, writeLine: ui.writeLine });
-  const gfxFns = gfx.buildGfxMetaFns(defFn);
+  const gfxFns = gfx.buildGfxMetaFns(defFn, defFnCtx);
 
   let editor;
 

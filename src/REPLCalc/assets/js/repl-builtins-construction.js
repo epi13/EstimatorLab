@@ -10,6 +10,8 @@ export function attachConstructionBuiltins(baseFns, {
   mul,
 }){
   const isMissing = (v) => v === undefined || v === null;
+  const fieldInfo = (v) => ({ value: v, note: "", raw: "" });
+  const makeAssy = (name, fields) => ({ __assy: true, name, fields });
   const scalarValue = (v) => {
     if (typeof v === "number") return v;
     if (v && typeof v === "object" && v.__kind === "scalar") return v.value;
@@ -621,6 +623,291 @@ export function attachConstructionBuiltins(baseFns, {
     if (!Number.isFinite(pct) || pct < 0) throw new Error("fastener_count waste_pct must be >= 0");
     const total = n * p * factor;
     return makeQty(ceilSafe(total), "count");
+  });
+
+  function requireNonNegScalar(value, label){
+    const n = isQty(value) ? value.value : value;
+    if (!Number.isFinite(n) || n < 0) throw new Error(`${label} must be >= 0`);
+    return n;
+  }
+
+  baseFns.flooring_sf = defFn("flooring_sf", -1, {
+    args: [
+      { label: "area", kinds: ["scalar", "dim"], dim: "area" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "area" },
+  }, (area, wastePct) => {
+    const A = isQty(area) ? area : makeQty(area, "area");
+    if (A.kind !== "area") throw new Error("flooring_sf expects area");
+    if (!(A.value >= 0)) throw new Error("flooring_sf area must be >= 0");
+    const factor = defaultPctFactor(wastePct, 10);
+    return makeQty(A.value * factor, "area");
+  });
+
+  baseFns.base_trim_lf = defFn("base_trim_lf", -1, {
+    args: [
+      { label: "length", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "len" },
+  }, (length, wastePct) => {
+    const L = isQty(length) ? length : makeQty(length, "len");
+    if (L.kind !== "len") throw new Error("base_trim_lf expects length");
+    if (!(L.value >= 0)) throw new Error("base_trim_lf length must be >= 0");
+    const factor = defaultPctFactor(wastePct, 10);
+    return makeQty(L.value * factor, "len");
+  });
+
+  baseFns.light_fixtures = defFn("light_fixtures", -1, {
+    args: [
+      { label: "count", kinds: ["scalar", "dim"], dim: "count" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (count, wastePct) => {
+    const n = requireNonNegScalar(count, "light_fixtures count");
+    const factor = defaultPctFactor(wastePct, 5);
+    return makeQty(ceilSafe(n * factor), "count");
+  });
+
+  baseFns.duct_lf = defFn("duct_lf", -1, {
+    args: [
+      { label: "length", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "len" },
+  }, (length, wastePct) => {
+    const L = isQty(length) ? length : makeQty(length, "len");
+    if (L.kind !== "len") throw new Error("duct_lf expects length");
+    if (!(L.value >= 0)) throw new Error("duct_lf length must be >= 0");
+    const factor = defaultPctFactor(wastePct, 10);
+    return makeQty(L.value * factor, "len");
+  });
+
+  baseFns.duct_elbows = defFn("duct_elbows", -1, {
+    args: [
+      { label: "count", kinds: ["scalar", "dim"], dim: "count" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (count, wastePct) => {
+    const n = requireNonNegScalar(count, "duct_elbows count");
+    const factor = defaultPctFactor(wastePct, 5);
+    return makeQty(ceilSafe(n * factor), "count");
+  });
+
+  baseFns.duct_diffusers = defFn("duct_diffusers", -1, {
+    args: [
+      { label: "count", kinds: ["scalar", "dim"], dim: "count" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (count, wastePct) => {
+    const n = requireNonNegScalar(count, "duct_diffusers count");
+    const factor = defaultPctFactor(wastePct, 5);
+    return makeQty(ceilSafe(n * factor), "count");
+  });
+
+  baseFns.duct_gauge_thk = defFn("duct_gauge_thk", 1, {
+    args: [{ label: "gauge", kinds: ["scalar", "dim"], dim: "scalar" }],
+    returns: { kinds: ["dim"], dim: "len" },
+  }, (gauge) => {
+    const g = isQty(gauge) ? gauge.value : gauge;
+    if (!Number.isFinite(g)) throw new Error("duct_gauge_thk gauge must be numeric");
+    const gi = Math.floor(g);
+    const thkIn = (() => {
+      if (gi === 30) return 0.012;
+      if (gi === 28) return 0.015;
+      if (gi === 26) return 0.0187;
+      if (gi === 24) return 0.0236;
+      if (gi === 22) return 0.0299;
+      if (gi === 20) return 0.0359;
+      if (gi === 18) return 0.0478;
+      if (gi === 16) return 0.0598;
+      if (gi === 14) return 0.0747;
+      if (gi === 12) return 0.1046;
+      if (gi === 10) return 0.1345;
+      return NaN;
+    })();
+    if (!Number.isFinite(thkIn)) throw new Error("duct_gauge_thk unsupported gauge (use 30,28,26,24,22,20,18,16,14,12,10)");
+    return makeQty(thkIn / 12, "len");
+  });
+
+  baseFns.duct_spec = defFn("duct_spec", -1, {
+    args: [
+      { label: "shape", kinds: ["string"] },
+      { label: "a", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "b", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "thickness", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "density_pcf", kinds: ["scalar", "dim"], dim: "wt*len^-3" },
+    ],
+    returns: { kinds: ["assy"] },
+  }, (shape, a, b, thickness, densityPcf) => {
+    if (typeof shape !== "string") throw new Error("duct_spec shape must be a string");
+    const s = shape.trim().toLowerCase();
+    if (s !== "rect" && s !== "round") throw new Error("duct_spec shape must be 'rect' or 'round'");
+    const A = isQty(a) ? a : makeQty(a, "len");
+    const B = isMissing(b) ? makeQty(0, "len") : (isQty(b) ? b : makeQty(b, "len"));
+    const t = isQty(thickness) ? thickness : makeQty(thickness, "len");
+    if (A.kind !== "len" || B.kind !== "len" || t.kind !== "len") throw new Error("duct_spec a/b/thickness must be length");
+    if (!(A.value > 0)) throw new Error("duct_spec a must be > 0");
+    if (s === "rect" && !(B.value > 0)) throw new Error("duct_spec b must be > 0 for rect duct");
+    if (!(t.value > 0)) throw new Error("duct_spec thickness must be > 0");
+    const dens = isQty(densityPcf) ? densityPcf : makeQty(densityPcf, "wt*len^-3");
+    try{
+      convert(dens, "pcf");
+    }catch{
+      throw new Error("duct_spec density_pcf must be pcf");
+    }
+    if (!(dens.value > 0)) throw new Error("duct_spec density_pcf must be > 0");
+    return makeAssy("duct_spec", {
+      shape: fieldInfo(s),
+      a: fieldInfo(A),
+      b: fieldInfo(B),
+      thickness: fieldInfo(t),
+      density: fieldInfo(dens),
+    });
+  });
+
+  baseFns.duct_takeoff = defFn("duct_takeoff", -1, {
+    args: [
+      { label: "spec", kinds: ["assy"] },
+      { label: "length", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["assy"] },
+  }, (spec, length, wastePct) => {
+    if (!spec || typeof spec !== "object" || !spec.__assy) throw new Error("duct_takeoff spec must be an assembly");
+    const shape = String(spec?.fields?.shape?.value || "").trim().toLowerCase();
+    const a = spec?.fields?.a?.value;
+    const b = spec?.fields?.b?.value;
+    const thk = spec?.fields?.thickness?.value;
+    const dens = spec?.fields?.density?.value;
+    if (!isQty(a) || a.kind !== "len") throw new Error("duct_takeoff spec.a must be length");
+    if (!isQty(b) || b.kind !== "len") throw new Error("duct_takeoff spec.b must be length");
+    if (!isQty(thk) || thk.kind !== "len") throw new Error("duct_takeoff spec.thickness must be length");
+    if (!isQty(dens)) throw new Error("duct_takeoff spec.density must be pcf");
+    try{
+      convert(dens, "pcf");
+    }catch{
+      throw new Error("duct_takeoff spec.density must be pcf");
+    }
+
+    const L = isQty(length) ? length : makeQty(length, "len");
+    if (L.kind !== "len") throw new Error("duct_takeoff length must be length");
+    if (!(L.value >= 0)) throw new Error("duct_takeoff length must be >= 0");
+
+    const factor = defaultPctFactor(wastePct, 10);
+    const lf = makeQty(L.value * factor, "len");
+
+    const perimeterFt = (() => {
+      if (shape === "round") return Math.PI * a.value;
+      if (shape === "rect") return 2 * (a.value + b.value);
+      throw new Error("duct_takeoff spec.shape must be 'rect' or 'round'");
+    })();
+    const area = makeQty(perimeterFt * lf.value, "area");
+    const vol = makeQty(area.value * thk.value, "vol");
+    const wt = mul(vol, dens);
+    return makeAssy("duct_takeoff", {
+      lf: fieldInfo(lf),
+      area: fieldInfo(area),
+      weight: fieldInfo(wt),
+    });
+  });
+
+  baseFns.duct_weight = defFn("duct_weight", -1, {
+    args: [
+      { label: "spec", kinds: ["assy"] },
+      { label: "length", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "wt" },
+  }, (spec, length, wastePct) => {
+    const take = baseFns.duct_takeoff.impl(spec, length, wastePct);
+    const wt = take?.fields?.weight?.value;
+    if (!isQty(wt) || wt.kind !== "wt") throw new Error("duct_weight internal error");
+    return wt;
+  });
+
+  baseFns.light_fixture = defFn("light_fixture", 1, {
+    args: [{ label: "id", kinds: ["string"] }],
+    returns: { kinds: ["assy"] },
+  }, (id) => {
+    if (typeof id !== "string") throw new Error("light_fixture expects a string id");
+    const key = id.trim().toUpperCase();
+    const spec = (() => {
+      if (key === "TROFFER_2X4" || key === "2X4_TROFFER" || key === "2X4_PANEL") return { label: "LED Troffer 2x4", watts: 40, lumens: 5200, cast: "area", falloff: 0.85 };
+      if (key === "TROFFER_2X2" || key === "2X2_TROFFER" || key === "2X2_PANEL") return { label: "LED Troffer 2x2", watts: 30, lumens: 3600, cast: "area", falloff: 0.9 };
+      if (key === "LINEAR_4FT" || key === "STRIP_4FT" || key === "LINEAR") return { label: "LED Linear 4ft", watts: 35, lumens: 4200, cast: "area", falloff: 0.9 };
+      if (key === "VAPORTIGHT_4FT" || key === "VAPOR_TIGHT_4FT" || key === "VT_4FT") return { label: "LED Vapor Tight 4ft", watts: 45, lumens: 5500, cast: "area", falloff: 0.92 };
+
+      if (key === "DOWNLIGHT_4" || key === "4IN_DOWNLIGHT" || key === "DL_4") return { label: "LED Downlight 4in", watts: 12, lumens: 900, cast: "spot", falloff: 1.25 };
+      if (key === "DOWNLIGHT_6" || key === "6IN_DOWNLIGHT" || key === "DL_6") return { label: "LED Downlight 6in", watts: 18, lumens: 1300, cast: "spot", falloff: 1.15 };
+      if (key === "CANOPY" || key === "CANOPY_LIGHT") return { label: "LED Canopy", watts: 55, lumens: 6500, cast: "spot", falloff: 1.05 };
+
+      if (key === "HIGHBAY" || key === "UFO_HIGHBAY") return { label: "LED High Bay", watts: 150, lumens: 21000, cast: "spot", falloff: 1.05 };
+
+      if (key === "WALLPACK" || key === "WALL_PACK") return { label: "LED Wallpack", watts: 40, lumens: 5000, cast: "wall", falloff: 1.0 };
+      if (key === "EMERGENCY_EXIT" || key === "EXIT_SIGN") return { label: "Exit Sign", watts: 5, lumens: 100, cast: "indicator", falloff: 1.6 };
+      throw new Error("light_fixture unknown id (try TROFFER_2X4, TROFFER_2X2, DOWNLIGHT_4, DOWNLIGHT_6, LINEAR_4FT, HIGHBAY, WALLPACK, EXIT_SIGN)");
+    })();
+    return makeAssy("light_fixture", {
+      id: fieldInfo(key),
+      label: fieldInfo(spec.label),
+      watts: fieldInfo(makeQty(spec.watts, "scalar")),
+      lumens: fieldInfo(makeQty(spec.lumens, "scalar")),
+      cast: fieldInfo(spec.cast),
+      falloff: fieldInfo(makeQty(spec.falloff, "scalar")),
+    });
+  });
+
+  baseFns.light_takeoff = defFn("light_takeoff", -1, {
+    args: [
+      { label: "fixture", kinds: ["assy"] },
+      { label: "count", kinds: ["scalar", "dim"], dim: "count" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["assy"] },
+  }, (fixture, count, wastePct) => {
+    if (!fixture || typeof fixture !== "object" || !fixture.__assy) throw new Error("light_takeoff fixture must be an assembly");
+    const watts = fixture?.fields?.watts?.value;
+    const lumens = fixture?.fields?.lumens?.value;
+    if (!isQty(watts) || !isQty(lumens)) throw new Error("light_takeoff invalid fixture");
+    const n = requireNonNegScalar(count, "light_takeoff count");
+    const factor = defaultPctFactor(wastePct, 5);
+    const qty = makeQty(ceilSafe(n * factor), "count");
+    const totalWatts = makeQty(watts.value * qty.value, "scalar");
+    const totalLumens = makeQty(lumens.value * qty.value, "scalar");
+    return makeAssy("light_takeoff", {
+      count: fieldInfo(qty),
+      watts: fieldInfo(totalWatts),
+      lumens: fieldInfo(totalLumens),
+    });
+  });
+
+  baseFns.stair_treads = defFn("stair_treads", -1, {
+    args: [
+      { label: "count", kinds: ["scalar", "dim"], dim: "count" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (count, wastePct) => {
+    const n = requireNonNegScalar(count, "stair_treads count");
+    const factor = defaultPctFactor(wastePct, 7);
+    return makeQty(ceilSafe(n * factor), "count");
+  });
+
+  baseFns.stair_risers = defFn("stair_risers", -1, {
+    args: [
+      { label: "count", kinds: ["scalar", "dim"], dim: "count" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (count, wastePct) => {
+    const n = requireNonNegScalar(count, "stair_risers count");
+    const factor = defaultPctFactor(wastePct, 7);
+    return makeQty(ceilSafe(n * factor), "count");
   });
 
   function defaultPctFactor(pct, defaultPct){

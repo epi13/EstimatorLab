@@ -30,6 +30,7 @@ import { attachGeometryBuiltins } from "./repl-builtins-geometry.js";
 import { attachLinAlgBuiltins } from "./repl-builtins-linalg.js";
 import { attachUncertaintyBuiltins } from "./repl-builtins-uncertainty.js";
 import { attachCsiBuiltins } from "./repl-builtins-csi.js";
+import { attachFinishBuiltins } from "./repl-builtins-finishes.js";
 
 function normalizeKindList(spec){
   if (!spec) return null;
@@ -966,6 +967,11 @@ export function createBaseFns(){
   attachCsiBuiltins(baseFns, {
     defFn,
     add,
+  });
+
+  attachFinishBuiltins(baseFns, {
+    defFn,
+    defFnCtx,
   });
 
   attachLinAlgBuiltins(baseFns, {

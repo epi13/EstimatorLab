@@ -25,7 +25,7 @@ w = ${DOOM_W};
 h = ${DOOM_H};
 scale = ${DOOM_SCALE};
 hud_h = 12;
-view_h = h - hud_h;
+view_h = h - hud_h
 
 # Math helpers
 so sign(x) = if(x < 0, -1, if(x > 0, 1, 0));
@@ -55,6 +55,18 @@ if has("doom_init") == 0:
   doom_money = 0 $
   doom_view = 0
   doom_metrics_dirty = 1
+
+  doom_duct_shape = "rect"
+  doom_duct_a = 24 in
+  doom_duct_b = 12 in
+  doom_duct_gauge = 26
+
+  wallFinish("DRYWALL_PRIMED")
+  floorFinish("LVP_OAK_LIGHT")
+  ceilingFinish("ACT_2x2")
+  trimFinish("BASE", "RUBBER_BASE_BLACK")
+  trimFinish("CASING", "WOOD_CASING_WHITE")
+  wainscot(4 ft, "WAINSCOT_BEADBOARD_WHITE")
 
   assy doom_profile = { tile = 2 ft; walk = 5 mph; run = 9 mph; accel = 28 ft / (s^2); friction = 6 / s }
   assy pistol = { dmg = 18; range = 45 ft; cooldown = 0.18 s; spread = 2 deg }
@@ -208,12 +220,35 @@ if doom_metrics_dirty == 1:
   doom_wall_edges = 0
   doom_wall_line_tiles = 0
   doom_floor_tiles = 0
+  doom_lights = 0
+  doom_light_2x4 = 0
+  doom_light_2x2 = 0
+  doom_light_dl = 0
+  doom_light_lin = 0
+  doom_light_hb = 0
+  doom_light_wp = 0
+  doom_light_exit = 0
+
+  doom_diffusers = 0
+  doom_returns = 0
+  doom_stairs = 0
   mw0 = mw(doom_map)
   mh0 = mh(doom_map)
   for y in 0..(mh0 - 1):
     for x in 0..(mw0 - 1):
       tt = mget(doom_map, x, y)
       if tile_wallish(tt) == 0: doom_floor_tiles = doom_floor_tiles + 1 else: 0
+      if tt == 8: doom_lights = doom_lights + 1; doom_light_2x4 = doom_light_2x4 + 1 else: 0
+      if tt == 12: doom_lights = doom_lights + 1; doom_light_2x2 = doom_light_2x2 + 1 else: 0
+      if tt == 13: doom_lights = doom_lights + 1; doom_light_dl = doom_light_dl + 1 else: 0
+      if tt == 16: doom_lights = doom_lights + 1; doom_light_lin = doom_light_lin + 1 else: 0
+      if tt == 17: doom_lights = doom_lights + 1; doom_light_hb = doom_light_hb + 1 else: 0
+      if tt == 18: doom_lights = doom_lights + 1; doom_light_wp = doom_light_wp + 1 else: 0
+      if tt == 19: doom_lights = doom_lights + 1; doom_light_exit = doom_light_exit + 1 else: 0
+
+      if tt == 20: doom_diffusers = doom_diffusers + 1 else: 0
+      if tt == 21: doom_returns = doom_returns + 1 else: 0
+      if tt == 10 || tt == 11: doom_stairs = doom_stairs + 1 else: 0
       if tile_wallish(tt) == 1:
         if tile_wallish(mget(doom_map, x + 1, y)) == 0 || tile_wallish(mget(doom_map, x - 1, y)) == 0 || tile_wallish(mget(doom_map, x, y + 1)) == 0 || tile_wallish(mget(doom_map, x, y - 1)) == 0: doom_wall_line_tiles = doom_wall_line_tiles + 1 else: 0
         if tile_wallish(mget(doom_map, x + 1, y)) == 0: doom_wall_edges = doom_wall_edges + 1 else: 0
@@ -238,6 +273,42 @@ if doom_metrics_dirty == 1:
 
   doom_slab_area = doom_floor_tiles * tile * tile
   doom_slab_cy = to_cy(concrete_cy(doom_slab_area, 4 in))
+
+  doom_flooring = flooring_sf(doom_slab_area, 10)
+  doom_base = base_trim_lf(doom_wall_lf, 10)
+
+  lf_2x4 = light_fixture("TROFFER_2X4")
+  lf_2x2 = light_fixture("TROFFER_2X2")
+  lf_dl = light_fixture("DOWNLIGHT_6")
+  lf_lin = light_fixture("LINEAR_4FT")
+  lf_hb = light_fixture("HIGHBAY")
+  lf_wp = light_fixture("WALLPACK")
+  lf_exit = light_fixture("EXIT_SIGN")
+
+  doom_light_fix = light_fixtures(doom_lights, 5)
+  doom_lt_2x4 = field(light_takeoff(lf_2x4, doom_light_2x4, 5), "count")
+  doom_lt_2x2 = field(light_takeoff(lf_2x2, doom_light_2x2, 5), "count")
+  doom_lt_dl = field(light_takeoff(lf_dl, doom_light_dl, 5), "count")
+  doom_lt_lin = field(light_takeoff(lf_lin, doom_light_lin, 5), "count")
+  doom_lt_hb = field(light_takeoff(lf_hb, doom_light_hb, 5), "count")
+  doom_lt_wp = field(light_takeoff(lf_wp, doom_light_wp, 5), "count")
+  doom_lt_exit = field(light_takeoff(lf_exit, doom_light_exit, 5), "count")
+
+  duct_trunk = mw0 * tile
+  duct_branch = (doom_diffusers + doom_returns) * tile
+  duct_len = duct_trunk + duct_branch
+
+  duct_thk = duct_gauge_thk(doom_duct_gauge)
+  duct_spec0 = duct_spec(doom_duct_shape, doom_duct_a, doom_duct_b, duct_thk, 490 pcf)
+  duct_take = duct_takeoff(duct_spec0, duct_len, 10)
+  doom_duct = field(duct_take, "lf")
+  doom_duct_wt = field(duct_take, "weight")
+  doom_elbows = duct_elbows((doom_diffusers + doom_returns) * 2, 5)
+  doom_supply = duct_diffusers(doom_diffusers, 5)
+  doom_return = duct_diffusers(doom_returns, 5)
+
+  doom_treads = stair_treads(doom_stairs * 11, 7)
+  doom_risers = stair_risers(doom_stairs * 12, 7)
   doom_metrics_dirty = 0
 else:
   0
@@ -249,11 +320,14 @@ max_d = 14
 ray_step = 0.08
 ray_steps = ceil(max_d / ray_step)
 ray_col_step = 1
+floor_step = 1
+ceil_step = 1
+tex_res = 1
 
 if doom_view == 0:
   fill(0, 0, w, mid, "muted")
   fill(0, mid, w, view_h - mid, "text")
-  raycast(doom_map, doom_px, doom_py, doom_yaw, fov, view_h, max_d, ray_step, ray_steps, ray_col_step)
+  raycast_tex(doom_map, doom_px, doom_py, doom_yaw, fov, view_h, max_d, ray_step, ray_steps, ray_col_step, { floor_step: floor_step; ceil_step: ceil_step; tex_res: tex_res })
   cxh = floor(w / 2)
   cyh = floor(view_h / 2)
   line(cxh - 3, cyh, cxh + 3, cyh, "ok")
@@ -265,6 +339,8 @@ else:
   mh1 = mh(doom_map)
   bx = floor((w - mw1 * bs) / 2)
   by = floor((view_h - mh1 * bs) / 2)
+  duct_x = bx + floor((mw1 * bs) / 2)
+  line(duct_x, by, duct_x, by + mh1 * bs, "accent")
   for y in 0..(mh1 - 1):
     for x in 0..(mw1 - 1):
       tt = mget(doom_map, x, y)
@@ -293,7 +369,15 @@ else:
           if tt == 5:
             fill(px + 2, py + 2, 2, 2, "err")
           else:
-            0
+            if tt == 8 || tt == 9 || tt == 12 || tt == 13 || tt == 16 || tt == 17 || tt == 18 || tt == 19:
+              fill(px + 2, py + 2, 2, 2, if(tt == 8, "accent-2", "accent"))
+              line(px + 3, py + 3, duct_x, py + 3, "accent")
+            else:
+              if tt == 10 || tt == 11:
+                fill(px + 1, py + 1, bs - 2, bs - 2, "muted")
+                rect(px + 1, py + 1, bs - 2, bs - 2, "accent-2")
+              else:
+                0
 
   ppx = floor(bx + doom_px * bs)
   ppy = floor(by + doom_py * bs)
@@ -322,8 +406,8 @@ else:
 
   tx = w - 124
   ty = 2
-  fill(tx, ty, 122, 88, "muted")
-  rect(tx, ty, 122, 88, "text")
+  fill(tx, ty, 122, 160, "muted")
+  rect(tx, ty, 122, 160, "text")
   txt(tx + 4, ty + 4, "TAKEOFF", "text", 1)
   txt(tx + 4, ty + 14, cat("WALL ", str(doom_wall_lf)), "text", 1)
   txt(tx + 4, ty + 22, cat("AREA ", str(doom_wall_area)), "text", 1)
@@ -335,6 +419,24 @@ else:
   txt(tx + 4, ty + 70, cat("MUD ", round(doom_mud * 10) / 10, " gal"), "text", 1)
   txt(tx + 64, ty + 70, cat("PAINT ", round(doom_paint * 10) / 10, " gal"), "text", 1)
   txt(tx + 4, ty + 78, cat("SLAB ", round(doom_slab_cy * 100) / 100, " cy"), "text", 1)
+  txt(tx + 64, ty + 78, cat("FLOOR ", str(doom_flooring)), "text", 1)
+  txt(tx + 4, ty + 86, cat("BASE ", str(doom_base)), "text", 1)
+  txt(tx + 64, ty + 86, cat("LITE ", str(doom_light_fix)), "text", 1)
+  txt(tx + 4, ty + 94, cat("DUCT ", str(doom_duct)), "text", 1)
+  txt(tx + 64, ty + 94, cat("ELB ", str(doom_elbows)), "text", 1)
+  txt(tx + 4, ty + 102, cat("SUP ", str(doom_supply)), "text", 1)
+  txt(tx + 64, ty + 102, cat("RET ", str(doom_return)), "text", 1)
+  txt(tx + 4, ty + 110, cat("DWT ", str(doom_duct_wt)), "text", 1)
+  txt(tx + 4, ty + 118, cat("L24 ", str(doom_lt_2x4)), "text", 1)
+  txt(tx + 64, ty + 118, cat("L22 ", str(doom_lt_2x2)), "text", 1)
+  txt(tx + 4, ty + 126, cat("DL ", str(doom_lt_dl)), "text", 1)
+  txt(tx + 64, ty + 126, cat("LIN ", str(doom_lt_lin)), "text", 1)
+  txt(tx + 4, ty + 134, cat("HB ", str(doom_lt_hb)), "text", 1)
+  txt(tx + 64, ty + 134, cat("WP ", str(doom_lt_wp)), "text", 1)
+  txt(tx + 4, ty + 142, cat("EXIT ", str(doom_lt_exit)), "text", 1)
+  txt(tx + 64, ty + 142, cat("STAI ", str(doom_stairs)), "text", 1)
+  txt(tx + 4, ty + 150, cat("TRD ", str(doom_treads)), "text", 1)
+  txt(tx + 64, ty + 150, cat("RIS ", str(doom_risers)), "text", 1)
 
 # HUD
 hy = view_h
@@ -407,6 +509,14 @@ export function runDoomDemo({ gfx, writeLine, writeInputEcho }) {
   const needsBuffer = !buf || buf.width !== DOOM_W || buf.height !== DOOM_H || buf.scale !== DOOM_SCALE;
   if (needsBuffer && typeof gfx.initBuffer === "function"){
     gfx.initBuffer(DOOM_W, DOOM_H, DOOM_SCALE);
+  }
+
+  const buf2 = typeof gfx.getBuffer === "function" ? gfx.getBuffer() : null;
+  if (buf2 && buf2.__gfx){
+    buf2.presentLocked = true;
+    buf2.presentWidth = DOOM_W;
+    buf2.presentHeight = DOOM_H;
+    buf2.presentScale = DOOM_SCALE;
   }
 
   gfx.configureLoop(DOOM_DEMO_SCRIPT, DOOM_DEFAULT_FPS);
