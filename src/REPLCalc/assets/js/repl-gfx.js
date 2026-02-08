@@ -1399,7 +1399,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
             const ntr = toNum(values.tex_res);
             if (Number.isFinite(nfs) && nfs >= 1) floorStep = Math.min(8, Math.floor(nfs));
             if (Number.isFinite(ncs0) && ncs0 >= 1) ceilStep = Math.min(8, Math.floor(ncs0));
-            if (Number.isFinite(ntr) && ntr >= 1) texRes = Math.min(4, Math.floor(ntr));
+            if (Number.isFinite(ntr) && ntr >= 1) texRes = Math.min(8, Math.floor(ntr));
           }catch{}
         }
 
@@ -1496,8 +1496,8 @@ fn fs(in: VSOut) -> @location(0) vec4f {
           const fracX = worldX - Math.floor(worldX);
           const fracY = worldY - Math.floor(worldY);
           const u01 = Math.abs(fracX) > Math.abs(fracY) ? fracY : fracX;
-          const u = Math.floor((u01 * tex.w * tex.worldRepeat) / texRes);
-          const v = Math.floor(((1 - wallY01) * tex.h * tex.worldRepeat) / texRes);
+          const u = (u01 * tex.w * tex.worldRepeat) / texRes;
+          const v = ((1 - wallY01) * tex.h * tex.worldRepeat) / texRes;
           return sampleFinishTexture(tex.id, u, v);
         }
 
@@ -1574,8 +1574,8 @@ fn fs(in: VSOut) -> @location(0) vec4f {
                   const rowDist = 1 / Math.max(0.0001, p);
                   const worldX = nPx + xrc * rowDist;
                   const worldY = nPy + xrs * rowDist;
-                  const u = Math.floor(((worldX * floorTex.worldRepeat) * floorTex.w) / texRes);
-                  const v = Math.floor(((worldY * floorTex.worldRepeat) * floorTex.h) / texRes);
+                  const u = ((worldX * floorTex.worldRepeat) * floorTex.w) / texRes;
+                  const v = ((worldY * floorTex.worldRepeat) * floorTex.h) / texRes;
                   let packed = sampleFinishTexture(floorTex.id, u, v);
                   const fFog = Math.max(0, Math.min(1, (rowDist - 1.6) / Math.max(0.001, (md - 1.6))));
                   const fBright = Math.max(0, Math.min(1, ambient + lightAt(worldX, worldY) - fFog * 0.55));
@@ -1595,8 +1595,8 @@ fn fs(in: VSOut) -> @location(0) vec4f {
                   const rowDist = 1 / Math.max(0.0001, p);
                   const worldX = nPx + xrc * rowDist;
                   const worldY = nPy + xrs * rowDist;
-                  const u = Math.floor(((worldX * ceilTex.worldRepeat) * ceilTex.w) / texRes);
-                  const v = Math.floor(((worldY * ceilTex.worldRepeat) * ceilTex.h) / texRes);
+                  const u = ((worldX * ceilTex.worldRepeat) * ceilTex.w) / texRes;
+                  const v = ((worldY * ceilTex.worldRepeat) * ceilTex.h) / texRes;
                   let packed = sampleFinishTexture(ceilTex.id, u, v);
                   const cFog = Math.max(0, Math.min(1, (rowDist - 1.6) / Math.max(0.001, (md - 1.6))));
                   const cBright = Math.max(0, Math.min(1, ambient + lightAt(worldX, worldY) - cFog * 0.55));
