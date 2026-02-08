@@ -18,6 +18,19 @@ export function attachConstructionBuiltins(baseFns, {
     return v;
   };
   const ceilSafe = (x) => Math.ceil(x - 1e-9);
+  const pctRatio = (pct, label, { allowNegative = false } = {}) => {
+    if (isMissing(pct)) throw new Error(`${label} pct is required`);
+    const raw = isQty(pct) ? pct.value : (Number(pct) / 100);
+    if (!Number.isFinite(raw)) throw new Error(`${label} pct must be numeric`);
+    if (!allowNegative && raw < 0) throw new Error(`${label} pct must be >= 0`);
+    return raw;
+  };
+  const pctFactor = (pct, label) => 1 + pctRatio(pct, label);
+  const pctReductionFactor = (pct, label) => {
+    const ratio = pctRatio(pct, label);
+    if (ratio > 1) throw new Error(`${label} pct must be <= 100%`);
+    return 1 - ratio;
+  };
 
   baseFns.waste = defFn("waste", 2, {
     args: [
@@ -35,6 +48,65 @@ export function attachConstructionBuiltins(baseFns, {
     ],
   }, (cost, pct) => {
     const factor = isQty(pct) ? (1 + pct.value) : (1 + (pct / 100));
+    return mul(cost, factor);
+  });
+  baseFns.tax = defFn("tax", 2, {
+    args: [
+      { label: "cost", kinds: ["scalar", "dim"] },
+      { label: "pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+  }, (cost, pct) => mul(cost, pctFactor(pct, "tax")));
+  baseFns.contingency = defFn("contingency", 2, {
+    args: [
+      { label: "cost", kinds: ["scalar", "dim"] },
+      { label: "pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+  }, (cost, pct) => mul(cost, pctFactor(pct, "contingency")));
+  baseFns.overhead = defFn("overhead", 2, {
+    args: [
+      { label: "cost", kinds: ["scalar", "dim"] },
+      { label: "pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+  }, (cost, pct) => mul(cost, pctFactor(pct, "overhead")));
+  baseFns.profit = defFn("profit", 2, {
+    args: [
+      { label: "cost", kinds: ["scalar", "dim"] },
+      { label: "pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+  }, (cost, pct) => mul(cost, pctFactor(pct, "profit")));
+  baseFns.ohp = defFn("ohp", 3, {
+    args: [
+      { label: "cost", kinds: ["scalar", "dim"] },
+      { label: "overhead_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "profit_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+  }, (cost, overheadPct, profitPct) => {
+    const withOverhead = mul(cost, pctFactor(overheadPct, "ohp overhead"));
+    return mul(withOverhead, pctFactor(profitPct, "ohp profit"));
+  });
+  baseFns.discount = defFn("discount", 2, {
+    args: [
+      { label: "cost", kinds: ["scalar", "dim"] },
+      { label: "pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+  }, (cost, pct) => mul(cost, pctReductionFactor(pct, "discount")));
+  baseFns.retainage = defFn("retainage", 2, {
+    args: [
+      { label: "cost", kinds: ["scalar", "dim"] },
+      { label: "pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+  }, (cost, pct) => mul(cost, pctReductionFactor(pct, "retainage")));
+  baseFns.escalate = defFn("escalate", -1, {
+    args: [
+      { label: "cost", kinds: ["scalar", "dim"] },
+      { label: "pct", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "periods", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+  }, (cost, pct, periods) => {
+    const ratio = pctRatio(pct, "escalate");
+    const n = isMissing(periods) ? 1 : (isQty(periods) ? periods.value : periods);
+    if (!Number.isFinite(n) || n < 0) throw new Error("escalate periods must be >= 0");
+    const factor = Math.pow(1 + ratio, n);
     return mul(cost, factor);
   });
   baseFns.burden = defFn("burden", 2, {
