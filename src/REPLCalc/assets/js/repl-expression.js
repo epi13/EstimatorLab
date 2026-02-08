@@ -303,7 +303,13 @@ export function tokenize(src){
       continue;
     }
 
-    throw new Error(`Unexpected character "${c}"`);
+    const excerptRadius = 32;
+    const start = Math.max(0, i - excerptRadius);
+    const end = Math.min(s.length, i + excerptRadius);
+    const head = start > 0 ? "…" : "";
+    const tail = end < s.length ? "…" : "";
+    const excerpt = head + s.slice(start, end) + tail;
+    throw new Error(`Unexpected character "${c}" at position ${i + 1} in ${JSON.stringify(excerpt)}`);
   }
   return out;
 }
@@ -380,6 +386,7 @@ export function toRPN(tokens){
     }else if (t.type === "id"){
       const next = tokens[idx + 1];
       if (next && next.type === "("){
+        markCallArgIfNeeded();
         stack.push({ type: "fn", value: t.value });
       }else{
         markCallArgIfNeeded();

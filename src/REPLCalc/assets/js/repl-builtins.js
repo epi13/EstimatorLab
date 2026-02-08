@@ -434,6 +434,38 @@ export function createBaseFns(){
   }
 
 
+  function valueToString(value){
+    if (isQty(value)) return qtyToString(value);
+    if (value === null || value === undefined) return "";
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    if (value && typeof value === "object"){
+      if (value.__assy) return String(value.name || "assy");
+      if (value.__graph) return String(value.name || "graph");
+      if (value.__scenario) return String(value.name || "scenario");
+      if (value.__material) return String(value.name || "material");
+      if (value.__pt) return "pt";
+      if (value.__poly) return "poly";
+      try{
+        return JSON.stringify(value);
+      }catch{
+        return String(value);
+      }
+    }
+    return String(value);
+  }
+
+  baseFns.str = defFn("str", 1, {
+    args: [{ label: "value", kinds: ["any"] }],
+    returns: { kinds: ["string"] },
+  }, (value) => valueToString(value));
+
+  baseFns.cat = defFn("cat", -1, {
+    args: [{ label: "value", kinds: ["any"] }],
+    returns: { kinds: ["string"] },
+  }, (...values) => values.map(valueToString).join(""));
+
+
   baseFns.to_json = defFn("to_json", 1, {
     args: [{ label: "value", kinds: ["any"] }],
     returns: { kinds: ["string"] },

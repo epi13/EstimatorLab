@@ -130,7 +130,7 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
     writeLineRich([token("Units:", "out-label")], "muted");
     writeLineRich([
       "  Supported: ",
-      token("in, ft, lf, yd, mi, sf, sy, cf, cy, lb, ton, hr, psi, psf, ksi, %, $", "out-unit"),
+      token("in, ft, yd, mi, sf, sy, cf, cy, lb, ton, oz, s, min, hr, day, wk, yr, mph, psi, psf, ksi, %, $, ea, layer, deg, rad", "out-unit"),
       "."
     ], "muted");
     writeLineRich([
@@ -202,6 +202,15 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("/", "out-op"),
       token("to_ft", "out-fn"),
       ", ",
+      token("to", "out-fn"),
+      token("(x, unit)", "out-op"),
+      "  |  time: ",
+      token("to_sec", "out-fn"),
+      token("/", "out-op"),
+      token("to_min", "out-fn"),
+      token("/", "out-op"),
+      token("to_hr", "out-fn"),
+      ", ",
       token("to_sf", "out-fn"),
       token("/", "out-op"),
       token("to_sy", "out-fn"),
@@ -233,11 +242,106 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("round_up", "out-fn"),
       token("(x,step)", "out-op")
     ], "muted");
+    writeLineRich([
+      "  ",
+      token("scale_linear", "out-fn"),
+      token("(value, old_scale, new_scale)", "out-op"),
+      "  ",
+      token("scale_pow", "out-fn"),
+      token("(value, old_scale, new_scale, k)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("perim_rect", "out-fn"),
+      token("(len, wid)", "out-op"),
+      "  ",
+      token("wall_area", "out-fn"),
+      token("(perim, height)", "out-op"),
+      "  ",
+      token("roof_squares", "out-fn"),
+      token("(area)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("oc_linear_ft", "out-fn"),
+      token("(area, oc)", "out-op"),
+      "  ",
+      token("oc_linear_ft_parallel", "out-fn"),
+      token("(area, height, oc)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("oc_run_count", "out-fn"),
+      token("(height, oc)", "out-op"),
+      "  ",
+      token("oc_count", "out-fn"),
+      token("(length, oc)", "out-op"),
+      "  ",
+      token("coils_needed", "out-fn"),
+      token("(total_lf, coil_len)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("stick_count", "out-fn"),
+      token("(lf, stick_len, waste_pct)", "out-op"),
+      "  ",
+      token("sheet_count", "out-fn"),
+      token("(area, sheet_area, waste_pct)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("paint_gal", "out-fn"),
+      token("(area, coverage_sf_per_gal, coats, waste_pct)", "out-op"),
+      "  ",
+      token("wt_from_cy", "out-fn"),
+      token("(vol, lb_per_cy)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("bar_count", "out-fn"),
+      token("(run_len, bar_len, lap_len, waste_pct)", "out-op"),
+      "  ",
+      token("fastener_count", "out-fn"),
+      token("(items, per_item, waste_pct)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  Framing: ",
+      token("studs_wall studs_perim plates_lf plates_sticks sheets_wall joist_count joist_lf joist_sticks rim_sticks subfloor_sheets", "out-keyword"),
+      "."
+    ], "muted");
+    writeLineRich([
+      "  Drywall: ",
+      token("drywall_sheets drywall_screws tape_rolls corner_bead_sticks mud_gal", "out-keyword"),
+      "."
+    ], "muted");
+    writeLineRich([
+      "  Concrete: ",
+      token("slab_cy wall_cy footing_cy concrete_bags rebar_grid_bars", "out-keyword"),
+      "."
+    ], "muted");
+    writeLineRich([
+      "  Roofing: ",
+      token("shingle_bundles underlayment_rolls ridgecap_bundles", "out-keyword"),
+      "."
+    ], "muted");
+    writeLineRich([
+      "  Earthwork: ",
+      token("trench_cy bank_to_loose loose_to_bank bank_to_compacted compacted_to_bank truck_loads", "out-keyword"),
+      "."
+    ], "muted");
+    writeLineRich([
+      "  Pipe: ",
+      token("pipe_wt_total hanger_count fitting_count pipe_jacket_area", "out-keyword"),
+      "."
+    ], "muted");
     writeLineRich([token("Rate calculus:", "out-label")], "muted");
     writeLineRich([
       "  ",
       token("rate", "out-fn"),
       token("(\"name\", base, {crew:2, eff:0.8})", "out-op"),
+      "  ",
+      token("is_rate", "out-fn"),
+      token("(x)", "out-op"),
       "  ",
       token("rate_eff", "out-fn"),
       token("(r)", "out-op"),
@@ -266,6 +370,9 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       "  ",
       token("rate_factors", "out-fn"),
       token("(r)", "out-op"),
+      "  ",
+      token("rate_factor", "out-fn"),
+      token("(r, \"key\")", "out-op"),
       "  ",
       token("tsim", "out-fn"),
       token("(1 hr, 15 min, \"dt\")", "out-op")
@@ -298,9 +405,9 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
     writeLineRich([token("Unit + cost algebra:", "out-label")], "muted");
     writeLineRich([
       "  ",
-      token("dimkey compat assert_dim simplify", "out-keyword"),
+      token("kind dim dimkey is_dim compat assert_dim uqty simplify", "out-keyword"),
       "  |  ",
-      token("cost_leaf cost_breakdown", "out-keyword")
+      token("is_cost cost_leaf cost_label cost_total cost_breakdown", "out-keyword")
     ], "muted");
     writeLineRich([token("Linear/nonlinear algebra:", "out-label")], "muted");
     writeLineRich([
@@ -374,7 +481,7 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
     writeLineRich([token("Math + logic:", "out-label")], "muted");
     writeLineRich([
       "  ",
-      token("abs min max round ceil floor sqrt pow exp log log10 sin cos tan atan2 clamp", "out-keyword")
+      token("abs min max round ceil floor sqrt pow exp log log10 sin cos tan asin acos atan atan2 clamp not and or", "out-keyword")
     ], "muted");
     writeLineRich([
       "  Comparisons return ",
@@ -439,6 +546,9 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("map", "out-fn"),
       token("(\"####|#S.#|####\")", "out-op"),
       " ",
+      token("dungeon", "out-fn"),
+      token("(seed,w,h,difficulty)", "out-op"),
+      " ",
       token("mw/mh", "out-fn"),
       " ",
       token("mget/mset", "out-fn"),
@@ -462,11 +572,80 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("gedge", "out-fn"),
       token("(g,\"from\",\"to\")", "out-op"),
       "  ",
+      token("gsum", "out-fn"),
+      token("(g)", "out-op"),
+      "  ",
+      token("gcalc", "out-fn"),
+      token("(g)", "out-op"),
+      "  ",
       token("gcalcx", "out-fn"),
       token("(g)", "out-op"),
       "  ",
       token("gtotal", "out-fn"),
       token("(g)", "out-op")
+    ], "muted");
+
+    writeLineRich([token("Geometry:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("pt", "out-fn"),
+      token("(x,y)", "out-op"),
+      "  ",
+      token("dist", "out-fn"),
+      token("(ptA,ptB)", "out-op"),
+      "  ",
+      token("poly", "out-fn"),
+      token("(pt1,pt2,pt3,...)", "out-op"),
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("poly_perim", "out-fn"),
+      token("(poly)", "out-op"),
+      "  ",
+      token("poly_area", "out-fn"),
+      token("(poly)", "out-op"),
+    ], "muted");
+
+    writeLineRich([token("Materials:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("material", "out-fn"),
+      token("(\"name\", {density:..., unit_cost:...})", "out-op"),
+      "  ",
+      token("density", "out-fn"),
+      token("(mat)", "out-op"),
+      "  ",
+      token("weight", "out-fn"),
+      token("(qty, mat)", "out-op"),
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("vol_from_wt", "out-fn"),
+      token("(wt, mat)", "out-op"),
+      "  ",
+      token("cost", "out-fn"),
+      token("(qty, mat)", "out-op"),
+    ], "muted");
+
+    writeLineRich([token("Projects:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("project", "out-fn"),
+      token("(\"name\")", "out-op"),
+      "  ",
+      token("ptask", "out-fn"),
+      token("(p, \"id\", {dur: 4 hr; cost: 100 $})", "out-op"),
+      "  ",
+      token("pdep", "out-fn"),
+      token("(p, \"a\", \"b\")", "out-op"),
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("pschedule", "out-fn"),
+      token("(p)", "out-op"),
+      "  ",
+      token("pcost", "out-fn"),
+      token("(p)", "out-op"),
     ], "muted");
     writeLineRich([token("CSI semantics:", "out-label")], "muted");
     writeLineRich([
@@ -500,6 +679,9 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       " ",
       token("plot", "out-fn"),
       token("(x,y,\"dx,dy|...\",color)", "out-op"),
+      "  ",
+      token("txt", "out-fn"),
+      token("(x,y,\"text\",color[,scale])", "out-op"),
       "  colors: ",
       token(GFX_COLOR_TOKENS.join(", "), "out-unit")
     ], "muted");
@@ -535,7 +717,6 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       " • focus gfx canvas for Space/Arrow controls"
     ], "muted");
     writeLineRich([token("Session commands:", "out-label")], "muted");
-    writeLineRich(["  ", token(":help", "out-command"), " quick help (see :docs)"] , "muted");
     writeLineRich(["  ", token(":docs", "out-command"), " show this page"], "muted");
     writeLineRich(["  ", token(":clear", "out-command"), " clear terminal output"], "muted");
     writeLineRich(["  ", token(":vars", "out-command"), " list variables"], "muted");
@@ -602,6 +783,9 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
     writeLineRich([token("Tips:", "out-label")], "muted");
     writeLineRich([
       "  - Shift+Enter inserts a new line. Enter runs when the statement is complete."
+    ], "muted");
+    writeLineRich([
+      "  - Use the Construction Helpers panel to preview a function and insert a starter template."
     ], "muted");
     writeLineRich([
       "  - Use Up/Down to cycle history; Ctrl/Cmd+L clears the terminal."

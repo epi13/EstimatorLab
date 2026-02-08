@@ -382,8 +382,8 @@ export function parseIfStatement(src){
     else thenLines.push(raw.trimEnd());
   }
 
-  const thenBody = thenLines.join("\n").trim();
-  const elseBody = elseLines.join("\n").trim();
+  const thenBody = thenLines.join("\n").trimEnd();
+  const elseBody = elseLines.join("\n").trimEnd();
   if (!thenBody) throw new Error("if statement missing body");
   return { type:"if", condition, thenBody, elseBody: elseBody || null };
 }
@@ -426,7 +426,7 @@ export function parseForStatement(src){
     if (indent <= baseIndent) continue;
     bodyLines.push(raw.trimEnd());
   }
-  const body = bodyLines.join("\n").trim();
+  const body = bodyLines.join("\n").trimEnd();
   if (!body) throw new Error("for statement missing body");
   return { type:"for", varName, startExpr, endExpr, stepExpr, body };
 }
@@ -460,7 +460,7 @@ export function parseRepeatStatement(src){
     if (indent <= baseIndent) continue;
     bodyLines.push(raw.trimEnd());
   }
-  const body = bodyLines.join("\n").trim();
+  const body = bodyLines.join("\n").trimEnd();
   if (!body) throw new Error("repeat statement requires count and body");
   return { type:"repeat", countExpr, body };
 }

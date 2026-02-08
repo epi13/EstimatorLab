@@ -556,3 +556,32 @@ details.rSub[open] > summary{ border-bottom:1px solid rgba(255,255,255,.06); }
 }
 .helperItem .name{ color:var(--text); }
 .helperItem .detail{ color:var(--muted); font-size:11px; }
+
+.helperPreview{
+  margin-top:10px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  background:rgba(0,0,0,.14);
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.helperPreviewTitle{
+  font-size:12px;
+  font-weight:600;
+  color:var(--text);
+}
+.helperPreviewBlock{ display:flex; flex-direction:column; gap:6px; }
+.helperCode{
+  margin:0;
+  padding:10px;
+  border-radius:10px;
+  background:rgba(0,0,0,.22);
+  border:1px solid rgba(255,255,255,.06);
+  color:var(--text);
+  font-size:12px;
+  line-height:1.35;
+  white-space:pre-wrap;
+  word-break:break-word;
+}

@@ -31,6 +31,11 @@ export function createUi(state){
   const helperClear = document.getElementById('helperClear');
   const helperList = document.getElementById('helperList');
   const helperHint = document.getElementById('helperHint');
+  const helperPreview = document.getElementById('helperPreview');
+  const helperPreviewTitle = document.getElementById('helperPreviewTitle');
+  const helperPreviewDetail = document.getElementById('helperPreviewDetail');
+  const helperPreviewTemplate = document.getElementById('helperPreviewTemplate');
+  const helperPreviewExample = document.getElementById('helperPreviewExample');
 
   function nowStamp(){
     const d = new Date();
@@ -126,6 +131,11 @@ export function createUi(state){
     helperClear,
     helperList,
     helperHint,
+    helperPreview,
+    helperPreviewTitle,
+    helperPreviewDetail,
+    helperPreviewTemplate,
+    helperPreviewExample,
     nowStamp,
     writeLine,
     writeLineRich,

@@ -67,6 +67,65 @@ export function createTests({
       { name: "circle area", expr: "area_circle(10 ft)", expect: expectNear(Math.PI * 25) },
       { name: "pipe weight", expr: "pipe_wt(2, 40, 10 ft)", expect: expectQty(36.5, "wt") },
       { name: "pipe weight alt", expr: "pipe_wt(1, 80, 5 ft)", expect: expectQty(10.85, "wt") },
+      { name: "scale linear", expr: "scale_linear(100, 10, 20)", expect: 200 },
+      { name: "scale pow", expr: "scale_pow(100, 10, 20, 0.5)", expect: expectNear(100 * Math.sqrt(2)) },
+
+      { name: "rectangle perimeter", expr: "perim_rect(10 ft, 5 ft)", expect: expectQty(30, "len") },
+      { name: "wall area from perim", steps: ["p = perim_rect(10 ft, 5 ft)", "wall_area(p, 8 ft)"], expect: expectQty(240, "area") },
+
+      { name: "oc linear ft", expr: "oc_linear_ft(500 sf, 6 in)", expect: expectQty(1000, "len") },
+      { name: "oc run count", expr: "oc_run_count(8 ft, 6 in)", expect: 16 },
+      { name: "oc count", expr: "oc_count(16 ft, 16 in)", expect: expectQty(13, "count") },
+      { name: "coils needed", expr: "coils_needed(500 ft, 250 ft)", expect: 2 },
+      { name: "oc linear ft parallel", expr: "oc_linear_ft_parallel(500 sf, 8 ft, 6 in)", expect: expectQty(1000, "len") },
+
+      { name: "stick count", expr: "stick_count(100 ft, 8 ft, 12)", expect: 14 },
+      { name: "sheet count", expr: "sheet_count(1000 sf, 32 sf, 10)", expect: 35 },
+
+      { name: "roof squares", expr: "roof_squares(2400 sf)", expect: 24 },
+      { name: "paint gallons", expr: "paint_gal(1000 sf, 350, 2, 10)", expect: expectNear((1000 * 2 / 350) * 1.1) },
+      { name: "weight from cy", expr: "wt_from_cy(27 cf, 4000)", expect: expectQty(4000, "wt") },
+      { name: "bar count", expr: "bar_count(100 ft, 20 ft, 1 ft, 0)", expect: expectQty(6, "count") },
+      { name: "fastener count", expr: "fastener_count(100 ea, 4, 10)", expect: expectQty(440, "count") },
+
+      { name: "studs wall default oc + waste", expr: "studs_wall(16 ft)", expect: expectQty(15, "count") },
+      { name: "studs wall qty waste as ratio", expr: "studs_wall(16 ft, 16 in, 10%)", expect: expectQty(15, "count") },
+      { name: "studs perim defaults", expr: "studs_perim(60 ft)", expect: expectQty(54, "count") },
+      { name: "plates lf defaults", expr: "plates_lf(40 ft)", expect: expectQty(120, "len") },
+      { name: "plates sticks defaults", expr: "plates_sticks(40 ft)", expect: expectQty(17, "count") },
+      { name: "wall sheets defaults", expr: "sheets_wall(40 ft, 8 ft)", expect: expectQty(11, "count") },
+      { name: "joist count defaults", expr: "joist_count(16 ft)", expect: expectQty(13, "count") },
+      { name: "joist lf defaults", expr: "joist_lf(16 ft, 10 ft)", expect: expectQty(130, "len") },
+      { name: "joist sticks defaults", expr: "joist_sticks(16 ft, 10 ft)", expect: expectQty(19, "count") },
+      { name: "rim sticks defaults", expr: "rim_sticks(40 ft)", expect: expectQty(6, "count") },
+      { name: "subfloor sheets defaults", expr: "subfloor_sheets(20 ft, 20 ft)", expect: expectQty(14, "count") },
+
+      { name: "drywall sheets defaults", expr: "drywall_sheets(1000 sf)", expect: expectQty(23, "count") },
+      { name: "drywall screws defaults", expr: "drywall_screws(drywall_sheets(1000 sf))", expect: expectQty(1620, "count") },
+      { name: "tape rolls defaults", expr: "tape_rolls(1200 ft)", expect: expectQty(3, "count") },
+      { name: "corner bead sticks defaults", expr: "corner_bead_sticks(160 ft)", expect: expectQty(18, "count") },
+      { name: "mud gallons", expr: "mud_gal(1000 sf, 100, 3, 10)", expect: expectNear((1000 * 3 / 100) * 1.1) },
+
+      { name: "slab cy helper", expr: "slab_cy(40 ft, 28 ft, 4 in)", expect: expectQty(392, "vol") },
+      { name: "wall cy helper", expr: "wall_cy(120 ft, 8 ft, 8 in)", expect: expectQty(672, "vol") },
+      { name: "footing cy helper", expr: "footing_cy(160 ft, 24 in, 12 in)", expect: expectQty(336, "vol") },
+      { name: "concrete bags defaults", expr: "concrete_bags(27 cf)", expect: expectQty(45, "count") },
+      { name: "rebar grid bars defaults", expr: "rebar_grid_bars(40 ft, 28 ft, 12 in)", expect: expectQty(178, "count") },
+
+      { name: "shingle bundles defaults", expr: "shingle_bundles(2400 sf)", expect: expectQty(80, "count") },
+      { name: "underlayment rolls defaults", expr: "underlayment_rolls(2400 sf)", expect: expectQty(7, "count") },
+      { name: "ridgecap bundles defaults", expr: "ridgecap_bundles(120 ft)", expect: expectQty(4, "count") },
+
+      { name: "bank to loose", expr: "to_cy(bank_to_loose(100 cy, 20))", expect: expectNear(120) },
+      { name: "loose to bank", expr: "to_cy(loose_to_bank(120 cy, 20))", expect: expectNear(100) },
+      { name: "bank to compacted", expr: "to_cy(bank_to_compacted(100 cy, 10))", expect: expectNear(90) },
+      { name: "compacted to bank", expr: "to_cy(compacted_to_bank(90 cy, 10))", expect: expectNear(100) },
+      { name: "truck loads", expr: "truck_loads(100 cy, 10 cy, 0)", expect: expectQty(10, "count") },
+
+      { name: "pipe weight total", expr: "pipe_wt_total(2, 40, 120 ft, 5)", expect: expectQty(459.9, "wt", 1e-6) },
+      { name: "hanger count", expr: "hanger_count(240 ft, 8 ft, 5)", expect: expectQty(33, "count") },
+      { name: "fitting count", expr: "fitting_count(300 ft, 6, 10)", expect: expectQty(20, "count") },
+      { name: "pipe jacket area", expr: "to_sf(pipe_jacket_area(120 ft, 4 in, 10))", expect: expectNear(Math.PI * (4/12) * 120 * 1.1) },
       { name: "board feet", expr: "bf(2, 6, 8, 12)", expect: 96 },
       { name: "mil unit", expr: "1000 mil", expect: expectQty(1/12, "len") },
       { name: "square inches", expr: "144 in2", expect: expectQty(1, "area") },
@@ -90,7 +149,7 @@ export function createTests({
       { name: "currency composite formatting", expr: "unit(1200 $, 300 sf)", expect: expectQty(4, "cur*len^-2") },
       { name: "clamp qty", expr: "clamp(12 ft, 0 ft, 10 ft)", expect: expectQty(10, "len") },
       { name: "user solution", steps: ["so crew_cost(rate, hours) = rate * hours", "crew_cost(85, 12)"], expect: 1020 },
-      { name: "user solution with units", steps: ["so wall_area(len, ht) = len * ht", "wall_area(12 ft, 8 ft)"], expect: expectQty(96, "area") },
+      { name: "user solution with units", steps: ["so wall_area_calc(len, ht) = len * ht", "wall_area_calc(12 ft, 8 ft)"], expect: expectQty(96, "area") },
       { name: "define meta function", steps: ["define(\"adder\", \"a,b\", \"a+b\")", "adder(4, 6)"], expect: 10 },
       { name: "methods listing", steps: ["define(\"double\", \"x\", \"x*2\")", "methods()"], expect: "double" },
       { name: "vars listing", steps: ["a = 1", "b = 2", "vars()"], expect: "a, b" },
@@ -781,6 +840,28 @@ export function createTests({
           "csi_norm(\"06-11-16\")",
         ],
         expect: "06 11 16",
+      },
+      {
+        name: "csi_norm preserves dot-subcodes",
+        steps: [
+          "csi_norm(\"03 01 30.51\")",
+        ],
+        expect: "03 01 30.51",
+      },
+      {
+        name: "csi_title looks up known nodes",
+        steps: [
+          "csi_title(\"03 01 30.51\")",
+        ],
+        expect: "Cleaning of Cast-in-Place Concrete",
+      },
+      {
+        name: "csi_node returns structured info",
+        steps: [
+          "n = csi_node(\"03 01 30.51\")",
+          "field(n, \"parent\")",
+        ],
+        expect: "03 01 30",
       },
       {
         name: "csi_rollup sums by CSI",

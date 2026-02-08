@@ -1,5 +1,6 @@
 // Doom demo - Pure EST DSL showcase
-// This demonstrates the EST DSL capabilities for graphics and animation
+// This demonstrates the EST DSL capabilities for an engineering grade graphical and temporal  representation of what the app can do. Since the helpers and built-in relate to spatial and temporal features with granular layers. 
+// This should take full advantage of as many of the construction helpers, assemblies, solutions, to continue to refine the level. Upgrade built-ins and helpers needed as long as it is inline with the est DSL. 
 
 const DOOM_W = 256;
 const DOOM_H = 144;
@@ -7,7 +8,7 @@ const DOOM_SCALE = 3;
 const DOOM_DEFAULT_FPS = 18;
 
 export const DOOM_DEMO_SCRIPT = `
-# Doom level - playable raycaster in EST DSL
+# Doom level - playable game in EST DSL
 # Controls:
 # - Click the canvas to capture the mouse (pointer lock)
 # - Mouse: look/turn
@@ -34,6 +35,7 @@ so lerp(a, b, t) = a + (b - a) * t;
 # Scene helpers
 so tile_solid(t) = if(t == 1 || t == 2, 1, 0);
 so tile_wall(t) = if(t == 1, 1, if(t == 2, 2, 0));
+so tile_wallish(t) = if(t == 1 || t == 2, 1, 0);
 
 # Deterministic PRNG (0..1)
 so rnd(x) = frac(sin(x * 12.9898 + 78.233) * 43758.5453);
@@ -51,6 +53,8 @@ if has("doom_init") == 0:
   doom_level = 0
   doom_regen = 1
   doom_money = 0 $
+  doom_view = 0
+  doom_metrics_dirty = 1
 
   assy doom_profile = { tile = 2 ft; walk = 5 mph; run = 9 mph; accel = 28 ft / (s^2); friction = 6 / s }
   assy pistol = { dmg = 18; range = 45 ft; cooldown = 0.18 s; spread = 2 deg }
@@ -80,17 +84,15 @@ bg("transparent");
 doom_use_cd = max(0, doom_use_cd - 1)
 doom_shoot_cd = max(0, doom_shoot_cd - 1)
 
+if key_e == 1 && has("doom_view_toggle") == 0: doom_view_toggle = 1; doom_view = 1 - doom_view else: if key_e == 0: unset("doom_view_toggle")
+
 # Input
 sens = 0.0022
 turn = mouse_dx * sens + (key_right - key_left) * 0.045
 doom_yaw = doom_yaw + turn
 
 # Weapon swap (RMB)
-if mouse_btn2 == 1 && has("doom_swap") == 0:
-  doom_swap = 1
-  doom_weapon = if(doom_weapon == pistol, shotgun, pistol)
-else:
-  if mouse_btn2 == 0: unset("doom_swap") else: 0
+if mouse_btn2 == 1 && has("doom_swap") == 0: doom_swap = 1; doom_weapon = if(doom_weapon == pistol, shotgun, pistol) else: if mouse_btn2 == 0: unset("doom_swap") else: 0
 
 # Movement model (tiles/s) tuned via units + assemblies
 walk = field(doom_profile, "walk")
@@ -118,12 +120,7 @@ doom_vx = doom_vx * damp
 doom_vy = doom_vy * damp
 
 vmag = sqrt(doom_vx * doom_vx + doom_vy * doom_vy)
-if vmag > max_spd:
-  sc = max_spd / max(0.0001, vmag)
-  doom_vx = doom_vx * sc
-  doom_vy = doom_vy * sc
-else:
-  0
+if vmag > max_spd: sc = max_spd / max(0.0001, vmag); doom_vx = doom_vx * sc; doom_vy = doom_vy * sc else: 0
 
 # Collision (radius)
 r = 0.18
@@ -145,34 +142,16 @@ if t_under == 6: doom_hp = min(100, doom_hp + 25); mset(doom_map, ftx, fty, 0) e
 if t_under == 7: doom_ammo = min(99, doom_ammo + 12); mset(doom_map, ftx, fty, 0) else: 0
 
 # Stairs depth
-if t_under == 10 && doom_dead == 0:
-  doom_level = doom_level + 1
-  doom_key = 0
-  doom_regen = 1
-else:
-  0
-if t_under == 11 && doom_dead == 0:
-  doom_level = max(0, doom_level - 1)
-  doom_key = 0
-  doom_regen = 1
-else:
-  0
+if t_under == 10 && doom_dead == 0: doom_level = doom_level + 1; doom_key = 0; doom_regen = 1 else: 0
+if t_under == 11 && doom_dead == 0: doom_level = max(0, doom_level - 1); doom_key = 0; doom_regen = 1 else: 0
 
-if doom_regen == 1:
-  doom_map = dungeon(doom_seed + doom_level * 101, 30, 22, doom_level)
-  doom_px = mspawnx(doom_map)
-  doom_py = mspawny(doom_map)
-  doom_vx = 0
-  doom_vy = 0
-  doom_regen = 0
-else:
-  0
+if doom_regen == 1: doom_map = dungeon(doom_seed + doom_level * 101, 30, 22, doom_level); doom_px = mspawnx(doom_map); doom_py = mspawny(doom_map); doom_vx = 0; doom_vy = 0; doom_regen = 0; doom_metrics_dirty = 1 else: 0
 
 # Use: open doors in front
 ux = floor(doom_px + cos(doom_yaw) * 1.0)
 uy = floor(doom_py + sin(doom_yaw) * 1.0)
 t_front = mget(doom_map, ux, uy)
-if key_space == 1 && doom_use_cd == 0 && t_front == 2: mset(doom_map, ux, uy, 0); doom_use_cd = 10 else: 0
+if key_space == 1 && doom_use_cd == 0 && t_front == 2: mset(doom_map, ux, uy, 0); doom_use_cd = 10; doom_metrics_dirty = 1 else: 0
 
 # Shoot: raycast for monster tiles
 cooldown = field(doom_weapon, "cooldown")
@@ -190,13 +169,7 @@ if mouse_btn0 == 1 && doom_shoot_cd == 0 && doom_ammo > 0 && doom_dead == 0 && d
     rx = doom_px + cos(aim) * d
     ry = doom_py + sin(aim) * d
     tt = mget(doom_map, rx, ry)
-    if hit == 0 && tt == 5:
-      mset(doom_map, floor(rx), floor(ry), 0)
-      doom_kills = doom_kills + 1
-      doom_money = doom_money + 25 $
-      hit = 1
-    else:
-      0
+    if hit == 0 && tt == 5: mset(doom_map, floor(rx), floor(ry), 0); doom_kills = doom_kills + 1; doom_money = doom_money + 25 $; hit = 1 else: 0
     if hit == 0 && tile_solid(tt) == 1: hit = 2 else: 0
 
 # Monster behavior (sampled movement) + proximity pressure
@@ -215,11 +188,7 @@ for i in 0..(mn - 1):
     stepy = sign(dy)
     tx = mx + if(adx > ady, stepx, 0)
     ty = my + if(adx > ady, 0, stepy)
-    if mget(doom_map, tx, ty) == 0:
-      mset(doom_map, mx, my, 0)
-      mset(doom_map, tx, ty, 5)
-    else:
-      0
+    if mget(doom_map, tx, ty) == 0: mset(doom_map, mx, my, 0); mset(doom_map, tx, ty, 5) else: 0
   else:
     0
 
@@ -235,6 +204,44 @@ if doom_hp <= 0: doom_dead = 1 else: 0
 # Win condition: reach exit with key
 if t_under == 4 && doom_key == 1 && doom_dead == 0: doom_win = if(doom_level >= 3, 1, 0) else: 0
 
+if doom_metrics_dirty == 1:
+  doom_wall_edges = 0
+  doom_wall_line_tiles = 0
+  doom_floor_tiles = 0
+  mw0 = mw(doom_map)
+  mh0 = mh(doom_map)
+  for y in 0..(mh0 - 1):
+    for x in 0..(mw0 - 1):
+      tt = mget(doom_map, x, y)
+      if tile_wallish(tt) == 0: doom_floor_tiles = doom_floor_tiles + 1 else: 0
+      if tile_wallish(tt) == 1:
+        if tile_wallish(mget(doom_map, x + 1, y)) == 0 || tile_wallish(mget(doom_map, x - 1, y)) == 0 || tile_wallish(mget(doom_map, x, y + 1)) == 0 || tile_wallish(mget(doom_map, x, y - 1)) == 0: doom_wall_line_tiles = doom_wall_line_tiles + 1 else: 0
+        if tile_wallish(mget(doom_map, x + 1, y)) == 0: doom_wall_edges = doom_wall_edges + 1 else: 0
+        if tile_wallish(mget(doom_map, x - 1, y)) == 0: doom_wall_edges = doom_wall_edges + 1 else: 0
+        if tile_wallish(mget(doom_map, x, y + 1)) == 0: doom_wall_edges = doom_wall_edges + 1 else: 0
+        if tile_wallish(mget(doom_map, x, y - 1)) == 0: doom_wall_edges = doom_wall_edges + 1 else: 0
+      else:
+        0
+
+  doom_wall_h = 8 ft
+  doom_wall_lf = doom_wall_line_tiles * tile
+  doom_wall_face_lf = doom_wall_edges * tile
+  doom_wall_area = doom_wall_face_lf * doom_wall_h
+
+  doom_studs = studs_wall(doom_wall_lf, 16 in, 10)
+  doom_plates = plates_lf(doom_wall_lf)
+  doom_sheathing = sheets_wall(doom_wall_lf, doom_wall_h, 32 sf, 10, 1)
+  doom_drywall = drywall_sheets(doom_wall_area)
+  doom_screws = drywall_screws(doom_drywall)
+  doom_paint = paint_gal(doom_wall_area, 350, 2, 10)
+  doom_mud = mud_gal(doom_wall_area, 100, 3, 10)
+
+  doom_slab_area = doom_floor_tiles * tile * tile
+  doom_slab_cy = to_cy(concrete_cy(doom_slab_area, 4 in))
+  doom_metrics_dirty = 0
+else:
+  0
+
 # Camera / rendering params
 mid = floor(view_h / 2)
 fov = 1.05
@@ -243,18 +250,91 @@ ray_step = 0.08
 ray_steps = ceil(max_d / ray_step)
 ray_col_step = 1
 
-# Floor + ceiling
-fill(0, 0, w, mid, "muted")
-fill(0, mid, w, view_h - mid, "text")
+if doom_view == 0:
+  fill(0, 0, w, mid, "muted")
+  fill(0, mid, w, view_h - mid, "text")
+  raycast(doom_map, doom_px, doom_py, doom_yaw, fov, view_h, max_d, ray_step, ray_steps, ray_col_step)
+  cxh = floor(w / 2)
+  cyh = floor(view_h / 2)
+  line(cxh - 3, cyh, cxh + 3, cyh, "ok")
+  line(cxh, cyh - 3, cxh, cyh + 3, "ok")
+else:
+  fill(0, 0, w, view_h, "muted")
+  bs = 6
+  mw1 = mw(doom_map)
+  mh1 = mh(doom_map)
+  bx = floor((w - mw1 * bs) / 2)
+  by = floor((view_h - mh1 * bs) / 2)
+  for y in 0..(mh1 - 1):
+    for x in 0..(mw1 - 1):
+      tt = mget(doom_map, x, y)
+      px = bx + x * bs
+      py = by + y * bs
+      if tt == 1:
+        fill(px, py, bs, bs, "accent")
+        fill(px + 1, py + 1, bs - 2, bs - 2, "muted")
+        fill(px + 2, py + 2, bs - 4, bs - 4, "text")
+        line(px + 2, py + 1, px + 2, py + bs - 2, "muted")
+        line(px + 4, py + 1, px + 4, py + bs - 2, "muted")
+      else:
+        if tt == 2:
+          fill(px, py, bs, bs, "warn")
+          fill(px + 1, py + 1, bs - 2, bs - 2, "muted")
+          line(px + 1, py + 1, px + bs - 2, py + bs - 2, "warn")
+        else:
+          if tile_wallish(tt) == 0: 0 else: 0
 
-# Raycast walls (fast builtin)
-raycast(doom_map, doom_px, doom_py, doom_yaw, fov, view_h, max_d, ray_step, ray_steps, ray_col_step)
+      if tt == 3:
+        fill(px + 2, py + 2, 2, 2, "warn")
+      else:
+        if tt == 4:
+          fill(px + 2, py + 2, 2, 2, "ok")
+        else:
+          if tt == 5:
+            fill(px + 2, py + 2, 2, 2, "err")
+          else:
+            0
 
-# Crosshair
-cxh = floor(w / 2)
-cyh = floor(view_h / 2)
-line(cxh - 3, cyh, cxh + 3, cyh, "ok")
-line(cxh, cyh - 3, cxh, cyh + 3, "ok")
+  ppx = floor(bx + doom_px * bs)
+  ppy = floor(by + doom_py * bs)
+  fill(ppx - 1, ppy - 1, 3, 3, "accent-2")
+  line(ppx, ppy, ppx + cos(doom_yaw) * 6, ppy + sin(doom_yaw) * 6, "accent-2")
+
+  lx = 2
+  ly = 2
+  fill(lx, ly, 118, 56, "muted")
+  rect(lx, ly, 118, 56, "text")
+  txt(lx + 4, ly + 4, "LEGEND", "text", 1)
+  fill(lx + 4, ly + 14, 6, 6, "accent")
+  txt(lx + 14, ly + 14, "WALL", "text", 1)
+  fill(lx + 4, ly + 22, 6, 6, "warn")
+  txt(lx + 14, ly + 22, "DOOR", "text", 1)
+  fill(lx + 4, ly + 30, 6, 6, "err")
+  txt(lx + 14, ly + 30, "MONSTER", "text", 1)
+  fill(lx + 4, ly + 38, 6, 6, "ok")
+  txt(lx + 14, ly + 38, "EXIT", "text", 1)
+  fill(lx + 52, ly + 14, 6, 6, "accent")
+  txt(lx + 62, ly + 14, "SHEATH", "text", 1)
+  fill(lx + 52, ly + 22, 6, 6, "muted")
+  txt(lx + 62, ly + 22, "FRAME", "text", 1)
+  fill(lx + 52, ly + 30, 6, 6, "text")
+  txt(lx + 62, ly + 30, "DRYW", "text", 1)
+
+  tx = w - 124
+  ty = 2
+  fill(tx, ty, 122, 88, "muted")
+  rect(tx, ty, 122, 88, "text")
+  txt(tx + 4, ty + 4, "TAKEOFF", "text", 1)
+  txt(tx + 4, ty + 14, cat("WALL ", str(doom_wall_lf)), "text", 1)
+  txt(tx + 4, ty + 22, cat("AREA ", str(doom_wall_area)), "text", 1)
+  txt(tx + 4, ty + 30, cat("STUD ", str(doom_studs)), "text", 1)
+  txt(tx + 4, ty + 38, cat("PLATE ", str(doom_plates)), "text", 1)
+  txt(tx + 4, ty + 46, cat("SHEATH ", str(doom_sheathing)), "text", 1)
+  txt(tx + 4, ty + 54, cat("DRYW ", str(doom_drywall)), "text", 1)
+  txt(tx + 4, ty + 62, cat("SCREW ", str(doom_screws)), "text", 1)
+  txt(tx + 4, ty + 70, cat("MUD ", round(doom_mud * 10) / 10, " gal"), "text", 1)
+  txt(tx + 64, ty + 70, cat("PAINT ", round(doom_paint * 10) / 10, " gal"), "text", 1)
+  txt(tx + 4, ty + 78, cat("SLAB ", round(doom_slab_cy * 100) / 100, " cy"), "text", 1)
 
 # HUD
 hy = view_h
@@ -278,23 +358,28 @@ for k in 0..5:
 badge = if(doom_dead == 1, "err", if(doom_win == 1, "ok", if(doom_key == 1, "warn", "accent-2")))
 fill(w - 7, hy + 3, 5, 7, badge)
 
-# Mini-map (top-left)
-mm_s = 2
-mm_x = 2
-mm_y = 2
-mm_r = 6
-mx0 = floor(doom_px) - mm_r
-my0 = floor(doom_py) - mm_r
-for my in my0..(my0 + mm_r * 2):
-  for mx in mx0..(mx0 + mm_r * 2):
-    tt = mget(doom_map, mx, my)
-    cc = if(tt == 1, "muted", if(tt == 2, "warn", if(tt == 4, "ok", if(tt == 3, "warn", if(tt == 5, "err", if(tt == 6, "ok", if(tt == 7, "accent-2", if(tt == 8 || tt == 9, "warn", if(tt == 10 || tt == 11, "accent", "transparent")))))))))
-    ix = mx - mx0
-    iy = my - my0
-    if cc != "transparent": fill(mm_x + ix * mm_s, mm_y + iy * mm_s, mm_s, mm_s, cc) else: 0
-pxm = floor(mm_x + (doom_px - mx0) * mm_s)
-pym = floor(mm_y + (doom_py - my0) * mm_s)
-fill(pxm, pym, 2, 2, "accent")
+txt(w - 74, hy + 2, cat("E ", if(doom_view == 1, "BP", "3D")), "text", 1)
+
+if doom_view == 0:
+  # Mini-map (top-left)
+  mm_s = 2
+  mm_x = 2
+  mm_y = 2
+  mm_r = 6
+  mx0 = floor(doom_px) - mm_r
+  my0 = floor(doom_py) - mm_r
+  for my in my0..(my0 + mm_r * 2):
+    for mx in mx0..(mx0 + mm_r * 2):
+      tt = mget(doom_map, mx, my)
+      cc = if(tt == 1, "muted", if(tt == 2, "warn", if(tt == 4, "ok", if(tt == 3, "warn", if(tt == 5, "err", if(tt == 6, "ok", if(tt == 7, "accent-2", if(tt == 8 || tt == 9, "warn", if(tt == 10 || tt == 11, "accent", "transparent")))))))))
+      ix = mx - mx0
+      iy = my - my0
+      if cc != "transparent": fill(mm_x + ix * mm_s, mm_y + iy * mm_s, mm_s, mm_s, cc) else: 0
+  pxm = floor(mm_x + (doom_px - mx0) * mm_s)
+  pym = floor(mm_y + (doom_py - my0) * mm_s)
+  fill(pxm, pym, 2, 2, "accent")
+else:
+  0
 
 # Export a deterministic hash for tests
 doom_hash = floor((abs(sin(time * 3.1 + doom_px * 1.7 + doom_py * 2.3 + doom_yaw)) + 0.5) * 1000000) + frame * 1000003
@@ -304,7 +389,7 @@ set("doom_hash", doom_hash)
 export function runDoomDemo({ gfx, writeLine, writeInputEcho }) {
   writeLine("Doom level - playable EST DSL raycaster", "muted");
   writeLine("Click the canvas to capture the mouse.", "muted");
-  writeLine("Controls: Mouse look • WASD move/strafe • Shift run • Space use • LMB shoot", "muted");
+  writeLine("Controls: Mouse look • WASD move/strafe • Shift run • Space use • LMB shoot • E view", "muted");
   writeLine("Loop UI: P play/pause (when mouse not captured) • Arrows step/fps • R reset", "muted");
 
   if (typeof gfx.setActiveBackend === "function"){

@@ -40,6 +40,11 @@ export function createInputHandlers({
     helperClear,
     helperList,
     helperHint,
+    helperPreview,
+    helperPreviewTitle,
+    helperPreviewDetail,
+    helperPreviewTemplate,
+    helperPreviewExample,
     writeLine,
     writeInputEcho,
     setStatus,
@@ -622,10 +627,70 @@ export function createInputHandlers({
       { name: "line", category: "Estimating", detail: "Build a cost line item assembly", insertText: "line(" },
       { name: "rollup", category: "Estimating", detail: "Roll up line totals", insertText: "rollup(" },
 
+      { name: "scale_linear", category: "Scaling", detail: "Scale a value by (new/old)", insertText: "scale_linear(", insertTemplate: true, template: "scale_linear(value, old_scale, new_scale)", example: "scale_linear(12, 2500, 4000)" },
+      { name: "scale_pow", category: "Scaling", detail: "Power-law scaling: value × (new/old)^k", insertText: "scale_pow(", insertTemplate: true, template: "scale_pow(value, old_scale, new_scale, k)", example: "scale_pow(120000 $, 2500, 4000, 0.8)" },
+
+      { name: "roof_squares", category: "Staples", detail: "Roofing squares (area / 100 sf)", insertText: "roof_squares(", template: "roof_squares(area)", example: "roof_squares(2400 sf)" },
+      { name: "paint_gal", category: "Staples", detail: "Paint gallons from area, coverage, coats, waste", insertText: "paint_gal(", insertTemplate: true, template: "paint_gal(area, coverage_sf_per_gal, coats, waste_pct)", example: "paint_gal(1800 sf, 350, 2, 10)" },
+      { name: "wt_from_cy", category: "Staples", detail: "Weight from volume (cy) and density (lb/cy)", insertText: "wt_from_cy(", insertTemplate: true, template: "wt_from_cy(vol, lb_per_cy)", example: "to_ton(wt_from_cy(12 cy, 3000))" },
+      { name: "bar_count", category: "Staples", detail: "Rebar sticks from run length, stick length, lap, waste", insertText: "bar_count(", insertTemplate: true, template: "bar_count(run_len, bar_len, lap_len, waste_pct)", example: "bar_count(420 ft, 20 ft, 2 ft, 5)" },
+      { name: "fastener_count", category: "Staples", detail: "Fasteners from items × per-item, w/ waste", insertText: "fastener_count(", insertTemplate: true, template: "fastener_count(items, per_item, waste_pct)", example: "fastener_count(120 ea, 6, 10)" },
+
+      { name: "studs_wall", category: "Framing", detail: "Wall studs from length (defaults: 16 in OC, 10% waste)", insertText: "studs_wall(", insertTemplate: true, template: "studs_wall(length, oc, waste_pct)", example: "studs_wall(32 ft)" },
+      { name: "studs_perim", category: "Framing", detail: "Perimeter studs (defaults: 16 in OC, +4 corners, 10% waste)", insertText: "studs_perim(", insertTemplate: true, template: "studs_perim(perim, oc, waste_pct, corner_fudge)", example: "studs_perim(perim_rect(40 ft, 28 ft))" },
+      { name: "plates_lf", category: "Framing", detail: "Plate linear footage (defaults: double top + single bottom)", insertText: "plates_lf(", insertTemplate: true, template: "plates_lf(perim, top_plates, bottom_plates)", example: "plates_lf(perim_rect(40 ft, 28 ft))" },
+      { name: "plates_sticks", category: "Framing", detail: "Plate sticks from perimeter (defaults: 8 ft sticks, 12% waste)", insertText: "plates_sticks(", insertTemplate: true, template: "plates_sticks(perim, top_plates, bottom_plates, stick_len, waste_pct)", example: "plates_sticks(perim_rect(40 ft, 28 ft))" },
+      { name: "sheets_wall", category: "Framing", detail: "Wall sheets from length × height (defaults: 4x8, 10% waste)", insertText: "sheets_wall(", insertTemplate: true, template: "sheets_wall(length, height, sheet_area, waste_pct, layers)", example: "sheets_wall(48 ft, 10 ft)" },
+      { name: "joist_count", category: "Framing", detail: "Joist count from run length and OC (defaults: 16 in OC)", insertText: "joist_count(", insertTemplate: true, template: "joist_count(run_len, oc)", example: "joist_count(40 ft)" },
+      { name: "joist_lf", category: "Framing", detail: "Joist linear feet from run length, span, and OC", insertText: "joist_lf(", insertTemplate: true, template: "joist_lf(run_len, span, oc)", example: "joist_lf(40 ft, 28 ft)" },
+      { name: "joist_sticks", category: "Framing", detail: "Joist sticks from run length × span (defaults: 8 ft sticks, 12% waste)", insertText: "joist_sticks(", insertTemplate: true, template: "joist_sticks(run_len, span, oc, stick_len, waste_pct)", example: "joist_sticks(40 ft, 28 ft)" },
+      { name: "rim_sticks", category: "Framing", detail: "Rim board sticks from perimeter (defaults: 8 ft sticks, 12% waste)", insertText: "rim_sticks(", insertTemplate: true, template: "rim_sticks(perim, stick_len, waste_pct)", example: "rim_sticks(perim_rect(40 ft, 28 ft))" },
+      { name: "subfloor_sheets", category: "Framing", detail: "Subfloor sheets from L×W (defaults: 4x8, 10% waste)", insertText: "subfloor_sheets(", insertTemplate: true, template: "subfloor_sheets(len, wid, sheet_area, waste_pct, layers)", example: "subfloor_sheets(40 ft, 28 ft)" },
+
+      { name: "drywall_sheets", category: "Drywall", detail: "Drywall sheets from area (defaults: 4x12, 10% waste)", insertText: "drywall_sheets(", insertTemplate: true, template: "drywall_sheets(area, sheet_area, waste_pct, layers)", example: "drywall_sheets(1000 sf)" },
+      { name: "drywall_screws", category: "Drywall", detail: "Drywall screws from sheet count (defaults: 16\" OC, 8\" edge / 12\" field)", insertText: "drywall_screws(", insertTemplate: true, template: "drywall_screws(sheets, studs_oc, sheet_w, sheet_h, edge_spacing, field_spacing, waste_pct)", example: "drywall_screws(drywall_sheets(1000 sf))" },
+      { name: "tape_rolls", category: "Drywall", detail: "Tape rolls from seam linear feet (default: 500 ft roll, 10% waste)", insertText: "tape_rolls(", insertTemplate: true, template: "tape_rolls(seam_lf, roll_len, waste_pct)", example: "tape_rolls(1200 ft)" },
+      { name: "corner_bead_sticks", category: "Drywall", detail: "Corner bead sticks from corner LF (default: 10 ft sticks, 10% waste)", insertText: "corner_bead_sticks(", insertTemplate: true, template: "corner_bead_sticks(corner_lf, stick_len, waste_pct)", example: "corner_bead_sticks(160 ft)" },
+      { name: "mud_gal", category: "Drywall", detail: "Joint compound gallons from area, coverage, coats, waste", insertText: "mud_gal(", insertTemplate: true, template: "mud_gal(area, coverage_sf_per_gal, coats, waste_pct)", example: "mud_gal(1000 sf, 100, 3, 10)" },
+
+      { name: "slab_cy", category: "Concrete", detail: "Slab volume (defaults: 5% waste; scalar thickness is inches)", insertText: "slab_cy(", insertTemplate: true, template: "slab_cy(len, wid, thickness_in, waste_pct)", example: "to_cy(slab_cy(40 ft, 28 ft, 4 in))" },
+      { name: "wall_cy", category: "Concrete", detail: "Wall volume (defaults: 5% waste; scalar thickness is inches)", insertText: "wall_cy(", insertTemplate: true, template: "wall_cy(length, height, thickness_in, waste_pct)", example: "to_cy(wall_cy(120 ft, 8 ft, 8 in))" },
+      { name: "footing_cy", category: "Concrete", detail: "Footing volume (defaults: 5% waste; scalar width/depth are inches)", insertText: "footing_cy(", insertTemplate: true, template: "footing_cy(length, width_in, depth_in, waste_pct)", example: "to_cy(footing_cy(160 ft, 24 in, 12 in))" },
+      { name: "concrete_bags", category: "Concrete", detail: "Concrete bags from volume (default yield: 0.6 cf per bag)", insertText: "concrete_bags(", insertTemplate: true, template: "concrete_bags(vol, bag_yield_cf, waste_pct)", example: "concrete_bags(slab_cy(10 ft, 10 ft, 4 in))" },
+      { name: "rebar_grid_bars", category: "Concrete", detail: "Grid rebar bars for slab mats (defaults: 20 ft bars, 12\" lap, 5% waste)", insertText: "rebar_grid_bars(", insertTemplate: true, template: "rebar_grid_bars(len, wid, oc, bar_len, lap_len, waste_pct, mats)", example: "rebar_grid_bars(40 ft, 28 ft, 12 in)" },
+
+      { name: "shingle_bundles", category: "Roofing", detail: "Shingle bundles from roof area (defaults: 3 bundles/sq, 10% waste)", insertText: "shingle_bundles(", insertTemplate: true, template: "shingle_bundles(area, bundles_per_square, waste_pct)", example: "shingle_bundles(2400 sf)" },
+      { name: "underlayment_rolls", category: "Roofing", detail: "Underlayment rolls from roof area (defaults: 400 sf/roll, 10% waste)", insertText: "underlayment_rolls(", insertTemplate: true, template: "underlayment_rolls(area, roll_coverage_sf, waste_pct)", example: "underlayment_rolls(2400 sf)" },
+      { name: "ridgecap_bundles", category: "Roofing", detail: "Ridge cap bundles from ridge LF (defaults: 33 lf/bundle, 10% waste)", insertText: "ridgecap_bundles(", insertTemplate: true, template: "ridgecap_bundles(ridge_lf, coverage_lf_per_bundle, waste_pct)", example: "ridgecap_bundles(120 ft)" },
+
       { name: "area_rect", category: "Layout / Geometry", detail: "Area from length and width", insertText: "area_rect(" },
       { name: "area_circle", category: "Layout / Geometry", detail: "Area from diameter", insertText: "area_circle(" },
       { name: "vol_rect", category: "Layout / Geometry", detail: "Volume from area and thickness", insertText: "vol_rect(" },
       { name: "concrete_cy", category: "Layout / Geometry", detail: "Concrete volume quantity", insertText: "concrete_cy(" },
+
+      { name: "perim_rect", category: "Takeoff", detail: "Rectangle perimeter", insertText: "perim_rect(", template: "perim_rect(len, wid)", example: "perim_rect(40 ft, 28 ft)" },
+      { name: "wall_area", category: "Takeoff", detail: "Wall area from perimeter and height", insertText: "wall_area(", template: "wall_area(perim, height)", example: "wall_area(perim_rect(40 ft, 28 ft), 10 ft)" },
+      { name: "stud_count", category: "Takeoff", detail: "Stud count from length and OC spacing", insertText: "stud_count(", insertTemplate: true, template: "stud_count(length, oc)", example: "stud_count(40 ft, 16 in)" },
+      { name: "oc_count", category: "Takeoff", detail: "Generic count for items laid out on-center", insertText: "oc_count(", template: "oc_count(length, oc)", example: "oc_count(120 ft, 6 ft)" },
+      { name: "stick_count", category: "Takeoff", detail: "Sticks/pieces from LF, stick length, and waste %", insertText: "stick_count(", insertTemplate: true, template: "stick_count(lf, stick_len, waste_pct)", example: "stick_count(640 ft, 8 ft, 12)" },
+      { name: "sheet_count", category: "Takeoff", detail: "Sheets from area, sheet area, and waste %", insertText: "sheet_count(", insertTemplate: true, template: "sheet_count(area, sheet_area, waste_pct)", example: "sheet_count(1200 sf, 32 sf, 10)" },
+
+      { name: "trench_cy", category: "Earthwork", detail: "Trench volume with side slopes (e.g. 1:1, 2:1)", insertText: "trench_cy(", insertTemplate: true, template: "trench_cy(length, depth, bottom_width, slope)", example: "trench_cy(120 ft, 4 ft, 2 ft, 2)" },
+      { name: "bank_to_loose", category: "Earthwork", detail: "Convert bank volume to loose volume using swell %", insertText: "bank_to_loose(", insertTemplate: true, template: "bank_to_loose(bank_vol, swell_pct)", example: "bank_to_loose(100 cy, 20)" },
+      { name: "loose_to_bank", category: "Earthwork", detail: "Convert loose volume to bank volume using swell %", insertText: "loose_to_bank(", insertTemplate: true, template: "loose_to_bank(loose_vol, swell_pct)", example: "loose_to_bank(120 cy, 20)" },
+      { name: "bank_to_compacted", category: "Earthwork", detail: "Convert bank volume to compacted volume using shrink %", insertText: "bank_to_compacted(", insertTemplate: true, template: "bank_to_compacted(bank_vol, shrink_pct)", example: "bank_to_compacted(100 cy, 10)" },
+      { name: "compacted_to_bank", category: "Earthwork", detail: "Convert compacted volume to bank volume using shrink %", insertText: "compacted_to_bank(", insertTemplate: true, template: "compacted_to_bank(compacted_vol, shrink_pct)", example: "compacted_to_bank(90 cy, 10)" },
+      { name: "truck_loads", category: "Earthwork", detail: "Truck loads from volume (defaults: 10 cy truck, 0% waste)", insertText: "truck_loads(", insertTemplate: true, template: "truck_loads(vol, truck_vol, waste_pct)", example: "truck_loads(bank_to_loose(trench_cy(120 ft, 4 ft, 2 ft, 2), 20), 10 cy)" },
+
+      { name: "pipe_wt_total", category: "Pipe", detail: "Pipe total weight (pipe_wt + optional waste)", insertText: "pipe_wt_total(", insertTemplate: true, template: "pipe_wt_total(nps_in, schedule, len_ft, waste_pct)", example: "to_ton(pipe_wt_total(2, 40, 120 ft, 5))" },
+      { name: "hanger_count", category: "Pipe", detail: "Hanger count from run length and spacing (default: 8 ft)", insertText: "hanger_count(", insertTemplate: true, template: "hanger_count(run_len, spacing, waste_pct)", example: "hanger_count(240 ft, 8 ft, 5)" },
+      { name: "fitting_count", category: "Pipe", detail: "Fittings allowance by run length (per 100 ft)", insertText: "fitting_count(", insertTemplate: true, template: "fitting_count(run_len, per_100ft, waste_pct)", example: "fitting_count(300 ft, 6, 10)" },
+      { name: "pipe_jacket_area", category: "Pipe", detail: "Pipe jacket/insulation area from OD and length", insertText: "pipe_jacket_area(", insertTemplate: true, template: "pipe_jacket_area(len, od_in, waste_pct)", example: "pipe_jacket_area(120 ft, 4 in, 10)" },
+
+      { name: "oc_linear_ft", category: "OC Linear Ft", detail: "Continuous run length from area and OC spacing", insertText: "oc_linear_ft(", insertTemplate: true, template: "oc_linear_ft(area, oc)", example: "oc_linear_ft(500 sf, 6 in)" },
+      { name: "oc_linear_ft_parallel", category: "OC Linear Ft", detail: "Parallel rows: area + wall height + OC", insertText: "oc_linear_ft_parallel(", insertTemplate: true, template: "oc_linear_ft_parallel(area, height, oc)", example: "oc_linear_ft_parallel(500 sf, 8 ft, 6 in)" },
+      { name: "oc_run_count", category: "OC Linear Ft", detail: "Rows/runs count from height and OC", insertText: "oc_run_count(", template: "oc_run_count(height, oc)", example: "oc_run_count(8 ft, 6 in)" },
+      { name: "coils_needed", category: "OC Linear Ft", detail: "Coils/rolls needed from LF and coil length", insertText: "coils_needed(", insertTemplate: true, template: "coils_needed(total_lf, coil_len)", example: "coils_needed(waste(oc_linear_ft(500 sf, 6 in), 5), 250 ft)" },
 
       { name: "qty", category: "Assemblies", detail: "Quantity breakdown from an assembly", insertText: "qty(" },
 
@@ -645,7 +710,7 @@ export function createInputHandlers({
       { name: "to_hr", category: "Conversions", detail: "Convert time to hours", insertText: "to_hr(" },
     ];
 
-    const categoryOrder = ["Estimating", "Layout / Geometry", "Assemblies", "Materials", "Conversions"];
+    const categoryOrder = ["Estimating", "Scaling", "Staples", "Takeoff", "Framing", "Drywall", "Concrete", "Roofing", "OC Linear Ft", "Earthwork", "Pipe", "Layout / Geometry", "Assemblies", "Materials", "Conversions"];
     const categoryRank = new Map(categoryOrder.map((c, idx) => [c, idx]));
 
     function usageForFn(name){
@@ -672,6 +737,9 @@ export function createInputHandlers({
           detail: spec.detail,
           insertText: spec.insertText || `${spec.name}(`,
           usage: usageForFn(spec.name),
+          template: typeof spec.template === "string" ? spec.template : usageForFn(spec.name),
+          example: typeof spec.example === "string" ? spec.example : "",
+          insertTemplate: Boolean(spec.insertTemplate),
         });
       }
       out.sort((a, b) => {
@@ -703,6 +771,15 @@ export function createInputHandlers({
       scheduleLiveResult();
     }
 
+    function activeInsertText(item){
+      if (!item) return "";
+      if (item.insertTemplate){
+        const t = String(item.template || "").trim();
+        if (t) return t;
+      }
+      return String(item.insertText || "");
+    }
+
     function matchesQuery(item, query){
       const q = normalizeText(query).trim();
       if (!q) return true;
@@ -727,6 +804,10 @@ export function createInputHandlers({
         empty.textContent = "No helpers match your filter.";
         helperList.appendChild(empty);
         if (helperHint) helperHint.textContent = "Tip: type to filter • Enter inserts";
+        if (helperPreviewTitle) helperPreviewTitle.textContent = "";
+        if (helperPreviewDetail) helperPreviewDetail.textContent = "";
+        if (helperPreviewTemplate) helperPreviewTemplate.textContent = "";
+        if (helperPreviewExample) helperPreviewExample.textContent = "";
         return;
       }
 
@@ -734,6 +815,13 @@ export function createInputHandlers({
         const active = helperState.visible[helperState.index];
         helperHint.textContent = active ? active.usage : "Tip: type to filter";
       }
+
+      const active = helperState.visible[helperState.index];
+      if (helperPreviewTitle) helperPreviewTitle.textContent = active ? active.name : "";
+      if (helperPreviewDetail) helperPreviewDetail.textContent = active ? active.detail : "";
+      if (helperPreviewTemplate) helperPreviewTemplate.textContent = active ? active.template : "";
+      if (helperPreviewExample) helperPreviewExample.textContent = active ? active.example : "";
+      if (helperPreview) helperPreview.style.display = "";
 
       let lastCategory = null;
       helperState.visible.forEach((item, idx) => {
@@ -753,7 +841,7 @@ export function createInputHandlers({
         row.addEventListener("mousedown", (event) => {
           event.preventDefault();
           helperState.index = idx;
-          insertIntoEditor(item.insertText);
+          insertIntoEditor(activeInsertText(item));
           helperSearch.value = "";
           updateVisible();
         });
@@ -801,7 +889,7 @@ export function createInputHandlers({
       if (e.key === "Enter" || e.key === "Tab"){
         const active = helperState.visible[helperState.index];
         if (active){
-          insertIntoEditor(active.insertText);
+          insertIntoEditor(activeInsertText(active));
           helperSearch.value = "";
           updateVisible();
         }

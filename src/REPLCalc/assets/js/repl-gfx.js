@@ -864,6 +864,90 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     }
   }
 
+  const FONT_5X7 = Object.freeze({
+    " ": [0, 0, 0, 0, 0, 0, 0],
+    "0": [0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110],
+    "1": [0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110],
+    "2": [0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111],
+    "3": [0b11110, 0b00001, 0b00001, 0b01110, 0b00001, 0b00001, 0b11110],
+    "4": [0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010],
+    "5": [0b11111, 0b10000, 0b11110, 0b00001, 0b00001, 0b10001, 0b01110],
+    "6": [0b00110, 0b01000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110],
+    "7": [0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000],
+    "8": [0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110],
+    "9": [0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00010, 0b01100],
+    "A": [0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
+    "B": [0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110],
+    "C": [0b01110, 0b10001, 0b10000, 0b10000, 0b10000, 0b10001, 0b01110],
+    "D": [0b11100, 0b10010, 0b10001, 0b10001, 0b10001, 0b10010, 0b11100],
+    "E": [0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11111],
+    "F": [0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b10000],
+    "G": [0b01110, 0b10001, 0b10000, 0b10111, 0b10001, 0b10001, 0b01110],
+    "H": [0b10001, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001],
+    "I": [0b01110, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110],
+    "J": [0b00001, 0b00001, 0b00001, 0b00001, 0b10001, 0b10001, 0b01110],
+    "K": [0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001],
+    "L": [0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111],
+    "M": [0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001],
+    "N": [0b10001, 0b11001, 0b10101, 0b10011, 0b10001, 0b10001, 0b10001],
+    "O": [0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
+    "P": [0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000],
+    "Q": [0b01110, 0b10001, 0b10001, 0b10001, 0b10101, 0b10010, 0b01101],
+    "R": [0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001],
+    "S": [0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110],
+    "T": [0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100],
+    "U": [0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110],
+    "V": [0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b00100],
+    "W": [0b10001, 0b10001, 0b10001, 0b10101, 0b10101, 0b11011, 0b10001],
+    "X": [0b10001, 0b10001, 0b01010, 0b00100, 0b01010, 0b10001, 0b10001],
+    "Y": [0b10001, 0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b00100],
+    "Z": [0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b10000, 0b11111],
+    ".": [0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b01100, 0b01100],
+    ",": [0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b01100, 0b01000],
+    ":": [0b00000, 0b01100, 0b01100, 0b00000, 0b01100, 0b01100, 0b00000],
+    "-": [0b00000, 0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000],
+    "+": [0b00000, 0b00100, 0b00100, 0b11111, 0b00100, 0b00100, 0b00000],
+    "=": [0b00000, 0b00000, 0b11111, 0b00000, 0b11111, 0b00000, 0b00000],
+    "/": [0b00001, 0b00010, 0b00100, 0b01000, 0b10000, 0b00000, 0b00000],
+    "*": [0b00000, 0b01010, 0b00100, 0b11111, 0b00100, 0b01010, 0b00000],
+    "^": [0b00100, 0b01010, 0b10001, 0b00000, 0b00000, 0b00000, 0b00000],
+    "$": [0b00100, 0b01111, 0b10100, 0b01110, 0b00101, 0b11110, 0b00100],
+    "#": [0b01010, 0b01010, 0b11111, 0b01010, 0b11111, 0b01010, 0b01010],
+    "(": [0b00010, 0b00100, 0b01000, 0b01000, 0b01000, 0b00100, 0b00010],
+    ")": [0b01000, 0b00100, 0b00010, 0b00010, 0b00010, 0b00100, 0b01000],
+  });
+
+  function drawText(buffer, x, y, text, color, scale){
+    if (!text) return;
+    const sc = Math.max(1, Math.min(6, Math.round(scale || 1)));
+    let cx = Math.round(x);
+    let cy = Math.round(y);
+    const lineH = 8 * sc;
+    for (let i = 0; i < text.length; i++){
+      const ch0 = text[i];
+      if (ch0 === "\n"){
+        cx = Math.round(x);
+        cy += lineH;
+        continue;
+      }
+      const ch = ch0 >= "a" && ch0 <= "z" ? ch0.toUpperCase() : ch0;
+      const glyph = FONT_5X7[ch] || FONT_5X7[" "];
+      for (let row = 0; row < 7; row++){
+        const bits = glyph[row] | 0;
+        for (let col = 0; col < 5; col++){
+          if ((bits >> (4 - col)) & 1){
+            if (sc === 1){
+              setPixel(buffer, cx + col, cy + row, color);
+            }else{
+              fillRect(buffer, cx + col * sc, cy + row * sc, sc, sc, color);
+            }
+          }
+        }
+      }
+      cx += 6 * sc;
+    }
+  }
+
   function markGfxDirty(){
     state.gfxDirty = true;
   }
@@ -881,11 +965,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       throw new Error("Loop runner not ready.");
     }
     if (runLoopStatement){
-      try{
-        runLoopStatement(loopState.expr);
-      }catch(err){
-        throw new Error(`GFX loop error: ${err.message || String(err)}`);
-      }
+      runLoopStatement(loopState.expr);
       return;
     }
 
@@ -951,7 +1031,9 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     }catch(err){
       pauseLoop();
       if (typeof writeLine === "function"){
-        writeLine(`GFX loop error: ${err.message || String(err)}`, "err");
+        const msg = err?.message || String(err);
+        const rendered = msg.startsWith("GFX loop error:") ? msg : `GFX loop error: ${msg}`;
+        writeLine(rendered, "err");
       }
     }
   }
@@ -1245,6 +1327,23 @@ fn fs(in: VSOut) -> @location(0) vec4f {
           throw new Error(`fill() requires numeric parameters: got x=${x}, y=${y}, w=${w}, h=${h}`);
         }
         fillRect(buffer, x, y, w, h, normalizeGfxColor(color));
+        markGfxDirty();
+        return 1;
+      }),
+      txt: defFn("txt", -1, {
+        args: [
+          { label: "x", kinds: ["scalar"] },
+          { label: "y", kinds: ["scalar"] },
+          { label: "text", kinds: ["string"] },
+          { label: "color", kinds: ["string", "scalar"] },
+          { label: "scale", kinds: ["scalar"] },
+        ],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, (x, y, text, color, scale) => {
+        const buffer = requireGfxBuffer();
+        const sc = (scale === undefined || scale === null) ? 1 : scale;
+        drawText(buffer, x, y, String(text || ""), normalizeGfxColor(color), sc);
         markGfxDirty();
         return 1;
       }),
