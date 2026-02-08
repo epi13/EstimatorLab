@@ -236,6 +236,34 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("burden", "out-fn"),
       token("(labor,pct)", "out-op"),
       "  ",
+      token("tax", "out-fn"),
+      token("(cost,pct)", "out-op"),
+      "  ",
+      token("contingency", "out-fn"),
+      token("(cost,pct)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("overhead", "out-fn"),
+      token("(cost,pct)", "out-op"),
+      "  ",
+      token("profit", "out-fn"),
+      token("(cost,pct)", "out-op"),
+      "  ",
+      token("ohp", "out-fn"),
+      token("(cost,overhead,profit)", "out-op"),
+      "  ",
+      token("discount", "out-fn"),
+      token("(cost,pct)", "out-op"),
+      "  ",
+      token("retainage", "out-fn"),
+      token("(cost,pct)", "out-op"),
+      "  ",
+      token("escalate", "out-fn"),
+      token("(cost,pct,periods)", "out-op")
+    ], "muted");
+    writeLineRich([
+      "  ",
       token("unit", "out-fn"),
       token("(cost,qty)", "out-op"),
       "  ",
