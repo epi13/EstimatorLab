@@ -551,6 +551,90 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       " ",
       token("methods()", "out-fn")
     ], "muted");
+
+    writeLineRich([token("Text + parsing helpers:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("len", "out-fn"),
+      token("(s)", "out-op"),
+      " ",
+      token("char_code", "out-fn"),
+      token("(s,i)", "out-op"),
+      " ",
+      token("charclass", "out-fn"),
+      token("(code)", "out-op"),
+      " (alias ",
+      token("class", "out-fn"),
+      ")",
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("scan", "out-fn"),
+      token("(s,i)", "out-op"),
+      " → assy {i,code,ch,cls}",
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("scan_while", "out-fn"),
+      token("(s,i,\"pred\")", "out-op"),
+      " or ",
+      token("scan_while(s,i,\"pred\", acc0, \"accExpr\")", "out-op"),
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("take_while", "out-fn"),
+      token("(s,i,\"pred\")", "out-op"),
+      " → text",
+    ], "muted");
+
+    writeLineRich([token("Serialization:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("to_json", "out-fn"),
+      token("(value)", "out-op"),
+      " ",
+      token("from_json", "out-fn"),
+      token("(text)", "out-op"),
+      " ",
+      token("to_csv", "out-fn"),
+      token("(value)", "out-op"),
+      " ",
+      token("from_csv", "out-fn"),
+      token("(text)", "out-op"),
+    ], "muted");
+
+    writeLineRich([token("Finishes + textures:", "out-label")], "muted");
+    writeLineRich([
+      "  ",
+      token("finishIds()", "out-fn"),
+      " list available texture ids",
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("wallFinish", "out-fn"),
+      token("(finish)", "out-op"),
+      " ",
+      token("floorFinish", "out-fn"),
+      token("(finish)", "out-op"),
+      " ",
+      token("ceilingFinish", "out-fn"),
+      token("(finish)", "out-op"),
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("trimFinish", "out-fn"),
+      token("(\"BASE\"|\"CASING\", finish)", "out-op"),
+      " ",
+      token("wainscot", "out-fn"),
+      token("(height, finish)", "out-op"),
+    ], "muted");
+    writeLineRich([
+      "  ",
+      token("finishInfo", "out-fn"),
+      token("(\"ID\")", "out-op"),
+      " → assy {id,ok,group,label,csi}",
+    ], "muted");
+
     writeLineRich([token("Graphics:", "out-label")], "muted");
     writeLineRich([
       "  ",
@@ -691,6 +775,12 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
     ], "muted");
     writeLineRich([
       "  ",
+      token("raycast_tex", "out-fn"),
+      token("(map, px, py, yaw, fov, viewH, maxD, step, steps, colStep, {floor_step:2; ceil_step:2; tex_res:1})", "out-op"),
+      " (textured finishes)"
+    ], "muted");
+    writeLineRich([
+      "  ",
       token("pix", "out-fn"),
       token("(x,y,color)", "out-op"),
       " ",
@@ -744,14 +834,22 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
       token("dt", "out-var"),
       " • focus gfx canvas for Space/Arrow controls"
     ], "muted");
+    writeLineRich([
+      "  ",
+      token("Input vars:", "out-label"),
+      " ",
+      token("key_w key_a key_s key_d key_left key_right key_up key_down key_shift key_space key_e key_q key_f", "out-var"),
+      " | ",
+      token("mouse_dx mouse_dy mouse_btn0 mouse_btn1 mouse_btn2", "out-var"),
+    ], "muted");
     writeLineRich([token("Session commands:", "out-label")], "muted");
     writeLineRich(["  ", token(":docs", "out-command"), " show this page"], "muted");
     writeLineRich(["  ", token(":clear", "out-command"), " clear terminal output"], "muted");
     writeLineRich(["  ", token(":vars", "out-command"), " list variables"], "muted");
     writeLineRich(["  ", token(":methods", "out-command"), " list user methods"], "muted");
     writeLineRich(["  ", token(":reset", "out-command"), " reset vars + history"], "muted");
-    writeLineRich(["  ", token(":save", "out-command"), " name [...] save modular profile"], "muted");
-    writeLineRich(["  ", token(":mux", "out-command"), " name merge loaded profiles"], "muted");
+    writeLineRich(["  ", token(":save", "out-command"), " name [--include-globals] [--recent|--last] [--roots=a,b] save modular profile"], "muted");
+    writeLineRich(["  ", token(":mux", "out-command"), " name (alias of :save)"], "muted");
     writeLineRich(["  ", token(":load", "out-command"), " name load saved profile"], "muted");
     writeLineRich(["  ", token(":profiles", "out-command"), " list saved profiles"], "muted");
     writeLineRich(["  ", token(":pin", "out-command"), " name always include symbol when saving"], "muted");
@@ -766,6 +864,7 @@ export function createDocs({ state, formatValueDisplay, writeLine, writeLineRich
     writeLineRich(["  ", token(":theme", "out-command"), " default|amber|matrix"], "muted");
     writeLineRich(["  ", token(":test", "out-command"), " run the built-in test suite"], "muted");
     writeLineRich(["  ", token(":doom", "out-command"), " run the gfx loop demo"], "muted");
+    writeLineRich(["  ", token(":latent", "out-command"), " [load|test] load/test latent mux walker module"], "muted");
 
     writeLineRich([token("Effects + determinism:", "out-label")], "muted");
     writeLineRich([
