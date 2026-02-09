@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Offline Alaska Pricebook Editor</title>
+  <style>
+    :root{
+      --bg:#0b1220; --panel:#101a2f; --text:#e7eefc; --muted:#9fb2d6; --line:rgba(255,255,255,.08);
+      --accent:#6aa6ff; --good:#8dffcf; --shadow:0 10px 30px rgba(0,0,0,.35); --r:14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:var(--sans); color:var(--text);
+      background: radial-gradient(1200px 800px at 20% 10%, rgba(106,166,255,.20), transparent 55%),
+                  radial-gradient(1000px 650px at 70% 30%, rgba(141,255,207,.12), transparent 60%),
+                  var(--bg);
+    }
+    header{position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(11,18,32,.95), rgba(11,18,32,.70)); backdrop-filter:blur(10px);}
+    .wrap{max-width:1400px;margin:0 auto;padding:14px 16px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    h1{margin:0;font-size:16px;letter-spacing:.2px}
+    .pill{font-family:var(--mono);font-size:12px;padding:4px 10px;border:1px solid var(--line);
+      background:rgba(255,255,255,.03);border-radius:999px;color:var(--muted)}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    button{border:1px solid var(--line);background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      color:var(--text);padding:9px 12px;border-radius:12px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.18);}
+    button:hover{border-color:rgba(106,166,255,.35)}
+    button.primary{border-color:rgba(106,166,255,.50);background:linear-gradient(180deg, rgba(106,166,255,.22), rgba(106,166,255,.10));}
+    button.good{border-color:rgba(141,255,207,.45);background:linear-gradient(180deg, rgba(141,255,207,.18), rgba(141,255,207,.08));}
+    button.danger{border-color:rgba(255,90,90,.45);background:linear-gradient(180deg, rgba(255,90,90,.14), rgba(255,90,90,.06));}
+    input,select{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);border-radius:12px;padding:9px 10px;outline:none}
+    input::placeholder{color:rgba(159,178,214,.65)}
+    input:focus,select:focus{border-color:rgba(106,166,255,.45)}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:12px}
+    .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .status{margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px}
+    main{max-width:1400px;margin:14px auto 18px;padding:0 16px}
+    .table{background:linear-gradient(180deg, rgba(16,26,47,.95), rgba(16,26,47,.82));
+      border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+    .thead,.trow{display:grid;grid-template-columns:1.7fr .55fr .55fr .6fr .7fr .7fr .7fr .75fr .75fr .75fr;
+      gap:10px;padding:10px 12px;align-items:center}
+    .thead{font-size:12px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--line)}
+    .tbody{max-height:70vh;overflow:auto}
+    .trow{border-bottom:1px solid var(--line);background:rgba(255,255,255,.01)}
+    .trow:nth-child(2n){background:rgba(255,255,255,.02)}
+    .lineitem{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .name{font-weight:650;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sub{font-size:12px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .mini{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:rgba(159,178,214,.9);font-family:var(--mono)}
+    .chip{padding:3px 8px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.06);white-space:nowrap}
+    .num{font-family:var(--mono);text-align:right}
+    .num input{width:100%;text-align:right;font-family:var(--mono);padding:8px 10px;border-radius:12px}
+    .money{font-family:var(--mono);text-align:right}
+    .right{display:flex;justify-content:flex-end}
+    #dirtyPill{display:none;border-color:rgba(255,205,90,.35);background:rgba(255,205,90,.08);color:#ffe3a7}
+    .footer{max-width:1400px;margin:0 auto;padding:0 16px 20px;color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="row">
+      <div class="row" style="justify-content:flex-start">
+        <h1>Offline Alaska Pricebook Editor</h1>
+        <span class="pill" id="filePill">No file loaded</span>
+        <span class="pill" id="dirtyPill">Unsaved edits</span>
+        <span class="pill" id="schemaPill">Schema v—</span>
+      </div>
+      <div class="controls">
+        <button class="primary" id="btnOpen">Open JSON</button>
+        <button class="good" id="btnSave">Save JSON (versioned)</button>
+        <button id="btnRevert" class="danger">Revert to Loaded</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="filters">
+        <input id="search" placeholder="Fuzzy search: name, description, tags, CSI, UniFormat…" style="width:min(560px,100%);" />
+        <select id="filterTrade"></select>
+        <select id="filterCsiDiv"></select>
+        <select id="filterUniL1"></select>
+        <select id="filterStatus"></select>
+      </div>
+      <div class="filters">
+        <label style="font-size:12px;color:var(--muted)">Remote Factor
+          <input id="remoteFactor" type="number" step="0.01" min="0.5" max="3" value="1.00" style="width:110px" />
+        </label>
+        <label style="font-size:12px;color:var(--muted)">Labor Premium %
+          <input id="laborPremium" type="number" step="0.1" min="0" max="300" value="0.0" style="width:120px" />
+        </label>
+        <label style="font-size:12px;color:var(--muted)">OH&P %
+          <input id="ohp" type="number" step="0.1" min="0" max="300" value="0.0" style="width:90px" />
+        </label>
+      </div>
+    </div>
+
+    <div class="status">
+      <div id="statsLeft">Load a pricebook JSON to begin.</div>
+      <div class="right"><span class="pill">Ctrl/Cmd+S = Save</span></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="table">
+    <div class="thead">
+      <div>LINE ITEM</div>
+      <div class="right">QTY</div>
+      <div>UNIT</div>
+      <div class="right">MAT $/UNIT</div>
+      <div class="right">BASE LABOR HRS/UNIT</div>
+      <div>TRADE</div>
+      <div class="right">MAT $</div>
+      <div class="right">FREIGHT+HAND $</div>
+      <div class="right">LABOR HRS (ADJ)</div>
+      <div class="right">TOTAL $</div>
+    </div>
+    <div class="tbody" id="tbody"></div>
+  </div>
+</main>
+
+<div class="footer">
+  <ul>
+    <li>Offline-only. “Save” exports a <span class="pill">versioned JSON</span> so annual updates are painless + auditable.</li>
+    <li>Freight+Handling defaults to <span class="pill">Mat$ × (freight% + handling%)</span>.</li>
+    <li>Labor hrs = Qty × BaseHrs/Unit × Item productivity factor × Remote Factor.</li>
+    <li>Labor $ = Labor hrs × Anchorage trade rate. Labor Premium % and OH&amp;P % are optional adders.</li>
+  </ul>
+</div>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+const fmtMoney = (n)=>Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const num = (x,d=0)=>{const n=Number(x); return Number.isFinite(n)?n:d;}
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const deepClone=(x)=>JSON.parse(JSON.stringify(x));
+const escapeHtml=(s)=>String(s??"").replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+let book=null, loaded=null, fileName=null, dirty=false;
+
+function setDirty(v){
+  dirty=!!v;
+  $("dirtyPill").style.display = dirty ? "inline-flex" : "none";
+}
+function nowStamp(){
+  const d=new Date(); const p=(n)=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+}
+
+/* -------- fuzzy search (simple + good enough) -------- */
+const normalize=(s)=>String(s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"");
+const tokens=(s)=>normalize(s).split(/[^a-z0-9]+/g).filter(Boolean);
+function isSubseq(a,b){
+  let i=0,j=0;
+  while(i<a.length && j<b.length){ if(a[i]===b[j]) i++; j++; }
+  return i===a.length && a.length>=3;
+}
+function scoreMatch(q, text){
+  q=normalize(q).trim(); if(!q) return 1;
+  const t=normalize(text); if(!t) return 0;
+  if(t.includes(q)) return 8;
+  const qt=tokens(q), tt=tokens(t);
+  let score=0;
+  for(const qtok of qt){
+    let best=0;
+    for(const ttok of tt){
+      if(ttok===qtok) best=Math.max(best,5);
+      else if(ttok.startsWith(qtok)) best=Math.max(best,3);
+      else if(ttok.includes(qtok)) best=Math.max(best,2);
+      else if(isSubseq(qtok,ttok)) best=Math.max(best,1);
+    }
+    score+=best;
+  }
+  return score;
+}
+function itemBlob(it){
+  const c=it.csi||{}, u=it.uniformat||{}, p=it.pricing||{}, l=it.labor||{};
+  return [
+    it.id,it.item_name,it.description,(it.tags||[]).join(" "),
+    c.division,c.division_title,c.section,c.section_title,
+    u.level1,u.level1_title,u.level2,u.level2_title,u.level3,u.level3_title,
+    it.unit,it.trade,
+    p.mat_per_unit,p.freight_percent,p.handling_percent,l.base_hrs_per_unit,l.productivity_factor
+  ].join(" | ");
+}
+
+/* -------- computations -------- */
+function getRate(trade){
+  const r=book?.settings?.labor_rates_by_trade_hr||{};
+  return num(r[trade],0);
+}
+function computeLine(it, qty){
+  const p=it.pricing||{}, l=it.labor||{};
+  const matPer=num(p.mat_per_unit,0);
+  const mat$=qty*matPer;
+
+  const f=num(p.freight_percent, num(book?.settings?.default_freight_percent,0));
+  const h=num(p.handling_percent, num(book?.settings?.default_handling_percent,0));
+  const freight$=mat$*(f+h);
+
+  const baseHrs=num(l.base_hrs_per_unit,0);
+  const prod=num(l.productivity_factor, num(book?.settings?.labor_adjustments?.default_productivity_factor,1));
+  const remote=clamp(num($("remoteFactor").value,1),0.5,3);
+  const hrs=qty*baseHrs*prod*remote;
+
+  const rate=getRate(it.trade);
+  let labor$=hrs*rate;
+
+  const prem=clamp(num($("laborPremium").value,0),0,300)/100;
+  labor$*= (1+prem);
+
+  let subtotal=mat$+freight$+labor$;
+  const ohp=clamp(num($("ohp").value,0),0,300)/100;
+  const total$=subtotal*(1+ohp);
+
+  return {mat$, freight$, hrs, total$};
+}
+
+/* -------- filters + render -------- */
+function uniq(arr){ return Array.from(new Set(arr.filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b))); }
+function fillSelect(el, opts){
+  el.innerHTML="";
+  const all=document.createElement("option"); all.value=""; all.textContent="All"; el.appendChild(all);
+  for(const s of opts){
+    const o=document.createElement("option"); o.value=s; o.textContent=s; el.appendChild(o);
+  }
+}
+function refreshFilters(){
+  if(!book) return;
+  const items=book.items||[];
+  fillSelect($("filterTrade"), uniq(items.map(i=>i.trade)));
+  fillSelect($("filterCsiDiv"), uniq(items.map(i=>i?.csi?.division ? `${i.csi.division} - ${(i.csi.division_title||"")}`.trim() : "")));
+  fillSelect($("filterUniL1"), uniq(items.map(i=>i?.uniformat?.level1 ? `${i.uniformat.level1} - ${(i.uniformat.level1_title||"")}`.trim() : "")));
+  fillSelect($("filterStatus"), ["active","inactive"]);
+}
+function passesFilters(it){
+  const t=$("filterTrade").value, c=$("filterCsiDiv").value, u=$("filterUniL1").value, s=$("filterStatus").value;
+  if(t && it.trade!==t) return false;
+  if(s && (it.status||"active")!==s) return false;
+  if(c){
+    const v=it?.csi?.division ? `${it.csi.division} - ${(it.csi.division_title||"")}`.trim() : "";
+    if(v!==c) return false;
+  }
+  if(u){
+    const v=it?.uniformat?.level1 ? `${it.uniformat.level1} - ${(it.uniformat.level1_title||"")}`.trim() : "";
+    if(v!==u) return false;
+  }
+  return true;
+}
+
+function tradeOptionsHtml(curr){
+  const trades = book?.lookups?.trades || ["Civil","Architectural","Structural","Mechanical","Electrical"];
+  return trades.map(t=>`<option value="${escapeHtml(t)}" ${t===curr?"selected":""}>${escapeHtml(t)}</option>`).join("");
+}
+
+function render(){
+  const body=$("tbody"); body.innerHTML="";
+  if(!book){ $("statsLeft").textContent="Load a pricebook JSON to begin."; return; }
+
+  const q=$("search").value.trim();
+  const rows=[];
+  for(const it of (book.items||[])){
+    if(!passesFilters(it)) continue;
+    const sc=scoreMatch(q, itemBlob(it));
+    if(sc<=0) continue;
+    rows.push({it, sc});
+  }
+  rows.sort((a,b)=>b.sc-a.sc);
+
+  $("statsLeft").textContent =
+    `${rows.length.toLocaleString()} shown • ${(book.items||[]).length.toLocaleString()} total • Remote=${$("remoteFactor").value} • Prem=${$("laborPremium").value}% • OHP=${$("ohp").value}%`;
+
+  for(const {it} of rows){
+    const qty=num(it._qty,0);
+    const c=computeLine(it, qty);
+
+    const div=document.createElement("div");
+    div.className="trow";
+    div.innerHTML = `
+      <div class="lineitem">
+        <div class="name" title="${escapeHtml(it.item_name||"")}">${escapeHtml(it.item_name||"")}</div>
+        <div class="sub">${escapeHtml(it.description||"")}</div>
+        <div class="mini">
+          ${it.id?`<span class="chip">${escapeHtml(it.id)}</span>`:""}
+          ${it?.csi?.section?`<span class="chip">CSI ${escapeHtml(it.csi.section)}</span>`:""}
+          ${it?.uniformat?.level2?`<span class="chip">UNI ${escapeHtml(it.uniformat.level2)}</span>`:""}
+        </div>
+      </div>
+
+      <div class="num"><input data-k="qty" data-id="${escapeHtml(it.id||"")}" type="number" step="0.01" min="0" value="${qty}"></div>
+      <div><span class="pill">${escapeHtml(it.unit||"")}</span></div>
+      <div class="num"><input data-k="mat" data-id="${escapeHtml(it.id||"")}" type="number" step="0.01" min="0" value="${num(it.pricing?.mat_per_unit,0)}"></div>
+      <div class="num"><input data-k="hrs" data-id="${escapeHtml(it.id||"")}" type="number" step="0.01" min="0" value="${num(it.labor?.base_hrs_per_unit,0)}"></div>
+      <div>
+        <select data-k="trade" data-id="${escapeHtml(it.id||"")}">${tradeOptionsHtml(it.trade)}</select>
+      </div>
+
+      <div class="money">$ <strong>${fmtMoney(c.mat$)}</strong></div>
+      <div class="money">$ ${fmtMoney(c.freight$)}</div>
+      <div class="money">${fmtMoney(c.hrs)}</div>
+      <div class="money">$ <strong>${fmtMoney(c.total$)}</strong></div>
+    `;
+    body.appendChild(div);
+  }
+
+  // wire inputs
+  body.querySelectorAll("input[data-k], select[data-k]").forEach(el=>{
+    el.oninput=()=>{
+      const k=el.getAttribute("data-k");
+      const id=el.getAttribute("data-id");
+      const it=(book.items||[]).find(x=>(x.id||"")===id);
+      if(!it) return;
+
+      if(k==="qty"){ it._qty=num(el.value,0); }
+      if(k==="mat"){ it.pricing=it.pricing||{}; it.pricing.mat_per_unit=num(el.value,0); setDirty(true); }
+      if(k==="hrs"){ it.labor=it.labor||{}; it.labor.base_hrs_per_unit=num(el.value,0); setDirty(true); }
+      if(k==="trade"){ it.trade=el.value; setDirty(true); }
+
+      render();
+    };
+  });
+}
+
+/* -------- open/save -------- */
+async function openJson(){
+  const picker = !!window.showOpenFilePicker;
+  if(picker){
+    const [handle]=await window.showOpenFilePicker({
+      multiple:false,
+      types:[{description:"JSON", accept:{"application/json":[".json"]}}]
+    });
+    const file=await handle.getFile();
+    fileName=file.name;
+    const text=await file.text();
+    loadBook(text);
+    return;
+  }
+  const input=document.createElement("input");
+  input.type="file"; input.accept="application/json,.json"; input.click();
+  const file=await new Promise(res=>{ input.onchange=()=>res(input.files?.[0]||null); });
+  if(!file) return;
+  fileName=file.name;
+  loadBook(await file.text());
+}
+
+function loadBook(text){
+  book=JSON.parse(text);
+  loaded=deepClone(book);
+  setDirty(false);
+
+  $("filePill").textContent=fileName||"Loaded";
+  $("schemaPill").textContent=`Schema v${book?.meta?.schema_version||"—"}`;
+
+  // normalize lookups
+  book.lookups=book.lookups||{};
+  book.lookups.trades=book.lookups.trades||["Civil","Architectural","Structural","Mechanical","Electrical"];
+  book.items=Array.isArray(book.items)?book.items:[];
+
+  refreshFilters();
+  render();
+}
+
+function downloadJson(data, name){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+}
+
+function saveJsonVersioned(){
+  if(!book) return;
+  const out=deepClone(book);
+  // strip session-only qty field
+  (out.items||[]).forEach(it=>delete it._qty);
+
+  const base = (fileName && fileName.endsWith(".json")) ? fileName.slice(0,-5) : (fileName || "pricebook");
+  downloadJson(out, `${base}_${nowStamp()}.json`);
+  setDirty(false);
+}
+
+function revert(){
+  if(!loaded) return;
+  if(!confirm("Revert all edits back to last loaded file?")) return;
+  book=deepClone(loaded);
+  setDirty(false);
+  refreshFilters();
+  render();
+}
+
+/* -------- events -------- */
+$("btnOpen").onclick=()=>openJson().catch(e=>alert("Open failed: "+e.message));
+$("btnSave").onclick=()=>saveJsonVersioned();
+$("btnRevert").onclick=()=>revert();
+
+["search","filterTrade","filterCsiDiv","filterUniL1","filterStatus","remoteFactor","laborPremium","ohp"]
+  .forEach(id=>{
+    const el=$(id);
+    el.oninput=render;
+    el.onchange=render;
+  });
+
+window.addEventListener("keydown",(e)=>{
+  if((e.ctrlKey||e.metaKey) && (e.key||"").toLowerCase()==="s"){
+    e.preventDefault();
+    if(book) saveJsonVersioned();
+  }
+});
+</script>
+</body>
+</html>
