@@ -1,0 +1,49 @@
+# Doom procedural textures implementation
+# Uses texture helpers to generate specific material textures
+# Note: texture-helpers module is loaded by JavaScript
+
+# Drywall stipple texture (ID 0)
+so doom_tex0_drywall(x, y, t) = {
+  base = 220 + speckle_noise(x, y, 0, t, 26);
+  stipple = stipple_pattern(x, y, 0, t);
+  pack_rgba(base + stipple, base + stipple, base + stipple + 2, 255)
+}
+
+# Tile grid texture (ID 1)
+so doom_tex1_tile(x, y, t) = {
+  grout = tile_grout(x, y, 16);
+  if(grout == 1,
+    pack_rgba(200 + ((tex_a(1, x, y, t * 2, 2, 2) / 97) - 0.5) * 12,
+             200 + ((tex_a(1, x, y, t * 2, 2, 2) / 97) - 0.5) * 12,
+             204 + ((tex_a(1, x, y, t * 2, 2, 2) / 97) - 0.5) * 12, 255),
+    pack_rgba(232 + ((tex_a(1, x, y, t * 2, 2, 2) / 97) - 0.5) * 18 + ((tex_b(1, x, y, t * 2, 2, 2) / 89) - 0.5) * 10,
+             232 + ((tex_a(1, x, y, t * 2, 2, 2) / 97) - 0.5) * 18 + ((tex_b(1, x, y, t * 2, 2, 2) / 89) - 0.5) * 10,
+             238 + ((tex_a(1, x, y, t * 2, 2, 2) / 97) - 0.5) * 18 + ((tex_b(1, x, y, t * 2, 2, 2) / 89) - 0.5) * 10, 255)
+  )
+}
+
+# Wood streaks texture (ID 2)
+so doom_tex2_wood(x, y, t) = {
+  grain = wood_grain(x, y, 2, t);
+  pack_rgba(160 + (grain - 0.5) * 60,
+           120 + (grain - 0.5) * 45,
+           70 + (grain - 0.5) * 30, 255)
+}
+
+# Speckled concrete texture (ID 3)
+so doom_tex3_concrete(x, y, t) = {
+  base = 158 + speckle_noise(x, y, 3, t, 26);
+  speckle = if(mod_pos(tex_c(3, x, y, t, 2, 2) + tex_d(3, x, y, t, 2, 2) + x * 3 + y * 5, 17) == 0, 30, 0);
+  pack_rgba(base + speckle, base + speckle, 161 + speckle_noise(x, y, 3, t, 26), 255)
+}
+
+# Texture family selector
+# 0: drywall stipple, 1: tile grid, 2: wood streaks, 3: speckled concrete
+so doom_tex_color(tex_id, x, y, t) = 
+  if(tex_id == 0, doom_tex0_drywall(x, y, t),
+  if(tex_id == 1, doom_tex1_tile(x, y, t),
+  if(tex_id == 2, doom_tex2_wood(x, y, t),
+  doom_tex3_concrete(x, y, t))))
+
+# Main texture interface
+so get_texel(tex_id, x, y, t) = doom_tex_color(floor(tex_id), floor(x), floor(y), floor(t))

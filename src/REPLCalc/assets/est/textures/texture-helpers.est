@@ -1,0 +1,39 @@
+# Texture generation helper functions
+# Mathematical utilities for procedural texture generation
+
+# Integer clamping for color values
+so clampi(x, lo, hi) = floor(clamp(x, lo, hi))
+
+# RGBA color packing
+so pack_rgba(r, g, b, a) = bor(shl(clampi(r, 0, 255), 24), bor(shl(clampi(g, 0, 255), 16), bor(shl(clampi(b, 0, 255), 8), clampi(a, 0, 255))))
+
+# Coordinate -> base code seed with low-frequency continuity
+so tex_seed(tex_id, x, y, scale_x, scale_y) = ltw_pack(floor(x / scale_x) + tex_id * 7, floor(y / scale_y) + tex_id * 11, floor(x / 8) + floor(y / 8) + tex_id * 13, floor(x / 16) - floor(y / 16) + tex_id * 17)
+
+# Per-texture hop lane selection (reversible scrubbing through step count)
+so tex_hop(tex_id) = ltw_mod(19 + tex_id * 7, 97)
+
+# Walk latent space N steps. t is the external scrub parameter
+so tex_code(tex_id, x, y, t, scale_x, scale_y) = ltw_seek(tex_seed(tex_id, x, y, scale_x, scale_y), tex_hop(tex_id), floor(t))
+
+# Texture coordinate extraction
+so tex_a(tex_id, x, y, t, scale_x, scale_y) = ltw_a(tex_code(tex_id, x, y, t, scale_x, scale_y))
+so tex_b(tex_id, x, y, t, scale_x, scale_y) = ltw_b(tex_code(tex_id, x, y, t, scale_x, scale_y))
+so tex_c(tex_id, x, y, t, scale_x, scale_y) = ltw_c(tex_code(tex_id, x, y, t, scale_x, scale_y))
+so tex_d(tex_id, x, y, t, scale_x, scale_y) = ltw_d(tex_code(tex_id, x, y, t, scale_x, scale_y))
+
+# Grout pattern for tiles
+so tile_grout(x, y, grout_spacing) = if(mod_pos(x, grout_spacing) == 0 || mod_pos(y, grout_spacing) == 0, 1, 0)
+
+# Wood grain pattern using sine waves
+so wood_grain(x, y, tex_id, t) = {
+  freq1 = sin(((x / 8) + (tex_a(tex_id, x, y, t, 2, 2) / 97) * 2.0) * 6.28318) * 0.55;
+  freq2 = sin(((x / 3) + (tex_c(tex_id, x, y, t, 2, 2) / 83) * 3.0) * 6.28318) * 0.45;
+  (freq1 + freq2) * 0.5 + 0.5
+}
+
+# Noise pattern for speckled surfaces
+so speckle_noise(x, y, tex_id, t, scale) = ((tex_a(tex_id, x, y, t, scale, scale) / 97) - 0.5) * scale + ((tex_b(tex_id, x, y, t, scale, scale) / 89) - 0.5) * (scale / 2)
+
+# Stipple pattern for drywall
+so stipple_pattern(x, y, tex_id, t) = if(mod_pos(tex_a(tex_id, x, y, t, 2, 2) + tex_b(tex_id, x, y, t, 2, 2) + x + y, 13) == 0, -20, 0)

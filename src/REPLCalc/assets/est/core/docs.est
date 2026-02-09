@@ -1,0 +1,221 @@
+so show_docs() = {
+  print_rich(vec("Estimator REPL docs"), "ok");
+  print_rich(vec(tok("Overview:", "out-label")), "muted");
+  print_rich(vec("  This REPL mixes calculator math with takeoff helpers, units, and quick scripting."), "muted");
+  print_rich(vec("  Use it for one-off computations or build up a session with variables + methods."), "muted");
+  print("");
+
+  print_rich(vec(tok("Syntax quickstart:", "out-label")), "muted");
+  print_rich(vec(
+    "  Expressions: ",
+    tok("2+2*5", "out-op"),
+    "  |  ",
+    tok("(1200 sf * 4 in) / 27", "out-op"),
+    "  |  ",
+    tok("pow", "out-fn"),
+    tok("(3,2)", "out-op")
+  ), "muted");
+  print_rich(vec(
+    "  Constants: ",
+    tok("pi", "out-number"),
+    ", ",
+    tok("e", "out-number")
+  ), "muted");
+  print_rich(vec(
+    "  Assignment: ",
+    tok("x", "out-var"),
+    " ",
+    tok("=", "out-op"),
+    " ",
+    tok("144", "out-number"),
+    "  |  ",
+    tok("total", "out-var"),
+    " ",
+    tok("=", "out-op"),
+    " ",
+    tok("markup", "out-fn"),
+    tok("(burden(12500, 16.7), 35)", "out-op")
+  ), "muted");
+  print_rich(vec(
+    "  Solutions: ",
+    tok("so", "out-keyword"),
+    " ",
+    tok("name", "out-fn"),
+    tok("(a,b)", "out-op"),
+    " = expression  (call with ",
+    tok("name(1,2)", "out-op"),
+    ")"
+  ), "muted");
+  print_rich(vec(
+    "  Also accepts: ",
+    tok("def", "out-keyword"),
+    ", ",
+    tok("fn", "out-keyword"),
+    ", ",
+    tok("function", "out-keyword"),
+    " (same as ",
+    tok("so", "out-keyword"),
+    ")"
+  ), "muted");
+  print_rich(vec(
+    "  Flow: ",
+    tok("if", "out-keyword"),
+    " ",
+    tok("labor", "out-var"),
+    " ",
+    tok(">", "out-op"),
+    " ",
+    tok("40", "out-number"),
+    ": ",
+    tok("overtime", "out-var"),
+    " ",
+    tok("=", "out-op"),
+    " ",
+    tok("labor", "out-var"),
+    " ",
+    tok("-", "out-op"),
+    " ",
+    tok("40", "out-number"),
+    " ",
+    tok("else", "out-keyword"),
+    ": ",
+    tok("overtime", "out-var"),
+    " ",
+    tok("=", "out-op"),
+    " ",
+    tok("0", "out-number")
+  ), "muted");
+  print_rich(vec(
+    "  Blocks: end a line with ",
+    tok(":", "out-op"),
+    " then indent the next line(s): ",
+    tok("if x > 0:", "out-op"),
+    " ↳ ",
+    tok("total = total + 1", "out-op")
+  ), "muted");
+  print_rich(vec(
+    "  Loop: ",
+    tok("for", "out-keyword"),
+    " i ",
+    tok("in", "out-keyword"),
+    " ",
+    tok("1..5", "out-number"),
+    " ",
+    tok("step", "out-keyword"),
+    " ",
+    tok("1", "out-number"),
+    ": expr   |   ",
+    tok("repeat", "out-keyword"),
+    " ",
+    tok("3", "out-number"),
+    ": expr"
+  ), "muted");
+  print_rich(vec(
+    "  Solve: ",
+    tok("56", "out-number"),
+    " ",
+    tok("cy", "out-unit"),
+    " ",
+    tok("=", "out-op"),
+    " ",
+    tok("concrete_cy", "out-fn"),
+    tok("(sf, 6 in)", "out-op")
+  ), "muted");
+  print_rich(vec(
+    "  Strings: ",
+    tok("\"crew\"", "out-string"),
+    " or ",
+    tok("'crew'", "out-string"),
+    " (required for meta-programming helpers)"
+  ), "muted");
+  print("");
+
+  print_rich(vec(tok("Units:", "out-label")), "muted");
+  print_rich(vec(
+    "  Supported: ",
+    tok("in, ft, yd, mi, sf, sy, cf, cy, lb, ton, oz, s, min, hr, day, wk, yr, mph, psi, psf, ksi, %, $, ea, layer, deg, rad", "out-unit"),
+    "."
+  ), "muted");
+  print_rich(vec(
+    "  Use as tokens: ",
+    tok("12", "out-number"),
+    " ",
+    tok("ft", "out-unit"),
+    " + ",
+    tok("6", "out-number"),
+    " ",
+    tok("in", "out-unit"),
+    "  |  ",
+    tok("1200", "out-number"),
+    " ",
+    tok("sf", "out-unit"),
+    " * ",
+    tok("4", "out-number"),
+    " ",
+    tok("in", "out-unit"),
+    "  |  ",
+    tok("3", "out-number"),
+    " ",
+    tok("cy", "out-unit"),
+    " + ",
+    tok("9", "out-number"),
+    " ",
+    tok("cf", "out-unit")
+  ), "muted");
+  print("");
+
+  print_rich(vec(tok("Assemblies:", "out-label")), "muted");
+  print_rich(vec(
+    "  ",
+    tok("assy", "out-keyword"),
+    " ",
+    tok("wall", "out-var"),
+    " ",
+    tok("=", "out-op"),
+    " ",
+    tok("{", "out-op"),
+    " ",
+    tok("studs", "out-var"),
+    " ",
+    tok("=", "out-op"),
+    " ",
+    tok("16 in o.c.", "out-number"),
+    "; ",
+    tok("height", "out-var"),
+    " ",
+    tok("=", "out-op"),
+    " ",
+    tok("10 ft", "out-number"),
+    "; ",
+    tok("sheathing", "out-var"),
+    " ",
+    tok("=", "out-op"),
+    " ",
+    tok("1 layer", "out-number"),
+    " ",
+    tok("}", "out-op")
+  ), "muted");
+  print_rich(vec(
+    "  ",
+    tok("qty", "out-fn"),
+    tok("(wall, 120 lf)", "out-op"),
+    " -> studs + area breakdown"
+  ), "muted");
+  print("");
+
+  print_rich(vec(tok("Converters:", "out-label")), "muted");
+  print_rich(vec("  Length: to_in / to_ft / to(x, unit)"), "muted");
+  print_rich(vec("  Time: to_sec / to_min / to_hr"), "muted");
+  print_rich(vec("  Area/vol: to_sf/to_sy, to_cf/to_cy"), "muted");
+  print("");
+
+  print_rich(vec(tok("Workflow tips:", "out-label")), "muted");
+  print_rich(vec("  :vars to list variables, :methods to list functions, :test to run tests"), "muted");
+  print_rich(vec("  :save name to snapshot your session (profiles), :load name to restore"), "muted");
+  print("");
+
+  print_rich(vec(tok("Printing:", "out-label")), "muted");
+  print_rich(vec("  print(x) writes to the REPL terminal and returns x (so it composes inside expressions)"), "muted");
+  print_rich(vec("  print_rich(vec(...), cls) writes a rich tokenized line (strings + tok(text, className))"), "muted");
+  1
+}

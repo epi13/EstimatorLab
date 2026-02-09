@@ -1,0 +1,29 @@
+# Core constants and unit definitions
+# Shared constants used across the game systems
+
+# Display constants
+w = 256;
+h = 144;
+scale = 3;
+hud_h = 12;
+view_h = h - hud_h
+
+# Unit definitions
+tile = 2 ft
+tile_per_s = tile / s
+tile_per_s2 = tile / (s^2)
+per_s = 1 / s
+
+# Camera/rendering constants
+mid = floor(view_h / 2)
+fov = 1.05
+max_d = 14
+ray_step = 0.08
+ray_steps = ceil(max_d / ray_step)
+ray_col_step = 1
+floor_step = 1
+ceil_step = 1
+tex_res = 1
+
+# Game constants
+DOOM_DEFAULT_FPS = 18

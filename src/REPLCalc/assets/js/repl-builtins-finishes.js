@@ -103,6 +103,39 @@ export function attachFinishBuiltins(baseFns, { defFn, defFnCtx }){
     vars[key] = value;
   }
 
+  baseFns.wallProcTex = defFnCtx("wallProcTex", 1, {
+    args: [{ label: "id", kinds: ["scalar", "dim"] }],
+    returns: { kinds: ["scalar"] },
+    effects: EFFECT.STATE,
+  }, (ctx, id) => {
+    const n = isQty(id) ? id.value : id;
+    const v = Number.isFinite(n) ? Math.floor(n) : -1;
+    setVar(ctx, "doom_wall_proc_tex", v);
+    return v;
+  });
+
+  baseFns.floorProcTex = defFnCtx("floorProcTex", 1, {
+    args: [{ label: "id", kinds: ["scalar", "dim"] }],
+    returns: { kinds: ["scalar"] },
+    effects: EFFECT.STATE,
+  }, (ctx, id) => {
+    const n = isQty(id) ? id.value : id;
+    const v = Number.isFinite(n) ? Math.floor(n) : -1;
+    setVar(ctx, "doom_floor_proc_tex", v);
+    return v;
+  });
+
+  baseFns.ceilingProcTex = defFnCtx("ceilingProcTex", 1, {
+    args: [{ label: "id", kinds: ["scalar", "dim"] }],
+    returns: { kinds: ["scalar"] },
+    effects: EFFECT.STATE,
+  }, (ctx, id) => {
+    const n = isQty(id) ? id.value : id;
+    const v = Number.isFinite(n) ? Math.floor(n) : -1;
+    setVar(ctx, "doom_ceiling_proc_tex", v);
+    return v;
+  });
+
   baseFns.finishIds = defFn("finishIds", 0, {
     returns: { kinds: ["string"] },
   }, () => listFinishTextureIds().join(", "));

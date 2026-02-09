@@ -109,6 +109,103 @@ export function createRuntime({ state, baseFns, defFn, defFnCtx, renderUserFunct
     return value;
   });
 
+  metaFns.print = defFnCtx("print", -1, {
+    args: [{ label: "value", kinds: ["any"] }],
+    returns: { kinds: ["any"] },
+    effects: EFFECT.IO_GFX,
+  }, (ctx, ...args) => {
+    const writeLine = typeof state.writeLine === "function" ? state.writeLine : null;
+    if (!writeLine) throw new Error("print(): output sink unavailable");
+    const fmt = typeof state.formatValueDisplay === "function"
+      ? state.formatValueDisplay
+      : (value) => ({ main: String(value), extra: "" });
+    const parts = args.map((value) => {
+      if (typeof value === "string") return value;
+      if (value && typeof value === "object" && value.__kind === "string") return value.value;
+      const rendered = fmt(value);
+      const main = rendered?.main ?? "";
+      const extra = rendered?.extra ?? "";
+      return extra ? `${main} ${extra}` : String(main);
+    });
+    writeLine(parts.join(" "), "out");
+    if (!args.length) return 1;
+    return args[args.length - 1];
+  });
+
+  metaFns.tok = defFn("tok", 2, {
+    args: [
+      { label: "text", kinds: ["string"] },
+      { label: "className", kinds: ["string"] },
+    ],
+    returns: { kinds: ["any"] },
+  }, (text, className) => {
+    const t = (typeof text === "string") ? text
+      : (text && typeof text === "object" && text.__kind === "string") ? text.value
+      : String(text);
+    const c = (typeof className === "string") ? className
+      : (className && typeof className === "object" && className.__kind === "string") ? className.value
+      : String(className);
+    return { text: t, className: c };
+  });
+
+  metaFns.print_rich = defFnCtx("print_rich", -1, {
+    args: [],
+    returns: { kinds: ["any"] },
+    effects: EFFECT.IO_GFX,
+  }, (ctx, ...args) => {
+    if (args.length !== 1 && args.length !== 2) throw new Error("print_rich(): expects (parts) or (parts, cls)");
+    const writeLineRich = typeof state.writeLineRich === "function" ? state.writeLineRich : null;
+    if (!writeLineRich) throw new Error("print_rich(): output sink unavailable");
+
+    const partsVec = args[0];
+    if (!partsVec || typeof partsVec !== "object" || !partsVec.__vec) throw new Error("print_rich(): parts must be a vec");
+
+    const clsRaw = args.length === 2 ? args[1] : "out";
+    const cls = (typeof clsRaw === "string") ? clsRaw
+      : (clsRaw && typeof clsRaw === "object" && clsRaw.__kind === "string") ? clsRaw.value
+      : String(clsRaw);
+
+    const fmt = typeof state.formatValueDisplay === "function"
+      ? state.formatValueDisplay
+      : (value) => ({ main: String(value), extra: "" });
+
+    const data = Array.isArray(partsVec.data) ? partsVec.data : [];
+    const outParts = data.map((value) => {
+      if (typeof value === "string") return value;
+      if (value && typeof value === "object" && value.__kind === "string") return value.value;
+
+      const directText = value && typeof value === "object" ? value.text : null;
+      const directClass = value && typeof value === "object" ? value.className : null;
+      const text = (typeof directText === "string") ? directText
+        : (directText && typeof directText === "object" && directText.__kind === "string") ? directText.value
+        : null;
+      const className = (typeof directClass === "string") ? directClass
+        : (directClass && typeof directClass === "object" && directClass.__kind === "string") ? directClass.value
+        : null;
+      if (text !== null && className !== null) return { text, className };
+
+      if (value && typeof value === "object" && value.__assy){
+        const t0 = value.fields?.text?.value;
+        const c0 = value.fields?.className?.value;
+        const tt = (typeof t0 === "string") ? t0
+          : (t0 && typeof t0 === "object" && t0.__kind === "string") ? t0.value
+          : null;
+        const cc = (typeof c0 === "string") ? c0
+          : (c0 && typeof c0 === "object" && c0.__kind === "string") ? c0.value
+          : null;
+        if (tt !== null && cc !== null) return { text: tt, className: cc };
+      }
+
+      const rendered = fmt(value);
+      const main = rendered?.main ?? "";
+      const extra = rendered?.extra ?? "";
+      return extra ? `${main} ${extra}` : String(main);
+    });
+
+    writeLineRich(outParts, cls);
+    return partsVec;
+  });
+
   metaFns.audit_add = metaFns.witness_push;
   metaFns.audit_take = metaFns.witness_pop;
 

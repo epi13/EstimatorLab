@@ -18,10 +18,9 @@ import {
   qtyToString,
 } from "./repl-units.js";
 import { createUi } from "./repl-ui.js";
-import { createGfxTools, GFX_COLOR_TOKENS } from "./repl-gfx.js";
+import { createGfxTools } from "./repl-gfx.js";
 import { createRuntime } from "./repl-runtime.js";
 import { createEvaluator } from "./repl-evaluator.js";
-import { createDocs } from "./repl-docs.js";
 import { createSession } from "./repl-session.js";
 import { createEditor } from "./repl-editor.js";
 import { createTests } from "./repl-tests.js";
@@ -58,6 +57,8 @@ export function initRepl(){
   const baseFns = createBaseFns();
 
   const ui = createUi(state);
+  state.writeLine = ui.writeLine;
+  state.writeLineRich = ui.writeLineRich;
   const gfx = createGfxTools({ state, terminalEl: ui.terminalEl, writeLine: ui.writeLine });
   const gfxFns = gfx.buildGfxMetaFns(defFn, defFnCtx);
 
@@ -135,6 +136,7 @@ export function initRepl(){
     usageTracker: session.usageTracker,
     cmdRunner,
   });
+  state.formatValueDisplay = evaluator.formatValueDisplay;
 
   const runLoopStatements = (source, context = null) => {
     const loopOptions = { allowedEffects: EFFECT.ALL };
@@ -292,15 +294,6 @@ export function initRepl(){
     KEYWORDS,
   });
 
-  const docs = createDocs({
-    state,
-    formatValueDisplay: evaluator.formatValueDisplay,
-    writeLine: ui.writeLine,
-    writeLineRich: ui.writeLineRich,
-    token: ui.token,
-    GFX_COLOR_TOKENS,
-  });
-
   const tests = createTests({
     state,
     setStatus: ui.setStatus,
@@ -326,7 +319,6 @@ export function initRepl(){
     ui,
     editor,
     userFnUi,
-    docs,
     session,
     tests,
     evaluator,

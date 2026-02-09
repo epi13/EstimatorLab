@@ -1,0 +1,134 @@
+# Level metrics and takeoff calculation system
+# Processes map data to generate construction metrics
+
+# Count tiles by type across the entire map
+so analyze_map_tiles(map) = {
+  wall_edges = 0;
+  wall_line_tiles = 0;
+  floor_tiles = 0;
+  doors = 0;
+  monsters = 0;
+  keys = 0;
+  exits = 0;
+  lights = 0;
+  light_2x4 = 0;
+  light_track = 0;
+  light_2x2 = 0;
+  light_dl = 0;
+  light_lin = 0;
+  light_hb = 0;
+  light_wp = 0;
+  light_exit = 0;
+  diffusers = 0;
+  returns = 0;
+  stairs = 0;
+  
+  mw0 = mw(map);
+  mh0 = mh(map);
+  
+  for y in 0..(mh0 - 1):
+    for x in 0..(mw0 - 1):
+      tt = mget(map, x, y);
+      
+      if tile_wallish(tt) == 0: floor_tiles = floor_tiles + 1 else: 0
+      if tt == 2: doors = doors + 1 else: 0
+      if tt == 3: keys = keys + 1 else: 0
+      if tt == 4: exits = exits + 1 else: 0
+      if tt == 5: monsters = monsters + 1 else: 0
+      if tt == 8: lights = lights + 1; light_2x4 = light_2x4 + 1 else: 0
+      if tt == 9: lights = lights + 1; light_track = light_track + 1 else: 0
+      if tt == 12: lights = lights + 1; light_2x2 = light_2x2 + 1 else: 0
+      if tt == 13: lights = lights + 1; light_dl = light_dl + 1 else: 0
+      if tt == 16: lights = lights + 1; light_lin = light_lin + 1 else: 0
+      if tt == 17: lights = lights + 1; light_hb = light_hb + 1 else: 0
+      if tt == 18: lights = lights + 1; light_wp = light_wp + 1 else: 0
+      if tt == 19: lights = lights + 1; light_exit = light_exit + 1 else: 0
+      if tt == 20: diffusers = diffusers + 1 else: 0
+      if tt == 21: returns = returns + 1 else: 0
+      if tt == 10 || tt == 11: stairs = stairs + 1 else: 0
+      
+      if tile_wallish(tt) == 1:
+        if tile_wallish(mget(map, x + 1, y)) == 0 || tile_wallish(mget(map, x - 1, y)) == 0 || tile_wallish(mget(map, x, y + 1)) == 0 || tile_wallish(mget(map, x, y - 1)) == 0: 
+          wall_line_tiles = wall_line_tiles + 1 else: 0
+        if tile_wallish(mget(map, x + 1, y)) == 0: wall_edges = wall_edges + 1 else: 0
+        if tile_wallish(mget(map, x - 1, y)) == 0: wall_edges = wall_edges + 1 else: 0
+        if tile_wallish(mget(map, x, y + 1)) == 0: wall_edges = wall_edges + 1 else: 0
+        if tile_wallish(mget(map, x, y - 1)) == 0: wall_edges = wall_edges + 1 else: 0
+      else:
+        0
+  
+  {
+    wall_edges, wall_line_tiles, floor_tiles, doors, monsters, keys, exits,
+    lights, light_2x4, light_track, light_2x2, light_dl, light_lin, light_hb, light_wp, light_exit,
+    diffusers, returns, stairs
+  }
+}
+
+# Calculate construction quantities from tile analysis
+so calculate_construction_metrics(analysis, tile_size) = {
+  wall_h = 8 ft;
+  wall_lf = analysis.wall_line_tiles * tile_size;
+  wall_face_lf = analysis.wall_edges * tile_size;
+  wall_area = wall_face_lf * wall_h;
+  
+  studs = studs_wall(wall_lf, 16 in, 10);
+  plates = plates_lf(wall_lf);
+  sheathing = sheets_wall(wall_lf, wall_h, 32 sf, 10, 1);
+  drywall = drywall_sheets(wall_area);
+  screws = drywall_screws(drywall);
+  paint = paint_gal(wall_area, 350, 2, 10);
+  mud = mud_gal(wall_area, 100, 3, 10);
+  
+  slab_area = analysis.floor_tiles * tile_size * tile_size;
+  slab_cy = to_cy(concrete_cy(slab_area, 4 in));
+  
+  flooring = flooring_sf(slab_area, 10);
+  base = base_trim_lf(wall_lf, 10);
+  
+  {
+    wall_h, wall_lf, wall_face_lf, wall_area,
+    studs, plates, sheathing, drywall, screws, paint, mud,
+    slab_area, slab_cy, flooring, base
+  }
+}
+
+# Calculate lighting and HVAC takeoffs
+so calculate_mep_metrics(analysis, tile_size, map_width) = {
+  lf_2x4 = light_fixture("TROFFER_2X4");
+  lf_2x2 = light_fixture("TROFFER_2X2");
+  lf_dl = light_fixture("DOWNLIGHT_6");
+  lf_lin = light_fixture("LINEAR_4FT");
+  lf_hb = light_fixture("HIGHBAY");
+  lf_wp = light_fixture("WALLPACK");
+  lf_exit = light_fixture("EXIT_SIGN");
+
+  light_fix = light_fixtures(analysis.lights, 5);
+  lt_2x4 = field(light_takeoff(lf_2x4, analysis.light_2x4, 5), "count");
+  lt_2x2 = field(light_takeoff(lf_2x2, analysis.light_2x2, 5), "count");
+  lt_dl = field(light_takeoff(lf_dl, analysis.light_dl, 5), "count");
+  lt_lin = field(light_takeoff(lf_lin, analysis.light_lin + analysis.light_track, 5), "count");
+  lt_hb = field(light_takeoff(lf_hb, analysis.light_hb, 5), "count");
+  lt_wp = field(light_takeoff(lf_wp, analysis.light_wp, 5), "count");
+  lt_exit = field(light_takeoff(lf_exit, analysis.light_exit, 5), "count");
+
+  duct_trunk = map_width * tile_size;
+  duct_branch = (analysis.diffusers + analysis.returns) * tile_size;
+  duct_len = duct_trunk + duct_branch;
+
+  duct_thk = duct_gauge_thk(doom_duct_gauge);
+  duct_spec0 = duct_spec(doom_duct_shape, doom_duct_a, doom_duct_b, duct_thk, 490 pcf);
+  duct_take = duct_takeoff(duct_spec0, duct_len, 10);
+  duct = field(duct_take, "lf");
+  duct_wt = field(duct_take, "weight");
+  elbows = duct_elbows((analysis.diffusers + analysis.returns) * 2, 5);
+  supply = duct_diffusers(analysis.diffusers, 5);
+  return = duct_diffusers(analysis.returns, 5);
+
+  treads = stair_treads(analysis.stairs * 11, 7);
+  risers = stair_risers(analysis.stairs * 12, 7);
+
+  {
+    light_fix, lt_2x4, lt_2x2, lt_dl, lt_lin, lt_hb, lt_wp, lt_exit,
+    duct, duct_wt, elbows, supply, return, treads, risers
+  }
+}

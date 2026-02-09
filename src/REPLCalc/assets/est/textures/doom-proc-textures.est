@@ -1,0 +1,3 @@
+# Doom procedural textures via Latent Mux Walker (LTW)
+# Refactored to use modular texture helpers
+# Note: doom-textures module is loaded by JavaScript

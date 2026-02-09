@@ -6,8 +6,6 @@ export function createUi(state){
   const liveResultEl = document.getElementById('liveResult');
   const statusPill = document.getElementById('statusPill');
   const hintRight = document.getElementById('hintRight');
-
-  const btnHelp = document.getElementById('btnHelp');
   const btnClear = document.getElementById('btnClear');
   const btnVars = document.getElementById('btnVars');
   const btnMethods = document.getElementById('btnMethods');
@@ -110,7 +108,6 @@ export function createUi(state){
     liveResultEl,
     statusPill,
     hintRight,
-    btnHelp,
     btnClear,
     btnVars,
     btnMethods,

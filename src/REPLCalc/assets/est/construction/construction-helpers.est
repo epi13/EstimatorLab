@@ -1,0 +1,37 @@
+so c_studs_wall(length, oc, waste_factor) = ceil(oc_count(length, oc) * waste_factor)
+
+so c_studs_perim(perim, oc, waste_factor, corner_fudge) = ceil((ceil(perim / oc) + corner_fudge) * waste_factor) ea
+
+so c_plates_lf(perim, top_plates, bottom_plates) = perim * (top_plates + bottom_plates)
+
+so c_plates_sticks(lf, top_plates, bottom_plates, stick_len, waste_pct) = stick_count(lf, stick_len, waste_pct) ea
+
+so c_sheets_wall(length, height, sheet_area, waste_factor, layers) = ceil(((length * height) * layers * waste_factor) / sheet_area) ea
+
+so c_joist_count(run_len, oc) = (ceil(run_len / oc) + 1) ea
+
+so c_joist_lf(run_len, span, oc) = to(c_joist_count(run_len, oc), ea) * span
+
+so c_joist_sticks(lf, span, oc, stick_len, waste_pct) = stick_count(lf, stick_len, waste_pct) ea
+
+so c_rim_sticks(perim, stick_len, waste_pct) = stick_count(perim, stick_len, waste_pct) ea
+
+so c_subfloor_sheets(len, wid, sheet_area, waste_factor, layers) = ceil(((len * wid) * layers * waste_factor) / sheet_area) ea
+
+so c_drywall_sheets(area, sheet_area, waste_factor, layers) = ceil((area * layers * waste_factor) / sheet_area) ea
+
+so c_drywall_screws(sheets, studs_oc, sheet_w, sheet_h, edge_spacing, field_spacing, waste_factor) = {
+  studs = max(2, floor(sheet_w / studs_oc) + 1);
+  edge_per_stud = floor(sheet_h / edge_spacing) + 1;
+  field_per_stud = floor(sheet_h / field_spacing) + 1;
+  screws_per_sheet = (2 * edge_per_stud) + max(0, studs - 2) * field_per_stud;
+  ceil(sheets * screws_per_sheet * waste_factor) ea
+}
+
+so c_tape_rolls(seam_lf, roll_len, waste_factor) = ceil((seam_lf * waste_factor) / roll_len) ea
+
+so c_corner_bead_sticks(corner_lf, stick_len, waste_factor) = ceil((corner_lf * waste_factor) / stick_len) ea
+
+so c_paint_gal(area, coverage_sf_per_gal, coats, waste_factor) = (to_sf(area) * coats / coverage_sf_per_gal) * waste_factor
+
+so c_mud_gal(area, coverage_sf_per_gal, coats, waste_factor) = (to_sf(area) * coats / coverage_sf_per_gal) * waste_factor

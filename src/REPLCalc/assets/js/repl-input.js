@@ -8,7 +8,6 @@ export function createInputHandlers({
   ui,
   editor,
   userFnUi,
-  docs,
   session,
   tests,
   evaluator,
@@ -22,7 +21,6 @@ export function createInputHandlers({
   const {
     inputEl,
     highlightEl,
-    btnHelp,
     btnClear,
     btnVars,
     btnMethods,
@@ -68,8 +66,6 @@ export function createInputHandlers({
     autocompleteState,
   } = editor;
   const { renderUserFunctions, clearFnForm } = userFnUi;
-
-  const { showDocs, listVars, listMethods } = docs;
   const {
     exportSession,
     importSession,
@@ -140,6 +136,100 @@ export function createInputHandlers({
     return desired.length > leading.length ? desired : leading;
   }
 
+  function listVars(){
+    const keys = Object.keys(state.vars).sort();
+    if (!keys.length){
+      writeLine("No variables set.", "muted");
+      return;
+    }
+    writeLine("Variables:", "ok");
+    for (const k of keys){
+      const formatted = formatValueDisplay(state.vars[k]);
+      writeLine(`  ${k} = ${formatted.main}`, "muted");
+      if (formatted.extra) writeLine(`↳ ${formatted.extra}`, "muted");
+    }
+  }
+
+  function listMethods(){
+    const keys = Object.keys(state.userFns).sort();
+    if (!keys.length){
+      writeLine("No user solutions defined.", "muted");
+      return;
+    }
+    writeLine("User solutions:", "ok");
+    for (const k of keys){
+      const defn = state.userFns[k];
+      const params = defn.params ? defn.params.join(", ") : "";
+      writeLine(`  ${k}(${params}) = ${defn.expr}`, "muted");
+    }
+  }
+
+  async function fetchText(url){
+    const res = await fetch(url, { cache: "no-cache" });
+    if (!res.ok){
+      throw new Error(`Failed to load ${url} (${res.status})`);
+    }
+    return await res.text();
+  }
+
+  async function ensureDocsModuleLoaded(){
+    const DOCS_MODULES_VERSION = 1;
+    if (state.__docsModuleLoaded && state.__docsModulesVersion === DOCS_MODULES_VERSION){
+      return;
+    }
+
+    const runExpressionAll = (expr) => runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL });
+    const applyModuleSource = (source, label) => {
+      const statements = splitStatements(source);
+      for (const stmt of statements){
+        const parsed = evaluate(stmt);
+        if (!parsed) continue;
+
+        if (parsed.type === "cmd"){
+          throw new Error(`${label} may not contain commands`);
+        }
+
+        if (parsed.type === "def"){
+          defineUserFn(parsed.name, parsed.params, parsed.expr);
+          continue;
+        }
+
+        if (parsed.type === "assy"){
+          const assembly = createAssembly(parsed.name, parsed.fields);
+          state.vars[parsed.name] = assembly;
+          continue;
+        }
+
+        if (parsed.type === "assign"){
+          state.vars[parsed.name] = runExpressionAll(parsed.expr);
+          continue;
+        }
+
+        if (parsed.type === "equation"){
+          const solved = solveEquation(parsed.left, parsed.right);
+          if (!solved.unknown.unitToken){
+            state.vars[solved.unknown.name] = solved.value;
+          }
+          continue;
+        }
+
+        if (parsed.type === "expr"){
+          runExpressionAll(parsed.expr);
+          continue;
+        }
+
+        if (parsed.type === "if" || parsed.type === "for" || parsed.type === "repeat"){
+          throw new Error(`${label} may not contain flow statements`);
+        }
+      }
+    };
+
+    const docsSource = await fetchText("assets/est/core/docs.est");
+    applyModuleSource(docsSource, "docs");
+    state.__docsModulesVersion = DOCS_MODULES_VERSION;
+    state.__docsModuleLoaded = true;
+  }
+
   async function handleLine(line){
     const runExpressionAll = (expr) => runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL });
     const statementList = splitStatements(line);
@@ -148,7 +238,11 @@ export function createInputHandlers({
     const executeParsed = async (parsed, stmt) => {
       if (parsed.type === "cmd"){
         const {cmd,arg} = parsed;
-        if (cmd === "docs"){ showDocs(); return; }
+        if (cmd === "docs"){
+          await ensureDocsModuleLoaded();
+          runExpressionAll("show_docs()");
+          return;
+        }
         if (cmd === "clear"){ clearTerminal(); return; }
         if (cmd === "vars"){ listVars(); return; }
         if (cmd === "methods"){ listMethods(); return; }
@@ -167,7 +261,10 @@ export function createInputHandlers({
         if (cmd === "use"){ useSymbolFromProfile(arg); return; }
         if (cmd === "diff"){ diffSymbol(arg); return; }
         if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); return; }
-        if (cmd === "doom"){ runDoomDemo({ gfx, writeLine, writeInputEcho }); return; }
+        if (cmd === "doom"){
+          await runDoomDemo({ gfx, writeLine, writeInputEcho, state, evaluator, runtime });
+          return;
+        }
         if (cmd === "latent"){
           await runLatentCommand({
             arg,
@@ -184,7 +281,7 @@ export function createInputHandlers({
           });
           return;
         }
-        if (cmd === "test"){ runTestSuite(); return; }
+        if (cmd === "test"){ await runTestSuite(); return; }
 
         if (cmd === "export"){
           const text = exportSession();
@@ -558,7 +655,6 @@ export function createInputHandlers({
     closeAutocomplete();
   });
 
-  btnHelp.addEventListener("click", showDocs);
   btnClear.addEventListener("click", clearTerminal);
   btnVars.addEventListener("click", listVars);
   btnMethods.addEventListener("click", listMethods);

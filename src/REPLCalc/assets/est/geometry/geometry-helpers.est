@@ -1,0 +1,25 @@
+# Geometry and collision detection functions
+# Spatial calculations and movement physics
+
+# Scene helpers
+so tile_solid(t) = if(t == 1 || t == 2, 1, 0);
+so tile_wall(t) = if(t == 1, 1, if(t == 2, 2, 0));
+so tile_wallish(t) = if(t == 1 || t == 2, 1, 0);
+
+# Collision detection
+so solid_at(x, y, map) = tile_solid(mget(map, floor(x), floor(y)))
+so clear(x, y, map, r) = if(solid_at(x - r, y - r, map) == 0 && solid_at(x + r, y - r, map) == 0 && solid_at(x - r, y + r, map) == 0 && solid_at(x + r, y + r, map) == 0, 1, 0)
+
+# Movement physics
+so apply_movement(vx0, vy0, ax, ay, dt) = { vx = vx0 + ax * dt; vy = vy0 + ay * dt }
+so apply_friction(vx0, vy0, fric_rate, dt) = {
+  damp = max(0, 1 - fric_rate * dt);
+  vx = vx0 * damp;
+  vy = vy0 * damp
+}
+so limit_speed(vx0, vy0, max_spd) = {
+  vmag = sqrt(vx0 * vx0 + vy0 * vy0);
+  sc = if(vmag > max_spd, max_spd / max(0.0001, vmag), 1);
+  vx = vx0 * sc;
+  vy = vy0 * sc
+}

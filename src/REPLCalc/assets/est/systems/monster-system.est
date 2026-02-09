@@ -1,0 +1,50 @@
+# Monster AI and behavior system
+# Handles monster movement, targeting, and damage
+
+# Monster movement logic
+so update_monster_ai(map, player_x, player_y, level, frame) = {
+  mn = 2 + min(6, level);
+  
+  for i in 0..(mn - 1):
+    mx = 1 + floor(rnd(frame * 1.31 + i * 9.7) * (mw(map) - 2));
+    my = 1 + floor(rnd(frame * 1.73 + i * 13.9) * (mh(map) - 2));
+    
+    if mget(map, mx, my) == 5:
+      pxm = mx + 0.5;
+      pym = my + 0.5;
+      dx = player_x - pxm;
+      dy = player_y - pym;
+      adx = abs(dx);
+      ady = abs(dy);
+      stepx = sign(dx);
+      stepy = sign(dy);
+      tx = mx + if(adx > ady, stepx, 0);
+      ty = my + if(adx > ady, 0, stepy);
+      
+      if mget(map, tx, ty) == 0: 
+        mset(map, mx, my, 0); 
+        mset(map, tx, ty, 5);
+      else:
+        0
+    else:
+      0
+}
+
+# Proximity damage calculation
+so calculate_proximity_damage(map, player_x, player_y, level, dt) = {
+  ftx = floor(player_x);
+  fty = floor(player_y);
+  near = 0;
+  
+  for ox in -1..1:
+    for oy in -1..1:
+      if mget(map, ftx + ox, fty + oy) == 5: near = 1 else: 0
+  
+  if near == 1 && doom_dead == 0 && doom_win == 0:
+    dmg = (16 + 4 * min(6, level)) * dt;
+    absorb = min(doom_armor, dmg * 0.55);
+    doom_armor = max(0, doom_armor - absorb);
+    doom_hp = doom_hp - (dmg - absorb);
+  else:
+    0
+}

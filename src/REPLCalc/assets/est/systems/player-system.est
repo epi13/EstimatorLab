@@ -1,0 +1,34 @@
+# Player movement and control system
+# Handles input processing, physics, and collision
+
+# Input processing
+so process_input(turn_sens) = {
+  fw = key_w - key_s;
+  st = key_d - key_a;
+  wish = sqrt(fw * fw + st * st);
+  turn = mouse_dx * turn_sens + (key_right - key_left) * 0.045;
+  { fw, st, wish, turn }
+}
+
+# Movement calculation
+so calculate_acceleration(fw, st, wish, cx, sx, accel) = {
+  ax = if(wish > 0, (cx * fw - sx * st) * (accel / wish), 0);
+  ay = if(wish > 0, (sx * fw + cx * st) * (accel / wish), 0);
+  { ax, ay }
+}
+
+# Collision resolution
+so resolve_collision(px, py, vx, vy, map, r) = {
+  nx = px + vx;
+  ny = py + vy;
+  new_px = if(clear(nx, py, map, r) == 1, nx, px);
+  new_py = if(clear(px, ny, map, r) == 1, ny, py);
+  new_vx = if(clear(nx, py, map, r) == 1, vx, 0);
+  new_vy = if(clear(px, ny, map, r) == 1, vy, 0);
+  { new_px, new_py, new_vx, new_vy }
+}
+
+# Update stamina based on running
+so update_stamina(run_req) = {
+  doom_stamina = clamp(doom_stamina + (if(run_req == 1, -22, 14) * dt), 0, 100)
+}

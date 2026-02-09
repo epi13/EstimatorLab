@@ -42,6 +42,12 @@ export function createGfxTools({ state, terminalEl, writeLine }){
   let webgpuInitPromise = null;
   let webgl2Supported = null;
 
+  const procTexCache = {
+    wall: Object.create(null),
+    floor: Object.create(null),
+    ceil: Object.create(null),
+  };
+
   const keyState = {
     down: Object.create(null),
   };
@@ -1375,12 +1381,58 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         const floorFinish = typeof vars.doom_floor_finish === "string" ? vars.doom_floor_finish : "CONCRETE_TROWEL";
         const ceilFinish = typeof vars.doom_ceiling_finish === "string" ? vars.doom_ceiling_finish : "ACT_2x2";
 
+        const wallProcTex = Number.isFinite(vars.doom_wall_proc_tex) ? (vars.doom_wall_proc_tex | 0) : -1;
+        const floorProcTex = Number.isFinite(vars.doom_floor_proc_tex) ? (vars.doom_floor_proc_tex | 0) : -1;
+        const ceilProcTex = Number.isFinite(vars.doom_ceiling_proc_tex) ? (vars.doom_ceiling_proc_tex | 0) : -1;
+
+        const procRes = (() => {
+          const v = vars.doom_proc_tex_res;
+          const n = isQty(v) ? v.value : v;
+          return Number.isFinite(n) ? Math.max(16, Math.min(256, Math.floor(n))) : 64;
+        })();
+        const procAnimDiv = (() => {
+          const v = vars.doom_proc_tex_anim_div;
+          const n = isQty(v) ? v.value : v;
+          return Number.isFinite(n) && n > 0 ? Math.max(1, Math.floor(n)) : 6;
+        })();
+        const procTBucket = (() => {
+          const f = Number.isFinite(vars.frame) ? vars.frame : 0;
+          return Math.floor(f / procAnimDiv);
+        })();
+
         const wainscotFinish = typeof vars.doom_wainscot_finish === "string" ? vars.doom_wainscot_finish : "";
         const wainscotH = (() => {
           const v = vars.doom_wainscot_h;
           const n = isQty(v) ? v.value : v;
           return Number.isFinite(n) ? Math.max(0, n) : 0;
         })();
+
+        function ensureProcTextureData(surface, texId){
+          if (!ctx || typeof ctx.evalString !== "function") return null;
+          if (texId < 0) return null;
+          const bucketKey = `${texId}@${procTBucket}@${procRes}`;
+          const cached = procTexCache[surface]?.[bucketKey];
+          if (cached) return cached;
+
+          const data = new Uint32Array(procRes * procRes);
+          const call = `get_texel(${texId}, x, y, ${procTBucket})`;
+          for (let y = 0; y < procRes; y++){
+            for (let x = 0; x < procRes; x++){
+              const packed = ctx.evalString(call, { x, y });
+              data[y * procRes + x] = (packed >>> 0);
+            }
+          }
+          procTexCache[surface][bucketKey] = { w: procRes, h: procRes, data };
+          return procTexCache[surface][bucketKey];
+        }
+
+        function sampleProcNearest(tex, u, v){
+          const w = tex.w | 0;
+          const h = tex.h | 0;
+          const xi = ((u | 0) % w + w) % w;
+          const yi = ((v | 0) % h + h) % h;
+          return tex.data[yi * w + xi] >>> 0;
+        }
 
         const optObj = (opts && typeof opts === "object" && opts.__obj && typeof opts.raw === "string") ? opts.raw : null;
         let floorStep = 2;
@@ -1491,12 +1543,24 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         const wallTexDefault = getFinishTexture(wallFinish) || getFinishTexture("DRYWALL_PRIMED");
         const wainscotTex = wainscotFinish ? (getFinishTexture(wainscotFinish) || wallTexDefault) : null;
 
+        const wallProc = wallProcTex >= 0 ? ensureProcTextureData("wall", wallProcTex) : null;
+        const floorProc = floorProcTex >= 0 ? ensureProcTextureData("floor", floorProcTex) : null;
+        const ceilProc = ceilProcTex >= 0 ? ensureProcTextureData("ceil", ceilProcTex) : null;
+
         function sampleWallTex(worldX, worldY, wallY01){
-          const tex = (wainscotTex && wainscotH > 0 && wallY01 >= 0 && wallY01 <= 1 && (wallY01 * 8) <= wainscotH) ? wainscotTex : wallTexDefault;
-          if (!tex) return FIN_TEX_INTERNAL.packRgba(200, 0, 200, 255);
+          const useWainscot = (wainscotTex && wainscotH > 0 && wallY01 >= 0 && wallY01 <= 1 && (wallY01 * 8) <= wainscotH);
           const fracX = worldX - Math.floor(worldX);
           const fracY = worldY - Math.floor(worldY);
           const u01 = Math.abs(fracX) > Math.abs(fracY) ? fracY : fracX;
+
+          if (wallProc && !useWainscot){
+            const u = (u01 * wallProc.w * 2) / texRes;
+            const v = ((1 - wallY01) * wallProc.h * 2) / texRes;
+            return sampleProcNearest(wallProc, u, v);
+          }
+
+          const tex = useWainscot ? wainscotTex : wallTexDefault;
+          if (!tex) return FIN_TEX_INTERNAL.packRgba(200, 0, 200, 255);
           const u = (u01 * tex.w * tex.worldRepeat) / texRes;
           const v = ((1 - wallY01) * tex.h * tex.worldRepeat) / texRes;
           return sampleFinishTexture(tex.id, u, v);
@@ -1575,9 +1639,16 @@ fn fs(in: VSOut) -> @location(0) vec4f {
                   const rowDist = 1 / Math.max(0.0001, p);
                   const worldX = nPx + xrc * rowDist;
                   const worldY = nPy + xrs * rowDist;
-                  const u = ((worldX * floorTex.worldRepeat) * floorTex.w) / texRes;
-                  const v = ((worldY * floorTex.worldRepeat) * floorTex.h) / texRes;
-                  let packed = sampleFinishTexture(floorTex.id, u, v);
+                  let packed;
+                  if (floorProc){
+                    const u = ((worldX * 2) * floorProc.w) / texRes;
+                    const v = ((worldY * 2) * floorProc.h) / texRes;
+                    packed = sampleProcNearest(floorProc, u, v);
+                  }else{
+                    const u = ((worldX * floorTex.worldRepeat) * floorTex.w) / texRes;
+                    const v = ((worldY * floorTex.worldRepeat) * floorTex.h) / texRes;
+                    packed = sampleFinishTexture(floorTex.id, u, v);
+                  }
                   const fFog = Math.max(0, Math.min(1, (rowDist - 1.6) / Math.max(0.001, (md - 1.6))));
                   const fBright = Math.max(0, Math.min(1, ambient + lightAt(worldX, worldY) - fFog * 0.55));
                   packed = applyBrightnessToRgba(packed, fBright * 0.9);
@@ -1596,9 +1667,16 @@ fn fs(in: VSOut) -> @location(0) vec4f {
                   const rowDist = 1 / Math.max(0.0001, p);
                   const worldX = nPx + xrc * rowDist;
                   const worldY = nPy + xrs * rowDist;
-                  const u = ((worldX * ceilTex.worldRepeat) * ceilTex.w) / texRes;
-                  const v = ((worldY * ceilTex.worldRepeat) * ceilTex.h) / texRes;
-                  let packed = sampleFinishTexture(ceilTex.id, u, v);
+                  let packed;
+                  if (ceilProc){
+                    const u = ((worldX * 2) * ceilProc.w) / texRes;
+                    const v = ((worldY * 2) * ceilProc.h) / texRes;
+                    packed = sampleProcNearest(ceilProc, u, v);
+                  }else{
+                    const u = ((worldX * ceilTex.worldRepeat) * ceilTex.w) / texRes;
+                    const v = ((worldY * ceilTex.worldRepeat) * ceilTex.h) / texRes;
+                    packed = sampleFinishTexture(ceilTex.id, u, v);
+                  }
                   const cFog = Math.max(0, Math.min(1, (rowDist - 1.6) / Math.max(0.001, (md - 1.6))));
                   const cBright = Math.max(0, Math.min(1, ambient + lightAt(worldX, worldY) - cFog * 0.55));
                   packed = applyBrightnessToRgba(packed, cBright * 0.95);

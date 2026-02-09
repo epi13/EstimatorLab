@@ -1550,6 +1550,7 @@ export function createBaseFns(){
 
   attachConstructionBuiltins(baseFns, {
     defFn,
+    defFnCtx,
     convert,
     isQty,
     isTruthy,

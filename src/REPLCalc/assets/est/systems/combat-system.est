@@ -1,0 +1,47 @@
+# Combat and weapons system
+# Handles shooting, raycasting, damage calculation
+
+# Raycast for shooting
+so weapon_raycast(px, py, yaw, spread, range, map) = {
+  hit = 0;
+  hit_tile = 0;
+  hit_x = 0;
+  hit_y = 0;
+  
+  aim = yaw + (rnd(frame * 7.1 + doom_kills * 11.7) - 0.5) * spread;
+  
+  for i in 0..240:
+    d = i * (range / 240);
+    rx = px + cos(aim) * d;
+    ry = py + sin(aim) * d;
+    tt = mget(map, rx, ry);
+    
+    if hit == 0 && tt == 5:
+      hit = 1;
+      hit_tile = tt;
+      hit_x = rx;
+      hit_y = ry;
+    else:
+      if hit == 0 && tile_solid(tt) == 1: 
+        hit = 2;
+        hit_tile = tt;
+        hit_x = rx;
+        hit_y = ry;
+      else:
+        0
+  }
+  
+  { hit, hit_tile, hit_x, hit_y }
+}
+
+# Damage calculation
+so calculate_damage(base_dmg, combo, crit) = base_dmg * (1 + 0.5 * crit + 0.1 * min(5, combo))
+
+# Process weapon hit effects
+so process_hit(hit_x, hit_y, dmg) = {
+  mset(doom_map, floor(hit_x), floor(hit_y), 0);
+  doom_kills = doom_kills + 1;
+  doom_money = doom_money + (20 + dmg) $;
+  doom_combo = min(6, doom_combo + 1);
+  doom_combo_cd = 70;
+}
