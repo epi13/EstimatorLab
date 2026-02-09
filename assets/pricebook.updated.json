@@ -3500,6 +3500,1610 @@
         "raceway"
       ],
       "status": "active"
+    },
+    {
+      "id": "PLF-08-0001",
+      "item_name": "Hollow metal door frame - insulated (exterior door) 6'0",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "B2030",
+        "level3_title": "Exterior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 775.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.954023,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "frames",
+        "exterior",
+        "metal",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0002",
+      "item_name": "Hollow metal door frame - insulated (exterior door) 4'0",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "B2030",
+        "level3_title": "Exterior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 620.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.781609,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "frames",
+        "exterior",
+        "metal",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0003",
+      "item_name": "Hollow metal door frame - insulated (exterior door) 3'0",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "B2030",
+        "level3_title": "Exterior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 460.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.666667,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "frames",
+        "exterior",
+        "metal",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0004",
+      "item_name": "Hollow metal door frame (interior) 3'0",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1020",
+        "level3_title": "Interior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 480.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.494253,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "frames",
+        "interior",
+        "metal",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0005",
+      "item_name": "HM door - insulated (exterior use) 6'0",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "B2030",
+        "level3_title": "Exterior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 2470.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 2.528736,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "exterior",
+        "metal",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0006",
+      "item_name": "HM door - insulated (exterior use) 4'0",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "B2030",
+        "level3_title": "Exterior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 1580.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.436782,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "exterior",
+        "metal",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0007",
+      "item_name": "HM door - insulated (exterior use) 3'0",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "B2030",
+        "level3_title": "Exterior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 1240.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.321839,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "exterior",
+        "metal",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0008",
+      "item_name": "HM door (interior) 3'0",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1020",
+        "level3_title": "Interior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 1240.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.321839,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "interior",
+        "metal",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0009",
+      "item_name": "Solid core wood flush door (prefinished)",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 14 16",
+        "section_title": "Flush Wood Doors"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1020",
+        "level3_title": "Interior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 730.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.321839,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "interior",
+        "wood",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0010",
+      "item_name": "Deadbolt",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 100.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 0.91954,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0011",
+      "item_name": "5 knuckle hinge",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 170.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 0.689655,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0012",
+      "item_name": "Lever style latch (passage)",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 175.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 0.977011,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0013",
+      "item_name": "Lever style latch (privacy)",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 175.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 0.977011,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0014",
+      "item_name": "Lever style latch (keyed with core)",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 205.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.034483,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0015",
+      "item_name": "Closer (interior doors)",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 250.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.781609,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0016",
+      "item_name": "Closer (heavy duty, exterior doors in windy places)",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 420.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.781609,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0017",
+      "item_name": "Panic hardware, rim mounted w/trim",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 2485.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 3.045977,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0018",
+      "item_name": "Narrow lite (4\"x22\" ish) interior only",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 285.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.091954,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0019",
+      "item_name": "Half lite interior only",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 510.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.436782,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0020",
+      "item_name": "Full lite",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 1025.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 2.701149,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0021",
+      "item_name": "Door glazing",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 80 00",
+        "section_title": "Glazing"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "SF",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 55.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 0.229885,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "glazing",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0022",
+      "item_name": "Transoms and sidelites",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 80 00",
+        "section_title": "Glazing"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "B2020",
+        "level3_title": "Exterior Windows"
+      },
+      "unit": "SF",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 115.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 0.287356,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "glazing",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0023",
+      "item_name": "Digital access - key pad (mechanical)",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 13",
+        "section_title": "Electrified Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 400.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.781609,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "access-control",
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0024",
+      "item_name": "Digital access - key pad (electronic)",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 13",
+        "section_title": "Electrified Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 815.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 2.701149,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "access-control",
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0025",
+      "item_name": "Electric Strike",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 13",
+        "section_title": "Electrified Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 830.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.321839,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "access-control",
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0026",
+      "item_name": "Electric Hinges",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 13",
+        "section_title": "Electrified Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 790.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.321839,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "access-control",
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0027",
+      "item_name": "Door Contacts",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 13",
+        "section_title": "Electrified Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 230.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 1.321839,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "access-control",
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0028",
+      "item_name": "Card Reader",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 13",
+        "section_title": "Electrified Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 460.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 5.0,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "access-control",
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0029",
+      "item_name": "Power Supply",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 13",
+        "section_title": "Electrified Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 570.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 2.471264,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "access-control",
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0030",
+      "item_name": "Interior Single Door Hardware Set",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1020",
+        "level3_title": "Interior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 625.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 3.505747,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "hardware",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0031",
+      "item_name": "Exterior Single Door Hardware Set",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "B2030",
+        "level3_title": "Exterior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 895.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 4.425287,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "hardware",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0032",
+      "item_name": "6'0x7'0 HM Exterior Door Complete, with amenities",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "B2030",
+        "level3_title": "Exterior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 5177.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 14.666667,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "hardware",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0033",
+      "item_name": "3'0x7'0 HM Exterior Door Complete, with amenities",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "B2030",
+        "level3_title": "Exterior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 2779.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 9.0,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "hardware",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0034",
+      "item_name": "6'0x7'0 HM Exterior Door Complete w/panic hardware, with amenities",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "B2030",
+        "level3_title": "Exterior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 10147.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 20.758621,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "hardware",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0035",
+      "item_name": "3'0x7'0 HM Exterior Door Complete w/panic hardware, with amenities",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "B2030",
+        "level3_title": "Exterior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 5264.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 12.045977,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "hardware",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0036",
+      "item_name": "3'0x7'0 HM Interior Door Complete, with amenities",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1020",
+        "level3_title": "Interior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 2569.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 8.218391,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "hardware",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0037",
+      "item_name": "3'0x7'0 HM Frame with Wood Interior Door Complete, with amenities",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 11 13",
+        "section_title": "Hollow Metal Doors and Frames"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1020",
+        "level3_title": "Interior Doors"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 2059.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 8.218391,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "doors",
+        "hardware",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0038",
+      "item_name": "Smoke rated gasket",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 83.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 0.689655,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0039",
+      "item_name": "Acoustic door seal",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 70.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 0.689655,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0040",
+      "item_name": "Silencers",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 9.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 0.149425,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0041",
+      "item_name": "Kick/mop plate",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 92.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 0.747126,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0042",
+      "item_name": "Wall/floor stop",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 40.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 0.310345,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0043",
+      "item_name": "Push/pull handle",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 90.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 0.747126,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
+    },
+    {
+      "id": "PLF-08-0044",
+      "item_name": "Normal Amenities - Kick plate, door stop, push/pull, door seal",
+      "description": "Door Prices March 2025.",
+      "csi": {
+        "division": "08",
+        "division_title": "Openings",
+        "section": "08 71 00",
+        "section_title": "Door Hardware"
+      },
+      "uniformat": {
+        "level1": "B",
+        "level1_title": "Shell",
+        "level2": "B20",
+        "level2_title": "Exterior Enclosure",
+        "level3": "C1030",
+        "level3_title": "Fittings"
+      },
+      "unit": "EA",
+      "trade": "Architectural",
+      "pricing": {
+        "mat_per_unit": 315.0,
+        "freight_percent": 0.12,
+        "handling_percent": 0.03
+      },
+      "labor": {
+        "base_hrs_per_unit": 2.471264,
+        "productivity_factor": 1.0
+      },
+      "tags": [
+        "hardware",
+        "doors",
+        "door-prices-2025"
+      ],
+      "status": "active"
     }
   ]
 }
