@@ -1090,6 +1090,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     state.vars.key_d = keyState.down.d ? 1 : 0;
     state.vars.key_q = keyState.down.q ? 1 : 0;
     state.vars.key_e = keyState.down.e ? 1 : 0;
+    state.vars.key_f = keyState.down.f ? 1 : 0;
     state.vars.key_space = keyState.down.space ? 1 : 0;
     state.vars.key_shift = keyState.down.shift ? 1 : 0;
     state.vars.key_up = keyState.down.arrowup ? 1 : 0;

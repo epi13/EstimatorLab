@@ -31,7 +31,10 @@ export function attachUncertaintyBuiltins(baseFns, {
       if (value.__kind === "bool") return value.value ? 1 : 0;
       if (value.__kind === "string") value = value.value;
     }
-    if (isQty(value)) return value;
+    if (isQty(value)){
+      if (value.kind === "scalar") return value.value;
+      return value;
+    }
     const num = Number(value);
     if (!Number.isFinite(num)) throw new Error(`${label} must be numeric`);
     return num;
@@ -40,11 +43,13 @@ export function attachUncertaintyBuiltins(baseFns, {
   function distNormal(mu, sigma){
     const m = scalarOrQty(mu, "mu");
     const s = scalarOrQty(sigma, "sigma");
-    if (isQty(m) !== isQty(s)) throw new Error("dist.normal mu/sigma must both be quantities or both be scalars");
-    if (isQty(m)){
-      const [mv, sv] = normalizeCompare(m, s);
+    if (isQty(m) || isQty(s)){
+      const unitKind = isQty(m) ? m.kind : s.kind;
+      const mm = isQty(m) ? m : makeQty(Number(m), unitKind);
+      const ss = isQty(s) ? s : makeQty(Number(s), unitKind);
+      const [mv, sv] = normalizeCompare(mm, ss);
       if (sv <= 0) throw new Error("dist.normal sigma must be > 0");
-      return { __dist: true, kind: "normal", mu: m, sigma: s };
+      return { __dist: true, kind: "normal", mu: mm, sigma: ss };
     }
     if (!(Number.isFinite(m) && Number.isFinite(s)) || s <= 0) throw new Error("dist.normal expects sigma > 0");
     return { __dist: true, kind: "normal", mu: m, sigma: s };
@@ -54,14 +59,17 @@ export function attachUncertaintyBuiltins(baseFns, {
     const aa = scalarOrQty(a, "a");
     const bb = scalarOrQty(b, "b");
     const cc = scalarOrQty(c, "c");
-    if (isQty(aa) !== isQty(bb) || isQty(aa) !== isQty(cc)) throw new Error("dist.tri params must all be quantities or all be scalars");
-    if (isQty(aa)){
-      const av = aa.value;
-      const bv = bb.value;
-      const cv = cc.value;
-      if (aa.kind !== bb.kind || aa.kind !== cc.kind) throw new Error("dist.tri quantity params must have same units");
+    if (isQty(aa) || isQty(bb) || isQty(cc)){
+      const unitKind = isQty(aa) ? aa.kind : (isQty(bb) ? bb.kind : cc.kind);
+      const aQ = isQty(aa) ? aa : makeQty(Number(aa), unitKind);
+      const bQ = isQty(bb) ? bb : makeQty(Number(bb), unitKind);
+      const cQ = isQty(cc) ? cc : makeQty(Number(cc), unitKind);
+      if (aQ.kind !== bQ.kind || aQ.kind !== cQ.kind) throw new Error("dist.tri quantity params must have same units");
+      const av = aQ.value;
+      const bv = bQ.value;
+      const cv = cQ.value;
       if (!(av <= cv && cv <= bv)) throw new Error("dist.tri requires a <= c <= b");
-      return { __dist: true, kind: "tri", a: aa, b: bb, c: cc };
+      return { __dist: true, kind: "tri", a: aQ, b: bQ, c: cQ };
     }
     if (!(Number.isFinite(aa) && Number.isFinite(bb) && Number.isFinite(cc))) throw new Error("dist.tri params must be numeric");
     if (!(aa <= cc && cc <= bb)) throw new Error("dist.tri requires a <= c <= b");
@@ -326,7 +334,13 @@ export function attachUncertaintyBuiltins(baseFns, {
     returns: { kinds: ["scalar"] },
   }, (dist, x) => {
     const p = distCdf(dist, x);
-    const twoSided = 2 * Math.min(p, 1 - p);
+    let twoSided = 2 * Math.min(p, 1 - p);
+    if (!Number.isFinite(twoSided)) throw new Error("pvalue(): result not finite");
+    if (twoSided < 0) twoSided = 0;
+    if (twoSided > 1) twoSided = 1;
+    const snap = 1e-9;
+    if (twoSided < snap) return 0;
+    if (1 - twoSided < snap) return 1;
     return twoSided;
   });
   baseFns.prob_gt = defFn("prob_gt", 2, {

@@ -231,6 +231,137 @@ export function createBaseFns(){
   baseFns.floor = defFn("floor", 1, {
     args: [{ label: "x", kinds: ["scalar", "dim"] }],
   }, (x) => isQty(x) ? makeQty(Math.floor(x.value), x.kind) : Math.floor(x));
+
+  baseFns.floor_div = defFn("floor_div", 2, {
+    args: [
+      { label: "x", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "m", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (x, m) => {
+    const xv = requireScalarArg(x, "floor_div x");
+    const mv = requireScalarArg(m, "floor_div m");
+    if (mv === 0) throw new Error("floor_div(): divisor cannot be 0");
+    return Math.floor(xv / mv);
+  });
+
+  baseFns.mod_floor = defFn("mod_floor", 2, {
+    args: [
+      { label: "x", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "m", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (x, m) => {
+    const xv = requireScalarArg(x, "mod_floor x");
+    const mv = requireScalarArg(m, "mod_floor m");
+    if (mv === 0) throw new Error("mod_floor(): modulus cannot be 0");
+    const q = Math.floor(xv / mv);
+    return xv - mv * q;
+  });
+
+  baseFns.mod_pos = defFn("mod_pos", 2, {
+    args: [
+      { label: "x", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "m", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (x, m) => {
+    const xv = requireScalarArg(x, "mod_pos x");
+    let mv = requireScalarArg(m, "mod_pos m");
+    if (mv === 0) throw new Error("mod_pos(): modulus cannot be 0");
+    if (mv < 0) mv = -mv;
+    let r = xv % mv;
+    if (r < 0) r += mv;
+    return r;
+  });
+
+  function toU32(value, label){
+    if (isQty(value)){
+      if (value.kind !== "scalar") throw new Error(`${label} expects a dimensionless scalar value`);
+      const n = Number(value.value);
+      if (!Number.isFinite(n)) throw new Error(`${label} expects a finite scalar`);
+      return (n >>> 0);
+    }
+    const n = Number(value);
+    if (!Number.isFinite(n)) throw new Error(`${label} expects a finite scalar`);
+    return (n >>> 0);
+  }
+
+  function toShift(value, label){
+    const n = toU32(value, label);
+    return (n & 31);
+  }
+
+  baseFns.band = defFn("band", 2, {
+    args: [
+      { label: "a", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "b", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (a, b) => (toU32(a, "band a") & toU32(b, "band b")) >>> 0);
+
+  baseFns.bor = defFn("bor", 2, {
+    args: [
+      { label: "a", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "b", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (a, b) => (toU32(a, "bor a") | toU32(b, "bor b")) >>> 0);
+
+  baseFns.bxor = defFn("bxor", 2, {
+    args: [
+      { label: "a", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "b", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (a, b) => (toU32(a, "bxor a") ^ toU32(b, "bxor b")) >>> 0);
+
+  baseFns.bnot = defFn("bnot", 1, {
+    args: [{ label: "a", kinds: ["scalar", "dim"], dim: "scalar" }],
+    returns: { kinds: ["scalar"] },
+  }, (a) => (~toU32(a, "bnot a")) >>> 0);
+
+  baseFns.shl = defFn("shl", 2, {
+    args: [
+      { label: "a", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "n", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (a, n) => (toU32(a, "shl a") << toShift(n, "shl n")) >>> 0);
+
+  baseFns.shr = defFn("shr", 2, {
+    args: [
+      { label: "a", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "n", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (a, n) => (toU32(a, "shr a") >>> toShift(n, "shr n")) >>> 0);
+
+  baseFns.flag_has = defFn("flag_has", 2, {
+    args: [
+      { label: "flags", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "mask", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (flags, mask) => {
+    const f = toU32(flags, "flag_has flags");
+    const m = toU32(mask, "flag_has mask");
+    return ((f & m) !== 0) ? 1 : 0;
+  });
+
+  baseFns.flag_set = defFn("flag_set", 3, {
+    args: [
+      { label: "flags", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "mask", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "on", kinds: ["any"] },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (flags, mask, on) => {
+    const f = toU32(flags, "flag_set flags");
+    const m = toU32(mask, "flag_set mask");
+    if (isTruthy(on)) return (f | m) >>> 0;
+    return (f & (~m)) >>> 0;
+  });
   baseFns.sqrt = defFn("sqrt", 1, {
     args: [{ label: "x", kinds: ["scalar", "dim"] }],
   }, (x) => pow(x, 0.5));
@@ -465,6 +596,120 @@ export function createBaseFns(){
     args: [{ label: "value", kinds: ["any"] }],
     returns: { kinds: ["string"] },
   }, (...values) => values.map(valueToString).join(""));
+
+  baseFns.len = defFn("len", 1, {
+    args: [{ label: "s", kinds: ["string"] }],
+    returns: { kinds: ["scalar"] },
+  }, (s) => {
+    if (typeof s !== "string") throw new Error("len expects a string");
+    return s.length;
+  });
+
+  baseFns.char_code = defFn("char_code", 2, {
+    args: [
+      { label: "s", kinds: ["string"] },
+      { label: "i", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (s, i) => {
+    if (typeof s !== "string") throw new Error("char_code expects a string");
+    const idx = toIndex(i, "char_code i");
+    if (idx < 0 || idx >= s.length) return -1;
+    const code = s.charCodeAt(idx);
+    return Number.isFinite(code) ? code : -1;
+  });
+
+  function charClass(code){
+    const c = Number(code);
+    if (!Number.isFinite(c) || c < 0) return 0;
+    const u = (c >>> 0);
+    if (u >= 48 && u <= 57) return 1; // digit
+    if ((u >= 65 && u <= 90) || (u >= 97 && u <= 122)) return 2; // alpha
+    if (u === 9 || u === 10 || u === 13 || u === 32) return 3; // space
+    if (u === 45) return 4; // '-'
+    if (u === 47) return 5; // '/'
+    if (u === 46) return 6; // '.'
+    if (u === 95) return 7; // '_'
+    if (u === 58) return 8; // ':'
+    if (u === 44) return 9; // ','
+    if (u === 35) return 10; // '#'
+    return 0;
+  }
+
+  baseFns.charclass = defFn("charclass", 1, {
+    args: [{ label: "code", kinds: ["scalar", "dim"], dim: "scalar" }],
+    returns: { kinds: ["scalar"] },
+  }, (code) => charClass(code));
+
+  baseFns.class = baseFns.charclass;
+
+  baseFns.scan = defFn("scan", 2, {
+    args: [
+      { label: "s", kinds: ["string"] },
+      { label: "i", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["assy"] },
+  }, (s, i) => {
+    if (typeof s !== "string") throw new Error("scan expects a string");
+    const idx = toIndex(i, "scan i");
+    const code = (idx < 0 || idx >= s.length) ? -1 : s.charCodeAt(idx);
+    const ch = (idx < 0 || idx >= s.length) ? "" : s[idx];
+    const cls = charClass(code);
+    return buildAssy("scan", {
+      i: fieldInfo((idx < 0) ? 0 : Math.min(idx + 1, s.length)),
+      code: fieldInfo(Number.isFinite(code) ? code : -1),
+      ch: fieldInfo(ch),
+      cls: fieldInfo(cls),
+    });
+  });
+
+  baseFns.scan_while = defFnCtx("scan_while", -1, {
+    args: [],
+    returns: { kinds: ["assy"] },
+  }, (ctx, ...args) => {
+    if (!ctx || typeof ctx.evalString !== "function") throw new Error("scan_while requires evalString support");
+    if (args.length !== 3 && args.length !== 5) throw new Error("scan_while expects (s, i, pred) or (s, i, pred, acc0, accExpr)");
+    const [s, i, pred] = args;
+    const acc0 = args.length === 5 ? args[3] : undefined;
+    const accExpr = args.length === 5 ? args[4] : undefined;
+    if (typeof s !== "string") throw new Error("scan_while expects a string");
+    if (typeof pred !== "string") throw new Error("scan_while expects predicate as string expression");
+    if (args.length === 5 && typeof accExpr !== "string") throw new Error("scan_while expects accExpr as string expression");
+    const start = toIndex(i, "scan_while i");
+    let j = Math.max(0, start);
+    let acc = acc0;
+    while (j < s.length){
+      const code = s.charCodeAt(j);
+      const ch = s[j];
+      const cls = charClass(code);
+      const locals = args.length === 5 ? { s, i: j, code, ch, cls, acc } : { s, i: j, code, ch, cls };
+      const ok = ctx.evalString(pred, locals);
+      if (!isTruthy(ok)) break;
+      if (args.length === 5){
+        acc = ctx.evalString(accExpr, locals);
+      }
+      j += 1;
+    }
+    const fields = {
+      i: fieldInfo(j),
+      text: fieldInfo(s.slice(Math.max(0, start), j)),
+    };
+    if (args.length === 5) fields.acc = fieldInfo(acc);
+    return buildAssy("scan", fields);
+  });
+
+  baseFns.take_while = defFnCtx("take_while", 3, {
+    args: [
+      { label: "s", kinds: ["string"] },
+      { label: "i", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "pred", kinds: ["string"] },
+    ],
+    returns: { kinds: ["string"] },
+  }, (ctx, s, i, pred) => {
+    const r = baseFns.scan_while.impl(ctx, s, i, pred);
+    const t = r && typeof r === "object" && r.__assy ? r.fields?.text?.value : "";
+    return (t === undefined || t === null) ? "" : String(t);
+  });
 
 
   baseFns.to_json = defFn("to_json", 1, {
@@ -933,6 +1178,359 @@ export function createBaseFns(){
     ],
     returns: { kinds: ["any"] },
   }, (cond, a, b) => (isTruthy(cond) ? a : b));
+
+  baseFns.muxp = defFn("muxp", 3, {
+    args: [
+      { label: "cond", kinds: ["any"] },
+      { label: "a", kinds: ["any"] },
+      { label: "b", kinds: ["any"] },
+    ],
+    returns: { kinds: ["any"] },
+  }, (cond, a, b) => {
+    return isTruthy(cond) ? a : b;
+  });
+
+  function requireVecArg(value, label){
+    if (!value || typeof value !== "object" || !value.__vec) throw new Error(`${label} expects a vector`);
+    return value;
+  }
+
+  function toIndex(value, label){
+    if (isQty(value)){
+      if (value.kind !== "scalar") throw new Error(`${label} expects a dimensionless scalar value`);
+      const n = Number(value.value);
+      if (!Number.isFinite(n)) throw new Error(`${label} expects a finite scalar`);
+      return Math.floor(n);
+    }
+    const n = Number(value);
+    if (!Number.isFinite(n)) throw new Error(`${label} expects a finite scalar`);
+    return Math.floor(n);
+  }
+
+  baseFns.mux = defFn("mux", 2, {
+    args: [
+      { label: "sel", kinds: ["any"] },
+      { label: "choices", kinds: ["vec"] },
+    ],
+    returns: { kinds: ["any"] },
+  }, (sel, choices) => {
+    const v = requireVecArg(choices, "mux");
+    const data = Array.isArray(v.data) ? v.data : [];
+    if (!data.length) throw new Error("mux(): choices must be non-empty");
+    if (data.length === 1) return data[0];
+    const idx = toIndex(sel, "mux sel");
+    const defaultVal = data[data.length - 1];
+    if (idx < 0) return defaultVal;
+    if (idx >= data.length - 1) return defaultVal;
+    return data[idx];
+  });
+
+  baseFns.mux8 = defFn("mux8", 10, {
+    args: [
+      { label: "sel", kinds: ["any"] },
+      { label: "a0", kinds: ["any"] },
+      { label: "a1", kinds: ["any"] },
+      { label: "a2", kinds: ["any"] },
+      { label: "a3", kinds: ["any"] },
+      { label: "a4", kinds: ["any"] },
+      { label: "a5", kinds: ["any"] },
+      { label: "a6", kinds: ["any"] },
+      { label: "a7", kinds: ["any"] },
+      { label: "default", kinds: ["any"] },
+    ],
+    returns: { kinds: ["any"] },
+  }, (sel, a0, a1, a2, a3, a4, a5, a6, a7, d) => {
+    const idx = toIndex(sel, "mux8 sel");
+    if (idx === 0) return a0;
+    if (idx === 1) return a1;
+    if (idx === 2) return a2;
+    if (idx === 3) return a3;
+    if (idx === 4) return a4;
+    if (idx === 5) return a5;
+    if (idx === 6) return a6;
+    if (idx === 7) return a7;
+    return d;
+  });
+
+  baseFns.mux16 = defFn("mux16", 18, {
+    args: [
+      { label: "sel", kinds: ["any"] },
+      { label: "a0", kinds: ["any"] },
+      { label: "a1", kinds: ["any"] },
+      { label: "a2", kinds: ["any"] },
+      { label: "a3", kinds: ["any"] },
+      { label: "a4", kinds: ["any"] },
+      { label: "a5", kinds: ["any"] },
+      { label: "a6", kinds: ["any"] },
+      { label: "a7", kinds: ["any"] },
+      { label: "a8", kinds: ["any"] },
+      { label: "a9", kinds: ["any"] },
+      { label: "a10", kinds: ["any"] },
+      { label: "a11", kinds: ["any"] },
+      { label: "a12", kinds: ["any"] },
+      { label: "a13", kinds: ["any"] },
+      { label: "a14", kinds: ["any"] },
+      { label: "a15", kinds: ["any"] },
+      { label: "default", kinds: ["any"] },
+    ],
+    returns: { kinds: ["any"] },
+  }, (sel, a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, d) => {
+    const idx = toIndex(sel, "mux16 sel");
+    if (idx === 0) return a0;
+    if (idx === 1) return a1;
+    if (idx === 2) return a2;
+    if (idx === 3) return a3;
+    if (idx === 4) return a4;
+    if (idx === 5) return a5;
+    if (idx === 6) return a6;
+    if (idx === 7) return a7;
+    if (idx === 8) return a8;
+    if (idx === 9) return a9;
+    if (idx === 10) return a10;
+    if (idx === 11) return a11;
+    if (idx === 12) return a12;
+    if (idx === 13) return a13;
+    if (idx === 14) return a14;
+    if (idx === 15) return a15;
+    return d;
+  });
+
+  function requireRadix(value, label){
+    const raw = requireScalarArg(value, label);
+    const n = Math.floor(Number(raw));
+    if (!Number.isFinite(n) || n === 0) throw new Error(`${label} must be a non-zero integer`);
+    return Math.abs(n);
+  }
+
+  function modPosNumber(x, m){
+    const mm = Math.abs(m);
+    let r = x % mm;
+    if (r < 0) r += mm;
+    return r;
+  }
+
+  baseFns.lane_mod = defFn("lane_mod", 2, {
+    args: [
+      { label: "hop", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "lanes", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (hop, lanes) => {
+    const hv = Math.floor(requireScalarArg(hop, "lane_mod hop"));
+    const lv = requireRadix(lanes, "lane_mod lanes");
+    return modPosNumber(hv, lv);
+  });
+
+  baseFns.packN = defFn("packN", 2, {
+    args: [
+      { label: "digits", kinds: ["vec"] },
+      { label: "radices", kinds: ["vec"] },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (digits, radices) => {
+    const dv = requireVecArg(digits, "packN digits");
+    const rv = requireVecArg(radices, "packN radices");
+    const ds = Array.isArray(dv.data) ? dv.data : [];
+    const rs = Array.isArray(rv.data) ? rv.data : [];
+    if (!ds.length) throw new Error("packN(): digits vector must be non-empty");
+    if (ds.length !== rs.length) throw new Error("packN(): digits and radices must have the same length");
+    let acc = 0;
+    let mulAcc = 1;
+    for (let i = 0; i < ds.length; i++){
+      const radix = requireRadix(rs[i], `packN radix${i}`);
+      const rawDigit = Math.floor(Number(requireScalarArg(ds[i], `packN digit${i}`)));
+      if (!Number.isFinite(rawDigit)) throw new Error(`packN digit${i} must be numeric`);
+      const digit = modPosNumber(rawDigit, radix);
+      acc += digit * mulAcc;
+      mulAcc *= radix;
+    }
+    return acc;
+  });
+
+  baseFns.unpackN = defFn("unpackN", 2, {
+    args: [
+      { label: "code", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "radices", kinds: ["vec"] },
+    ],
+    returns: { kinds: ["vec"] },
+  }, (code, radices) => {
+    const rv = requireVecArg(radices, "unpackN radices");
+    const rs = Array.isArray(rv.data) ? rv.data : [];
+    if (!rs.length) throw new Error("unpackN(): radices vector must be non-empty");
+    let x = Math.floor(Number(requireScalarArg(code, "unpackN code")));
+    if (!Number.isFinite(x)) throw new Error("unpackN(): code must be numeric");
+    const out = new Array(rs.length);
+    for (let i = 0; i < rs.length; i++){
+      const radix = requireRadix(rs[i], `unpackN radix${i}`);
+      out[i] = modPosNumber(x, radix);
+      x = Math.floor(x / radix);
+    }
+    return OPS_INTERNAL.makeVec("vec", out);
+  });
+
+  function scoreNumber(value, label){
+    const raw = requireScalarArg(value, label);
+    const n = Number(raw);
+    if (Number.isNaN(n)) throw new Error(`${label} must be numeric`);
+    return n;
+  }
+
+  baseFns.argmax4 = defFn("argmax4", 4, {
+    args: [
+      { label: "s0", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "s1", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "s2", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "s3", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (s0, s1, s2, s3) => {
+    const scores = [
+      scoreNumber(s0, "argmax4 s0"),
+      scoreNumber(s1, "argmax4 s1"),
+      scoreNumber(s2, "argmax4 s2"),
+      scoreNumber(s3, "argmax4 s3"),
+    ];
+    let bestIdx = 0;
+    let best = scores[0];
+    for (let i = 1; i < 4; i++){
+      if (scores[i] > best){
+        best = scores[i];
+        bestIdx = i;
+      }
+    }
+    return bestIdx;
+  });
+
+  baseFns.argmin4 = defFn("argmin4", 4, {
+    args: [
+      { label: "s0", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "s1", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "s2", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "s3", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (s0, s1, s2, s3) => {
+    const scores = [
+      scoreNumber(s0, "argmin4 s0"),
+      scoreNumber(s1, "argmin4 s1"),
+      scoreNumber(s2, "argmin4 s2"),
+      scoreNumber(s3, "argmin4 s3"),
+    ];
+    let bestIdx = 0;
+    let best = scores[0];
+    for (let i = 1; i < 4; i++){
+      if (scores[i] < best){
+        best = scores[i];
+        bestIdx = i;
+      }
+    }
+    return bestIdx;
+  });
+
+  baseFns.select_best4 = defFn("select_best4", -1, {
+    args: [],
+    returns: { kinds: ["assy"] },
+  }, (...args) => {
+    let states;
+    let scores;
+
+    if (args.length === 8){
+      states = [args[0], args[2], args[4], args[6]];
+      scores = [
+        scoreNumber(args[1], "select_best4 score0"),
+        scoreNumber(args[3], "select_best4 score1"),
+        scoreNumber(args[5], "select_best4 score2"),
+        scoreNumber(args[7], "select_best4 score3"),
+      ];
+    }else if (args.length === 4){
+      states = new Array(4);
+      scores = new Array(4);
+      for (let i = 0; i < 4; i++){
+        const cand = requireAssemblyArg(args[i], "select_best4");
+        const sField = cand.fields?.state;
+        const scoreField = cand.fields?.score;
+        if (!scoreField) throw new Error("select_best4 candidate missing field: score");
+        states[i] = sField ? sField.value : cand;
+        scores[i] = scoreNumber(scoreField.value, `select_best4 score${i}`);
+      }
+    }else{
+      throw new Error("select_best4 expects either 8 args (state0,score0,...,state3,score3) or 4 candidates (assy with fields state,score)");
+    }
+
+    let bestLane = 0;
+    let bestScore = scores[0];
+    for (let i = 1; i < 4; i++){
+      if (scores[i] > bestScore){
+        bestScore = scores[i];
+        bestLane = i;
+      }
+    }
+
+    return buildAssy("best4", {
+      lane: fieldInfo(bestLane),
+      state: fieldInfo(states[bestLane]),
+      score: fieldInfo(bestScore),
+    });
+  });
+
+  baseFns.rec = defFn("rec", 7, {
+    args: [
+      { label: "a", kinds: ["any"] },
+      { label: "b", kinds: ["any"] },
+      { label: "c", kinds: ["any"] },
+      { label: "d", kinds: ["any"] },
+      { label: "cursor", kinds: ["any"] },
+      { label: "flags", kinds: ["any"] },
+      { label: "score", kinds: ["any"] },
+    ],
+    returns: { kinds: ["assy"] },
+  }, (a, b, c, d, cursor, flags, score) => {
+    return buildAssy("rec", {
+      a: fieldInfo(a),
+      b: fieldInfo(b),
+      c: fieldInfo(c),
+      d: fieldInfo(d),
+      cursor: fieldInfo(cursor),
+      flags: fieldInfo(flags),
+      score: fieldInfo(score),
+    });
+  });
+
+  baseFns.record = defFn("record", -1, {
+    args: [],
+    returns: { kinds: ["assy"] },
+  }, (...args) => {
+    if (args.length % 2 !== 0) throw new Error("record(): expects alternating (name, value) pairs");
+    const fields = Object.create(null);
+    for (let i = 0; i < args.length; i += 2){
+      const name = args[i];
+      const value = args[i + 1];
+      if (typeof name !== "string") throw new Error("record(): field name must be a string");
+      const key = name.trim();
+      if (!key) throw new Error("record(): field name must be non-empty");
+      fields[key] = fieldInfo(value);
+    }
+    return buildAssy("record", fields);
+  });
+
+  baseFns.case = defFn("case", -1, {
+    args: [],
+    returns: { kinds: ["any"] },
+  }, (sel, ...rest) => {
+    if (rest.length < 1) throw new Error("case(): expects at least (sel, default)");
+    if (rest.length === 1) return rest[0];
+    if ((rest.length - 1) % 2 !== 0){
+      throw new Error("case(): expects (sel, k0, v0, k1, v1, ..., default)");
+    }
+    const defaultVal = rest[rest.length - 1];
+    for (let i = 0; i < rest.length - 1; i += 2){
+      const key = rest[i];
+      const val = rest[i + 1];
+      const [a, b] = normalizeCompare(sel, key);
+      if (a === b) return val;
+    }
+    return defaultVal;
+  });
 
   baseFns.field = defFn("field", 2, {
     args: [

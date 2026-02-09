@@ -11,6 +11,7 @@ const COMMANDS = [
   { label: ":export", detail: "copy session" },
   { label: ":import", detail: "load session" },
   { label: ":theme", detail: "switch theme" },
+  { label: ":latent", detail: "latent mux walker" },
   { label: ":test", detail: "run tests" },
 ];
 
@@ -151,6 +152,14 @@ export function createEditor({
   function isStatementComplete(source){
     const trimmed = source.trim();
     if (!trimmed) return false;
+
+    for (const line of trimmed.split("\n")){
+      const t = line.trim();
+      if (!t) continue;
+      if (t.startsWith("#")) continue;
+      if (/=$/.test(t)) return false;
+    }
+
     let quote = null;
     for (let i = 0; i < trimmed.length; i++){
       const c = trimmed[i];

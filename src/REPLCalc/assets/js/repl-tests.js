@@ -45,6 +45,57 @@ export function createTests({
       { name: "atan2", expr: "atan2(1, 1)", expect: expectNear(Math.PI / 4) },
       { name: "clamp", expr: "clamp(12, 0, 10)", expect: 10 },
       { name: "if function", expr: "if(3>2, 7, 4)", expect: 7 },
+      { name: "repeat loop", expr: "repeat(5, 0, \"state + 2\")", expect: 10 },
+      { name: "while_budget stops", expr: "while_budget(100, \"state < 5\", 0, \"state + 1\")", expect: 5 },
+      { name: "while_budget respects budget", expr: "while_budget(3, \"1\", 0, \"state + 1\")", expect: 3 },
+      { name: "witness push/pop", steps: ["witness_push(\"a\", 42)", "witness_pop(\"a\")"], expect: 42 },
+      { name: "audit alias push/pop", steps: ["audit_add(\"x\", 9)", "audit_take(\"x\")"], expect: 9 },
+      { name: "witness tag mismatch", steps: ["witness_push(\"a\", 42)", "witness_pop(\"b\")"], expect: expectError(/tag mismatch/i) },
+      { name: "trace passthrough", expr: "trace(7, \"dbg\") + 1", expect: 8 },
+      { name: "rec get field", expr: "get(rec(1,2,3,4,5,6,7), \"cursor\")", expect: 5 },
+      { name: "record get field", expr: "get(record(\"cursor\", 9, \"flags\", 2), \"flags\")", expect: 2 },
+      { name: "set record field", expr: "get(set(rec(1,2,3,4,5,6,7), \"cursor\", 11), \"cursor\")", expect: 11 },
+      { name: "set var still works", steps: ["set(\"x\", 12)", "get(\"x\")"], expect: 12 },
+      { name: "len string", expr: "len(\"abc\")", expect: 3 },
+      { name: "char_code in range", expr: "char_code(\"A\", 0)", expect: 65 },
+      { name: "char_code out of range", expr: "char_code(\"A\", 2)", expect: -1 },
+      { name: "charclass digit", expr: "charclass(char_code(\"7\", 0))", expect: 1 },
+      { name: "charclass alpha", expr: "charclass(char_code(\"Z\", 0))", expect: 2 },
+      { name: "class alias works", expr: "class(char_code(\"-\", 0))", expect: 4 },
+      { name: "scan returns code", expr: "field(scan(\"A\", 0), \"code\")", expect: 65 },
+      { name: "scan returns cls", expr: "field(scan(\"A\", 0), \"cls\")", expect: 2 },
+      { name: "scan increments i", expr: "field(scan(\"A\", 0), \"i\")", expect: 1 },
+      { name: "scan_while digits text", expr: "field(scan_while(\"123abc\", 0, \"cls==1\"), \"text\")", expect: "123" },
+      { name: "scan_while digits index", expr: "field(scan_while(\"123abc\", 0, \"cls==1\"), \"i\")", expect: 3 },
+      { name: "take_while digits", expr: "take_while(\"123abc\", 0, \"cls==1\")", expect: "123" },
+      { name: "scan_while accumulator atoi", expr: "field(scan_while(\"123\", 0, \"cls==1\", 0, \"acc*10 + (code-48)\"), \"acc\")", expect: 123 },
+      { name: "floor_div negative", expr: "floor_div(-1, 4)", expect: -1 },
+      { name: "mod_floor negative", expr: "mod_floor(-1, 4)", expect: 3 },
+      { name: "mod_pos negative", expr: "mod_pos(-1, 4)", expect: 3 },
+      { name: "mod_pos handles negative modulus", expr: "mod_pos(5, -4)", expect: 1 },
+      { name: "lane_mod works", expr: "lane_mod(-1, 4)", expect: 3 },
+      { name: "packN/unpackN roundtrip", expr: "packN(unpackN(12345, vec(97, 89, 83, 79)), vec(97, 89, 83, 79))", expect: 12345 },
+      { name: "unpackN length", expr: "field(unpackN(0, vec(5, 7, 11)), \"v3\")", expect: 0 },
+      { name: "packN normalizes digits", expr: "packN(vec(-1, 7), vec(5, 7))", expect: 4 },
+      { name: "argmax4 chooses best", expr: "argmax4(1, 5, 3, 4)", expect: 1 },
+      { name: "argmin4 chooses best", expr: "argmin4(1, -5, 3, 4)", expect: 1 },
+      { name: "argmax4 tie picks first", expr: "argmax4(5, 5, 1, 5)", expect: 0 },
+      { name: "select_best4 pair form", expr: "field(select_best4(\"a\", 1, \"b\", 3, \"c\", 2, \"d\", 0), \"lane\")", expect: 1 },
+      { name: "select_best4 candidate assy form", steps: [
+        "c0 = record(\"state\", \"a\", \"score\", 1)",
+        "c1 = record(\"state\", \"b\", \"score\", 3)",
+        "c2 = record(\"state\", \"c\", \"score\", 2)",
+        "c3 = record(\"state\", \"d\", \"score\", 0)",
+        "field(select_best4(c0, c1, c2, c3), \"state\")",
+      ], expect: "b" },
+      { name: "bit ops band", expr: "band(6, 3)", expect: 2 },
+      { name: "bit ops bor", expr: "bor(6, 3)", expect: 7 },
+      { name: "bit ops bxor", expr: "bxor(6, 3)", expect: 5 },
+      { name: "bit ops bnot", expr: "bnot(0)", expect: 4294967295 },
+      { name: "bit ops shl", expr: "shl(1, 5)", expect: 32 },
+      { name: "bit ops shr", expr: "shr(32, 5)", expect: 1 },
+      { name: "flag set+has on", expr: "flag_has(flag_set(0, 4, 1), 4)", expect: 1 },
+      { name: "flag set+has off", expr: "flag_has(flag_set(4, 4, 0), 4)", expect: 0 },
       { name: "pi constant", expr: "pi * 2", expect: expectNear(Math.PI * 2) },
       { name: "assignment + reference", steps: ["x = 10", "x * 3"], expect: 30 },
       { name: "variable reassignment", steps: ["x = 5", "x = x + 2", "x"], expect: 7 },
@@ -1681,11 +1732,15 @@ export function createTests({
       userFns: state.userFns,
       history: state.history,
       histIdx: state.histIdx,
+      witness: state.witness,
+      witnessLog: state.witnessLog,
     };
     state.vars = Object.create(null);
     state.userFns = Object.create(null);
     state.history = [];
     state.histIdx = -1;
+    state.witness = [];
+    state.witnessLog = [];
     renderUserFunctions();
 
     const tests = createTestSuite();
@@ -1700,6 +1755,8 @@ export function createTests({
         state.userFns = Object.create(null);
         state.history = [];
         state.histIdx = -1;
+        state.witness = [];
+        state.witnessLog = [];
         const source = test.steps ? test.steps.join("\n") : test.expr;
         const formattedSource = formatInput(source);
         const formattedExpected = formatExpectedValue(test.expect);
@@ -1761,6 +1818,8 @@ export function createTests({
     state.userFns = savedState.userFns;
     state.history = savedState.history;
     state.histIdx = savedState.histIdx;
+    state.witness = savedState.witness;
+    state.witnessLog = savedState.witnessLog;
     renderUserFunctions();
 
     if (!failures.length){

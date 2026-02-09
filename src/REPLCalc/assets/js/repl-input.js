@@ -1,4 +1,5 @@
 import { runDoomDemo } from "./repl-doom.js";
+import { runLatentCommand } from "./repl-latent.js";
 import { parseParams, splitStatements } from "./repl-parser.js";
 import { EFFECT } from "./repl-effects.js";
 
@@ -167,6 +168,22 @@ export function createInputHandlers({
         if (cmd === "diff"){ diffSymbol(arg); return; }
         if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); return; }
         if (cmd === "doom"){ runDoomDemo({ gfx, writeLine, writeInputEcho }); return; }
+        if (cmd === "latent"){
+          await runLatentCommand({
+            arg,
+            state,
+            evaluator,
+            runtime,
+            runExpressionAll,
+            solveEquation,
+            createAssembly,
+            defineUserFn,
+            makeQty,
+            recordSymbolDefinition,
+            writeLine,
+          });
+          return;
+        }
         if (cmd === "test"){ runTestSuite(); return; }
 
         if (cmd === "export"){

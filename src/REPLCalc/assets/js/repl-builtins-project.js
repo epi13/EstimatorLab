@@ -27,6 +27,11 @@ export function attachProjectBuiltins(baseFns, {
       if (t.kind !== "time") throw new Error(`${label} expects time quantity`);
       return t.value;
     }
+    if (t && typeof t === "object"){
+      if (t.__kind === "scalar" && typeof t.value === "number"){
+        return t.value;
+      }
+    }
     const n = Number(t);
     if (!Number.isFinite(n)) throw new Error(`${label} expects numeric time`);
     return n;

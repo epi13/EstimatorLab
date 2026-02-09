@@ -1,0 +1,63 @@
+so mux4(sel, a, b, c, d) = if(sel == 0, a, if(sel == 1, b, if(sel == 2, c, d)))
+
+so ltw_mod(x, m) = mod_pos(x, m)
+
+so ltw_lane(hop) = ltw_mod(floor(hop), 4)
+
+so ltw_a(code) = ltw_mod(floor(code), 97)
+so ltw_b(code) = ltw_mod(floor(code / 97), 89)
+so ltw_c(code) = ltw_mod(floor(code / (97 * 89)), 83)
+so ltw_d(code) = ltw_mod(floor(code / (97 * 89 * 83)), 79)
+
+so ltw_pack(a, b, c, d) = ltw_mod(a, 97) + 97 * (ltw_mod(b, 89) + 89 * (ltw_mod(c, 83) + 83 * ltw_mod(d, 79)))
+
+so ltw_packN(digits, radices) = packN(digits, radices)
+
+so ltw_vec(code) = vec(ltw_a(code), ltw_b(code), ltw_c(code), ltw_d(code))
+
+so ltw_unpackN(code, radices) = unpackN(code, radices)
+
+so ltw_a_inc(code) = ltw_mod(ltw_a(code) + 1, 97)
+so ltw_b_inc(code) = ltw_mod(ltw_b(code) + 1, 89)
+so ltw_c_inc(code) = ltw_mod(ltw_c(code) + 1, 83)
+so ltw_d_inc(code) = ltw_mod(ltw_d(code) + 1, 79)
+
+so ltw_step0(code) = ltw_pack(ltw_a_inc(code), ltw_mod(ltw_b(code) + ltw_a_inc(code), 89), ltw_mod(ltw_c(code) + ltw_a_inc(code), 83), ltw_mod(ltw_d(code) + ltw_a_inc(code), 79))
+
+so ltw_step1(code) = ltw_pack(ltw_mod(ltw_a(code) + ltw_b_inc(code), 97), ltw_b_inc(code), ltw_mod(ltw_c(code) + ltw_b_inc(code), 83), ltw_mod(ltw_d(code) + ltw_b_inc(code), 79))
+
+so ltw_step2(code) = ltw_pack(ltw_mod(ltw_a(code) + ltw_c_inc(code), 97), ltw_mod(ltw_b(code) + ltw_c_inc(code), 89), ltw_c_inc(code), ltw_mod(ltw_d(code) + ltw_c_inc(code), 79))
+
+so ltw_step3(code) = ltw_pack(ltw_mod(ltw_a(code) + ltw_d_inc(code), 97), ltw_mod(ltw_b(code) + ltw_d_inc(code), 89), ltw_mod(ltw_c(code) + ltw_d_inc(code), 83), ltw_d_inc(code))
+
+so ltw_step(code, hop) = mux4(ltw_lane(hop), ltw_step0(code), ltw_step1(code), ltw_step2(code), ltw_step3(code))
+
+so ltw_laneN(hop, lanes) = lane_mod(hop, lanes)
+
+so ltw_step_lane(code, lane) = mux4(ltw_mod(floor(lane), 4), ltw_step0(code), ltw_step1(code), ltw_step2(code), ltw_step3(code))
+
+so ltw_unstep0(code) = ltw_pack(ltw_mod(ltw_a(code) - 1, 97), ltw_mod(ltw_b(code) - ltw_a(code), 89), ltw_mod(ltw_c(code) - ltw_a(code), 83), ltw_mod(ltw_d(code) - ltw_a(code), 79))
+
+so ltw_unstep1(code) = ltw_pack(ltw_mod(ltw_a(code) - ltw_b(code), 97), ltw_mod(ltw_b(code) - 1, 89), ltw_mod(ltw_c(code) - ltw_b(code), 83), ltw_mod(ltw_d(code) - ltw_b(code), 79))
+
+so ltw_unstep2(code) = ltw_pack(ltw_mod(ltw_a(code) - ltw_c(code), 97), ltw_mod(ltw_b(code) - ltw_c(code), 89), ltw_mod(ltw_c(code) - 1, 83), ltw_mod(ltw_d(code) - ltw_c(code), 79))
+
+so ltw_unstep3(code) = ltw_pack(ltw_mod(ltw_a(code) - ltw_d(code), 97), ltw_mod(ltw_b(code) - ltw_d(code), 89), ltw_mod(ltw_c(code) - ltw_d(code), 83), ltw_mod(ltw_d(code) - 1, 79))
+
+so ltw_unstep(code, hop) = mux4(ltw_lane(hop), ltw_unstep0(code), ltw_unstep1(code), ltw_unstep2(code), ltw_unstep3(code))
+
+so ltw_unstep_lane(code, lane) = mux4(ltw_mod(floor(lane), 4), ltw_unstep0(code), ltw_unstep1(code), ltw_unstep2(code), ltw_unstep3(code))
+
+so ltw_seek(code, hop, steps) = repeat(steps, code, "ltw_step(state, hop)")
+
+so ltw_rewind(code, hop, steps) = repeat(steps, code, "ltw_unstep(state, hop)")
+
+so ltw_lane_csi(code) = if(csi_div(code) == "", 0, ltw_mod(field(scan_while(csi_div(code), 0, "cls==1", 0, "acc*10 + (code-48)"), "acc"), 4))
+
+so ltw_step_csi(code, csi_code) = ltw_step_lane(code, ltw_lane_csi(csi_code))
+
+so ltw_unstep_csi(code, csi_code) = ltw_unstep_lane(code, ltw_lane_csi(csi_code))
+
+so ltw_seek_csi(code, csi_code, steps) = repeat(steps, code, "ltw_step_csi(state, csi_code)")
+
+so ltw_rewind_csi(code, csi_code, steps) = repeat(steps, code, "ltw_unstep_csi(state, csi_code)")

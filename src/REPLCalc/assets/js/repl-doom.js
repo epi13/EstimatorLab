@@ -33,7 +33,6 @@ view_h = h - hud_h
 so sign(x) = if(x < 0, -1, if(x > 0, 1, 0));
 so frac(x) = x - floor(x);
 so lerp(a, b, t) = a + (b - a) * t;
-so clamp(x, lo, hi) = min(max(x, lo), hi);
 so smoothstep(a, b, x) = if(a == b, 0, clamp((x - a) / (b - a), 0, 1) * clamp((x - a) / (b - a), 0, 1) * (3 - 2 * clamp((x - a) / (b - a), 0, 1)));
 
 # Scene helpers
@@ -390,7 +389,7 @@ if doom_metrics_dirty == 1:
 
   doom_rect_area = area_rect(mw0 * tile, mh0 * tile)
   doom_rect_perim = perim_rect(mw0 * tile, mh0 * tile)
-  doom_shell_poly = poly(pt(0, 0), pt(mw0 * tile, 0), pt(mw0 * tile, mh0 * tile), pt(0, mh0 * tile))
+  doom_shell_poly = poly(pt(0 ft, 0 ft), pt(mw0 * tile, 0 ft), pt(mw0 * tile, mh0 * tile), pt(0 ft, mh0 * tile))
   doom_shell_area = poly_area(doom_shell_poly)
   doom_shell_perim = poly_perim(doom_shell_poly)
   doom_diag = vec_len(vec(mw0 * tile, mh0 * tile))
@@ -402,9 +401,10 @@ if doom_metrics_dirty == 1:
   doom_trim_cost = cost(doom_wall_lf, mat_trim)
   doom_duct_cost = cost(doom_duct_wt, mat_duct)
 
-  framing_rate = rate("framing", 55 sf / hr, { shift: 0.92; congestion: 0.9 })
-  drywall_rate = rate("drywall", 68 sf / hr, { shift: 0.95 })
-  mep_rate = rate("mep", 42 lf / hr, { lift: 0.88 })
+  t_hr = 3600 s
+  framing_rate = rate("framing", 55 sf / t_hr, { shift: 0.92; congestion: 0.9 })
+  drywall_rate = rate("drywall", 68 sf / t_hr, { shift: 0.95 })
+  mep_rate = rate("mep", 42 lf / t_hr, { lift: 0.88 })
   crew_framing = crew(3, framing_rate)
   crew_drywall = crew(4, drywall_rate)
   crew_mep = crew(2, mep_rate)
@@ -413,7 +413,7 @@ if doom_metrics_dirty == 1:
   drywall_time = time_for(doom_wall_area, crew_drywall)
   mep_time = time_for(duct_len, crew_mep)
   labor_hours = framing_time + drywall_time + mep_time
-  labor_rate = rate("labor", 48 $ / hr, { burden: 1.18; ovr: 1.05 })
+  labor_rate = rate("labor", 48 $ / t_hr, { burden: 1.18; ovr: 1.05 })
   labor_cost = labor_hours * rate_eff(labor_rate)
 
   cost_shell = cost_leaf("Concrete", cost_total(doom_conc_cost)) + cost_leaf("Drywall", cost_total(doom_gyp_cost)) + cost_leaf("Paint", cost_total(doom_paint_cost))
@@ -422,8 +422,8 @@ if doom_metrics_dirty == 1:
   cost_base = cost_shell + cost_mep + cost_labor
   cost_final = ohp(contingency(cost_base, 5%), 8%, 6%)
 
-  sc_base = scenario("Base", { mat = cost_shell + cost_mep; labor = labor_cost; oh = 8%; profit = 6%; tax = 7% })
-  sc_prem = scenario("Premium", { mat = cost_shell + cost_mep * 1.18; labor = labor_cost * 1.1; oh = 10%; profit = 8%; tax = 7% })
+  sc_base = scenario("Base", { mat: cost_shell + cost_mep; labor: labor_cost; oh: 8%; profit: 6%; tax: 7% })
+  sc_prem = scenario("Premium", { mat: cost_shell + cost_mep * 1.18; labor: labor_cost * 1.1; oh: 10%; profit: 8%; tax: 7% })
   doom_budget = sc_eval(sc_base, "tax(ohp(contingency(mat + labor, 5%), oh, profit), tax)")
   doom_budget_hi = sc_eval(sc_prem, "tax(ohp(contingency(mat + labor, 7%), oh, profit), tax)")
   doom_budget_cmp = sc_compare(sc_base, sc_prem, "tax(ohp(contingency(mat + labor, 6%), oh, profit), tax)", "budget")
@@ -446,10 +446,11 @@ if doom_metrics_dirty == 1:
   doom_cost_mean = mean(doom_cost_range)
 
   sched = project("doom-level")
-  sched = ptask(sched, "framing", { dur = framing_time })
-  sched = ptask(sched, "mep", { dur = mep_time })
-  sched = ptask(sched, "drywall", { dur = drywall_time })
-  sched = ptask(sched, "finishes", { dur = time_for(doom_flooring, crew(3, rate("floor", 120 sf / hr, { eff: 0.9 }))) })
+  sched = ptask(sched, "framing", { dur: to_sec(if(is_dim(framing_time, "time") == 1, framing_time, framing_time * t_hr)) })
+  sched = ptask(sched, "mep", { dur: to_sec(if(is_dim(mep_time, "time") == 1, mep_time, mep_time * t_hr)) })
+  sched = ptask(sched, "drywall", { dur: to_sec(if(is_dim(drywall_time, "time") == 1, drywall_time, drywall_time * t_hr)) })
+  finishes_time = time_for(doom_flooring, crew(3, rate("floor", 120 sf / t_hr, { eff: 0.9 })))
+  sched = ptask(sched, "finishes", { dur: to_sec(if(is_dim(finishes_time, "time") == 1, finishes_time, finishes_time * t_hr)) })
   sched = pdep(sched, "framing", "mep")
   sched = pdep(sched, "mep", "drywall")
   sched = pdep(sched, "drywall", "finishes")
