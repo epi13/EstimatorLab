@@ -45,7 +45,7 @@
     main{max-width:1500px;margin:14px auto 18px;padding:0 16px}
     .table{background:linear-gradient(180deg, rgba(16,26,47,.95), rgba(16,26,47,.82));
       border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-    .thead,.trow{display:grid;grid-template-columns:1.7fr .55fr .55fr .6fr .7fr .7fr .7fr .75fr .75fr .75fr 60px;
+    .thead,.trow{display:grid;grid-template-columns:1.7fr .55fr .55fr .6fr .7fr .7fr .6fr .7fr .7fr .75fr .75fr .75fr 60px;
       gap:10px;padding:10px 12px;align-items:center}
     .thead{font-size:12px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--line)}
     .tbody{max-height:70vh;overflow:auto}
@@ -137,6 +137,8 @@
       <div class="right">MAT $/UNIT</div>
       <div class="right">BASE LABOR HRS/UNIT</div>
       <div>TRADE</div>
+      <div class="right">LABOR RATE</div>
+      <div class="right">LABOR $/UNIT</div>
       <div class="right">MAT $</div>
       <div class="right">FREIGHT+HAND $</div>
       <div class="right">LABOR HRS (ADJ)</div>
@@ -280,6 +282,7 @@ function computeLine(it, qty){
 
   const rate=getRate(it.trade);
   let labor$=hrs*rate;
+  const laborUnit=baseHrs*rate;
 
   const prem=clamp(num($("laborPremium").value,0),0,300)/100;
   labor$*= (1+prem);
@@ -288,7 +291,7 @@ function computeLine(it, qty){
   const ohp=clamp(num($("ohp").value,0),0,300)/100;
   const total$=subtotal*(1+ohp);
 
-  return {mat$, freight$, hrs, labor$, rate, total$};
+  return {mat$, freight$, hrs, labor$, rate, laborUnit, total$};
 }
 
 /* filters */
@@ -371,6 +374,8 @@ function render(){
       <div class="num"><input data-k="mat" data-id="${escapeHtml(it.id||"")}" type="number" step="0.01" min="0" value="${num(it.pricing?.mat_per_unit,0)}"></div>
       <div class="num"><input data-k="hrs" data-id="${escapeHtml(it.id||"")}" type="number" step="0.01" min="0" value="${num(it.labor?.base_hrs_per_unit,0)}"></div>
       <div><select data-k="trade" data-id="${escapeHtml(it.id||"")}">${tradeOptionsHtml(it.trade)}</select></div>
+      <div class="num"><input data-k="rate" data-id="${escapeHtml(it.id||"")}" type="number" step="0.01" min="0" value="${num(c.rate,0)}"></div>
+      <div class="num"><input data-k="labor_unit" data-id="${escapeHtml(it.id||"")}" type="number" step="0.01" min="0" value="${num(c.laborUnit,0)}"></div>
 
       <div class="money">$ <strong>${fmtMoney(c.mat$)}</strong></div>
       <div class="money">$ ${fmtMoney(c.freight$)}</div>
@@ -401,6 +406,18 @@ function render(){
       if(k==="mat"){ it.pricing=it.pricing||{}; it.pricing.mat_per_unit=num(el.value,0); setDirty(true); }
       if(k==="hrs"){ it.labor=it.labor||{}; it.labor.base_hrs_per_unit=num(el.value,0); setDirty(true); }
       if(k==="trade"){ it.trade=el.value; setDirty(true); }
+      if(k==="rate"){
+        book.settings=book.settings||{};
+        book.settings.labor_rates_by_trade_hr=book.settings.labor_rates_by_trade_hr||{};
+        book.settings.labor_rates_by_trade_hr[it.trade]=num(el.value,0);
+        setDirty(true);
+      }
+      if(k==="labor_unit"){
+        const rate=getRate(it.trade);
+        it.labor=it.labor||{};
+        it.labor.base_hrs_per_unit = rate > 0 ? num(el.value,0) / rate : 0;
+        setDirty(true);
+      }
       render();
     };
   });
