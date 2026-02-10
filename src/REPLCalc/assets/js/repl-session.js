@@ -236,6 +236,7 @@ export function createSession({ state, setTheme, writeLine, setStatus, renderUse
       return;
     }
     state.symbolTable.set(name, winner);
+    if (!winner.bodyLoaded) _allSymbolsLoaded = false;
     applyResolvedSymbol(name, winner);
   }
 
@@ -422,8 +423,14 @@ export function createSession({ state, setTheme, writeLine, setStatus, renderUse
     return Array.from(refs).sort();
   }
 
+  let _allSymbolsLoaded = false;
+  let _loadingSymbols = false;
   function ensureSymbolsLoaded(names){
+    if (_allSymbolsLoaded || _loadingSymbols) return;
     if (!names || !names.size) return;
+    _loadingSymbols = true;
+    try{
+    let loadedAny = false;
     const store = loadProfileStore();
     for (const name of names){
       const def = state.symbolTable.get(name);
@@ -437,6 +444,7 @@ export function createSession({ state, setTheme, writeLine, setStatus, renderUse
       def.value = body.value ?? null;
       def.fields = body.fields || null;
       def.bodyLoaded = true;
+      loadedAny = true;
       if (def.kind === "fn"){
         state.loadingProfileSymbol = true;
         try{
@@ -447,6 +455,16 @@ export function createSession({ state, setTheme, writeLine, setStatus, renderUse
       }else{
         state.vars[name] = def.value;
       }
+    }
+    if (!loadedAny){
+      let remaining = false;
+      for (const [, def] of state.symbolTable){
+        if (def.originProfile !== "session" && !def.bodyLoaded){ remaining = true; break; }
+      }
+      if (!remaining) _allSymbolsLoaded = true;
+    }
+    }finally{
+      _loadingSymbols = false;
     }
   }
 

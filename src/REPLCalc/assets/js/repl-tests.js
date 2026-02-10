@@ -135,6 +135,9 @@ export function createTests({
     const suiteSource = await fetchText("assets/est/tests/test-suite.est");
     applyModuleSource(suiteSource, "tests");
 
+    const constructionSource = await fetchText("assets/est/construction/construction-helpers.est");
+    applyModuleSource(constructionSource, "construction helpers");
+
     const suite = runExpression("test_suite()");
     if (!suite || typeof suite !== "object" || !suite.__vec || !Array.isArray(suite.data)){
       throw new Error("test_suite(): expected vec");

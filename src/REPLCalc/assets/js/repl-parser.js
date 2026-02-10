@@ -5,9 +5,12 @@ export function splitStatements(source){
   const isComment = (t) => t.trim().startsWith("#");
   const lineIndent = (l) => (l.match(/^\s*/) || [""])[0].length;
 
-  function hasOpenQuote(text){
+  function scanDelimiters(text){
     let quote = null;
     let escaped = false;
+    let depth = 0;
+    let braceDepth = 0;
+    let bracketDepth = 0;
     for (let i = 0; i < text.length; i++){
       const c = text[i];
       if (quote){
@@ -25,11 +28,22 @@ export function splitStatements(source){
         }
         continue;
       }
+      if (c === "#"){
+        while (i < text.length && text[i] !== "\n") i += 1;
+        continue;
+      }
       if (c === "\"" || c === "'"){
         quote = c;
+        continue;
       }
+      if (c === "(") depth += 1;
+      else if (c === ")") depth = Math.max(0, depth - 1);
+      else if (c === "{") braceDepth += 1;
+      else if (c === "}") braceDepth = Math.max(0, braceDepth - 1);
+      else if (c === "[") bracketDepth += 1;
+      else if (c === "]") bracketDepth = Math.max(0, bracketDepth - 1);
     }
-    return Boolean(quote);
+    return { quoteOpen: Boolean(quote), depth, braceDepth, bracketDepth };
   }
 
   function splitInlineFlow(stmt){
@@ -112,7 +126,9 @@ export function splitStatements(source){
 
     if (!isBlock){
       let rendered = stmtLines.join("\n");
-      while (i < lines.length && hasOpenQuote(rendered)){
+      while (i < lines.length){
+        const scan = scanDelimiters(rendered);
+        if (!scan.quoteOpen && scan.depth === 0 && scan.braceDepth === 0 && scan.bracketDepth === 0) break;
         stmtLines.push(lines[i].trimEnd());
         i += 1;
         rendered = stmtLines.join("\n");
@@ -385,6 +401,17 @@ export function parseIfStatement(src){
   const thenBody = thenLines.join("\n").trimEnd();
   const elseBody = elseLines.join("\n").trimEnd();
   if (!thenBody) throw new Error("if statement missing body");
+  if (!elseBody && !thenBody.includes("\n")){
+    const inlineElse = findTopLevelKeyword(thenBody, "else");
+    if (inlineElse >= 0){
+      const actualThen = thenBody.slice(0, inlineElse).trim();
+      let actualElse = thenBody.slice(inlineElse + 4).trim();
+      if (actualElse.startsWith(":")) actualElse = actualElse.slice(1).trim();
+      if (actualThen && actualElse){
+        return { type:"if", condition, thenBody: actualThen, elseBody: actualElse };
+      }
+    }
+  }
   return { type:"if", condition, thenBody, elseBody: elseBody || null };
 }
 

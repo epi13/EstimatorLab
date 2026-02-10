@@ -19,7 +19,8 @@ const navigationData = [
         icon: 'clipboard',
         calculators: [
            { label: 'XLSX to LLM', href: 'src/miscellaneous/xlsx-to-llm/xlsx-to-llm.html', keywords: 'llm token saver' },   
-          { label: 'Dictionary', href: 'src/miscellaneous/dictionary/index.html', keywords: 'dictionary' },
+           { label: 'Dictionary', href: 'src/miscellaneous/dictionary/index.html', keywords: 'dictionary' },
+           { label: 'Cost Engine', href: 'src/ancfe/index.html', keywords: 'cost engine' },
            { label: 'MarkDown Editor', href: 'src/miscellaneous/MarkDownEditor/markdown.html', keywords: 'markdown editor' }
         ]
       },

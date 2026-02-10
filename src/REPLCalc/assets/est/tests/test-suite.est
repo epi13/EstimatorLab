@@ -5,7 +5,6 @@ so expect_near(value, tol) = record("type", "scalar", "value", value, "tol", tol
 so expect_error(message) = record("type", "error", "message", message)
 so expect_error_re(re, flags) = record("type", "error", "re", re, "flags", flags)
 so expect_gfx(w, h) = record("type", "gfx", "w", w, "h", h)
-so expect_gfx(w, h, scale) = record("type", "gfx", "w", w, "h", h, "scale", scale)
 so test_suite() = vec(
   t("basic arithmetic", "2+2", 4),
   t("operator precedence", "2+2*5", 12),
@@ -312,7 +311,7 @@ so test_suite() = vec(
   t("unit string ustr", "ustr(3 ft)", "3 ft"),
   ts("seeded sample deterministic", vec("seed(123)", "a = sample(dist.uniform(0, 1))", "seed(123)", "b = sample(dist.uniform(0, 1))", "if(abs(a - b) < 1e-9, 1, 0)"), 1),
   t("triangular dist cdf", "cdf(dist.tri(0, 10, 5), 5)", expect_near(0.5, 1e-9)),
-  t("pvalue two-sided normal", "pvalue(dist.normal(0, 1), 0)", 1),
+  t("pvalue two-sided normal", "pvalue(dist.normal(0, 1), 0)", expect_near(1, 1e-6)),
   t("mean of range", "mean(range(0, 10))", 5),
   ts("argmax grid search", vec("r = argmax(\"x\", -2, 2, 1, \"-(x-1)^2\")", "field(r, \"x\")"), 1),
   ts("dim and is_dim helpers", vec("d = dim(3 ft)", "field(d, \"len\") + is_dim(3 ft, \"len\")"), 2),

@@ -456,6 +456,70 @@ export function toRPN(tokens){
   return output;
 }
 
+function tryBuildObjAssy(raw, evalString){
+  const text = raw.trim();
+  if (!text.startsWith("{") || !text.endsWith("}")) return null;
+  const inner = text.slice(1, -1).trim();
+  if (!inner) return null;
+
+  const entries = [];
+  let start = 0;
+  let depth = 0;
+  let quote = null;
+  for (let i = 0; i < inner.length; i++){
+    const ch = inner[i];
+    if (quote){
+      if (ch === "\\"){i += 1; continue;}
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "\"" || ch === "'"){quote = ch; continue;}
+    if (ch === "(" || ch === "{" || ch === "[") depth += 1;
+    else if (ch === ")" || ch === "}" || ch === "]") depth = Math.max(0, depth - 1);
+    if (depth === 0 && (ch === "," || ch === ";")){
+      const piece = inner.slice(start, i).trim();
+      if (piece) entries.push(piece);
+      start = i + 1;
+    }
+  }
+  const tail = inner.slice(start).trim();
+  if (tail) entries.push(tail);
+  if (!entries.length) return null;
+
+  const fields = Object.create(null);
+  for (const entry of entries){
+    let sep = -1;
+    let d = 0, q = null;
+    for (let i = 0; i < entry.length; i++){
+      const ch = entry[i];
+      if (q){
+        if (ch === "\\"){i += 1; continue;}
+        if (ch === q) q = null;
+        continue;
+      }
+      if (ch === "\"" || ch === "'"){q = ch; continue;}
+      if (ch === "(" || ch === "{") d += 1;
+      else if (ch === ")" || ch === "}") d = Math.max(0, d - 1);
+      if (d === 0 && ch === ":" && sep < 0){sep = i; break;}
+    }
+    if (sep >= 0){
+      const keyRaw = entry.slice(0, sep).trim();
+      const valExpr = entry.slice(sep + 1).trim();
+      if (!keyRaw || !valExpr) return null;
+      const key = (keyRaw.startsWith("\"") && keyRaw.endsWith("\"")) || (keyRaw.startsWith("'") && keyRaw.endsWith("'"))
+        ? keyRaw.slice(1, -1) : keyRaw;
+      try{ fields[key] = { value: evalString(valExpr), raw: valExpr }; }
+      catch{ return null; }
+    }else if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(entry)){
+      try{ fields[entry] = { value: evalString(entry), raw: entry }; }
+      catch{ return null; }
+    }else{
+      return null;
+    }
+  }
+  return { __assy: true, __obj: true, name: "_anon", fields, raw };
+}
+
 export function evalRPN(rpn, ctx){
   const st = [];
   const onResolve = typeof ctx.onResolve === "function" ? ctx.onResolve : null;
@@ -492,6 +556,24 @@ export function evalRPN(rpn, ctx){
       recordResolve(name);
       return makeQty(unit.toBase, unit.kind, name);
     }
+
+    const dotIdx = name.indexOf(".");
+    if (dotIdx > 0){
+      const baseName = name.slice(0, dotIdx);
+      const fieldName = name.slice(dotIdx + 1);
+      let base = null;
+      if (Object.prototype.hasOwnProperty.call(ctx.vars, baseName)){
+        base = ctx.vars[baseName];
+      }else if (Object.prototype.hasOwnProperty.call(ctx.aliases, baseName)){
+        base = ctx.vars[ctx.aliases[baseName]];
+      }
+      if (base && typeof base === "object" && base.__assy && base.fields){
+        if (Object.prototype.hasOwnProperty.call(base.fields, fieldName)){
+          recordResolve(name);
+          return base.fields[fieldName].value;
+        }
+      }
+    }
     throw new Error(`Unknown identifier: ${name}`);
   }
 
@@ -501,6 +583,10 @@ export function evalRPN(rpn, ctx){
     }else if (t.type === "str"){
       st.push(string(t.value));
     }else if (t.type === "obj"){
+      if (evalString){
+        const assy = tryBuildObjAssy(t.value, evalString);
+        if (assy){ st.push(assy); continue; }
+      }
       st.push({ __obj: true, raw: t.value });
     }else if (t.type === "lazy_if"){
       if (!evalString) throw new Error("Lazy if() requires evalString support");
@@ -563,6 +649,7 @@ export function buildAliasMap(tokens, vars, fnNames){
     }
     if (isUnitToken(name) || name === "pi" || name === "e") continue;
     if (fnNames && fnNames.has(name)) continue;
+    if (name.includes(".")) continue;
     unknown.push(name);
   }
 

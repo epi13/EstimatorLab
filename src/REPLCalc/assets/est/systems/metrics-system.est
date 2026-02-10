@@ -129,6 +129,6 @@ so calculate_mep_metrics(analysis, tile_size, map_width) = {
 
   {
     light_fix, lt_2x4, lt_2x2, lt_dl, lt_lin, lt_hb, lt_wp, lt_exit,
-    duct, duct_wt, elbows, supply, return, treads, risers
+    duct_len, duct, duct_wt, elbows, supply, return, treads, risers
   }
 }

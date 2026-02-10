@@ -253,6 +253,7 @@ if doom_metrics_dirty == 1:
   doom_lt_hb = mep.lt_hb
   doom_lt_wp = mep.lt_wp
   doom_lt_exit = mep.lt_exit
+  duct_len = mep.duct_len
   doom_duct = mep.duct
   doom_duct_wt = mep.duct_wt
   doom_elbows = mep.elbows
@@ -261,6 +262,8 @@ if doom_metrics_dirty == 1:
   doom_treads = mep.treads
   doom_risers = mep.risers
 
+  mw0 = mw(doom_map)
+  mh0 = mh(doom_map)
   doom_rect_area = area_rect(mw0 * tile, mh0 * tile)
   doom_rect_perim = perim_rect(mw0 * tile, mh0 * tile)
   doom_shell_poly = poly(pt(0 ft, 0 ft), pt(mw0 * tile, 0 ft), pt(mw0 * tile, mh0 * tile), pt(0 ft, mh0 * tile))

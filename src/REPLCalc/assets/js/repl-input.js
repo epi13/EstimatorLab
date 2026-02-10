@@ -230,6 +230,64 @@ export function createInputHandlers({
     state.__docsModuleLoaded = true;
   }
 
+  async function ensureConstructionModuleLoaded(){
+    const CONSTRUCTION_MODULES_VERSION = 1;
+    if (state.__constructionModuleLoaded && state.__constructionModulesVersion === CONSTRUCTION_MODULES_VERSION){
+      return;
+    }
+
+    const runExpressionAll = (expr) => runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL });
+    const applyModuleSource = (source, label) => {
+      const statements = splitStatements(source);
+      for (const stmt of statements){
+        const parsed = evaluate(stmt);
+        if (!parsed) continue;
+
+        if (parsed.type === "cmd"){
+          throw new Error(`${label} may not contain commands`);
+        }
+
+        if (parsed.type === "def"){
+          defineUserFn(parsed.name, parsed.params, parsed.expr);
+          continue;
+        }
+
+        if (parsed.type === "assy"){
+          const assembly = createAssembly(parsed.name, parsed.fields);
+          state.vars[parsed.name] = assembly;
+          continue;
+        }
+
+        if (parsed.type === "assign"){
+          state.vars[parsed.name] = runExpressionAll(parsed.expr);
+          continue;
+        }
+
+        if (parsed.type === "equation"){
+          const solved = solveEquation(parsed.left, parsed.right);
+          if (!solved.unknown.unitToken){
+            state.vars[solved.unknown.name] = solved.value;
+          }
+          continue;
+        }
+
+        if (parsed.type === "expr"){
+          runExpressionAll(parsed.expr);
+          continue;
+        }
+
+        if (parsed.type === "if" || parsed.type === "for" || parsed.type === "repeat"){
+          throw new Error(`${label} may not contain flow statements`);
+        }
+      }
+    };
+
+    const source = await fetchText("assets/est/construction/construction-helpers.est");
+    applyModuleSource(source, "construction helpers");
+    state.__constructionModulesVersion = CONSTRUCTION_MODULES_VERSION;
+    state.__constructionModuleLoaded = true;
+  }
+
   async function handleLine(line){
     const runExpressionAll = (expr) => runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL });
     const statementList = splitStatements(line);
@@ -241,6 +299,11 @@ export function createInputHandlers({
         if (cmd === "docs"){
           await ensureDocsModuleLoaded();
           runExpressionAll("show_docs()");
+          return;
+        }
+        if (cmd === "construction"){
+          await ensureConstructionModuleLoaded();
+          writeLine("Loaded construction helpers.", "ok");
           return;
         }
         if (cmd === "clear"){ clearTerminal(); return; }

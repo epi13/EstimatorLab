@@ -39,8 +39,7 @@ so doom_tex3_concrete(x, y, t) = {
 
 # Texture family selector
 # 0: drywall stipple, 1: tile grid, 2: wood streaks, 3: speckled concrete
-so doom_tex_color(tex_id, x, y, t) = 
-  if(tex_id == 0, doom_tex0_drywall(x, y, t),
+so doom_tex_color(tex_id, x, y, t) = if(tex_id == 0, doom_tex0_drywall(x, y, t),
   if(tex_id == 1, doom_tex1_tile(x, y, t),
   if(tex_id == 2, doom_tex2_wood(x, y, t),
   doom_tex3_concrete(x, y, t))))

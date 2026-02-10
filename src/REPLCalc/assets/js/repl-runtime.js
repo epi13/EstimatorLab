@@ -3,6 +3,7 @@ import { isTruthy } from "./repl-expression.js";
 
 export function createRuntime({ state, baseFns, defFn, defFnCtx, renderUserFunctions, parseParams, gfxFns }){
   let runExpressionWithContext = null;
+  let runBlockBody = null;
   const callStack = [];
   const MAX_CALL_STACK_DEPTH = 2048;
   const MAX_BOUNDED_ITERATIONS = 100000;
@@ -268,6 +269,8 @@ export function createRuntime({ state, baseFns, defFn, defFnCtx, renderUserFunct
       throw new Error(`Cannot redefine built-in function: ${name}`);
     }
     if (typeof defFnCtx !== "function") throw new Error("Runtime missing defFnCtx");
+    const trimmedExpr = expr.trim();
+    const isBraceBlock = trimmedExpr.startsWith("{") && trimmedExpr.endsWith("}");
     const defn = defFnCtx(name, params.length, (ctx, ...args) => {
       if (callStack.length >= MAX_CALL_STACK_DEPTH){
         throw new Error(`Max call depth exceeded (${MAX_CALL_STACK_DEPTH}).`);
@@ -280,6 +283,48 @@ export function createRuntime({ state, baseFns, defFn, defFnCtx, renderUserFunct
         }
       }
       callStack.push(name);
+      const allowed = typeof ctx?.allowedEffects === "number" ? ctx.allowedEffects : EFFECT.PURE;
+      if (isBraceBlock && runBlockBody){
+        const keysBefore = new Set(Object.keys(state.vars));
+        const saved = {};
+        const had = {};
+        params.forEach((param, idx) => {
+          had[param] = Object.prototype.hasOwnProperty.call(state.vars, param);
+          if (had[param]) saved[param] = state.vars[param];
+          state.vars[param] = args[idx];
+        });
+        try{
+          const body = trimmedExpr.slice(1, -1);
+          const bodyResult = runBlockBody(body, { allowedEffects: allowed });
+          if (bodyResult && typeof bodyResult === "object" && bodyResult.__assy){
+            return bodyResult;
+          }
+          const newFields = Object.create(null);
+          let fieldCount = 0;
+          for (const k of Object.keys(state.vars)){
+            if (!keysBefore.has(k) && !had[k]){
+              newFields[k] = { value: state.vars[k] };
+              fieldCount++;
+            }
+          }
+          if (fieldCount > 0){
+            return { __assy: true, name, fields: newFields };
+          }
+          return bodyResult;
+        }finally{
+          params.forEach((param) => {
+            if (had[param]) state.vars[param] = saved[param];
+            else delete state.vars[param];
+          });
+          const keysAfter = Object.keys(state.vars);
+          for (const k of keysAfter){
+            if (!keysBefore.has(k) && !had[k]){
+              delete state.vars[k];
+            }
+          }
+          callStack.pop();
+        }
+      }
       const scoped = Object.create(null);
       Object.assign(scoped, state.vars);
       params.forEach((param, idx) => {
@@ -289,7 +334,6 @@ export function createRuntime({ state, baseFns, defFn, defFnCtx, renderUserFunct
         throw new Error("Expression engine not ready.");
       }
       try{
-        const allowed = typeof ctx?.allowedEffects === "number" ? ctx.allowedEffects : EFFECT.PURE;
         return runExpressionWithContext(expr, scoped, { allowedEffects: allowed });
       }finally{
         callStack.pop();
@@ -427,10 +471,15 @@ export function createRuntime({ state, baseFns, defFn, defFnCtx, renderUserFunct
     runExpressionWithContext = fn;
   }
 
+  function setRunBlockBody(fn){
+    runBlockBody = fn;
+  }
+
   return {
     getFns,
     defineUserFn,
     metaFns,
     setRunExpressionWithContext,
+    setRunBlockBody,
   };
 }

@@ -29,7 +29,6 @@ so weapon_raycast(px, py, yaw, spread, range, map) = {
         hit_y = ry;
       else:
         0
-  }
   
   { hit, hit_tile, hit_x, hit_y }
 }

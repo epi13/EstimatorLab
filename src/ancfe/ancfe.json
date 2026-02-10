@@ -1,0 +1,477 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/alaska-construction-cost-factors.schema.json",
+  "title": "Alaska Construction Cost Factors (ACF) Input Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["project", "location", "logistics", "workforce", "market", "project_characteristics", "risk"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": { "type": "string", "default": "1.0.0" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "created_by": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "industry", "project_type", "size", "baseline"],
+      "properties": {
+        "name": { "type": "string" },
+        "industry": {
+          "type": "string",
+          "enum": [
+            "General",
+            "Government",
+            "Military",
+            "Healthcare",
+            "Education",
+            "Aviation",
+            "Marine",
+            "Utilities",
+            "OilAndGas",
+            "Mining",
+            "Fishing",
+            "Tourism",
+            "Industrial",
+            "Residential",
+            "Commercial"
+          ]
+        },
+        "project_type": {
+          "type": "string",
+          "enum": ["NewConstruction", "Renovation", "OccupiedRenovation", "CriticalFacility"]
+        },
+        "size": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["gross_sf", "estimated_value_usd"],
+          "properties": {
+            "gross_sf": { "type": "number", "minimum": 0 },
+            "estimated_value_usd": { "type": "number", "minimum": 0 }
+          }
+        },
+        "baseline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["baseline_region", "baseline_cost_basis"],
+          "properties": {
+            "baseline_region": {
+              "type": "string",
+              "enum": ["Anchorage", "Fairbanks", "Lower48", "Other"]
+            },
+            "baseline_cost_basis": {
+              "type": "string",
+              "enum": [
+                "UnitCosts",
+                "Assemblies",
+                "RSMeans",
+                "HistoricalHMS",
+                "VendorQuotes",
+                "EngineerEstimate",
+                "Other"
+              ]
+            },
+            "baseline_reference": { "type": "string", "description": "Optional link, filename, estimate ID, or RSMeans line reference." }
+          }
+        }
+      }
+    },
+
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "place_name", "region", "road_system_tier", "population"],
+      "properties": {
+        "state": { "type": "string", "const": "AK" },
+        "place_name": { "type": "string" },
+        "region": {
+          "type": "string",
+          "enum": [
+            "Southcentral",
+            "Southeast",
+            "Interior",
+            "Southwest",
+            "Arctic",
+            "Aleutians",
+            "Western"
+          ]
+        },
+        "road_system_tier": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5,
+          "description": "0=Anchorage/Fairbanks urban, 1=Road near hub, 2=Road remote, 3=Barge only, 4=Air only, 5=Air+seasonal"
+        },
+        "population": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["population_count", "density_per_sq_mi"],
+          "properties": {
+            "population_count": { "type": "integer", "minimum": 0 },
+            "density_per_sq_mi": { "type": "number", "minimum": 0 }
+          }
+        },
+        "proximity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "nearest_hub_name": { "type": "string" },
+            "nearest_hub_distance_miles": { "type": "number", "minimum": 0 },
+            "nearest_port_name": { "type": "string" },
+            "nearest_port_distance_miles": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+
+    "logistics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transport_legs", "seasonal_access", "delivery_window", "material_handling"],
+      "properties": {
+        "transport_legs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/transportLeg" },
+          "description": "List of logistics legs to reach site. Multiple legs stack."
+        },
+        "seasonal_access": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["access_type", "season_weight"],
+          "properties": {
+            "access_type": {
+              "type": "string",
+              "enum": ["YearRound", "SummerOnly", "WinterOnly", "ShoulderSeason", "HighlyVariable"]
+            },
+            "season_weight": {
+              "$ref": "#/$defs/factorValue",
+              "description": "Multiplier capturing seasonal constraint impact (risk + cost)."
+            },
+            "constraints": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["Ice", "Breakup", "FreezeUp", "StormSeason", "DraftLimit", "DaylightLimit", "RoadClosure"]
+              }
+            }
+          }
+        },
+        "delivery_window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["window_type", "risk_premium"],
+          "properties": {
+            "window_type": {
+              "type": "string",
+              "enum": ["Normal", "Narrow", "SingleShipmentCritical", "MultiShipmentComplex"]
+            },
+            "risk_premium": { "$ref": "#/$defs/factorValue" },
+            "notes": { "type": "string" }
+          }
+        },
+        "material_handling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["handling_complexity", "multiplier"],
+          "properties": {
+            "handling_complexity": { "type": "integer", "minimum": 0, "maximum": 5 },
+            "multiplier": { "$ref": "#/$defs/factorValue" },
+            "drivers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["NoForklift", "NoCrane", "LimitedStaging", "LongCarry", "TideDependent", "HelicopterPick", "Hazmat"]
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "workforce": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["local_labor_availability", "crew_mobilization", "productivity", "wage_overlay"],
+      "properties": {
+        "local_labor_availability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability_level", "multiplier"],
+          "properties": {
+            "availability_level": {
+              "type": "string",
+              "enum": ["FullLocalTrades", "PartialLocalTrades", "FlyInCrews", "SpecializedFlyInOnly"]
+            },
+            "multiplier": { "$ref": "#/$defs/factorValue" },
+            "notes": { "type": "string" }
+          }
+        },
+        "crew_mobilization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rotation_model", "camp_required", "travel_time_policy", "multiplier"],
+          "properties": {
+            "rotation_model": { "type": "string", "enum": ["LocalDaily", "5x2", "4x3", "2x2", "3x3", "Other"] },
+            "camp_required": { "type": "boolean" },
+            "travel_time_policy": { "type": "string", "enum": ["Paid", "Unpaid", "Mixed", "Unknown"] },
+            "multiplier": { "$ref": "#/$defs/factorValue" },
+            "components": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "per_diem_usd_per_day": { "type": "number", "minimum": 0 },
+                "camp_cost_usd_per_person_day": { "type": "number", "minimum": 0 },
+                "airfare_usd_per_person_roundtrip": { "type": "number", "minimum": 0 }
+              }
+          }
+          }
+        },
+        "productivity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["climate_zone", "climate_factor", "setup_teardown_overhead_factor"],
+          "properties": {
+            "climate_zone": { "type": "string", "enum": ["Southeast", "Southcentral", "Interior", "ArcticCoastal", "Aleutians", "Western"] },
+            "climate_factor": { "$ref": "#/$defs/factorValue", "description": "Labor hour inflation from climate/weather/daylight." },
+            "setup_teardown_overhead_factor": { "$ref": "#/$defs/factorValue", "description": "Overhead for staging, PPE, thaw protection, etc." },
+            "drivers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["ColdWeatherGear", "HeatedEnclosures", "SnowManagement", "WindShutdowns", "LimitedDaylight", "FreezeThawSequencing"]
+              }
+            }
+          }
+        },
+        "wage_overlay": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["wage_basis", "multiplier"],
+          "properties": {
+            "wage_basis": { "type": "string", "enum": ["CompanyRates", "AnchorageDefault", "PrevailingWage", "UnionCBA", "FederalDavisBacon", "Unknown"] },
+            "multiplier": { "$ref": "#/$defs/factorValue" },
+            "notes": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "market": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["population_gravity", "competition", "industry_pressure"],
+      "properties": {
+        "population_gravity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["band", "multiplier"],
+          "properties": {
+            "band": { "type": "string", "enum": ["Over100k", "10kTo100k", "1kTo10k", "Under1k"] },
+            "multiplier": { "$ref": "#/$defs/factorValue" }
+          }
+        },
+        "competition": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["bidder_depth", "multiplier"],
+          "properties": {
+            "bidder_depth": { "type": "string", "enum": ["High", "Moderate", "Low", "SingleSourceLikely"] },
+            "multiplier": { "$ref": "#/$defs/factorValue" },
+            "notes": { "type": "string" }
+          }
+        },
+        "industry_pressure": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dominant_industries", "multiplier"],
+          "properties": {
+            "dominant_industries": {
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "enum": ["OilAndGas", "Mining", "Fishing", "Military", "Tourism", "Utilities", "None"]
+              }
+            },
+            "multiplier": { "$ref": "#/$defs/factorValue" },
+            "notes": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "project_characteristics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["remodel_complexity", "scale_curve", "site_constraints"],
+      "properties": {
+        "remodel_complexity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["level", "multiplier"],
+          "properties": {
+            "level": { "type": "string", "enum": ["None", "Renovation", "OccupiedRenovation", "CriticalFacility"] },
+            "multiplier": { "$ref": "#/$defs/factorValue" },
+            "notes": { "type": "string" }
+          }
+        },
+        "scale_curve": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["band", "multiplier"],
+          "properties": {
+            "band": { "type": "string", "enum": ["Under250k", "250kTo1M", "1MTo10M", "Over10M"] },
+            "multiplier": { "$ref": "#/$defs/factorValue" }
+          }
+        },
+        "site_constraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["constraint_score", "multiplier"],
+          "properties": {
+            "constraint_score": { "type": "integer", "minimum": 0, "maximum": 10 },
+            "multiplier": { "$ref": "#/$defs/factorValue" },
+            "drivers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["LimitedLaydown", "ConfinedSite", "PoorSoils", "HighWaterTable", "Permafrost", "SteepTerrain", "EnvironmentalBuffers", "NoiseRestrictions"]
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unknowns_index", "schedule_volatility", "permitting_complexity"],
+      "properties": {
+        "unknowns_index": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["score", "multiplier"],
+          "properties": {
+            "score": { "type": "integer", "minimum": 0, "maximum": 10 },
+            "multiplier": { "$ref": "#/$defs/factorValue" },
+            "drivers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["IncompleteDrawings", "UnknownExistingConditions", "HazmatAsbestos", "HiddenUtilities", "LimitedSurvey", "StakeholderComplexity"]
+              }
+            }
+          }
+        },
+        "schedule_volatility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["level", "multiplier"],
+          "properties": {
+            "level": { "type": "string", "enum": ["Low", "Moderate", "High", "Extreme"] },
+            "multiplier": { "$ref": "#/$defs/factorValue" },
+            "drivers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["WeatherStops", "MissedBarge", "EquipmentDelay", "MedivacRisk", "SupplyChainFragility", "InspectionDelays"]
+              }
+            }
+          }
+        },
+        "permitting_complexity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["level", "multiplier"],
+          "properties": {
+            "level": { "type": "string", "enum": ["Low", "Moderate", "High", "FederalOrTribalHeavy"] },
+            "multiplier": { "$ref": "#/$defs/factorValue" },
+            "notes": { "type": "string" }
+          }
+        },
+        "contingency": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "contingency_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+            "applies_to": {
+              "type": "string",
+              "enum": ["MaterialsOnly", "LaborOnly", "DirectCosts", "Total", "Unknown"]
+            }
+          }
+        }
+      }
+    },
+
+    "weights": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional weights for rolling up to a composite Alaska Cost Factor (ACF). If omitted, use your system defaults.",
+      "properties": {
+        "logistics": { "type": "number", "minimum": 0 },
+        "workforce": { "type": "number", "minimum": 0 },
+        "market": { "type": "number", "minimum": 0 },
+        "project_characteristics": { "type": "number", "minimum": 0 },
+        "risk": { "type": "number", "minimum": 0 }
+      }
+    },
+
+    "computed": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional area where an engine can store derived outputs (not required for input validation).",
+      "properties": {
+        "logistics_factor": { "$ref": "#/$defs/factorValue" },
+        "workforce_factor": { "$ref": "#/$defs/factorValue" },
+        "market_factor": { "$ref": "#/$defs/factorValue" },
+        "project_factor": { "$ref": "#/$defs/factorValue" },
+        "risk_factor": { "$ref": "#/$defs/factorValue" },
+        "acf_total_factor": { "$ref": "#/$defs/factorValue" }
+      }
+    }
+  },
+
+  "$defs": {
+    "factorValue": {
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 10,
+      "default": 1.0,
+      "description": "Multiplier (1.00 = no change). Use >1.0 to increase costs, <1.0 to decrease."
+    },
+
+    "transportLeg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "distance_miles", "season", "cost_index"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["Road", "Barge", "Ferry", "AirCargo", "CharterAir", "WinterRoad", "Helicopter", "Other"]
+        },
+        "distance_miles": { "type": "number", "minimum": 0 },
+        "season": { "type": "string", "enum": ["AllYear", "Summer", "Winter", "Shoulder", "Unknown"] },
+        "cost_index": {
+          "$ref": "#/$defs/factorValue",
+          "description": "Relative cost intensity of this leg (e.g., AirCargo higher than Road)."
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["WeightLimited", "CubeLimited", "HazmatRestricted", "ScheduleUnreliable", "TideDependent", "DraftLimit", "RunwayLimit"]
+          }
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

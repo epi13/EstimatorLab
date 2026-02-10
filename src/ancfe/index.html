@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Alaska Cost Factor Builder (ACF)</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar__left">
+      <h1>Alaska Construction Cost Factors (ACF)</h1>
+      <p class="muted">Offline editor for ACF JSON • Import / Export • Transport legs builder</p>
+    </div>
+    <div class="topbar__right">
+      <button id="btnNew" class="btn">New</button>
+      <label class="btn btn--ghost">
+        Import JSON
+        <input id="fileImport" type="file" accept="application/json" hidden />
+      </label>
+      <button id="btnExport" class="btn btn--primary">Export JSON</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <div class="row row--between">
+        <div>
+          <h2>Composite Preview</h2>
+          <p class="muted">This preview multiplies major section multipliers (Logistics × Workforce × Market × Project × Risk).</p>
+        </div>
+        <div class="kpi">
+          <div class="kpi__label">ACF Total</div>
+          <div id="acfTotal" class="kpi__value">1.00</div>
+        </div>
+      </div>
+
+      <div class="grid grid--5">
+        <div class="mini">
+          <div class="mini__label">Logistics</div>
+          <div id="kLogistics" class="mini__value">1.00</div>
+        </div>
+        <div class="mini">
+          <div class="mini__label">Workforce</div>
+          <div id="kWorkforce" class="mini__value">1.00</div>
+        </div>
+        <div class="mini">
+          <div class="mini__label">Market</div>
+          <div id="kMarket" class="mini__value">1.00</div>
+        </div>
+        <div class="mini">
+          <div class="mini__label">Project</div>
+          <div id="kProject" class="mini__value">1.00</div>
+        </div>
+        <div class="mini">
+          <div class="mini__label">Risk</div>
+          <div id="kRisk" class="mini__value">1.00</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROJECT -->
+    <section class="card">
+      <h2>Project</h2>
+
+      <div class="grid grid--3">
+        <label class="field">
+          <span>Name</span>
+          <input id="project_name" type="text" placeholder="e.g., Kotlik Landfill Improvements" />
+        </label>
+
+        <label class="field">
+          <span>Industry</span>
+          <select id="project_industry"></select>
+        </label>
+
+        <label class="field">
+          <span>Project Type</span>
+          <select id="project_type"></select>
+        </label>
+
+        <label class="field">
+          <span>Gross SF</span>
+          <input id="project_gross_sf" type="number" min="0" step="1" value="0" />
+        </label>
+
+        <label class="field">
+          <span>Estimated Value (USD)</span>
+          <input id="project_value_usd" type="number" min="0" step="1000" value="0" />
+        </label>
+
+        <label class="field">
+          <span>Baseline Region</span>
+          <select id="project_baseline_region"></select>
+        </label>
+
+        <label class="field">
+          <span>Baseline Cost Basis</span>
+          <select id="project_baseline_basis"></select>
+        </label>
+
+        <label class="field gridspan-2">
+          <span>Baseline Reference (optional)</span>
+          <input id="project_baseline_ref" type="text" placeholder="Estimate ID, RSMeans line, filename, etc." />
+        </label>
+      </div>
+    </section>
+
+    <!-- LOCATION -->
+    <section class="card">
+      <h2>Location</h2>
+
+      <div class="grid grid--3">
+        <label class="field">
+          <span>State</span>
+          <input id="loc_state" type="text" value="AK" readonly />
+        </label>
+
+        <label class="field">
+          <span>Place Name</span>
+          <input id="loc_place" type="text" placeholder="e.g., Thorne Bay" />
+        </label>
+
+        <label class="field">
+          <span>Region</span>
+          <select id="loc_region"></select>
+        </label>
+
+        <label class="field">
+          <span>Road System Tier (0–5)</span>
+          <input id="loc_road_tier" type="number" min="0" max="5" step="1" value="0" />
+        </label>
+
+        <label class="field">
+          <span>Population Count</span>
+          <input id="loc_pop_count" type="number" min="0" step="1" value="0" />
+        </label>
+
+        <label class="field">
+          <span>Population Density (per sq mi)</span>
+          <input id="loc_pop_density" type="number" min="0" step="0.1" value="0" />
+        </label>
+      </div>
+
+      <details class="details">
+        <summary>Proximity (optional)</summary>
+        <div class="grid grid--3">
+          <label class="field">
+            <span>Nearest Hub Name</span>
+            <input id="loc_hub_name" type="text" />
+          </label>
+          <label class="field">
+            <span>Hub Distance (miles)</span>
+            <input id="loc_hub_mi" type="number" min="0" step="0.1" value="0" />
+          </label>
+          <label class="field">
+            <span>Nearest Port Name</span>
+            <input id="loc_port_name" type="text" />
+          </label>
+          <label class="field">
+            <span>Port Distance (miles)</span>
+            <input id="loc_port_mi" type="number" min="0" step="0.1" value="0" />
+          </label>
+        </div>
+      </details>
+    </section>
+
+    <!-- LOGISTICS -->
+    <section class="card">
+      <div class="row row--between">
+        <h2>Logistics</h2>
+        <button id="btnAddLeg" class="btn btn--ghost">+ Add Transport Leg</button>
+      </div>
+
+      <div id="legs" class="stack"></div>
+
+      <hr class="sep" />
+
+      <div class="grid grid--3">
+        <div class="box">
+          <h3>Seasonal Access</h3>
+          <div class="grid grid--2">
+            <label class="field">
+              <span>Access Type</span>
+              <select id="log_season_access_type"></select>
+            </label>
+            <label class="field">
+              <span>Season Weight (multiplier)</span>
+              <input id="log_season_weight" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+            </label>
+          </div>
+          <label class="field">
+            <span>Constraints (comma separated)</span>
+            <input id="log_season_constraints" type="text" placeholder="Ice, Breakup, DraftLimit..." />
+          </label>
+        </div>
+
+        <div class="box">
+          <h3>Delivery Window</h3>
+          <div class="grid grid--2">
+            <label class="field">
+              <span>Window Type</span>
+              <select id="log_delivery_window_type"></select>
+            </label>
+            <label class="field">
+              <span>Risk Premium (multiplier)</span>
+              <input id="log_delivery_risk" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+            </label>
+          </div>
+          <label class="field">
+            <span>Notes</span>
+            <input id="log_delivery_notes" type="text" placeholder="e.g., single barge shipment critical" />
+          </label>
+        </div>
+
+        <div class="box">
+          <h3>Material Handling</h3>
+          <div class="grid grid--2">
+            <label class="field">
+              <span>Handling Complexity (0–5)</span>
+              <input id="log_handling_score" type="number" min="0" max="5" step="1" value="0" />
+            </label>
+            <label class="field">
+              <span>Handling Multiplier</span>
+              <input id="log_handling_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+            </label>
+          </div>
+          <label class="field">
+            <span>Drivers (comma separated)</span>
+            <input id="log_handling_drivers" type="text" placeholder="NoForklift, LimitedStaging..." />
+          </label>
+        </div>
+      </div>
+
+      <div class="row row--between mt12">
+        <div>
+          <h3>Logistics Factor (section rollup)</h3>
+          <p class="muted">Editable multiplier used in composite preview (you can later compute this from legs + constraints).</p>
+        </div>
+        <label class="field field--inline">
+          <span>Logistics Multiplier</span>
+          <input id="logistics_factor" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+        </label>
+      </div>
+    </section>
+
+    <!-- WORKFORCE -->
+    <section class="card">
+      <h2>Workforce</h2>
+
+      <div class="grid grid--3">
+        <div class="box">
+          <h3>Local Labor Availability</h3>
+          <label class="field">
+            <span>Availability Level</span>
+            <select id="wf_availability_level"></select>
+          </label>
+          <label class="field">
+            <span>Multiplier</span>
+            <input id="wf_availability_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+          <label class="field">
+            <span>Notes</span>
+            <input id="wf_availability_notes" type="text" />
+          </label>
+        </div>
+
+        <div class="box">
+          <h3>Crew Mobilization</h3>
+          <label class="field">
+            <span>Rotation Model</span>
+            <select id="wf_rotation_model"></select>
+          </label>
+          <label class="field">
+            <span>Camp Required</span>
+            <select id="wf_camp_required">
+              <option value="true">Yes</option>
+              <option value="false" selected>No</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Travel Time Policy</span>
+            <select id="wf_travel_policy"></select>
+          </label>
+          <label class="field">
+            <span>Multiplier</span>
+            <input id="wf_mob_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+
+          <details class="details">
+            <summary>Cost Components (optional)</summary>
+            <div class="grid grid--2">
+              <label class="field">
+                <span>Per Diem ($/day)</span>
+                <input id="wf_per_diem" type="number" min="0" step="1" value="0" />
+              </label>
+              <label class="field">
+                <span>Camp Cost ($/person-day)</span>
+                <input id="wf_camp_cost" type="number" min="0" step="1" value="0" />
+              </label>
+              <label class="field">
+                <span>Airfare ($/person RT)</span>
+                <input id="wf_airfare" type="number" min="0" step="1" value="0" />
+              </label>
+            </div>
+          </details>
+        </div>
+
+        <div class="box">
+          <h3>Productivity</h3>
+          <label class="field">
+            <span>Climate Zone</span>
+            <select id="wf_climate_zone"></select>
+          </label>
+          <label class="field">
+            <span>Climate Factor</span>
+            <input id="wf_climate_factor" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+          <label class="field">
+            <span>Setup/Teardown Overhead Factor</span>
+            <input id="wf_setup_factor" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+          <label class="field">
+            <span>Drivers (comma separated)</span>
+            <input id="wf_prod_drivers" type="text" placeholder="ColdWeatherGear, HeatedEnclosures..." />
+          </label>
+        </div>
+      </div>
+
+      <div class="grid grid--2 mt12">
+        <div class="box">
+          <h3>Wage Overlay</h3>
+          <label class="field">
+            <span>Wage Basis</span>
+            <select id="wf_wage_basis"></select>
+          </label>
+          <label class="field">
+            <span>Multiplier</span>
+            <input id="wf_wage_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+          <label class="field">
+            <span>Notes</span>
+            <input id="wf_wage_notes" type="text" />
+          </label>
+        </div>
+
+        <div class="row row--between">
+          <div>
+            <h3>Workforce Factor (section rollup)</h3>
+            <p class="muted">Editable multiplier used in composite preview.</p>
+          </div>
+          <label class="field field--inline">
+            <span>Workforce Multiplier</span>
+            <input id="workforce_factor" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- MARKET -->
+    <section class="card">
+      <h2>Market</h2>
+      <div class="grid grid--3">
+        <div class="box">
+          <h3>Population Gravity</h3>
+          <label class="field">
+            <span>Band</span>
+            <select id="mk_pop_band"></select>
+          </label>
+          <label class="field">
+            <span>Multiplier</span>
+            <input id="mk_pop_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+        </div>
+
+        <div class="box">
+          <h3>Competition</h3>
+          <label class="field">
+            <span>Bidder Depth</span>
+            <select id="mk_bidder_depth"></select>
+          </label>
+          <label class="field">
+            <span>Multiplier</span>
+            <input id="mk_comp_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+          <label class="field">
+            <span>Notes</span>
+            <input id="mk_comp_notes" type="text" />
+          </label>
+        </div>
+
+        <div class="box">
+          <h3>Industry Pressure</h3>
+          <label class="field">
+            <span>Dominant Industries (comma separated)</span>
+            <input id="mk_industries" type="text" placeholder="Mining, Military, Fishing..." />
+          </label>
+          <label class="field">
+            <span>Multiplier</span>
+            <input id="mk_ind_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+          <label class="field">
+            <span>Notes</span>
+            <input id="mk_ind_notes" type="text" />
+          </label>
+        </div>
+      </div>
+
+      <div class="row row--between mt12">
+        <div>
+          <h3>Market Factor (section rollup)</h3>
+          <p class="muted">Editable multiplier used in composite preview.</p>
+        </div>
+        <label class="field field--inline">
+          <span>Market Multiplier</span>
+          <input id="market_factor" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+        </label>
+      </div>
+    </section>
+
+    <!-- PROJECT CHARACTERISTICS -->
+    <section class="card">
+      <h2>Project Characteristics</h2>
+      <div class="grid grid--3">
+        <div class="box">
+          <h3>Remodel Complexity</h3>
+          <label class="field">
+            <span>Level</span>
+            <select id="pc_remodel_level"></select>
+          </label>
+          <label class="field">
+            <span>Multiplier</span>
+            <input id="pc_remodel_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+          <label class="field">
+            <span>Notes</span>
+            <input id="pc_remodel_notes" type="text" />
+          </label>
+        </div>
+
+        <div class="box">
+          <h3>Scale Curve</h3>
+          <label class="field">
+            <span>Band</span>
+            <select id="pc_scale_band"></select>
+          </label>
+          <label class="field">
+            <span>Multiplier</span>
+            <input id="pc_scale_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+        </div>
+
+        <div class="box">
+          <h3>Site Constraints</h3>
+          <label class="field">
+            <span>Constraint Score (0–10)</span>
+            <input id="pc_site_score" type="number" min="0" max="10" step="1" value="0" />
+          </label>
+          <label class="field">
+            <span>Multiplier</span>
+            <input id="pc_site_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+          <label class="field">
+            <span>Drivers (comma separated)</span>
+            <input id="pc_site_drivers" type="text" placeholder="Permafrost, PoorSoils..." />
+          </label>
+        </div>
+      </div>
+
+      <div class="row row--between mt12">
+        <div>
+          <h3>Project Factor (section rollup)</h3>
+          <p class="muted">Editable multiplier used in composite preview.</p>
+        </div>
+        <label class="field field--inline">
+          <span>Project Multiplier</span>
+          <input id="project_factor" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+        </label>
+      </div>
+    </section>
+
+    <!-- RISK -->
+    <section class="card">
+      <h2>Risk</h2>
+      <div class="grid grid--3">
+        <div class="box">
+          <h3>Unknowns Index</h3>
+          <label class="field">
+            <span>Score (0–10)</span>
+            <input id="rk_unknown_score" type="number" min="0" max="10" step="1" value="0" />
+          </label>
+          <label class="field">
+            <span>Multiplier</span>
+            <input id="rk_unknown_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+          <label class="field">
+            <span>Drivers (comma separated)</span>
+            <input id="rk_unknown_drivers" type="text" placeholder="IncompleteDrawings, HazmatAsbestos..." />
+          </label>
+        </div>
+
+        <div class="box">
+          <h3>Schedule Volatility</h3>
+          <label class="field">
+            <span>Level</span>
+            <select id="rk_sched_level"></select>
+          </label>
+          <label class="field">
+            <span>Multiplier</span>
+            <input id="rk_sched_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+          <label class="field">
+            <span>Drivers (comma separated)</span>
+            <input id="rk_sched_drivers" type="text" placeholder="WeatherStops, MissedBarge..." />
+          </label>
+        </div>
+
+        <div class="box">
+          <h3>Permitting Complexity</h3>
+          <label class="field">
+            <span>Level</span>
+            <select id="rk_permit_level"></select>
+          </label>
+          <label class="field">
+            <span>Multiplier</span>
+            <input id="rk_permit_mult" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+          </label>
+          <label class="field">
+            <span>Notes</span>
+            <input id="rk_permit_notes" type="text" />
+          </label>
+        </div>
+      </div>
+
+      <details class="details mt12">
+        <summary>Contingency (optional)</summary>
+        <div class="grid grid--3">
+          <label class="field">
+            <span>Contingency %</span>
+            <input id="rk_cont_pct" type="number" min="0" max="100" step="0.1" value="0" />
+          </label>
+          <label class="field">
+            <span>Applies To</span>
+            <select id="rk_cont_applies"></select>
+          </label>
+        </div>
+      </details>
+
+      <div class="row row--between mt12">
+        <div>
+          <h3>Risk Factor (section rollup)</h3>
+          <p class="muted">Editable multiplier used in composite preview.</p>
+        </div>
+        <label class="field field--inline">
+          <span>Risk Multiplier</span>
+          <input id="risk_factor" type="number" min="0.5" max="10" step="0.01" value="1.00" />
+        </label>
+      </div>
+    </section>
+
+    <!-- WEIGHTS -->
+    <section class="card">
+      <h2>Weights (optional)</h2>
+      <p class="muted">Stored in JSON but not used in the current preview. Useful if you later want weighted rollups instead of pure multiplication.</p>
+      <div class="grid grid--5">
+        <label class="field">
+          <span>Logistics</span>
+          <input id="wt_logistics" type="number" min="0" step="0.01" value="1" />
+        </label>
+        <label class="field">
+          <span>Workforce</span>
+          <input id="wt_workforce" type="number" min="0" step="0.01" value="1" />
+        </label>
+        <label class="field">
+          <span>Market</span>
+          <input id="wt_market" type="number" min="0" step="0.01" value="1" />
+        </label>
+        <label class="field">
+          <span>Project</span>
+          <input id="wt_project" type="number" min="0" step="0.01" value="1" />
+        </label>
+        <label class="field">
+          <span>Risk</span>
+          <input id="wt_risk" type="number" min="0" step="0.01" value="1" />
+        </label>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="muted">
+        Tip: keep the “section rollup multipliers” editable for now. Later we can auto-calculate them from sub-fields + legs (and show the derivation).
+      </div>
+    </footer>
+  </main>
+
+  <template id="tplLeg">
+    <div class="leg">
+      <div class="row row--between">
+        <h3 class="leg__title">Transport Leg <span data-leg-index></span></h3>
+        <button class="btn btn--danger" data-remove-leg>Remove</button>
+      </div>
+
+      <div class="grid grid--5">
+        <label class="field">
+          <span>Mode</span>
+          <select data-leg-mode></select>
+        </label>
+        <label class="field">
+          <span>Distance (miles)</span>
+          <input data-leg-distance type="number" min="0" step="0.1" value="0" />
+        </label>
+        <label class="field">
+          <span>Season</span>
+          <select data-leg-season></select>
+        </label>
+        <label class="field">
+          <span>Cost Index (multiplier)</span>
+          <input data-leg-costindex type="number" min="0.5" max="10" step="0.01" value="1.00" />
+        </label>
+        <label class="field gridspan-2">
+          <span>Constraints (comma separated)</span>
+          <input data-leg-constraints type="text" placeholder="WeightLimited, CubeLimited..." />
+        </label>
+        <label class="field gridspan-5">
+          <span>Notes</span>
+          <input data-leg-notes type="text" placeholder="Optional" />
+        </label>
+      </div>
+    </div>
+  </template>
+
+  <script src="./app.js"></script>
+</body>
+</html>
