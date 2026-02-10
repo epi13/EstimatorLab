@@ -1,0 +1,660 @@
+<!doctype html> 
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Offline Alaska Pricebook Editor (Manage Items + HMS CSV)</title>
+  <style>
+    :root{
+      --bg:#0b1220; --text:#e7eefc; --muted:#9fb2d6; --line:rgba(255,255,255,.08);
+      --chip:rgba(255,255,255,.06); --accent:#6aa6ff; --shadow:0 10px 30px rgba(0,0,0,.35);
+      --radius:14px; --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:var(--sans); color:var(--text);
+      background: radial-gradient(1200px 800px at 20% 10%, rgba(106,166,255,.20), transparent 55%),
+                  radial-gradient(1000px 650px at 70% 30%, rgba(141,255,207,.14), transparent 60%),
+                  var(--bg);
+    }
+    header{position:sticky;top:0;z-index:10;border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(11,18,32,.95), rgba(11,18,32,.70)); backdrop-filter:blur(10px);}
+    .wrap{max-width:1500px;margin:0 auto;padding:14px 16px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .title{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    h1{margin:0;font-size:16px;letter-spacing:.2px}
+    .pill{font-family:var(--mono);font-size:12px;padding:4px 10px;border:1px solid var(--line);
+      background:rgba(255,255,255,.03);border-radius:999px;color:var(--muted);display:inline-flex;align-items:center;gap:8px}
+    .toggle{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);
+      border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer;user-select:none;font-size:12px}
+    .toggle input{accent-color:var(--accent)}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    button{border:1px solid var(--line);background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      color:var(--text);padding:9px 12px;border-radius:12px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.18);}
+    button:hover{border-color:rgba(106,166,255,.35)}
+    button.primary{border-color:rgba(106,166,255,.50);background:linear-gradient(180deg, rgba(106,166,255,.22), rgba(106,166,255,.10));}
+    button.good{border-color:rgba(141,255,207,.45);background:linear-gradient(180deg, rgba(141,255,207,.18), rgba(141,255,207,.08));}
+    button.danger{border-color:rgba(255,90,90,.45);background:linear-gradient(180deg, rgba(255,90,90,.14), rgba(255,90,90,.06));}
+    input,select,textarea{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text);border-radius:12px;padding:9px 10px;outline:none}
+    input::placeholder,textarea::placeholder{color:rgba(159,178,214,.65)}
+    input:focus,select:focus,textarea:focus{border-color:rgba(106,166,255,.45)}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:12px}
+    .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .status{margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;color:var(--muted);font-size:12px}
+    main{max-width:1500px;margin:14px auto 18px;padding:0 16px}
+    .table{background:linear-gradient(180deg, rgba(16,26,47,.95), rgba(16,26,47,.82));
+      border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .thead,.trow{display:grid;grid-template-columns:1.7fr .55fr .55fr .6fr .7fr .7fr .6fr .7fr .7fr .75fr .75fr .75fr 60px;
+      gap:10px;padding:10px 12px;align-items:center}
+    .thead{font-size:12px;background:rgba(255,255,255,.03);border-bottom:1px solid var(--line)}
+    .tbody{max-height:70vh;overflow:auto}
+    .trow{border-bottom:1px solid var(--line);background:rgba(255,255,255,.01)}
+    .trow:nth-child(2n){background:rgba(255,255,255,.02)}
+    .lineitem{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .name{font-weight:650;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sub{font-size:12px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .mini{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;color:rgba(159,178,214,.9);font-family:var(--mono)}
+    .chip{padding:3px 8px;border:1px solid var(--line);border-radius:999px;background:var(--chip);white-space:nowrap}
+    .num{font-family:var(--mono);text-align:right}
+    .num input{width:100%;text-align:right;font-family:var(--mono);padding:8px 10px;border-radius:12px}
+    .money{font-family:var(--mono);text-align:right}
+    .right{display:flex;justify-content:flex-end}
+    .iconbtn{width:38px;height:34px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);
+      border-radius:12px;background:rgba(255,255,255,.03);cursor:pointer}
+    .iconbtn:hover{border-color:rgba(106,166,255,.35)}
+    .footer{max-width:1500px;margin:0 auto;padding:0 16px 20px;color:var(--muted);font-size:12px}
+
+    dialog{border:1px solid var(--line);background:linear-gradient(180deg, rgba(16,26,47,.98), rgba(16,26,47,.88));
+      color:var(--text);border-radius:16px;width:min(980px, calc(100vw - 24px));box-shadow:var(--shadow)}
+    dialog::backdrop{background:rgba(0,0,0,.6)}
+    .dlg-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .dlg-head h2{margin:0;font-size:14px}
+    .dlg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .dlg-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--muted)}
+    .dlg-grid textarea{min-height:74px;resize:vertical}
+    .dlg-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+    @media (max-width:980px){.dlg-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="row">
+      <div class="title">
+        <h1>Offline Alaska Pricebook Editor</h1>
+        <span class="pill" id="filePill">No file loaded</span>
+        <span class="pill" id="schemaPill">Schema v—</span>
+        <span class="pill" id="dirtyPill" style="display:none;border-color:rgba(255,205,90,.35);background:rgba(255,205,90,.08);color:#ffe3a7;">Unsaved edits</span>
+        <label class="toggle" title="Turn on to add/edit/delete line items. Double-click a row, or click the pencil.">
+          <input type="checkbox" id="manageMode" />
+          Manage Items
+        </label>
+      </div>
+      <div class="controls">
+        <button class="primary" id="btnOpen">Open JSON</button>
+        <button class="good" id="btnSave">Save JSON</button>
+        <button id="btnExport">Export HMS CSV</button>
+        <button id="btnAdd" style="display:none">Add Item</button>
+        <button class="danger" id="btnReset">Revert</button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="filters">
+        <input id="search" placeholder="Fuzzy search: name, description, tags, CSI, UniFormat…" style="width:min(560px, 100%);" />
+        <select id="filterTrade"></select>
+        <select id="filterCsiDiv"></select>
+        <select id="filterUniL1"></select>
+        <select id="filterStatus"></select>
+      </div>
+      <div class="filters">
+        <label style="font-size:12px;color:var(--muted)">Remote Factor
+          <input id="remoteFactor" type="number" step="0.01" min="0.5" max="3" value="1.00" style="width:110px"/>
+        </label>
+        <label style="font-size:12px;color:var(--muted)">Labor Premium %
+          <input id="laborPremium" type="number" step="0.1" min="0" max="300" value="0.0" style="width:120px"/>
+        </label>
+        <label style="font-size:12px;color:var(--muted)">OH&P %
+          <input id="ohp" type="number" step="0.1" min="0" max="300" value="0.0" style="width:90px"/>
+        </label>
+      </div>
+    </div>
+
+    <div class="status">
+      <div id="statsLeft">Load a pricebook JSON to begin.</div>
+      <div class="right"><span class="pill">Ctrl/Cmd+S = Save JSON</span></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="table">
+    <div class="thead">
+      <div>LINE ITEM</div>
+      <div class="right">QTY</div>
+      <div>UNIT</div>
+      <div class="right">MAT $/UNIT</div>
+      <div class="right">BASE LABOR HRS/UNIT</div>
+      <div>TRADE</div>
+      <div class="right">LABOR RATE</div>
+      <div class="right">LABOR $/UNIT</div>
+      <div class="right">MAT $</div>
+      <div class="right">FREIGHT+HAND $</div>
+      <div class="right">LABOR HRS (ADJ)</div>
+      <div class="right">TOTAL $</div>
+      <div class="right">EDIT</div>
+    </div>
+    <div class="tbody" id="tbody"></div>
+  </div>
+</main>
+
+<div class="footer">
+  <div><b>HMS CSV Export columns (simple import-friendly):</b></div>
+  <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+    <span class="pill">Item ID</span><span class="pill">Line Item</span><span class="pill">Description</span>
+    <span class="pill">Qty</span><span class="pill">Unit</span><span class="pill">Trade</span>
+    <span class="pill">Mat $/Unit</span><span class="pill">Mat $</span><span class="pill">Freight+Handling $</span>
+    <span class="pill">Labor Hrs (Adj)</span><span class="pill">Labor Rate</span><span class="pill">Labor $</span>
+    <span class="pill">Total $</span>
+    <span class="pill">CSI / UniFormat</span>
+  </div>
+</div>
+
+<dialog id="dlgItem">
+  <form method="dialog" id="dlgForm">
+    <div class="dlg-head">
+      <h2 id="dlgTitle">Add / Edit Item</h2>
+      <button value="cancel">Close</button>
+    </div>
+
+    <div class="dlg-grid">
+      <label>ID (unique)<input id="f_id" placeholder="PLF-22-0003" /></label>
+      <label>Status
+        <select id="f_status"><option value="active">active</option><option value="inactive">inactive</option></select>
+      </label>
+
+      <label>Item Name<input id="f_name" placeholder='(Dimension)(Capacity)(Power)(Features) ITEM (Ancillaries)…' /></label>
+      <label>Unit<select id="f_unit"></select></label>
+
+      <label>Description<textarea id="f_desc" placeholder="Scope notes / clarifiers…"></textarea></label>
+      <label>Tags (comma separated)<input id="f_tags" placeholder="copper, medgas, type-k" /></label>
+
+      <label>CSI Division<input id="f_csi_div" placeholder="22" /></label>
+      <label>CSI Division Title<input id="f_csi_div_title" placeholder="Plumbing" /></label>
+      <label>CSI Section<input id="f_csi_sec" placeholder="22 63 00" /></label>
+      <label>CSI Section Title<input id="f_csi_sec_title" placeholder="Gas and Vacuum Systems…" /></label>
+
+      <label>UniFormat L1<input id="f_u1" placeholder="D" /></label>
+      <label>UniFormat L1 Title<input id="f_u1t" placeholder="Services" /></label>
+      <label>UniFormat L2<input id="f_u2" placeholder="D20" /></label>
+      <label>UniFormat L2 Title<input id="f_u2t" placeholder="Plumbing" /></label>
+      <label>UniFormat L3<input id="f_u3" placeholder="D2090" /></label>
+      <label>UniFormat L3 Title<input id="f_u3t" placeholder="Other Plumbing Systems" /></label>
+
+      <label>Trade<select id="f_trade"></select></label>
+      <label>Material $/Unit<input id="f_mat" type="number" step="0.01" min="0" /></label>
+
+      <label>Freight % (0.12 = 12%)<input id="f_freight" type="number" step="0.001" min="0" max="2" /></label>
+      <label>Handling % (0.03 = 3%)<input id="f_handling" type="number" step="0.001" min="0" max="2" /></label>
+
+      <label>Base Labor Hrs/Unit<input id="f_hrs" type="number" step="0.01" min="0" /></label>
+      <label>Productivity Factor<input id="f_prod" type="number" step="0.01" min="0.2" max="5" /></label>
+    </div>
+
+    <div class="dlg-actions">
+      <button value="cancel">Cancel</button>
+      <button class="danger" id="btnDelete" type="button" style="margin-right:auto;display:none;">Delete Item</button>
+      <button class="primary" id="btnApply" value="apply">Apply</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const $ = (id)=>document.getElementById(id);
+const fmtMoney = (n)=>Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const num = (x,d=0)=>{const n=Number(x); return Number.isFinite(n)?n:d;}
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const deepClone=(x)=>JSON.parse(JSON.stringify(x));
+const escapeHtml=(s)=>String(s??"").replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+
+let book=null, loaded=null, fileName=null, dirty=false, editingId=null;
+
+function setDirty(v){
+  dirty=!!v;
+  $("dirtyPill").style.display = dirty ? "inline-flex" : "none";
+}
+function nowStamp(){
+  const d=new Date(); const p=(n)=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+}
+
+/* fuzzy search */
+const normalize=(s)=>String(s||"").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g,"");
+const tokens=(s)=>normalize(s).split(/[^a-z0-9]+/g).filter(Boolean);
+function isSubseq(a,b){ let i=0,j=0; while(i<a.length&&j<b.length){ if(a[i]===b[j]) i++; j++; } return i===a.length && a.length>=3; }
+function scoreMatch(q, text){
+  q=normalize(q).trim(); if(!q) return 1;
+  const t=normalize(text); if(!t) return 0;
+  if(t.includes(q)) return 8;
+  const qt=tokens(q), tt=tokens(t);
+  let score=0;
+  for(const qtok of qt){
+    let best=0;
+    for(const ttok of tt){
+      if(ttok===qtok) best=Math.max(best,5);
+      else if(ttok.startsWith(qtok)) best=Math.max(best,3);
+      else if(ttok.includes(qtok)) best=Math.max(best,2);
+      else if(isSubseq(qtok,ttok)) best=Math.max(best,1);
+    }
+    score+=best;
+  }
+  return score;
+}
+function itemBlob(it){
+  const c=it.csi||{}, u=it.uniformat||{}, p=it.pricing||{}, l=it.labor||{};
+  return [
+    it.id,it.item_name,it.description,(it.tags||[]).join(" "),
+    c.division,c.division_title,c.section,c.section_title,
+    u.level1,u.level1_title,u.level2,u.level2_title,u.level3,u.level3_title,
+    it.unit,it.trade,p.mat_per_unit,p.freight_percent,p.handling_percent,l.base_hrs_per_unit,l.productivity_factor
+  ].join(" | ");
+}
+
+/* computations */
+function getRate(trade){
+  const r=book?.settings?.labor_rates_by_trade_hr||{};
+  return num(r[trade],0);
+}
+function computeLine(it, qty){
+  const p=it.pricing||{}, l=it.labor||{};
+  const matPer=num(p.mat_per_unit,0);
+  const mat$=qty*matPer;
+
+  const f=num(p.freight_percent, num(book?.settings?.default_freight_percent,0));
+  const h=num(p.handling_percent, num(book?.settings?.default_handling_percent,0));
+  const freight$=mat$*(f+h);
+
+  const baseHrs=num(l.base_hrs_per_unit,0);
+  const prod=num(l.productivity_factor, num(book?.settings?.labor_adjustments?.default_productivity_factor,1));
+  const remote=clamp(num($("remoteFactor").value,1),0.5,3);
+  const hrs=qty*baseHrs*prod*remote;
+
+  const rate=getRate(it.trade);
+  let labor$=hrs*rate;
+  const laborUnit=baseHrs*rate;
+
+  const prem=clamp(num($("laborPremium").value,0),0,300)/100;
+  labor$*= (1+prem);
+
+  let subtotal=mat$+freight$+labor$;
+  const ohp=clamp(num($("ohp").value,0),0,300)/100;
+  const total$=subtotal*(1+ohp);
+
+  return {mat$, freight$, hrs, labor$, rate, laborUnit, total$};
+}
+
+/* filters */
+function uniq(arr){ return Array.from(new Set(arr.filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b))); }
+function fillSelect(el, opts, all=true){
+  el.innerHTML="";
+  if(all){ const o=document.createElement("option"); o.value=""; o.textContent="All"; el.appendChild(o); }
+  for(const s of opts){ const o=document.createElement("option"); o.value=s; o.textContent=s; el.appendChild(o); }
+}
+function refreshFilters(){
+  if(!book) return;
+  const items=book.items||[];
+  fillSelect($("filterTrade"), uniq(items.map(i=>i.trade)));
+  fillSelect($("filterCsiDiv"), uniq(items.map(i=>i?.csi?.division ? `${i.csi.division} - ${(i.csi.division_title||"")}`.trim() : "")));
+  fillSelect($("filterUniL1"), uniq(items.map(i=>i?.uniformat?.level1 ? `${i.uniformat.level1} - ${(i.uniformat.level1_title||"")}`.trim() : "")));
+  fillSelect($("filterStatus"), ["active","inactive"]);
+  fillSelect($("f_unit"), book.lookups?.units || ["EA","LF","SF"], false);
+  fillSelect($("f_trade"), book.lookups?.trades || ["Mechanical"], false);
+}
+function passesFilters(it){
+  const t=$("filterTrade").value, c=$("filterCsiDiv").value, u=$("filterUniL1").value, s=$("filterStatus").value;
+  if(t && it.trade!==t) return false;
+  if(s && (it.status||"active")!==s) return false;
+  if(c){
+    const v=it?.csi?.division ? `${it.csi.division} - ${(it.csi.division_title||"")}`.trim() : "";
+    if(v!==c) return false;
+  }
+  if(u){
+    const v=it?.uniformat?.level1 ? `${it.uniformat.level1} - ${(it.uniformat.level1_title||"")}`.trim() : "";
+    if(v!==u) return false;
+  }
+  return true;
+}
+
+/* render */
+function tradeOptionsHtml(curr){
+  const trades = book?.lookups?.trades || ["Civil","Architectural","Structural","Mechanical","Electrical"];
+  return trades.map(t=>`<option value="${escapeHtml(t)}" ${t===curr?"selected":""}>${escapeHtml(t)}</option>`).join("");
+}
+
+function render(){
+  const body=$("tbody"); body.innerHTML="";
+  if(!book){ $("statsLeft").textContent="Load a pricebook JSON to begin."; return; }
+
+  const manage=$("manageMode").checked;
+  $("btnAdd").style.display = manage ? "inline-flex" : "none";
+
+  const q=$("search").value.trim();
+  const rows=[];
+  for(const it of (book.items||[])){
+    if(!passesFilters(it)) continue;
+    const sc=scoreMatch(q, itemBlob(it));
+    if(sc<=0) continue;
+    rows.push({it, sc});
+  }
+  rows.sort((a,b)=>b.sc-a.sc);
+
+  $("statsLeft").textContent =
+    `${rows.length.toLocaleString()} shown • ${(book.items||[]).length.toLocaleString()} total • Manage=${manage?"ON":"OFF"} • Remote=${$("remoteFactor").value} • Prem=${$("laborPremium").value}% • OHP=${$("ohp").value}%`;
+
+  for(const {it} of rows){
+    const qty=num(it._qty,0);
+    const c=computeLine(it, qty);
+
+    const row=document.createElement("div");
+    row.className="trow";
+    row.innerHTML = `
+      <div class="lineitem">
+        <div class="name" title="${escapeHtml(it.item_name||"")}">${escapeHtml(it.item_name||"")}</div>
+        <div class="sub">${escapeHtml(it.description||"")}</div>
+        <div class="mini">
+          ${it.id?`<span class="chip">${escapeHtml(it.id)}</span>`:""}
+          ${it?.csi?.section?`<span class="chip">CSI ${escapeHtml(it.csi.section)}</span>`:""}
+          ${it?.uniformat?.level2?`<span class="chip">UNI ${escapeHtml(it.uniformat.level2)}</span>`:""}
+        </div>
+      </div>
+
+      <div class="num"><input data-k="qty" data-id="${escapeHtml(it.id||"")}" type="number" step="0.01" min="0" value="${qty}"></div>
+      <div><span class="pill">${escapeHtml(it.unit||"")}</span></div>
+      <div class="num"><input data-k="mat" data-id="${escapeHtml(it.id||"")}" type="number" step="0.01" min="0" value="${num(it.pricing?.mat_per_unit,0)}"></div>
+      <div class="num"><input data-k="hrs" data-id="${escapeHtml(it.id||"")}" type="number" step="0.01" min="0" value="${num(it.labor?.base_hrs_per_unit,0)}"></div>
+      <div><select data-k="trade" data-id="${escapeHtml(it.id||"")}">${tradeOptionsHtml(it.trade)}</select></div>
+      <div class="num"><input data-k="rate" data-id="${escapeHtml(it.id||"")}" type="number" step="0.01" min="0" value="${num(c.rate,0)}"></div>
+      <div class="num"><input data-k="labor_unit" data-id="${escapeHtml(it.id||"")}" type="number" step="0.01" min="0" value="${num(c.laborUnit,0)}"></div>
+
+      <div class="money">$ <strong>${fmtMoney(c.mat$)}</strong></div>
+      <div class="money">$ ${fmtMoney(c.freight$)}</div>
+      <div class="money">${fmtMoney(c.hrs)}</div>
+      <div class="money">$ <strong>${fmtMoney(c.total$)}</strong></div>
+
+      <div class="right">
+        <button class="iconbtn" data-edit="${escapeHtml(it.id||"")}" title="Edit item" style="${manage?"":"display:none"}">✎</button>
+        <span style="${manage?"display:none":""}; color:rgba(159,178,214,.8); font-family:var(--mono); font-size:12px;">—</span>
+      </div>
+    `;
+    row.addEventListener("dblclick",(e)=>{
+      if(!$("manageMode").checked) return;
+      if(e.target && ["INPUT","SELECT","BUTTON","TEXTAREA"].includes(e.target.tagName)) return;
+      openItemDialog(it.id);
+    });
+    body.appendChild(row);
+  }
+
+  body.querySelectorAll("input[data-k], select[data-k]").forEach(el=>{
+    el.oninput=()=>{
+      const k=el.getAttribute("data-k");
+      const id=el.getAttribute("data-id");
+      const it=(book.items||[]).find(x=>(x.id||"")===id);
+      if(!it) return;
+
+      if(k==="qty"){ it._qty=num(el.value,0); }
+      if(k==="mat"){ it.pricing=it.pricing||{}; it.pricing.mat_per_unit=num(el.value,0); setDirty(true); }
+      if(k==="hrs"){ it.labor=it.labor||{}; it.labor.base_hrs_per_unit=num(el.value,0); setDirty(true); }
+      if(k==="trade"){ it.trade=el.value; setDirty(true); }
+      if(k==="rate"){
+        book.settings=book.settings||{};
+        book.settings.labor_rates_by_trade_hr=book.settings.labor_rates_by_trade_hr||{};
+        book.settings.labor_rates_by_trade_hr[it.trade]=num(el.value,0);
+        setDirty(true);
+      }
+      if(k==="labor_unit"){
+        const rate=getRate(it.trade);
+        it.labor=it.labor||{};
+        it.labor.base_hrs_per_unit = rate > 0 ? num(el.value,0) / rate : 0;
+        setDirty(true);
+      }
+      render();
+    };
+  });
+
+  body.querySelectorAll("button[data-edit]").forEach(btn=>{
+    btn.onclick=(e)=>{ e.preventDefault(); openItemDialog(btn.getAttribute("data-edit")); };
+  });
+}
+
+/* open/save */
+function downloadText(text, name, mime){
+  const blob=new Blob([text],{type:mime||"text/plain"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+}
+
+async function openJson(){
+  if(window.showOpenFilePicker){
+    const [handle]=await window.showOpenFilePicker({multiple:false, types:[{description:"JSON", accept:{"application/json":[".json"]}}]});
+    const file=await handle.getFile();
+    fileName=file.name;
+    loadBook(await file.text());
+    return;
+  }
+  const input=document.createElement("input");
+  input.type="file"; input.accept="application/json,.json"; input.click();
+  const file=await new Promise(res=>{ input.onchange=()=>res(input.files?.[0]||null); });
+  if(!file) return;
+  fileName=file.name;
+  loadBook(await file.text());
+}
+
+function loadBook(text){
+  book=JSON.parse(text);
+  loaded=deepClone(book);
+  setDirty(false);
+  $("filePill").textContent=fileName||"Loaded";
+  $("schemaPill").textContent=`Schema v${book?.meta?.schema_version||"—"}`;
+  book.lookups=book.lookups||{};
+  book.lookups.trades=book.lookups.trades||["Civil","Architectural","Structural","Mechanical","Electrical"];
+  book.lookups.units=book.lookups.units||["EA","LF","SF","SY","CY"];
+  book.items=Array.isArray(book.items)?book.items:[];
+  refreshFilters();
+  render();
+}
+
+function saveJsonVersioned(){
+  if(!book) return;
+  const out=deepClone(book);
+  (out.items||[]).forEach(it=>delete it._qty);
+  const base=(fileName&&fileName.endsWith(".json"))?fileName.slice(0,-5):(fileName||"pricebook");
+  downloadText(JSON.stringify(out,null,2), `${base}_${nowStamp()}.json`, "application/json");
+  setDirty(false);
+}
+
+/* export HMS CSV */
+function csvEscape(v){
+  const s=String(v??"");
+  return /[,"\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+}
+function exportHmsCsv(){
+  if(!book) return;
+  const headers=[
+    "Item ID","Line Item","Description","Qty","Unit","Trade",
+    "Mat $/Unit","Mat $","Freight+Handling $",
+    "Labor Hrs (Adj)","Labor Rate","Labor $","Total $",
+    "CSI Division","CSI Section","UniFormat L1","UniFormat L2","UniFormat L3"
+  ];
+  const lines=[headers.map(csvEscape).join(",")];
+  for(const it of (book.items||[])){
+    const qty=num(it._qty,0);
+    if(qty<=0) continue;
+    const c=computeLine(it, qty);
+    const row=[
+      it.id||"", it.item_name||"", it.description||"",
+      qty, it.unit||"", it.trade||"",
+      num(it.pricing?.mat_per_unit,0).toFixed(2),
+      c.mat$.toFixed(2),
+      c.freight$.toFixed(2),
+      c.hrs.toFixed(2),
+      c.rate.toFixed(2),
+      c.labor$.toFixed(2),
+      c.total$.toFixed(2),
+      it?.csi?.division||"",
+      it?.csi?.section||"",
+      it?.uniformat?.level1||"",
+      it?.uniformat?.level2||"",
+      it?.uniformat?.level3||""
+    ];
+    lines.push(row.map(csvEscape).join(","));
+  }
+  const base=(fileName&&fileName.endsWith(".json"))?fileName.slice(0,-5):(fileName||"pricebook");
+  downloadText(lines.join("\n"), `${base}_HMS_EXPORT_${nowStamp()}.csv`, "text/csv");
+}
+
+/* manage items dialog */
+function openItemDialog(id=null){
+  if(!book) return;
+  editingId=id;
+  const it=id ? (book.items||[]).find(x=>x.id===id) : null;
+
+  $("dlgTitle").textContent = it ? `Edit Item • ${it.id}` : "Add Item";
+  $("btnDelete").style.display = it ? "inline-flex" : "none";
+
+  const v=(x,d="")=> (x===undefined||x===null) ? d : String(x);
+
+  $("f_id").value=v(it?.id,"");
+  $("f_status").value=v(it?.status,"active");
+  $("f_name").value=v(it?.item_name,"");
+  $("f_desc").value=v(it?.description,"");
+  $("f_tags").value=(it?.tags||[]).join(", ");
+  $("f_unit").value=v(it?.unit, book.lookups.units[0]);
+  $("f_trade").value=v(it?.trade, book.lookups.trades[0]);
+
+  $("f_csi_div").value=v(it?.csi?.division,"");
+  $("f_csi_div_title").value=v(it?.csi?.division_title,"");
+  $("f_csi_sec").value=v(it?.csi?.section,"");
+  $("f_csi_sec_title").value=v(it?.csi?.section_title,"");
+
+  $("f_u1").value=v(it?.uniformat?.level1,"");
+  $("f_u1t").value=v(it?.uniformat?.level1_title,"");
+  $("f_u2").value=v(it?.uniformat?.level2,"");
+  $("f_u2t").value=v(it?.uniformat?.level2_title,"");
+  $("f_u3").value=v(it?.uniformat?.level3,"");
+  $("f_u3t").value=v(it?.uniformat?.level3_title,"");
+
+  $("f_mat").value=num(it?.pricing?.mat_per_unit,0);
+  $("f_freight").value=num(it?.pricing?.freight_percent, num(book?.settings?.default_freight_percent,0.12));
+  $("f_handling").value=num(it?.pricing?.handling_percent, num(book?.settings?.default_handling_percent,0.03));
+
+  $("f_hrs").value=num(it?.labor?.base_hrs_per_unit,0);
+  $("f_prod").value=num(it?.labor?.productivity_factor, num(book?.settings?.labor_adjustments?.default_productivity_factor,1));
+
+  $("dlgItem").showModal();
+}
+
+function applyDialog(){
+  const id=$("f_id").value.trim();
+  if(!id){ alert("ID is required."); return; }
+  const existsIdx=(book.items||[]).findIndex(x=>x.id===id);
+  if(editingId && editingId!==id && existsIdx!==-1){ alert("That ID already exists."); return; }
+  if(!editingId && existsIdx!==-1){ alert("That ID already exists."); return; }
+
+  const item={
+    id,
+    status:$("f_status").value,
+    item_name:$("f_name").value.trim(),
+    description:$("f_desc").value.trim(),
+    tags:$("f_tags").value.split(",").map(s=>s.trim()).filter(Boolean),
+    csi:{
+      division:$("f_csi_div").value.trim(),
+      division_title:$("f_csi_div_title").value.trim(),
+      section:$("f_csi_sec").value.trim(),
+      section_title:$("f_csi_sec_title").value.trim()
+    },
+    uniformat:{
+      level1:$("f_u1").value.trim(),
+      level1_title:$("f_u1t").value.trim(),
+      level2:$("f_u2").value.trim(),
+      level2_title:$("f_u2t").value.trim(),
+      level3:$("f_u3").value.trim(),
+      level3_title:$("f_u3t").value.trim()
+    },
+    unit:$("f_unit").value,
+    trade:$("f_trade").value,
+    pricing:{
+      mat_per_unit:num($("f_mat").value,0),
+      freight_percent:num($("f_freight").value, num(book?.settings?.default_freight_percent,0.12)),
+      handling_percent:num($("f_handling").value, num(book?.settings?.default_handling_percent,0.03))
+    },
+    labor:{
+      base_hrs_per_unit:num($("f_hrs").value,0),
+      productivity_factor:num($("f_prod").value,1)
+    }
+  };
+
+  if(!editingId) book.items.push(item);
+  else{
+    const i=(book.items||[]).findIndex(x=>x.id===editingId);
+    if(i!==-1) book.items[i]=item;
+  }
+  setDirty(true);
+  refreshFilters();
+  render();
+  $("dlgItem").close();
+}
+
+function deleteEditing(){
+  if(!editingId) return;
+  const idx=(book.items||[]).findIndex(x=>x.id===editingId);
+  if(idx===-1) return;
+  if(!confirm(`Delete item ${editingId}?`)) return;
+  book.items.splice(idx,1);
+  setDirty(true);
+  refreshFilters();
+  render();
+  $("dlgItem").close();
+}
+
+function revert(){
+  if(!loaded) return;
+  if(!confirm("Revert all edits back to last loaded file?")) return;
+  book=deepClone(loaded);
+  setDirty(false);
+  refreshFilters();
+  render();
+}
+
+/* wire */
+$("btnOpen").onclick=()=>openJson().catch(e=>alert("Open failed: "+e.message));
+$("btnSave").onclick=()=>saveJsonVersioned();
+$("btnExport").onclick=()=>exportHmsCsv();
+$("btnAdd").onclick=()=>openItemDialog(null);
+$("btnReset").onclick=()=>revert();
+$("manageMode").onchange=()=>render();
+
+["search","filterTrade","filterCsiDiv","filterUniL1","filterStatus","remoteFactor","laborPremium","ohp"]
+  .forEach(id=>{
+    const el=$(id);
+    el.oninput=render;
+    el.onchange=render;
+  });
+
+$("btnApply").onclick=(e)=>{ e.preventDefault(); applyDialog(); };
+$("btnDelete").onclick=(e)=>{ e.preventDefault(); deleteEditing(); };
+
+window.addEventListener("keydown",(e)=>{
+  if((e.ctrlKey||e.metaKey) && (e.key||"").toLowerCase()==="s"){
+    e.preventDefault();
+    if(book) saveJsonVersioned();
+  }
+});
+</script>
+</body>
+</html>
