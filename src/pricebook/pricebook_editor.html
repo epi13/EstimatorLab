@@ -219,10 +219,13 @@ const deepClone=(x)=>JSON.parse(JSON.stringify(x));
 const escapeHtml=(s)=>String(s??"").replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 
 let book=null, loaded=null, fileName=null, dirty=false, editingId=null;
+const STORAGE_KEY="pricebook_editor_state_v1";
+let persistTimer=null;
 
 function setDirty(v){
   dirty=!!v;
   $("dirtyPill").style.display = dirty ? "inline-flex" : "none";
+  schedulePersistence();
 }
 function nowStamp(){
   const d=new Date(); const p=(n)=>String(n).padStart(2,"0");
@@ -427,6 +430,77 @@ function render(){
   });
 }
 
+function persistState(){
+  if(!book) return;
+  const payload={
+    savedAt:new Date().toISOString(),
+    fileName:fileName||null,
+    dirty:!!dirty,
+    controls:{
+      search:$("search").value,
+      filterTrade:$("filterTrade").value,
+      filterCsiDiv:$("filterCsiDiv").value,
+      filterUniL1:$("filterUniL1").value,
+      filterStatus:$("filterStatus").value,
+      manageMode:$("manageMode").checked,
+      remoteFactor:$("remoteFactor").value,
+      laborPremium:$("laborPremium").value,
+      ohp:$("ohp").value
+    },
+    book:deepClone(book),
+    loaded:deepClone(loaded||book)
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function schedulePersistence(){
+  if(persistTimer) clearTimeout(persistTimer);
+  persistTimer=setTimeout(()=>{
+    persistTimer=null;
+    persistState();
+  }, 120);
+}
+
+function tryRestorePersistedState(){
+  const raw=localStorage.getItem(STORAGE_KEY);
+  if(!raw) return;
+
+  try{
+    const state=JSON.parse(raw);
+    if(!state?.book || !Array.isArray(state.book.items)) return;
+
+    book=state.book;
+    loaded=state.loaded && Array.isArray(state.loaded.items) ? state.loaded : deepClone(book);
+    fileName=state.fileName||"autosaved_pricebook.json";
+
+    $("filePill").textContent = `${fileName} (restored)`;
+    $("schemaPill").textContent=`Schema v${book?.meta?.schema_version||"—"}`;
+
+    book.lookups=book.lookups||{};
+    book.lookups.trades=book.lookups.trades||["Civil","Architectural","Structural","Mechanical","Electrical"];
+    book.lookups.units=book.lookups.units||["EA","LF","SF","SY","CY"];
+    book.items=Array.isArray(book.items)?book.items:[];
+
+    refreshFilters();
+
+    const controls=state.controls||{};
+    $("search").value=controls.search||"";
+    $("filterTrade").value=controls.filterTrade||"";
+    $("filterCsiDiv").value=controls.filterCsiDiv||"";
+    $("filterUniL1").value=controls.filterUniL1||"";
+    $("filterStatus").value=controls.filterStatus||"";
+    $("manageMode").checked=!!controls.manageMode;
+    $("remoteFactor").value=controls.remoteFactor||"1.00";
+    $("laborPremium").value=controls.laborPremium||"0.0";
+    $("ohp").value=controls.ohp||"0.0";
+
+    setDirty(!!state.dirty);
+    render();
+  }catch(_err){
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
 /* open/save */
 function downloadText(text, name, mime){
   const blob=new Blob([text],{type:mime||"text/plain"});
@@ -467,6 +541,7 @@ function loadBook(text){
   book.items=Array.isArray(book.items)?book.items:[];
   refreshFilters();
   render();
+  persistState();
 }
 
 function saveJsonVersioned(){
@@ -476,6 +551,7 @@ function saveJsonVersioned(){
   const base=(fileName&&fileName.endsWith(".json"))?fileName.slice(0,-5):(fileName||"pricebook");
   downloadText(JSON.stringify(out,null,2), `${base}_${nowStamp()}.json`, "application/json");
   setDirty(false);
+  persistState();
 }
 
 /* export HMS CSV */
@@ -629,6 +705,7 @@ function revert(){
   setDirty(false);
   refreshFilters();
   render();
+  persistState();
 }
 
 /* wire */
@@ -642,8 +719,8 @@ $("manageMode").onchange=()=>render();
 ["search","filterTrade","filterCsiDiv","filterUniL1","filterStatus","remoteFactor","laborPremium","ohp"]
   .forEach(id=>{
     const el=$(id);
-    el.oninput=render;
-    el.onchange=render;
+    el.oninput=()=>{ render(); schedulePersistence(); };
+    el.onchange=()=>{ render(); schedulePersistence(); };
   });
 
 $("btnApply").onclick=(e)=>{ e.preventDefault(); applyDialog(); };
@@ -655,6 +732,9 @@ window.addEventListener("keydown",(e)=>{
     if(book) saveJsonVersioned();
   }
 });
+
+window.addEventListener("beforeunload", ()=>persistState());
+tryRestorePersistedState();
 </script>
 </body>
 </html>
