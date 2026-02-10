@@ -624,7 +624,7 @@ export function attachConstructionBuiltins(baseFns, {
     return makeQty(Math.ceil((R.value * factor) / cov.value), "count");
   });
 
-  baseFns.paint_gal = defFn("paint_gal", 4, {
+  baseFns.paint_gal = (defFnCtx && typeof defFnCtx === "function") ? defFnCtx("paint_gal", 4, {
     args: [
       { label: "area", kinds: ["scalar", "dim"], dim: "area" },
       { label: "coverage_sf_per_gal", kinds: ["scalar", "dim"], dim: "scalar" },
@@ -632,7 +632,7 @@ export function attachConstructionBuiltins(baseFns, {
       { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
     ],
     returns: { kinds: ["scalar"] },
-  }, defFnCtx ? ((ctx, area, coverageSfPerGal, coats, wastePct) => {
+  }, (ctx, area, coverageSfPerGal, coats, wastePct) => {
     const A = isQty(area) ? area : makeQty(area, "area");
     if (A.kind !== "area") throw new Error("paint_gal expects area");
     const cov = isQty(coverageSfPerGal) ? coverageSfPerGal.value : coverageSfPerGal;
@@ -641,7 +641,15 @@ export function attachConstructionBuiltins(baseFns, {
     if (!Number.isFinite(c) || c <= 0) throw new Error("paint_gal coats must be > 0");
     const wasteFactor = defaultPctFactor(wastePct, 0);
     return callEst(ctx, "c_paint_gal", A, cov, c, wasteFactor);
-  }) : ((area, coverageSfPerGal, coats, wastePct) => {
+  }) : defFn("paint_gal", 4, {
+    args: [
+      { label: "area", kinds: ["scalar", "dim"], dim: "area" },
+      { label: "coverage_sf_per_gal", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "coats", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (area, coverageSfPerGal, coats, wastePct) => {
     const A = isQty(area) ? area : makeQty(area, "area");
     if (A.kind !== "area") throw new Error("paint_gal expects area");
     const cov = isQty(coverageSfPerGal) ? coverageSfPerGal.value : coverageSfPerGal;
@@ -654,7 +662,7 @@ export function attachConstructionBuiltins(baseFns, {
     const totalArea = A.value * c;
     const gallons = (totalArea / cov) * factor;
     return gallons;
-  }));
+  });
 
   baseFns.wt_from_cy = defFn("wt_from_cy", 2, {
     args: [
@@ -1027,14 +1035,14 @@ export function attachConstructionBuiltins(baseFns, {
     return isQty(value) ? value : makeQty(value, "area");
   }
 
-  baseFns.studs_wall = defFn("studs_wall", -1, {
+  baseFns.studs_wall = (defFnCtx && typeof defFnCtx === "function") ? defFnCtx("studs_wall", -1, {
     args: [
       { label: "length", kinds: ["scalar", "dim"], dim: "len" },
       { label: "oc", kinds: ["scalar", "dim"], dim: "len" },
       { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
     ],
     returns: { kinds: ["dim"], dim: "count" },
-  }, defFnCtx ? ((ctx, length, oc, wastePct) => {
+  }, (ctx, length, oc, wastePct) => {
     const L = defaultLen(length, 0);
     const S = defaultLen(oc, 16 / 12);
     if (L.kind !== "len" || S.kind !== "len") throw new Error("studs_wall expects (len, oc, waste_pct)");
@@ -1042,7 +1050,14 @@ export function attachConstructionBuiltins(baseFns, {
     if (!(L.value >= 0)) throw new Error("studs_wall length must be >= 0");
     const wasteFactor = defaultPctFactor(wastePct, 10);
     return callEst(ctx, "c_studs_wall", L, S, wasteFactor);
-  }) : ((length, oc, wastePct) => {
+  }) : defFn("studs_wall", -1, {
+    args: [
+      { label: "length", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "oc", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (length, oc, wastePct) => {
     const L = defaultLen(length, 0);
     const S = defaultLen(oc, 16 / 12);
     if (L.kind !== "len" || S.kind !== "len") throw new Error("studs_wall expects (len, oc, waste_pct)");
@@ -1051,9 +1066,9 @@ export function attachConstructionBuiltins(baseFns, {
     const base = baseFns.oc_count.impl(L, S).value;
     const count = Math.ceil(base * defaultPctFactor(wastePct, 10));
     return makeQty(count, "count");
-  }));
+  });
 
-  baseFns.studs_perim = defFn("studs_perim", -1, {
+  baseFns.studs_perim = (defFnCtx && typeof defFnCtx === "function") ? defFnCtx("studs_perim", -1, {
     args: [
       { label: "perim", kinds: ["scalar", "dim"], dim: "len" },
       { label: "oc", kinds: ["scalar", "dim"], dim: "len" },
@@ -1061,7 +1076,7 @@ export function attachConstructionBuiltins(baseFns, {
       { label: "corner_fudge", kinds: ["scalar", "dim"], dim: "scalar" },
     ],
     returns: { kinds: ["dim"], dim: "count" },
-  }, defFnCtx ? ((ctx, perim, oc, wastePct, cornerFudge) => {
+  }, (ctx, perim, oc, wastePct, cornerFudge) => {
     const P = defaultLen(perim, 0);
     const S = defaultLen(oc, 16 / 12);
     if (P.kind !== "len" || S.kind !== "len") throw new Error("studs_perim expects (len, oc, waste_pct, corner_fudge)");
@@ -1071,7 +1086,15 @@ export function attachConstructionBuiltins(baseFns, {
     if (!Number.isFinite(fudge)) throw new Error("studs_perim corner_fudge must be numeric");
     const wasteFactor = defaultPctFactor(wastePct, 10);
     return callEst(ctx, "c_studs_perim", P, S, wasteFactor, fudge);
-  }) : ((perim, oc, wastePct, cornerFudge) => {
+  }) : defFn("studs_perim", -1, {
+    args: [
+      { label: "perim", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "oc", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "corner_fudge", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (perim, oc, wastePct, cornerFudge) => {
     const P = defaultLen(perim, 0);
     const S = defaultLen(oc, 16 / 12);
     if (P.kind !== "len" || S.kind !== "len") throw new Error("studs_perim expects (len, oc, waste_pct, corner_fudge)");
@@ -1082,16 +1105,16 @@ export function attachConstructionBuiltins(baseFns, {
     const base = Math.ceil(P.value / S.value) + fudge;
     const count = Math.ceil(base * defaultPctFactor(wastePct, 10));
     return makeQty(count, "count");
-  }));
+  });
 
-  baseFns.plates_lf = defFn("plates_lf", -1, {
+  baseFns.plates_lf = (defFnCtx && typeof defFnCtx === "function") ? defFnCtx("plates_lf", -1, {
     args: [
       { label: "perim", kinds: ["scalar", "dim"], dim: "len" },
       { label: "top_plates", kinds: ["scalar", "dim"], dim: "scalar" },
       { label: "bottom_plates", kinds: ["scalar", "dim"], dim: "scalar" },
     ],
     returns: { kinds: ["dim"], dim: "len" },
-  }, defFnCtx ? ((ctx, perim, topPlates, bottomPlates) => {
+  }, (ctx, perim, topPlates, bottomPlates) => {
     const P = defaultLen(perim, 0);
     if (P.kind !== "len") throw new Error("plates_lf expects perim length");
     const top = isMissing(topPlates) ? 2 : (isQty(topPlates) ? topPlates.value : topPlates);
@@ -1099,7 +1122,14 @@ export function attachConstructionBuiltins(baseFns, {
     if (!Number.isFinite(top) || top < 0) throw new Error("plates_lf top_plates must be >= 0");
     if (!Number.isFinite(bot) || bot < 0) throw new Error("plates_lf bottom_plates must be >= 0");
     return callEst(ctx, "c_plates_lf", P, top, bot);
-  }) : ((perim, topPlates, bottomPlates) => {
+  }) : defFn("plates_lf", -1, {
+    args: [
+      { label: "perim", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "top_plates", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "bottom_plates", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "len" },
+  }, (perim, topPlates, bottomPlates) => {
     const P = defaultLen(perim, 0);
     if (P.kind !== "len") throw new Error("plates_lf expects perim length");
     const top = isMissing(topPlates) ? 2 : (isQty(topPlates) ? topPlates.value : topPlates);
@@ -1108,9 +1138,9 @@ export function attachConstructionBuiltins(baseFns, {
     if (!Number.isFinite(bot) || bot < 0) throw new Error("plates_lf bottom_plates must be >= 0");
     const mult = top + bot;
     return makeQty(P.value * mult, "len");
-  }));
+  });
 
-  baseFns.plates_sticks = defFn("plates_sticks", -1, {
+  baseFns.plates_sticks = (defFnCtx && typeof defFnCtx === "function") ? defFnCtx("plates_sticks", -1, {
     args: [
       { label: "perim", kinds: ["scalar", "dim"], dim: "len" },
       { label: "top_plates", kinds: ["scalar", "dim"], dim: "scalar" },
@@ -1119,7 +1149,7 @@ export function attachConstructionBuiltins(baseFns, {
       { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
     ],
     returns: { kinds: ["dim"], dim: "count" },
-  }, defFnCtx ? ((ctx, perim, topPlates, bottomPlates, stickLen, wastePct) => {
+  }, (ctx, perim, topPlates, bottomPlates, stickLen, wastePct) => {
     const plateArgs = [perim];
     if (!isMissing(topPlates)) plateArgs.push(topPlates);
     if (!isMissing(bottomPlates)) plateArgs.push(bottomPlates);
@@ -1127,7 +1157,16 @@ export function attachConstructionBuiltins(baseFns, {
     const stick = defaultLen(stickLen, 8);
     const pct = isMissing(wastePct) ? 12 : wastePct;
     return callEst(ctx, "c_plates_sticks", lf, 0, 0, stick, pct);
-  }) : ((perim, topPlates, bottomPlates, stickLen, wastePct) => {
+  }) : defFn("plates_sticks", -1, {
+    args: [
+      { label: "perim", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "top_plates", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "bottom_plates", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "stick_len", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (perim, topPlates, bottomPlates, stickLen, wastePct) => {
     const plateArgs = [perim];
     if (!isMissing(topPlates)) plateArgs.push(topPlates);
     if (!isMissing(bottomPlates)) plateArgs.push(bottomPlates);
@@ -1136,9 +1175,9 @@ export function attachConstructionBuiltins(baseFns, {
     const pct = isMissing(wastePct) ? 12 : wastePct;
     const count = scalarValue(baseFns.stick_count.impl(lf, stick, pct));
     return makeQty(count, "count");
-  }));
+  });
 
-  baseFns.sheets_wall = defFn("sheets_wall", -1, {
+  baseFns.sheets_wall = (defFnCtx && typeof defFnCtx === "function") ? defFnCtx("sheets_wall", -1, {
     args: [
       { label: "length", kinds: ["scalar", "dim"], dim: "len" },
       { label: "height", kinds: ["scalar", "dim"], dim: "len" },
@@ -1147,7 +1186,7 @@ export function attachConstructionBuiltins(baseFns, {
       { label: "layers", kinds: ["scalar", "dim"], dim: "scalar" },
     ],
     returns: { kinds: ["dim"], dim: "count" },
-  }, defFnCtx ? ((ctx, length, height, sheetArea, wastePct, layers) => {
+  }, (ctx, length, height, sheetArea, wastePct, layers) => {
     const L = defaultLen(length, 0);
     const H = defaultLen(height, 0);
     if (L.kind !== "len" || H.kind !== "len") throw new Error("sheets_wall expects (len, len, ...) ");
@@ -1158,11 +1197,20 @@ export function attachConstructionBuiltins(baseFns, {
     if (!Number.isFinite(layerCount) || layerCount <= 0) throw new Error("sheets_wall layers must be > 0");
     const wasteFactor = defaultPctFactor(wastePct, 10);
     return callEst(ctx, "c_sheets_wall", L, H, S, wasteFactor, layerCount);
-  }) : ((length, height, sheetArea, wastePct, layers) => {
+  }) : defFn("sheets_wall", -1, {
+    args: [
+      { label: "length", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "height", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "sheet_area", kinds: ["scalar", "dim"], dim: "area" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "layers", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (length, height, sheetArea, wastePct, layers) => {
     const L = defaultLen(length, 0);
     const H = defaultLen(height, 0);
     if (L.kind !== "len" || H.kind !== "len") throw new Error("sheets_wall expects (len, len, ...) ");
-    const S = defaultArea(sheetArea, 32, "sf");
+    const S = defaultArea(sheetArea, 32);
     if (S.kind !== "area") throw new Error("sheets_wall sheet_area must be area");
     if (!(S.value > 0)) throw new Error("sheets_wall sheet_area must be > 0");
     const layerCount = isMissing(layers) ? 1 : (isQty(layers) ? layers.value : layers);
@@ -1171,22 +1219,28 @@ export function attachConstructionBuiltins(baseFns, {
     const factor = defaultPctFactor(wastePct, 10);
     const count = Math.ceil((totalArea * factor) / S.value);
     return makeQty(count, "count");
-  }));
+  });
 
-  baseFns.joist_count = defFn("joist_count", -1, {
+  baseFns.joist_count = (defFnCtx && typeof defFnCtx === "function") ? defFnCtx("joist_count", -1, {
     args: [
       { label: "run_len", kinds: ["scalar", "dim"], dim: "len" },
       { label: "oc", kinds: ["scalar", "dim"], dim: "len" },
     ],
     returns: { kinds: ["dim"], dim: "count" },
-  }, defFnCtx ? ((ctx, runLen, oc) => {
+  }, (ctx, runLen, oc) => {
     const R = defaultLen(runLen, 0);
     const S = defaultLen(oc, 16 / 12);
     if (R.kind !== "len" || S.kind !== "len") throw new Error("joist_count expects (len, oc)");
     if (!(S.value > 0)) throw new Error("joist_count oc must be > 0");
     if (!(R.value >= 0)) throw new Error("joist_count run_len must be >= 0");
     return callEst(ctx, "c_joist_count", R, S);
-  }) : ((runLen, oc) => {
+  }) : defFn("joist_count", -1, {
+    args: [
+      { label: "run_len", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "oc", kinds: ["scalar", "dim"], dim: "len" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (runLen, oc) => {
     const R = defaultLen(runLen, 0);
     const S = defaultLen(oc, 16 / 12);
     if (R.kind !== "len" || S.kind !== "len") throw new Error("joist_count expects (len, oc)");
@@ -1194,28 +1248,35 @@ export function attachConstructionBuiltins(baseFns, {
     if (!(R.value >= 0)) throw new Error("joist_count run_len must be >= 0");
     const count = Math.ceil(R.value / S.value) + 1;
     return makeQty(count, "count");
-  }));
+  });
 
-  baseFns.joist_lf = defFn("joist_lf", -1, {
+  baseFns.joist_lf = (defFnCtx && typeof defFnCtx === "function") ? defFnCtx("joist_lf", -1, {
     args: [
       { label: "run_len", kinds: ["scalar", "dim"], dim: "len" },
       { label: "span", kinds: ["scalar", "dim"], dim: "len" },
       { label: "oc", kinds: ["scalar", "dim"], dim: "len" },
     ],
     returns: { kinds: ["dim"], dim: "len" },
-  }, defFnCtx ? ((ctx, runLen, span, oc) => {
+  }, (ctx, runLen, span, oc) => {
     const R = defaultLen(runLen, 0);
     const Sp = defaultLen(span, 0);
-    const S = isMissing(oc) ? defaultLen(oc, 16 / 12) : defaultLen(oc, 16 / 12);
+    const S = defaultLen(oc, 16 / 12);
     return callEst(ctx, "c_joist_lf", R, Sp, S);
-  }) : ((runLen, span, oc) => {
+  }) : defFn("joist_lf", -1, {
+    args: [
+      { label: "run_len", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "span", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "oc", kinds: ["scalar", "dim"], dim: "len" },
+    ],
+    returns: { kinds: ["dim"], dim: "len" },
+  }, (runLen, span, oc) => {
     const R = defaultLen(runLen, 0);
     const Sp = defaultLen(span, 0);
     const count = isMissing(oc) ? baseFns.joist_count.impl(R) : baseFns.joist_count.impl(R, oc);
     return makeQty(count.value * Sp.value, "len");
-  }));
+  });
 
-  baseFns.joist_sticks = defFn("joist_sticks", -1, {
+  baseFns.joist_sticks = (defFnCtx && typeof defFnCtx === "function") ? defFnCtx("joist_sticks", -1, {
     args: [
       { label: "run_len", kinds: ["scalar", "dim"], dim: "len" },
       { label: "span", kinds: ["scalar", "dim"], dim: "len" },
@@ -1224,14 +1285,23 @@ export function attachConstructionBuiltins(baseFns, {
       { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
     ],
     returns: { kinds: ["dim"], dim: "count" },
-  }, defFnCtx ? ((ctx, runLen, span, oc, stickLen, wastePct) => {
+  }, (ctx, runLen, span, oc, stickLen, wastePct) => {
     const joistArgs = [runLen, span];
     if (!isMissing(oc)) joistArgs.push(oc);
     const lf = baseFns.joist_lf.impl(...joistArgs);
     const stick = defaultLen(stickLen, 8);
     const pct = isMissing(wastePct) ? 12 : wastePct;
     return callEst(ctx, "c_joist_sticks", lf, 0, 0, stick, pct);
-  }) : ((runLen, span, oc, stickLen, wastePct) => {
+  }) : defFn("joist_sticks", -1, {
+    args: [
+      { label: "run_len", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "span", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "oc", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "stick_len", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (runLen, span, oc, stickLen, wastePct) => {
     const joistArgs = [runLen, span];
     if (!isMissing(oc)) joistArgs.push(oc);
     const lf = baseFns.joist_lf.impl(...joistArgs);
@@ -1239,29 +1309,36 @@ export function attachConstructionBuiltins(baseFns, {
     const pct = isMissing(wastePct) ? 12 : wastePct;
     const count = scalarValue(baseFns.stick_count.impl(lf, stick, pct));
     return makeQty(count, "count");
-  }));
+  });
 
-  baseFns.rim_sticks = defFn("rim_sticks", -1, {
+  baseFns.rim_sticks = (defFnCtx && typeof defFnCtx === "function") ? defFnCtx("rim_sticks", -1, {
     args: [
       { label: "perim", kinds: ["scalar", "dim"], dim: "len" },
       { label: "stick_len", kinds: ["scalar", "dim"], dim: "len" },
       { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
     ],
     returns: { kinds: ["dim"], dim: "count" },
-  }, defFnCtx ? ((ctx, perim, stickLen, wastePct) => {
+  }, (ctx, perim, stickLen, wastePct) => {
     const P = defaultLen(perim, 0);
     const stick = defaultLen(stickLen, 8);
     const pct = isMissing(wastePct) ? 12 : wastePct;
     return callEst(ctx, "c_rim_sticks", P, stick, pct);
-  }) : ((perim, stickLen, wastePct) => {
+  }) : defFn("rim_sticks", -1, {
+    args: [
+      { label: "perim", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "stick_len", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (perim, stickLen, wastePct) => {
     const P = defaultLen(perim, 0);
     const stick = defaultLen(stickLen, 8);
     const pct = isMissing(wastePct) ? 12 : wastePct;
     const count = scalarValue(baseFns.stick_count.impl(P, stick, pct));
     return makeQty(count, "count");
-  }));
+  });
 
-  baseFns.subfloor_sheets = defFn("subfloor_sheets", -1, {
+  baseFns.subfloor_sheets = (defFnCtx && typeof defFnCtx === "function") ? defFnCtx("subfloor_sheets", -1, {
     args: [
       { label: "len", kinds: ["scalar", "dim"], dim: "len" },
       { label: "wid", kinds: ["scalar", "dim"], dim: "len" },
@@ -1270,22 +1347,31 @@ export function attachConstructionBuiltins(baseFns, {
       { label: "layers", kinds: ["scalar", "dim"], dim: "scalar" },
     ],
     returns: { kinds: ["dim"], dim: "count" },
-  }, defFnCtx ? ((ctx, len, wid, sheetArea, wastePct, layers) => {
+  }, (ctx, len, wid, sheetArea, wastePct, layers) => {
     const L = defaultLen(len, 0);
     const W = defaultLen(wid, 0);
     if (L.kind !== "len" || W.kind !== "len") throw new Error("subfloor_sheets expects (len, len, ...) ");
-    const S = defaultArea(sheetArea, 32, "sf");
+    const S = defaultArea(sheetArea, 32);
     if (S.kind !== "area") throw new Error("subfloor_sheets sheet_area must be area");
     if (!(S.value > 0)) throw new Error("subfloor_sheets sheet_area must be > 0");
     const layerCount = isMissing(layers) ? 1 : (isQty(layers) ? layers.value : layers);
     if (!Number.isFinite(layerCount) || layerCount <= 0) throw new Error("subfloor_sheets layers must be > 0");
     const wasteFactor = defaultPctFactor(wastePct, 10);
     return callEst(ctx, "c_subfloor_sheets", L, W, S, wasteFactor, layerCount);
-  }) : ((len, wid, sheetArea, wastePct, layers) => {
+  }) : defFn("subfloor_sheets", -1, {
+    args: [
+      { label: "len", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "wid", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "sheet_area", kinds: ["scalar", "dim"], dim: "area" },
+      { label: "waste_pct", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "layers", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["dim"], dim: "count" },
+  }, (len, wid, sheetArea, wastePct, layers) => {
     const L = defaultLen(len, 0);
     const W = defaultLen(wid, 0);
     if (L.kind !== "len" || W.kind !== "len") throw new Error("subfloor_sheets expects (len, len, ...) ");
-    const S = defaultArea(sheetArea, 32, "sf");
+    const S = defaultArea(sheetArea, 32);
     if (S.kind !== "area") throw new Error("subfloor_sheets sheet_area must be area");
     if (!(S.value > 0)) throw new Error("subfloor_sheets sheet_area must be > 0");
     const layerCount = isMissing(layers) ? 1 : (isQty(layers) ? layers.value : layers);
@@ -1294,7 +1380,7 @@ export function attachConstructionBuiltins(baseFns, {
     const factor = defaultPctFactor(wastePct, 10);
     const count = Math.ceil((totalArea * factor) / S.value);
     return makeQty(count, "count");
-  }));
+  });
 
   baseFns.drywall_sheets = defFn("drywall_sheets", -1, {
     args: [
