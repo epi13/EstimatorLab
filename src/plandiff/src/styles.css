@@ -1,0 +1,23 @@
+:root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+body { margin: 0; background: #0b0c10; color: #e8e8e8; }
+header { padding: 16px 16px 8px; border-bottom: 1px solid #222; }
+h1 { margin: 0 0 10px; font-size: 18px; }
+h2 { margin: 0 0 8px; font-size: 14px; color: #cfcfcf; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.small { font-size: 12px; opacity: 0.9; }
+label { display: inline-flex; gap: 8px; align-items: center; background: #12141a; padding: 8px 10px; border-radius: 10px; border: 1px solid #222; }
+button { background: #1b2a4a; color: #fff; border: 1px solid #2a3d66; padding: 8px 12px; border-radius: 10px; cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+main { padding: 16px; display: grid; gap: 16px; }
+.canvases { display: grid; grid-template-columns: repeat(3, minmax(240px, 1fr)); gap: 12px; }
+.panel { background: #12141a; border: 1px solid #222; border-radius: 14px; padding: 10px; }
+canvas { width: 100%; height: auto; background: #0f1116; border-radius: 10px; border: 1px solid #222; }
+
+.changes { background: #12141a; border: 1px solid #222; border-radius: 14px; padding: 10px; }
+#regions { margin: 10px 0 0; padding-left: 20px; }
+#regions li { margin: 6px 0; }
+.region-btn {
+  background: #162032; border: 1px solid #22314e; color: #e8e8e8;
+  padding: 6px 10px; border-radius: 10px; cursor: pointer;
+}
