@@ -4,7 +4,7 @@ if (!pdfjsLib) {
   throw new Error("PDF.js failed to load. Ensure pdf.min.js is included before this module.");
 }
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = "/src/lib/vendor/pdfjs/pdf.worker.min.js";
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("../../lib/vendor/pdfjs/pdf.worker.min.js", import.meta.url).toString();
 
 const SHEET_REGEX = /\b([A-Z]{1,3}-?\d{1,3}(?:\.\d+)?)\b/g;
 
