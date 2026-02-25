@@ -9,6 +9,7 @@ export function exportHtmlReport({ pageA, pageB, dpi, regions, canvasA, canvasB,
       <td>${r.x}, ${r.y}</td>
       <td>${r.width}×${r.height}</td>
       <td>${r.area}</td>
+      <td>${Number.isFinite(r.movedFeet) ? r.movedFeet.toFixed(2) + " ft" : "-"}</td>
     </tr>`;
   }).join("");
 
@@ -41,7 +42,7 @@ export function exportHtmlReport({ pageA, pageB, dpi, regions, canvasA, canvasB,
 
   <h2>Change Regions</h2>
   <table>
-    <thead><tr><th>#</th><th>Top-left</th><th>Size</th><th>Area</th></tr></thead>
+    <thead><tr><th>#</th><th>Top-left</th><th>Size</th><th>Area</th><th>Estimated Move</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
 </body>
