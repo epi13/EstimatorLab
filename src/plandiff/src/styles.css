@@ -21,3 +21,5 @@ canvas { width: 100%; height: auto; background: #0f1116; border-radius: 10px; bo
   background: #162032; border: 1px solid #22314e; color: #e8e8e8;
   padding: 6px 10px; border-radius: 10px; cursor: pointer;
 }
+
+#scaleInfo { font-size: 12px; opacity: 0.9; }

@@ -1,6 +1,12 @@
 import "./styles.css";
-import { loadPdfFromFile, renderPageToCanvas, fillPageSelector } from "./pdf.js";
-import { alignAndDiff, computeRegionsFromDiffCanvas } from "./align_diff.js";
+import {
+  loadPdfFromFile,
+  renderPageToCanvas,
+  fillPageSelector,
+  autoMatchSheets,
+  getPageGeometryOps
+} from "./pdf.js";
+import { alignAndDiff, computeRegionsFromDiffCanvas, vectorDiff } from "./align_diff.js";
 import { exportHtmlReport } from "./report.js";
 
 const el = (id) => document.getElementById(id);
@@ -17,6 +23,13 @@ const btnRecalc = el("btnRecalc");
 const minArea = el("minArea");
 const maxRegions = el("maxRegions");
 const status = el("status");
+const diffMode = el("diffMode");
+const btnAutoMatch = el("btnAutoMatch");
+const btnScaleA = el("btnScaleA");
+const btnScaleB = el("btnScaleB");
+const scaleInfo = el("scaleInfo");
+const ignoreZones = el("ignoreZones");
+const ocrFallback = el("ocrFallback");
 
 const canvasA = el("canvasA");
 const canvasB = el("canvasB");
@@ -26,6 +39,7 @@ const regionsList = el("regions");
 let pdfA = null;
 let pdfB = null;
 let lastRegions = [];
+const scaleStore = { A: {}, B: {} };
 
 function setStatus(msg) { status.textContent = msg; }
 
@@ -50,9 +64,27 @@ btnLoad.addEventListener("click", async () => {
   pageB.disabled = false;
   dpiSel.disabled = false;
   btnDiff.disabled = false;
+  btnAutoMatch.disabled = false;
+  diffMode.disabled = false;
+  btnScaleA.disabled = false;
+  btnScaleB.disabled = false;
 
   setStatus(`Loaded. Set A: ${pdfA.numPages} pages | Set B: ${pdfB.numPages} pages`);
   btnLoad.disabled = false;
+});
+
+btnAutoMatch.addEventListener("click", async () => {
+  if (!pdfA || !pdfB) return;
+  setStatus("Auto matching sheets (text + OCR fallback)...");
+  const matches = await autoMatchSheets(pdfA, pdfB, { ocrFallback: ocrFallback.checked });
+  if (!matches.length) {
+    setStatus("No confident sheet matches found.");
+    return;
+  }
+  const best = matches[0];
+  pageA.value = String(best.pageA);
+  pageB.value = String(best.pageB);
+  setStatus(`Matched A:${best.pageA} ↔ B:${best.pageB} (${best.sheetNo || "no sheet #"} ${best.title || ""})`);
 });
 
 btnDiff.addEventListener("click", async () => {
@@ -72,15 +104,44 @@ btnDiff.addEventListener("click", async () => {
   await renderPageToCanvas(pdfA, pA, canvasA, dpi);
   await renderPageToCanvas(pdfB, pB, canvasB, dpi);
 
-  setStatus("Aligning + diffing (OpenCV.js)...");
-  await alignAndDiff(canvasA, canvasB, canvasDiff);
+  if (diffMode.value === "vector") {
+    setStatus("Vector extraction mode: parsing operator lists...");
+    const [geomA, geomB] = await Promise.all([
+      getPageGeometryOps(pdfA, pA),
+      getPageGeometryOps(pdfB, pB)
+    ]);
+    const regions = vectorDiff(geomA, geomB, { width: canvasDiff.width || geomA.width, height: canvasDiff.height || geomA.height });
 
-  setStatus("Computing change regions...");
-  lastRegions = await computeRegionsFromDiffCanvas(
-    canvasDiff,
-    Number(minArea.value),
-    Number(maxRegions.value)
-  );
+    const ctx = canvasDiff.getContext("2d");
+    canvasDiff.width = canvasA.width;
+    canvasDiff.height = canvasA.height;
+    ctx.clearRect(0, 0, canvasDiff.width, canvasDiff.height);
+    ctx.drawImage(canvasA, 0, 0);
+    ctx.strokeStyle = "rgba(255,0,0,0.9)";
+    ctx.lineWidth = 2;
+    for (const r of regions) ctx.strokeRect(r.x, r.y, r.width, r.height);
+
+    lastRegions = regions
+      .filter((r) => r.area >= Number(minArea.value))
+      .sort((a, b) => b.area - a.area)
+      .slice(0, Number(maxRegions.value));
+  } else {
+    setStatus("Aligning + diffing (OpenCV)...");
+    await alignAndDiff(canvasA, canvasB, canvasDiff, { ignoreZones: ignoreZones.checked });
+
+    setStatus("Computing change regions...");
+    lastRegions = await computeRegionsFromDiffCanvas(
+      canvasDiff,
+      Number(minArea.value),
+      Number(maxRegions.value),
+      {
+        canvasA,
+        canvasB,
+        scale: scaleStore.B[pB] || scaleStore.A[pA]
+      }
+    );
+  }
+
   renderRegions(lastRegions);
 
   btnReport.disabled = false;
@@ -95,7 +156,12 @@ btnRecalc.addEventListener("click", async () => {
   lastRegions = await computeRegionsFromDiffCanvas(
     canvasDiff,
     Number(minArea.value),
-    Number(maxRegions.value)
+    Number(maxRegions.value),
+    {
+      canvasA,
+      canvasB,
+      scale: scaleStore.B[Number(pageB.value)] || scaleStore.A[Number(pageA.value)]
+    }
   );
   renderRegions(lastRegions);
   setStatus(`Done. Found ${lastRegions.length} regions.`);
@@ -114,6 +180,37 @@ btnReport.addEventListener("click", () => {
   });
 });
 
+btnScaleA.addEventListener("click", () => beginScaleCapture(canvasA, "A", Number(pageA.value)));
+btnScaleB.addEventListener("click", () => beginScaleCapture(canvasB, "B", Number(pageB.value)));
+
+function beginScaleCapture(canvas, setName, pageNum) {
+  const pts = [];
+  setStatus(`Scale ${setName}/page ${pageNum}: click two points along known distance.`);
+
+  const onClick = (evt) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = ((evt.clientX - rect.left) * canvas.width) / rect.width;
+    const y = ((evt.clientY - rect.top) * canvas.height) / rect.height;
+    pts.push({ x, y });
+
+    if (pts.length === 2) {
+      canvas.removeEventListener("click", onClick);
+      const px = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
+      const feet = Number(prompt("Known distance between those points (feet)", "10"));
+      if (feet > 0) {
+        const pxPerFoot = px / feet;
+        scaleStore[setName][pageNum] = { pxPerFoot, feet, px };
+        scaleInfo.textContent = `${setName} page ${pageNum}: ${pxPerFoot.toFixed(2)} px/ft`;
+        setStatus(`Scale saved for ${setName} page ${pageNum}.`);
+      } else {
+        setStatus("Scale capture canceled.");
+      }
+    }
+  };
+
+  canvas.addEventListener("click", onClick);
+}
+
 function renderRegions(regions) {
   regionsList.innerHTML = "";
   regions.forEach((r, i) => {
@@ -121,7 +218,8 @@ function renderRegions(regions) {
 
     const btn = document.createElement("button");
     btn.className = "region-btn";
-    btn.textContent = `#${i + 1}  x=${r.x} y=${r.y}  ${r.width}×${r.height}  area=${r.area}`;
+    const moved = Number.isFinite(r.movedFeet) ? ` | delta moved by ${r.movedFeet.toFixed(2)} ft` : "";
+    btn.textContent = `#${i + 1}  x=${r.x} y=${r.y}  ${r.width}×${r.height}  area=${r.area}${moved}`;
 
     btn.addEventListener("click", () => zoomToRegion(r));
 
@@ -131,7 +229,6 @@ function renderRegions(regions) {
 }
 
 function zoomToRegion(r) {
-  // Simple “zoom”: open a new window with cropped images
   const crop = (canvas) => {
     const c = document.createElement("canvas");
     const pad = 20;
