@@ -1,7 +1,10 @@
-import * as pdfjsLib from "pdfjs-dist";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
+const pdfjsLib = globalThis.pdfjsLib;
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+if (!pdfjsLib) {
+  throw new Error("PDF.js failed to load. Ensure pdf.min.js is included before this module.");
+}
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/src/lib/vendor/pdfjs/pdf.worker.min.js";
 
 const SHEET_REGEX = /\b([A-Z]{1,3}-?\d{1,3}(?:\.\d+)?)\b/g;
 
