@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PlanDiff</title>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>PlanDiff</h1>
+        <div class="row">
+          <label>
+            Set A (65%)
+            <input id="fileA" type="file" accept="application/pdf" />
+          </label>
+          <label>
+            Set B (95%)
+            <input id="fileB" type="file" accept="application/pdf" />
+          </label>
+          <button id="btnLoad" disabled>Load PDFs</button>
+        </div>
+
+        <div class="row">
+          <label>Page A
+            <select id="pageA" disabled></select>
+          </label>
+          <label>Page B
+            <select id="pageB" disabled></select>
+          </label>
+
+          <label>DPI
+            <select id="dpi" disabled>
+              <option value="200">200</option>
+              <option value="300" selected>300</option>
+              <option value="450">450</option>
+            </select>
+          </label>
+
+          <button id="btnDiff" disabled>Align + Diff</button>
+          <button id="btnReport" disabled>Export HTML Report</button>
+        </div>
+
+        <div class="row small">
+          <span id="status">Load two PDFs to begin.</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="canvases">
+          <div class="panel">
+            <h2>Before (A)</h2>
+            <canvas id="canvasA"></canvas>
+          </div>
+          <div class="panel">
+            <h2>After (B)</h2>
+            <canvas id="canvasB"></canvas>
+          </div>
+          <div class="panel">
+            <h2>Diff</h2>
+            <canvas id="canvasDiff"></canvas>
+          </div>
+        </section>
+
+        <section class="changes">
+          <h2>Change Regions</h2>
+          <div class="row small">
+            <label>Min Area (px²)
+              <input id="minArea" type="number" value="800" min="10" step="10" />
+            </label>
+            <label>Max Regions
+              <input id="maxRegions" type="number" value="30" min="1" step="1" />
+            </label>
+            <button id="btnRecalc" disabled>Recompute Regions</button>
+          </div>
+          <ol id="regions"></ol>
+        </section>
+      </main>
+    </div>
+
+    <!-- OpenCV.js (WASM) via CDN -->
+    <script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
