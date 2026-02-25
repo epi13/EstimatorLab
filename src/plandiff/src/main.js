@@ -31,6 +31,12 @@ const scaleInfo = el("scaleInfo");
 const ignoreZones = el("ignoreZones");
 const ocrFallback = el("ocrFallback");
 
+if (!globalThis.Tesseract) {
+  ocrFallback.checked = false;
+  ocrFallback.disabled = true;
+  ocrFallback.title = "OCR fallback unavailable in this build.";
+}
+
 const canvasA = el("canvasA");
 const canvasB = el("canvasB");
 const canvasDiff = el("canvasDiff");
