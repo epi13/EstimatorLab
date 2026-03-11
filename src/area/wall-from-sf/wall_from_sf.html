@@ -114,6 +114,7 @@
           <option value="square">Square footprint</option>
           <option value="rectangle">Rectangle (L:W ratio)</option>
           <option value="custom">Custom perimeter factor</option>
+          <option value="provided">Use provided perimeter (LF)</option>
         </select>
       </div>
 
@@ -127,6 +128,12 @@
         <label for="perimeterFactor">Perimeter Factor (ft of perimeter per SF)</label>
         <input id="perimeterFactor" type="number" min="0" step="any" value="0.04">
         <small>Custom perimeter = floor area × factor.</small>
+      </div>
+
+      <div class="field" id="providedPerimeterField" hidden>
+        <label for="providedPerimeter">Provided Perimeter (LF)</label>
+        <input id="providedPerimeter" type="number" min="0" step="any" value="500">
+        <small>Use measured perimeter directly when you already have LF.</small>
       </div>
 
       <div class="field">
@@ -176,7 +183,7 @@
 
     const format = (v, suffix = '') => `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(v)}${suffix}`;
 
-    function getPerimeter(area, method, ratio, factor) {
+    function getPerimeter(area, method, ratio, factor, providedPerimeter) {
       if (method === 'square') {
         return 4 * Math.sqrt(area);
       }
@@ -184,6 +191,9 @@
         const length = Math.sqrt(area * ratio);
         const width = Math.sqrt(area / ratio);
         return 2 * (length + width);
+      }
+      if (method === 'provided') {
+        return providedPerimeter;
       }
       return area * factor;
     }
@@ -206,6 +216,7 @@
         const method = $('footprintMethod').value;
         const ratio = readPositive('ratio', 'Length:width ratio');
         const factor = readPositive('perimeterFactor', 'Perimeter factor');
+        const providedPerimeter = readPositive('providedPerimeter', 'Provided perimeter');
         const faceMultiplier = readPositive('faceMultiplier', 'Face multiplier');
         const openingsPct = readPositive('openings', 'Openings deduction', true);
         const wastePct = readPositive('waste', 'Waste / overage', true);
@@ -214,7 +225,7 @@
           throw new Error('Openings deduction must be less than 100%.');
         }
 
-        const perimeter = getPerimeter(area, method, ratio, factor);
+        const perimeter = getPerimeter(area, method, ratio, factor, providedPerimeter);
         const grossWall = perimeter * wallHeight;
         const wallWithFaces = grossWall * faceMultiplier;
         const netBeforeWaste = wallWithFaces * (1 - openingsPct / 100);
@@ -226,7 +237,7 @@
         $('totalOut').textContent = format(total, ' SF');
         $('results').hidden = false;
 
-        $('formulaOut').textContent = `Perimeter = ${method === 'square' ? '4 × √area' : method === 'rectangle' ? '2 × (√(area×ratio) + √(area÷ratio))' : 'area × perimeter factor'} = ${format(perimeter)}. Gross wall = perimeter × height = ${format(grossWall)} SF. Adjusted total = gross × faces × (1 - openings%) × (1 + waste%) = ${format(total)} SF.`;
+        $('formulaOut').textContent = `Perimeter = ${method === 'square' ? '4 × √area' : method === 'rectangle' ? '2 × (√(area×ratio) + √(area÷ratio))' : method === 'provided' ? 'provided perimeter input' : 'area × perimeter factor'} = ${format(perimeter)}. Gross wall = perimeter × height = ${format(grossWall)} SF. Adjusted total = gross × faces × (1 - openings%) × (1 + waste%) = ${format(total)} SF.`;
       } catch (error) {
         $('results').hidden = true;
         $('formulaOut').textContent = 'Formula details will appear after calculation.';
@@ -238,9 +249,10 @@
       const method = $('footprintMethod').value;
       $('ratioField').hidden = method !== 'rectangle';
       $('factorField').hidden = method !== 'custom';
+      $('providedPerimeterField').hidden = method !== 'provided';
     }
 
-    ['floorArea', 'wallHeight', 'ratio', 'perimeterFactor', 'faceMultiplier', 'openings', 'waste'].forEach((id) => {
+    ['floorArea', 'wallHeight', 'ratio', 'perimeterFactor', 'providedPerimeter', 'faceMultiplier', 'openings', 'waste'].forEach((id) => {
       $(id).addEventListener('input', calculate);
     });
 
