@@ -48,6 +48,7 @@ const navigationData = [
         title: 'Area',
         icon: 'ruler',
         calculators: [
+          { label: 'Wall Totals from SF', href: 'src/area/wall-from-sf/wall_from_sf.html', keywords: 'wall sheathing perimeter height' },
           { label: 'Area of Triangle', href: 'src/area/triangle/triangle_area.html', keywords: 'geometry surface' }
         ]
       },
