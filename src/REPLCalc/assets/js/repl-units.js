@@ -274,7 +274,7 @@ export function qtyToString(qty){
   const fmt = (num) => {
     if (!Number.isFinite(num)) return String(num);
     const abs = Math.abs(num);
-    if (abs !== 0 && (abs >= 1e6 || abs < 1e-4)) return num.toExponential(6);
+    if (abs !== 0 && abs < 1e-4) return num.toExponential(6);
     return (Math.round(num * 1e6) / 1e6).toString();
   };
 
