@@ -21,6 +21,10 @@
       </label>
       <button id="extractBtn" type="button">Extract JSON</button>
       <button id="downloadBtn" type="button" disabled>Download JSON</button>
+      <label class="debug-toggle">
+        <input id="debugMode" type="checkbox">
+        <span>Debug overlay</span>
+      </label>
     </section>
 
     <section class="status-panel" aria-live="polite">
@@ -31,6 +35,11 @@
     <section>
       <h2>Output</h2>
       <pre id="jsonOutput">{}</pre>
+    </section>
+
+    <section>
+      <h2>Debug Overlays</h2>
+      <div id="debugCanvases" class="debug-canvases"></div>
     </section>
   </main>
 
