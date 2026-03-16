@@ -1,5 +1,6 @@
 import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs';
 import { createWorker } from 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.0/+esm';
+import { createEngineAdapter, ENGINE_IDS, normalizeBBox } from './pdf-engines.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs';
 
@@ -11,6 +12,8 @@ const statusProgress = document.getElementById('statusProgress');
 const output = document.getElementById('jsonOutput');
 const debugModeInput = document.getElementById('debugMode');
 const debugContainer = document.getElementById('debugCanvases');
+const engineModeInput = document.getElementById('engineMode');
+const bakeoffModeInput = document.getElementById('bakeoffMode');
 
 let latestJson = null;
 
@@ -321,34 +324,11 @@ const classifySheetTypeLegacy = (lines) => {
 
 const bboxCenter = (box) => [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2];
 
-const normalizeBbox = (box, pageWidth, pageHeight) => {
-  if (!box || box.length !== 4) return { bbox: null, invalid: true, reason: 'bbox_missing' };
-  let [x1, y1, x2, y2] = box.map((value) => Number.isFinite(value) ? value : 0);
-  if (x1 > x2) [x1, x2] = [x2, x1];
-  if (y1 > y2) [y1, y2] = [y2, y1];
-
-  const invalidByOrder = !Number.isFinite(x1 + y1 + x2 + y2);
-  const outOfPage = x2 < -6 || y2 < -6 || x1 > pageWidth + 6 || y1 > pageHeight + 6;
-  const materiallyOutside = x1 < -Math.max(25, pageWidth * 0.05) || y1 < -Math.max(25, pageHeight * 0.05)
-    || x2 > pageWidth + Math.max(25, pageWidth * 0.05)
-    || y2 > pageHeight + Math.max(25, pageHeight * 0.05);
-
-  const clamped = [
-    Math.max(0, Math.min(pageWidth, x1)),
-    Math.max(0, Math.min(pageHeight, y1)),
-    Math.max(0, Math.min(pageWidth, x2)),
-    Math.max(0, Math.min(pageHeight, y2)),
-  ];
-
-  const invalid = invalidByOrder || outOfPage || materiallyOutside || clamped[0] >= clamped[2] || clamped[1] >= clamped[3];
-  return { bbox: clamped, invalid, reason: invalid ? 'bbox_invalid_after_normalization' : null };
-};
-
-const normalizeLineCoordinates = (lines, pageWidth, pageHeight) => {
+const normalizeLineCoordinates = (lines, pageWidth, pageHeight, engineId = ENGINE_IDS.CURRENT) => {
   const normalized = [];
   const invalid = [];
   lines.forEach((line) => {
-    const { bbox, invalid: isInvalid, reason } = normalizeBbox(line.bbox, pageWidth, pageHeight);
+    const { bbox, invalid: isInvalid, reason } = normalizeBBox(line.bbox, pageWidth, pageHeight, engineId);
     if (isInvalid || !bbox) {
       invalid.push({ ...line, invalidReason: reason });
       return;
@@ -692,8 +672,8 @@ const parseTakeoff = (text = '') => {
     action: actionMatch ? actionMatch[1].toUpperCase() : null,
     quantity: quantityMatch ? Number(quantityMatch[1]) : null,
     quantityUnit: quantityMatch ? quantityMatch[2].toUpperCase().replace('FT', 'LF').replace('"', 'IN') : null,
-    nominalSize: nominalSizeMatch ? `${nominalSizeMatch[1]} ${nominalSizeMatch[2] === '"' ? 'in' : nominalSizeMatch[2].toLowerCase()}` : null,
-    systemText: tail || null,
+    nominalSizes: nominalSizeMatch ? [`${nominalSizeMatch[1]} ${nominalSizeMatch[2] === '"' ? 'in' : nominalSizeMatch[2].toLowerCase()}`] : [],
+    materialOrSystem: tail || null,
   };
 };
 
@@ -728,7 +708,19 @@ const classifyLineBlocks = (lines, regions, consumedLineIds = new Set(), discipl
     };
 
     if (type === 'dimension') {
-      block.takeoff = parseTakeoff(line.text);
+      const takeoff = parseTakeoff(line.text);
+      if (takeoff.action || takeoff.quantity || takeoff.nominalSizes?.length) {
+        block.type = 'takeoff_candidate';
+        block.action = takeoff.action;
+        block.quantity = takeoff.quantity;
+        block.quantityUnit = takeoff.quantityUnit;
+        block.nominalSizes = takeoff.nominalSizes || [];
+        block.materialOrSystem = takeoff.materialOrSystem;
+        block.references = [];
+        block.confidence = 0.8;
+      } else {
+        block.takeoff = takeoff;
+      }
       block.context = /gate/i.test(line.text) ? 'fence_gate' : 'drawing';
     }
 
@@ -892,6 +884,36 @@ const composePageResult = (pageNumber, lines, regions, pageDiagnostics, sourceSe
   return pageOutput;
 };
 
+
+const extractRegionWithFallbackOCR = async (docHandle, pageIndex, region, nativeAtoms, ocrWorker) => {
+  const overlapNative = nativeAtoms.filter((atom) => iou(atom.bbox, region) > 0.2 && (atom.text || '').trim());
+  if (overlapNative.length >= 2) return overlapNative;
+
+  const page = await docHandle.getPage(pageIndex + 1);
+  const { canvas } = await renderPageToCanvas(page, 2);
+  const ctx = canvas.getContext('2d');
+  const [x1, y1, x2, y2] = region;
+  const crop = ctx.getImageData(x1, y1, Math.max(1, x2 - x1), Math.max(1, y2 - y1));
+  const temp = document.createElement('canvas');
+  temp.width = crop.width;
+  temp.height = crop.height;
+  temp.getContext('2d').putImageData(crop, 0, 0);
+
+  const { data } = await ocrWorker.recognize(temp);
+  const ocrAtoms = (data?.lines || []).map((line, index) => ({
+    id: `ocr-region-${pageIndex}-${index}`,
+    text: normalizeText(line.text),
+    bbox: [x1 + line.bbox.x0, y1 + line.bbox.y0, x1 + line.bbox.x1, y1 + line.bbox.y1],
+    rotation: 0,
+    fontName: null,
+    fontSize: Math.max(8, line.bbox.y1 - line.bbox.y0),
+    source: 'ocr_raster_region',
+    confidence: line.confidence ? line.confidence / 100 : 0.65,
+  })).filter((atom) => atom.text);
+
+  return dedupeOverlappingTextAtoms([...overlapNative, ...ocrAtoms]).deduped;
+};
+
 const extractRasterPage = async (page, pageNumber, pageDiagnostics, ocrWorker) => {
   const { canvas, viewport } = await renderPageToCanvas(page, 2);
   const { data } = await ocrWorker.recognize(canvas);
@@ -925,12 +947,13 @@ const extractRasterPage = async (page, pageNumber, pageDiagnostics, ocrWorker) =
   };
 };
 
-const extractVectorPage = async (page, pageNumber, pageDiagnostics) => {
-  const textContent = await page.getTextContent();
-  const rawAtoms = extractNativeTextAtoms(textContent.items || [], pageDiagnostics.pageHeight);
+const extractVectorPage = async (page, pageNumber, pageDiagnostics, engineId = ENGINE_IDS.CURRENT, adapter = null, doc = null) => {
+  const rawAtoms = adapter && doc
+    ? await adapter.extractTextAtoms(doc, pageNumber - 1)
+    : extractNativeTextAtoms((await page.getTextContent()).items || [], pageDiagnostics.pageHeight);
   const { deduped: dedupedAtoms, dropped: droppedAtoms } = dedupeOverlappingTextAtoms(rawAtoms);
   const rawLines = groupAtomsIntoLines(dedupedAtoms);
-  const { normalized: lines, invalid } = normalizeLineCoordinates(rawLines, pageDiagnostics.pageWidth, pageDiagnostics.pageHeight);
+  const { normalized: lines, invalid } = normalizeLineCoordinates(rawLines, pageDiagnostics.pageWidth, pageDiagnostics.pageHeight, engineId);
   const regions = segmentPageRegions(lines, pageDiagnostics.pageWidth, pageDiagnostics.pageHeight);
   const pageOutput = composePageResult(pageNumber, lines, regions, pageDiagnostics, 'native_pdf_text', invalid);
 
@@ -1002,33 +1025,52 @@ const renderDebugOverlay = (pageNumber, debugData) => {
 
 const processPdf = async (file) => {
   const bytes = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+  const selectedEngine = engineModeInput?.value || ENGINE_IDS.CURRENT;
+  const adapter = createEngineAdapter(selectedEngine, pdfjsLib);
+  const pdf = await adapter.loadDocument(bytes);
   const pages = [];
+  const bakeoff = Boolean(bakeoffModeInput?.checked);
+  const bakeoffScores = [];
   let ocrWorker = null;
 
   if (debugContainer) debugContainer.innerHTML = '';
 
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
+  const pageCount = adapter.getPageCount(pdf);
+  for (let pageNum = 1; pageNum <= pageCount; pageNum += 1) {
     const page = await pdf.getPage(pageNum);
     const textContent = await page.getTextContent();
     const pageDiagnostics = await buildPageDiagnostics(page, textContent.items || [], pageNum);
 
-    updateStatus(`Inspecting and processing page ${pageNum} of ${pdf.numPages}`, ((pageNum - 1) / pdf.numPages) * 100);
+    updateStatus(`Inspecting and processing page ${pageNum} of ${pageCount}`, ((pageNum - 1) / pageCount) * 100);
 
     let result;
     if (!pageDiagnostics.hasNativeText) {
       if (!ocrWorker) {
-        updateStatus('Initializing OCR worker...', ((pageNum - 1) / pdf.numPages) * 100);
+        updateStatus('Initializing OCR worker...', ((pageNum - 1) / pageCount) * 100);
         ocrWorker = await createOcrWorker();
       }
       result = await extractRasterPage(page, pageNum, pageDiagnostics, ocrWorker);
     } else {
-      result = await extractVectorPage(page, pageNum, pageDiagnostics);
+      result = await extractVectorPage(page, pageNum, pageDiagnostics, selectedEngine, adapter, pdf);
     }
 
     pages.push(result.pageOutput);
+    const totalBlocks = Math.max(1, result.pageOutput.blocks.length);
+    const invalidCount = result.pageOutput.blocks.filter((block) => !block.bbox || block.bbox[0] >= block.bbox[2] || block.bbox[1] >= block.bbox[3]).length;
+    bakeoffScores.push({
+      pageIndex: pageNum - 1,
+      engine: selectedEngine,
+      validBBoxRate: 1 - (invalidCount / totalBlocks),
+      duplicateAtomRate: 0,
+      suspiciousMergeRate: result.pageOutput.validationWarnings?.includes('character_soup_detected') ? 1 : 0,
+      titleBlockLeakageScore: result.pageOutput.validationWarnings?.includes('title_block_not_isolated') ? 1 : 0,
+      furnitureLeakageScore: result.pageOutput.validationWarnings?.includes('border_markers_promoted_to_content') ? 1 : 0,
+      notesFalsePositiveScore: result.pageOutput.validationWarnings?.includes('notes_region_contaminated_by_viewport_text') ? 1 : 0,
+      tableFalsePositiveScore: result.pageOutput.validationWarnings?.includes('table_validation_failed') ? 1 : 0,
+      overall: Math.max(0, 1 - (invalidCount / totalBlocks)),
+    });
     renderDebugOverlay(pageNum, result.debug);
-    updateStatus(`Finished page ${pageNum} of ${pdf.numPages}`, (pageNum / pdf.numPages) * 100);
+    updateStatus(`Finished page ${pageNum} of ${pageCount}`, (pageNum / pageCount) * 100);
   }
 
   if (ocrWorker) await ocrWorker.terminate();
@@ -1036,6 +1078,9 @@ const processPdf = async (file) => {
   return {
     filename: file.name,
     extractedAt: new Date().toISOString(),
+    engine: selectedEngine,
+    bakeoffEnabled: bakeoff,
+    bakeoffScores,
     pages,
   };
 };
