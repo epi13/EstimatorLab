@@ -21,6 +21,18 @@
       </label>
       <button id="extractBtn" type="button">Extract JSON</button>
       <button id="downloadBtn" type="button" disabled>Download JSON</button>
+      <label>
+        <span>Engine</span>
+        <select id="engineMode">
+          <option value="current" selected>Current (PDF.js)</option>
+          <option value="mupdf">MuPDF WASM (adapter)</option>
+          <option value="pdfium">PDFium WASM (adapter)</option>
+        </select>
+      </label>
+      <label class="debug-toggle">
+        <input id="bakeoffMode" type="checkbox">
+        <span>Bakeoff scoring</span>
+      </label>
       <label class="debug-toggle">
         <input id="debugMode" type="checkbox">
         <span>Debug overlay</span>
