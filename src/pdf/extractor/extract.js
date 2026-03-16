@@ -59,7 +59,7 @@ async function extractPagesFromBytes(pdfBytes, pagesSpec, suggestedName='extract
   const copied = await newDoc.copyPages(srcDoc, wanted);
   copied.forEach(p => newDoc.addPage(p));
 
-  // Optionally preserve metadata (title/author, etc.) if present
+  // Preserve common document info metadata.
   try {
     const title = srcDoc.getTitle(); if (title) newDoc.setTitle(title + ' (extracted)');
     const author = srcDoc.getAuthor(); if (author) newDoc.setAuthor(author);
@@ -69,7 +69,35 @@ async function extractPagesFromBytes(pdfBytes, pagesSpec, suggestedName='extract
     const creator = srcDoc.getCreator(); if (creator) newDoc.setCreator(creator);
   } catch { /* metadata may not exist; ignore */ }
 
-  const outBytes = await newDoc.save({ updateFieldAppearances: false });
+  // Preserve XMP/catalog metadata when present.
+  // Many BIM/Revit-generated PDFs store additional properties here.
+  try {
+    const PDFName = globalThis.PDFLib?.PDFName;
+    const srcCatalog = srcDoc?.catalog;
+    const dstCatalog = newDoc?.catalog;
+    const srcContext = srcDoc?.context;
+    const dstContext = newDoc?.context;
+    if (PDFName && srcCatalog && dstCatalog && srcContext && dstContext) {
+      const metadataKey = PDFName.of('Metadata');
+      const metadataRef = srcCatalog.get(metadataKey);
+      if (metadataRef) {
+        const metadataObj = srcContext.lookup(metadataRef);
+        if (metadataObj) {
+          const copiedMetadata = dstContext.copy(metadataObj);
+          const copiedMetadataRef = dstContext.register(copiedMetadata);
+          dstCatalog.set(metadataKey, copiedMetadataRef);
+        }
+      }
+    }
+  } catch {
+    // Some files omit metadata streams or expose unsupported object types.
+  }
+
+  const outBytes = await newDoc.save({
+    updateFieldAppearances: false,
+    // Keep output compatible with object stream-heavy source PDFs.
+    useObjectStreams: true
+  });
   const blob = new Blob([outBytes], { type: 'application/pdf' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
