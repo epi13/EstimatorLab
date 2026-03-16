@@ -23,6 +23,40 @@ const DISCIPLINE_RULES = [
   { discipline: 'instrumentation', terms: ['instrument', 'plc', 'i/o', 'loop', 'control panel'] },
 ];
 
+const DISCIPLINE_PREFIX_MAP = {
+  G: 'general',
+  C: 'civil',
+  S: 'structural',
+  A: 'architectural',
+  M: 'mechanical',
+  P: 'plumbing',
+  E: 'electrical',
+  I: 'instrumentation',
+  X: 'misc',
+};
+
+const METADATA_LABEL_PATTERNS = {
+  sheetNumber: /(sheet\s*(no\.?|number|#)|drawing\s*(no\.?|number)|dwg\s*(no\.?|number))/i,
+  sheetTitle: /(sheet\s*title|title)/i,
+  scaleText: /\bscale\b/i,
+  issueStatus: /(issue|status|for\s+(construction|permit|bidding)|revision|rev\.?\s*status)/i,
+  date: /\bdate\b/i,
+  projectName: /(project|project\s*name)/i,
+  client: /(client|owner)/i,
+};
+
+const FURNITURE_PATTERNS = [
+  /contractor shall verify/i,
+  /copyright/i,
+  /reproduction or use/i,
+  /original sheet/i,
+  /ansi\s*[a-z]/i,
+  /\bphone\b|\bfax\b|\bwww\./i,
+  /\b\d{3}[-.)\s]\d{3}[-.\s]\d{4}\b/,
+  /[a-z]:\\/i,
+  /sheet_sets\\/i,
+];
+
 const SHEET_TYPE_RULES = [
   { type: 'schedule_sheet', terms: ['schedule', 'table'] },
   { type: 'general_notes', terms: ['general notes', 'notes'] },
@@ -252,7 +286,7 @@ const classifyDiscipline = (lines) => {
   return best.discipline;
 };
 
-const classifySheetType = (lines) => {
+const classifySheetTypeLegacy = (lines) => {
   const haystack = lines.slice(0, 80).map((line) => line.text.toLowerCase()).join(' ');
   let best = { type: 'detail_sheet', score: 0 };
 
@@ -264,27 +298,106 @@ const classifySheetType = (lines) => {
   return best.type;
 };
 
-const segmentPageRegions = (lines, pageWidth, pageHeight) => {
-  const titleBlockCandidates = lines.filter((line) => {
-    const [x1, y1, x2, y2] = line.bbox;
-    const inBottomBand = y1 > pageHeight * 0.73;
-    const inRightBand = x1 > pageWidth * 0.62;
-    const metadataLike = /(sheet|title|scale|date|rev|revision|project|drawn|checked|issue)/i.test(line.text);
-    return (inBottomBand && inRightBand) || metadataLike;
+const bboxCenter = (box) => [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2];
+
+const normalizeBbox = (box, pageWidth, pageHeight) => {
+  if (!box || box.length !== 4) return { bbox: null, invalid: true, reason: 'bbox_missing' };
+  let [x1, y1, x2, y2] = box.map((value) => Number.isFinite(value) ? value : 0);
+  if (x1 > x2) [x1, x2] = [x2, x1];
+  if (y1 > y2) [y1, y2] = [y2, y1];
+
+  const invalidByOrder = !Number.isFinite(x1 + y1 + x2 + y2);
+  const outOfPage = x2 < -6 || y2 < -6 || x1 > pageWidth + 6 || y1 > pageHeight + 6;
+  const materiallyOutside = x1 < -Math.max(25, pageWidth * 0.05) || y1 < -Math.max(25, pageHeight * 0.05)
+    || x2 > pageWidth + Math.max(25, pageWidth * 0.05)
+    || y2 > pageHeight + Math.max(25, pageHeight * 0.05);
+
+  const clamped = [
+    Math.max(0, Math.min(pageWidth, x1)),
+    Math.max(0, Math.min(pageHeight, y1)),
+    Math.max(0, Math.min(pageWidth, x2)),
+    Math.max(0, Math.min(pageHeight, y2)),
+  ];
+
+  const invalid = invalidByOrder || outOfPage || materiallyOutside || clamped[0] >= clamped[2] || clamped[1] >= clamped[3];
+  return { bbox: clamped, invalid, reason: invalid ? 'bbox_invalid_after_normalization' : null };
+};
+
+const normalizeLineCoordinates = (lines, pageWidth, pageHeight) => {
+  const normalized = [];
+  const invalid = [];
+  lines.forEach((line) => {
+    const { bbox, invalid: isInvalid, reason } = normalizeBbox(line.bbox, pageWidth, pageHeight);
+    if (isInvalid || !bbox) {
+      invalid.push({ ...line, invalidReason: reason });
+      return;
+    }
+    normalized.push({ ...line, bbox });
   });
+  return { normalized, invalid };
+};
 
-  const notesCandidates = lines.filter((line) => /notes?\b|general notes?/i.test(line.text) || /^\d+[\.)\-]/.test(line.text));
-  const tableCandidates = lines.filter((line) => line.words.length >= 3);
+const isFurnitureText = (text = '') => {
+  if (!text) return false;
+  if (FURNITURE_PATTERNS.some((pattern) => pattern.test(text))) return true;
+  if (/^[A-H]$/.test(text.trim()) || /^\d{1,2}$/.test(text.trim())) return true;
+  return false;
+};
 
-  const titleBlock = titleBlockCandidates.length ? unionBoxes(titleBlockCandidates.map((line) => line.bbox)) : null;
-  const notesBlock = notesCandidates.length >= 2 ? unionBoxes(notesCandidates.map((line) => line.bbox)) : null;
-  const scheduleBlock = tableCandidates.length >= 4 ? unionBoxes(tableCandidates.map((line) => line.bbox)) : null;
+const detectBorderMarkers = (lines, pageWidth, pageHeight) => lines.filter((line) => {
+  const [x1, y1, x2, y2] = line.bbox;
+  const text = (line.text || '').trim();
+  if (!/^[A-H]$|^\d{1,2}$/.test(text)) return false;
+  const nearEdge = x1 < pageWidth * 0.05 || x2 > pageWidth * 0.95 || y1 < pageHeight * 0.05 || y2 > pageHeight * 0.95;
+  return nearEdge;
+});
+
+const detectTitleBlockRegion = (lines, pageWidth, pageHeight) => {
+  const candidates = lines.filter((line) => {
+    const [x1, y1] = line.bbox;
+    const nearBottom = y1 > pageHeight * 0.7;
+    const nearRight = x1 > pageWidth * 0.58;
+    const labeled = Object.values(METADATA_LABEL_PATTERNS).some((pattern) => pattern.test(line.text));
+    return (nearBottom && nearRight) || labeled;
+  });
+  if (!candidates.length) return null;
+  return unionBoxes(candidates.map((line) => line.bbox));
+};
+
+const segmentPageRegions = (lines, pageWidth, pageHeight) => {
+  const titleBlockRegion = detectTitleBlockRegion(lines, pageWidth, pageHeight);
+
+  const notesLines = lines.filter((line) => /\b(general\s+notes?|key\s+notes?|notes?)\b/i.test(line.text) || /^\d+[\.)\-:]/.test(line.text));
+  const tableLines = lines.filter((line) => /schedule|table|legend/i.test(line.text) || line.words.length >= 4);
+  const legendLines = lines.filter((line) => /\blegend|abbreviations|symbols\b/i.test(line.text));
+  const detailCaptionLines = lines.filter((line) => /\bdetail|section|elevation\b/i.test(line.text));
+
+  const pageBorderRegion = [0, 0, pageWidth, pageHeight];
+  const notesRegion = notesLines.length >= 3 ? unionBoxes(notesLines.map((line) => line.bbox)) : null;
+  const tableRegion = tableLines.length >= 5 ? unionBoxes(tableLines.map((line) => line.bbox)) : null;
+  const legendRegion = legendLines.length >= 2 ? unionBoxes(legendLines.map((line) => line.bbox)) : null;
+  const detailCaptionRegion = detailCaptionLines.length >= 2 ? unionBoxes(detailCaptionLines.map((line) => line.bbox)) : null;
+
+  const furnitureLines = lines.filter((line) => (titleBlockRegion && inBox(line.bbox, titleBlockRegion)) || isFurnitureText(line.text));
+  const borderMarkers = detectBorderMarkers(lines, pageWidth, pageHeight);
+  const furnitureIds = new Set([...furnitureLines, ...borderMarkers].map((line) => line.id));
 
   return {
-    title_block: titleBlock,
-    notes: notesBlock,
-    schedule: scheduleBlock,
-    main_viewport: [0, 0, pageWidth, pageHeight],
+    title_block_region: titleBlockRegion,
+    page_border_region: pageBorderRegion,
+    main_viewport_region: [0, 0, pageWidth, pageHeight],
+    notes_region: notesRegion,
+    table_region: tableRegion,
+    legend_region: legendRegion,
+    detail_caption_region: detailCaptionRegion,
+    likelyTitleBlockSide: titleBlockRegion ? 'bottom_right' : 'unknown',
+    furnitureIds,
+    furniture: {
+      titleBlockMeta: furnitureLines.filter((line) => titleBlockRegion && inBox(line.bbox, titleBlockRegion)).map((line) => ({ text: line.text, bbox: line.bbox })),
+      borderMarkers: borderMarkers.map((line) => ({ text: line.text, bbox: line.bbox })),
+      timestamps: lines.filter((line) => /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b.*\b\d{1,2}:\d{2}/.test(line.text)).map((line) => ({ text: line.text, bbox: line.bbox })),
+      consultantInfo: lines.filter((line) => isFurnitureText(line.text) && !(titleBlockRegion && inBox(line.bbox, titleBlockRegion))).map((line) => ({ text: line.text, bbox: line.bbox })),
+    },
   };
 };
 
@@ -299,35 +412,123 @@ const inBox = (box, regionBox) => {
   return area(overlap) > area(box) * 0.55;
 };
 
-const extractMetadata = (titleLines, discipline) => {
-  const sheetNumberLine = titleLines.find((line) => /[A-Z]{1,3}-?\d{1,4}[A-Z]?/i.test(line.text));
-  const titleLine = titleLines.find((line) => /(plan|notes|details|schedule|legend|section)/i.test(line.text));
-  const scaleLine = titleLines.find((line) => /\bscale\b/i.test(line.text));
-  const issueLine = titleLines.find((line) => /\b(for|issue|permit|construction|bid)\b/i.test(line.text));
-  const dateLine = titleLines.find((line) => /\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/.test(line.text));
+const detectMetadataValueFromLabel = (titleLines, labelPattern) => {
+  const labeledLine = titleLines.find((line) => labelPattern.test(line.text));
+  if (!labeledLine) return null;
+  const [, cy] = bboxCenter(labeledLine.bbox);
+  const neighbor = titleLines
+    .filter((line) => line.id !== labeledLine.id)
+    .map((line) => {
+      const [cx, y] = bboxCenter(line.bbox);
+      const horizontal = cx - labeledLine.bbox[2];
+      return { line, score: Math.abs(y - cy) + (horizontal < -6 ? 10000 : Math.abs(horizontal)) };
+    })
+    .sort((a, b) => a.score - b.score)[0];
+  return neighbor?.line || null;
+};
 
-  const sheetNumber = sheetNumberLine?.text.match(/[A-Z]{1,3}-?\d{1,4}[A-Z]?/i)?.[0] || null;
+const containsDisclaimer = (value = '') => /contractor shall verify|reproduction or use|copyright reserved/i.test(value);
+const containsFilePath = (value = '') => /[a-z]:\\|sheet_sets\\|\\[^\s]+/i.test(value);
+
+const metadataValueGuard = (value, field) => {
+  if (!value) return { ok: false, reason: `${field}_missing` };
+  if (containsFilePath(value)) return { ok: false, reason: 'metadata_contains_file_path' };
+  if (containsDisclaimer(value)) return { ok: false, reason: 'metadata_contains_disclaimer_text' };
+  const longThreshold = field === 'scaleText' ? 80 : 140;
+  if (value.length > longThreshold) return { ok: false, reason: `${field}_suspiciously_long` };
+  if (field === 'scaleText' && !/(as shown|no scale|\d+\s*\/?\d*"\s*=\s*\d+'?-?\d*"?)/i.test(value)) {
+    return { ok: false, reason: 'scale_text_invalid_pattern' };
+  }
+  return { ok: true };
+};
+
+const parseSheetNumber = (lines) => {
+  const matchers = [/[A-Z]{1,2}\s*[-.]\s*\d{1,4}[A-Z]?/g, /\b[A-Z]\d{1,3}\b/g];
+  for (const line of lines) {
+    for (const matcher of matchers) {
+      const hit = line.text.match(matcher)?.[0];
+      if (hit) return hit.replace(/\s+/g, '').replace('.', '-').toUpperCase();
+    }
+  }
+  return null;
+};
+
+const inferDisciplineFromSheetNumber = (sheetNumber) => {
+  const prefix = (sheetNumber || '').match(/^([A-Z])/i)?.[1]?.toUpperCase();
+  if (!prefix) return { discipline: 'unknown', confidence: 0 };
+  return { discipline: DISCIPLINE_PREFIX_MAP[prefix] || 'unknown', confidence: DISCIPLINE_PREFIX_MAP[prefix] ? 0.92 : 0.2 };
+};
+
+const extractMetadata = (titleLines, fallbackDiscipline) => {
+  const warnings = [];
+  const sheetNumber = parseSheetNumber(titleLines);
+  const inferred = inferDisciplineFromSheetNumber(sheetNumber);
+  const labeledSheetTitle = detectMetadataValueFromLabel(titleLines, METADATA_LABEL_PATTERNS.sheetTitle)?.text || null;
+  const titleCandidate = labeledSheetTitle || titleLines
+    .filter((line) => /(plan|notes|details?|schedule|legend|section|map|vicinity)/i.test(line.text) && !METADATA_LABEL_PATTERNS.sheetTitle.test(line.text))
+    .sort((a, b) => b.avgFontSize - a.avgFontSize)[0]?.text || null;
+
+  const scaleCandidate = detectMetadataValueFromLabel(titleLines, METADATA_LABEL_PATTERNS.scaleText)?.text
+    || titleLines.find((line) => /(as shown|no scale|"\s*=\s*\d+'?)/i.test(line.text))?.text
+    || null;
+
+  const issueCandidate = detectMetadataValueFromLabel(titleLines, METADATA_LABEL_PATTERNS.issueStatus)?.text
+    || titleLines.find((line) => /(for permitting|not for construction|\b\d{2,3}%\b|for bid)/i.test(line.text))?.text
+    || null;
+
+  const dateCandidate = detectMetadataValueFromLabel(titleLines, METADATA_LABEL_PATTERNS.date)?.text
+    || titleLines.find((line) => /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/.test(line.text))?.text
+    || null;
+
+  const guards = {
+    sheetTitle: metadataValueGuard(titleCandidate, 'sheetTitle'),
+    scaleText: metadataValueGuard(scaleCandidate, 'scaleText'),
+    issueStatus: issueCandidate ? metadataValueGuard(issueCandidate, 'issueStatus') : { ok: false, reason: 'issueStatus_missing' },
+  };
+
+  Object.values(guards).forEach((guard) => {
+    if (!guard.ok && !warnings.includes(guard.reason)) warnings.push(guard.reason);
+  });
+
+  const discipline = inferred.confidence >= 0.85 ? inferred.discipline : fallbackDiscipline;
+  const confidence = clamp01(
+    (sheetNumber ? 0.38 : 0)
+    + (guards.sheetTitle.ok ? 0.22 : 0)
+    + (guards.scaleText.ok ? 0.16 : 0)
+    + (guards.issueStatus.ok ? 0.12 : 0)
+    + (dateCandidate ? 0.06 : 0)
+    + (inferred.confidence > 0.8 ? 0.08 : 0)
+    - warnings.length * 0.08,
+  );
+
+  if (!sheetNumber && confidence < 0.45) warnings.push('low_metadata_confidence');
 
   return {
     sheetNumber,
-    sheetTitle: titleLine?.text || null,
+    sheetTitle: guards.sheetTitle.ok ? titleCandidate : null,
     discipline,
-    scaleText: scaleLine?.text || null,
-    issueStatus: issueLine?.text || null,
-    date: dateLine?.text || null,
-    confidence: clamp01((sheetNumber ? 0.35 : 0) + (titleLine ? 0.3 : 0) + (scaleLine ? 0.15 : 0) + (issueLine ? 0.1 : 0) + 0.1),
+    scaleText: guards.scaleText.ok ? scaleCandidate : null,
+    issueStatus: guards.issueStatus.ok ? issueCandidate : null,
+    date: dateCandidate,
+    confidence,
+    warnings,
   };
 };
 
-const parseNotesBlock = (lines, bbox) => {
+const parseNotesBlock = (lines, bbox, regions) => {
   if (!bbox) return null;
   const noteLines = lines.filter((line) => inBox(line.bbox, bbox)).sort((a, b) => a.bbox[1] - b.bbox[1]);
-  if (noteLines.length < 2) return null;
+  if (noteLines.length < 3) return null;
 
-  const heading = noteLines.find((line) => /notes?\b/i.test(line.text));
+  const heading = noteLines.find((line) => /\b(general\s+notes?|key\s+notes?|notes?)\b/i.test(line.text));
+  const numbered = noteLines.filter((line) => /^\d+[\.)\-:]/.test(line.text));
+  if (!heading || numbered.length < 2) return null;
+
+  const contaminated = noteLines.some((line) => regions.title_block_region && inBox(line.bbox, regions.title_block_region));
+  if (contaminated) return null;
+
   const items = [];
   let current = null;
-
   noteLines.forEach((line) => {
     const match = line.text.match(/^(\d+)[\.)\-:]\s*(.*)$/);
     if (match) {
@@ -335,90 +536,101 @@ const parseNotesBlock = (lines, bbox) => {
       current = { number: match[1], text: match[2] || '' };
       return;
     }
-    if (current) {
-      current.text = normalizeText(`${current.text} ${line.text}`);
-    }
+    if (current) current.text = normalizeText(`${current.text} ${line.text}`);
   });
   if (current) items.push(current);
 
-  if (!items.length) return null;
+  if (items.length < 2) return null;
   return {
     type: 'notes_block',
-    title: heading?.text || 'NOTES',
+    title: heading.text,
     items,
     bbox,
     source: 'native_pdf_text',
-    confidence: clamp01(0.72 + Math.min(items.length, 6) * 0.04),
+    confidence: clamp01(0.58 + Math.min(0.2, items.length * 0.03)),
   };
 };
 
 const detectTable = (lines, bbox) => {
-  if (!bbox) return null;
+  if (!bbox) return { block: null, warning: null };
   const tableLines = lines.filter((line) => inBox(line.bbox, bbox));
-  if (tableLines.length < 3) return null;
+  if (tableLines.length < 4) return { block: null, warning: null };
 
-  const rowCandidates = tableLines
-    .map((line) => ({
-      line,
-      cells: line.words,
-    }))
-    .filter((entry) => entry.cells.length >= 3);
+  const rows = tableLines
+    .map((line) => ({ line, cells: line.words, y: (line.bbox[1] + line.bbox[3]) / 2 }))
+    .filter((row) => row.cells.length >= 2)
+    .sort((a, b) => a.y - b.y);
 
-  if (rowCandidates.length < 2) return null;
+  if (rows.length < 2) return { block: null, warning: 'table_validation_failed' };
 
-  const maxCells = Math.max(...rowCandidates.map((row) => row.cells.length));
-  const columns = Array.from({ length: maxCells }, (_, i) => ({ name: rowCandidates[0].cells[i] || `Column ${i + 1}` }));
-  const rows = rowCandidates.slice(1).map((row) => {
-    const data = {};
-    columns.forEach((col, i) => {
-      data[col.name] = row.cells[i] || '';
+  const hasScheduleTitle = tableLines.some((line) => /schedule|table|matrix/i.test(line.text));
+  const rowHeights = rows.map((row) => row.line.bbox[3] - row.line.bbox[1]);
+  const avgHeight = rowHeights.reduce((sum, h) => sum + h, 0) / Math.max(1, rowHeights.length);
+  const stableHeights = rowHeights.filter((h) => Math.abs(h - avgHeight) < Math.max(3, avgHeight * 0.7)).length >= Math.ceil(rows.length * 0.6);
+  const columnCount = Math.round(rows.reduce((sum, row) => sum + row.cells.length, 0) / rows.length);
+
+  const strongEvidence = [hasScheduleTitle, stableHeights, columnCount > 1, rows.length > 2].filter(Boolean).length;
+  if (strongEvidence < 3) return { block: null, warning: 'table_validation_failed' };
+
+  const columns = Array.from({ length: columnCount }, (_, i) => ({ name: rows[0].cells[i] || `Column ${i + 1}` }));
+  const dataRows = rows.slice(1).map((row) => {
+    const payload = {};
+    columns.forEach((col, idx) => {
+      payload[col.name] = row.cells[idx] || '';
     });
-    return data;
+    return payload;
   });
 
-  const title = tableLines.find((line) => /schedule|table/i.test(line.text))?.text || 'Schedule';
+  if (dataRows.length < 1 || columns.length < 2) return { block: null, warning: 'table_validation_failed' };
 
   return {
-    type: 'table',
-    tableRole: 'schedule',
-    title,
-    bbox,
-    columns,
-    rows,
-    source: 'native_pdf_text',
-    confidence: clamp01(0.7 + Math.min(rows.length, 5) * 0.04),
+    block: {
+      type: 'table',
+      tableRole: 'schedule',
+      title: tableLines.find((line) => /schedule|table/i.test(line.text))?.text || 'Schedule',
+      bbox,
+      columns,
+      rows: dataRows,
+      source: 'native_pdf_text',
+      confidence: clamp01(0.62 + Math.min(0.2, dataRows.length * 0.03)),
+    },
+    warning: null,
   };
 };
 
-const classifyLineSemantic = (line, regions) => {
-  if (regions.title_block && inBox(line.bbox, regions.title_block)) {
-    return 'title_block_meta';
-  }
-
-  if (/\b(see|typ|match existing|ref\.|detail|section)\b/i.test(line.text) || /\d+\s*[\/-]\s*[A-Z]-?\d+/i.test(line.text)) {
-    return 'reference_callout';
-  }
-
-  if (/\b\d+\s*'\s*-?\s*\d*\s*\"|\b\d+\s*\"\s*(dia|ø)?|\bR\s*\d+/i.test(line.text)) {
-    return 'dimension';
-  }
-
-  if (/\blegend\b/i.test(line.text)) return 'legend_block';
-  if (/\b(detail|section)\b/i.test(line.text)) return 'detail_title';
-  if (/\b(notes?)\b/i.test(line.text)) return 'viewport_label';
-  return 'equipment_label';
+const isEquipmentLike = (text = '', discipline = 'unknown') => {
+  const hasTagPattern = /\b[A-Z]{1,4}-\d{1,4}[A-Z]?\b/.test(text);
+  const engineeringNouns = /\b(pump|valve|fan|ahu|rtu|compressor|boiler|chiller|panel|transformer|motor)\b/i.test(text);
+  const disciplineCompat = discipline === 'mechanical' || discipline === 'electrical' || discipline === 'plumbing' || discipline === 'instrumentation';
+  return hasTagPattern || (engineeringNouns && disciplineCompat);
 };
 
-const classifyLineBlocks = (lines, regions, consumedLineIds = new Set()) => lines
-  .filter((line) => !consumedLineIds.has(line.id))
+const classifyLineSemantic = (line, regions, discipline) => {
+  if (regions.furnitureIds?.has(line.id)) return 'sheet_furniture_label';
+  if (regions.title_block_region && inBox(line.bbox, regions.title_block_region)) return 'title_block_meta';
+
+  const text = line.text || '';
+  if (/^[A-H]$|^\d{1,2}$/.test(text.trim())) return 'border_marker';
+  if (/\b(canada|pacific ocean|atlantic ocean|united states|mexico|city of)\b/i.test(text)) return 'map_label';
+  if (/\b(see|typ|match existing|ref\.?|detail|section)\b/i.test(text) || /\d+\s*[\/-]\s*[A-Z]-?\d+/i.test(text)) return 'reference_callout';
+  if (/\b\d+\s*'\s*-?\s*\d*\s*"|\b\d+\s*"\s*(dia|ø)?|\bR\s*\d+/i.test(text)) return 'dimension';
+  if (/\blegend\b/i.test(text)) return 'legend_block';
+  if (/\b(detail|section)\b/i.test(text)) return 'detail_label';
+  if (/\b(room|area|corridor|building|plan|section|elevation)\b/i.test(text)) return 'viewport_label';
+  if (isEquipmentLike(text, discipline)) return 'equipment_label';
+  return 'general_annotation';
+};
+
+const classifyLineBlocks = (lines, regions, consumedLineIds = new Set(), discipline = 'unknown') => lines
+  .filter((line) => !consumedLineIds.has(line.id) && !regions.furnitureIds?.has(line.id))
   .map((line) => {
-    const type = classifyLineSemantic(line, regions);
+    const type = classifyLineSemantic(line, regions, discipline);
     const block = {
       type,
       text: line.text,
       bbox: line.bbox,
       source: line.atoms.some((atom) => atom.source === 'ocr_raster_region') ? 'ocr_raster_region' : 'native_pdf_text',
-      confidence: type === 'title_block_meta' ? 0.92 : 0.8,
+      confidence: ['general_annotation', 'viewport_label', 'map_label'].includes(type) ? 0.64 : 0.78,
     };
 
     if (type === 'dimension') {
@@ -435,9 +647,6 @@ const classifyLineBlocks = (lines, regions, consumedLineIds = new Set()) => line
         block.referenceType = 'detail';
         block.detailNumber = detail[1];
         block.targetSheet = detail[2].toUpperCase();
-      } else if (/see electrical/i.test(line.text)) {
-        block.referenceType = 'discipline_ref';
-        block.targetDiscipline = 'electrical';
       } else {
         block.referenceType = 'reference_text';
       }
@@ -446,24 +655,43 @@ const classifyLineBlocks = (lines, regions, consumedLineIds = new Set()) => line
     return block;
   });
 
-const runValidations = (pageOutput) => {
-  const warnings = [];
+const classifySheetType = (lines, sheetMeta = null) => {
+  const head = lines.slice(0, 120).map((line) => line.text.toLowerCase()).join(' ');
+  const metaTitle = (sheetMeta?.sheetTitle || '').toLowerCase();
+  const text = `${head} ${metaTitle}`;
+
+  if (/vicinity map|location map/.test(text)) return 'cover_map_general';
+  if (/key notes|general notes/.test(text)) return 'notes_sheet';
+  if (/legend|abbreviations|symbols/.test(text)) return 'legend_sheet';
+  if (/schedule/.test(text)) return 'schedule_sheet';
+  if (/section/.test(text)) return 'section_sheet';
+  if (/plan/.test(text)) return 'plan_sheet';
+  return 'detail_sheet';
+};
+
+const runValidations = (pageOutput, invalidLines = []) => {
+  const warnings = [...(pageOutput.sheetMeta?.warnings || [])];
   const allText = pageOutput.blocks.map((block) => block.text || '').join(' ');
 
   if (detectCharacterSoup(allText)) warnings.push('character_soup_detected');
-  if (pageOutput.blocks.some((block) => block.type === 'table' && !block.rows)) warnings.push('table_coherence_failed');
-  if (pageOutput.blocks.some((block) => block.type === 'notes_block' && block.items?.length <= 1)) warnings.push('notes_continuity_failed');
+  if (invalidLines.length) warnings.push('negative_bbox_detected');
+  if (pageOutput.blocks.some((block) => block.type === 'equipment_label' && /\b(canada|ocean|mexico|city)\b/i.test(block.text || ''))) {
+    warnings.push('border_markers_promoted_to_content');
+  }
+  if (pageOutput.blocks.some((block) => block.type === 'table' && (!block.rows || block.rows.length < 1 || block.columns.length < 2))) {
+    warnings.push('table_validation_failed');
+  }
+  if (pageOutput.blocks.some((block) => block.type === 'notes_block' && block.items?.length <= 1)) warnings.push('notes_region_contaminated_by_viewport_text');
 
-  const titleStrings = (pageOutput.blocks || [])
-    .filter((block) => block.type === 'title_block_meta')
-    .map((block) => (block.text || '').toUpperCase())
-    .slice(0, 6);
-
-  if (pageOutput.blocks.some((block) => block.type === 'notes_block' && titleStrings.some((t) => t && JSON.stringify(block).toUpperCase().includes(t)))) {
-    warnings.push('metadata_bleed_detected');
+  const prefixDiscipline = inferDisciplineFromSheetNumber(pageOutput.sheetMeta?.sheetNumber).discipline;
+  if (prefixDiscipline !== 'unknown' && pageOutput.sheetMeta?.discipline && prefixDiscipline !== pageOutput.sheetMeta.discipline) {
+    warnings.push('discipline_mismatch_with_sheet_prefix');
   }
 
-  return warnings;
+  if (!pageOutput.regions?.title_block_region) warnings.push('title_block_not_isolated');
+  if ((pageOutput.sheetMeta?.confidence || 0) < 0.45) warnings.push('low_metadata_confidence');
+
+  return [...new Set(warnings)];
 };
 
 const createOcrWorker = async () => createWorker('eng', 1, {
@@ -490,7 +718,7 @@ const estimateImageCoverage = async (page) => {
   return clamp01(paintImageOps / 45);
 };
 
-const buildPageDiagnostics = async (page, textItems) => {
+const buildPageDiagnostics = async (page, textItems, pageNumber = 1) => {
   const viewport = page.getViewport({ scale: 1 });
   const nativeAtoms = extractNativeTextAtoms(textItems, viewport.height);
   const nativeArea = nativeAtoms.reduce((sum, atom) => sum + area(atom.bbox), 0);
@@ -500,23 +728,79 @@ const buildPageDiagnostics = async (page, textItems) => {
   const hasNativeText = nativeAtoms.length > 0;
   const hasRasterRegions = imageCoverageRatio > 0.06 || !hasNativeText;
   const lineProxies = groupAtomsIntoLines(nativeAtoms);
+  const regions = segmentPageRegions(lineProxies, viewport.width, viewport.height);
+  const guessedSheetNumber = parseSheetNumber(lineProxies.filter((line) => regions.title_block_region && inBox(line.bbox, regions.title_block_region)));
 
   return {
-    width: viewport.width,
-    height: viewport.height,
+    pageNumber,
+    pageWidth: viewport.width,
+    pageHeight: viewport.height,
     hasNativeText,
     hasRasterRegions,
     nativeTextDensity,
     imageCoverageRatio,
-    suspectedSheetType: classifySheetType(lineProxies),
+    likelyTitleBlockSide: regions.likelyTitleBlockSide,
+    likelyBorderMarkers: regions.furniture.borderMarkers.length,
+    likelyDisciplineByPrefix: inferDisciplineFromSheetNumber(guessedSheetNumber).discipline,
+    likelySheetType: classifySheetType(lineProxies),
     suspectedDiscipline: classifyDiscipline(lineProxies),
   };
+};
+
+const composePageResult = (pageNumber, lines, regions, pageDiagnostics, sourceSelection, invalidLines = []) => {
+  const notesBlock = parseNotesBlock(lines, regions.notes_region, regions);
+  const tableResult = detectTable(lines, regions.table_region);
+  const consumed = new Set();
+  const blocks = [];
+
+  if (notesBlock) {
+    blocks.push(notesBlock);
+    lines.filter((line) => inBox(line.bbox, notesBlock.bbox)).forEach((line) => consumed.add(line.id));
+  }
+
+  if (tableResult.block) {
+    blocks.push(tableResult.block);
+    lines.filter((line) => inBox(line.bbox, tableResult.block.bbox)).forEach((line) => consumed.add(line.id));
+  }
+
+  const metaLines = lines.filter((line) => regions.title_block_region && inBox(line.bbox, regions.title_block_region));
+  const sheetMeta = extractMetadata(metaLines, pageDiagnostics.suspectedDiscipline);
+  if (tableResult.warning && !sheetMeta.warnings.includes(tableResult.warning)) sheetMeta.warnings.push(tableResult.warning);
+
+  const semanticLines = lines.filter((line) => !regions.furnitureIds?.has(line.id));
+  blocks.push(...classifyLineBlocks(semanticLines, regions, consumed, sheetMeta.discipline));
+
+  const pageOutput = {
+    pageNumber,
+    sheetMeta,
+    pageDiagnostics: {
+      pageNumber,
+      pageWidth: pageDiagnostics.pageWidth,
+      pageHeight: pageDiagnostics.pageHeight,
+      hasNativeText: pageDiagnostics.hasNativeText,
+      hasRasterRegions: pageDiagnostics.hasRasterRegions,
+      nativeTextDensity: pageDiagnostics.nativeTextDensity,
+      imageCoverageRatio: pageDiagnostics.imageCoverageRatio,
+      likelyTitleBlockSide: pageDiagnostics.likelyTitleBlockSide,
+      likelyBorderMarkers: pageDiagnostics.likelyBorderMarkers,
+      likelyDisciplineByPrefix: pageDiagnostics.likelyDisciplineByPrefix,
+      likelySheetType: classifySheetType(lines, sheetMeta),
+      sourceSelection,
+    },
+    regions,
+    pageFurniture: regions.furniture,
+    blocks,
+    validationWarnings: [],
+  };
+
+  pageOutput.validationWarnings = runValidations(pageOutput, invalidLines);
+  return pageOutput;
 };
 
 const extractRasterPage = async (page, pageNumber, pageDiagnostics, ocrWorker) => {
   const { canvas, viewport } = await renderPageToCanvas(page, 2);
   const { data } = await ocrWorker.recognize(canvas);
-  const ocrLines = (data?.lines || []).map((line, index) => ({
+  const ocrLinesRaw = (data?.lines || []).map((line, index) => ({
     id: `ocr-line-${index}`,
     text: normalizeText(line.text),
     bbox: [line.bbox.x0, line.bbox.y0, line.bbox.x1, line.bbox.y1],
@@ -526,90 +810,35 @@ const extractRasterPage = async (page, pageNumber, pageDiagnostics, ocrWorker) =
     rotation: 0,
   })).filter((line) => line.text && !detectCharacterSoup(line.text));
 
+  const { normalized: ocrLines, invalid } = normalizeLineCoordinates(ocrLinesRaw, viewport.width, viewport.height);
   const regions = segmentPageRegions(ocrLines, viewport.width, viewport.height);
-  const notesBlock = parseNotesBlock(ocrLines, regions.notes);
-  const tableBlock = detectTable(ocrLines, regions.schedule);
-  const consumed = new Set();
-  const blocks = [];
+  const pageOutput = composePageResult(pageNumber, ocrLines, regions, pageDiagnostics, 'ocr_raster_region', invalid);
 
-  if (notesBlock) {
-    blocks.push(notesBlock);
-    ocrLines.filter((line) => inBox(line.bbox, notesBlock.bbox)).forEach((line) => consumed.add(line.id));
-  }
-  if (tableBlock) {
-    blocks.push(tableBlock);
-    ocrLines.filter((line) => inBox(line.bbox, tableBlock.bbox)).forEach((line) => consumed.add(line.id));
-  }
-
-  blocks.push(...classifyLineBlocks(ocrLines, regions, consumed));
-
-  const metaLines = ocrLines.filter((line) => regions.title_block && inBox(line.bbox, regions.title_block));
-  const sheetMeta = extractMetadata(metaLines, pageDiagnostics.suspectedDiscipline);
-
-  const pageOutput = {
-    pageNumber,
-    sheetMeta,
-    pageDiagnostics: {
-      hasNativeText: false,
-      hasRasterRegions: true,
-      nativeTextDensity: 0,
-      imageCoverageRatio: pageDiagnostics.imageCoverageRatio,
-      suspectedSheetType: pageDiagnostics.suspectedSheetType,
-      suspectedDiscipline: pageDiagnostics.suspectedDiscipline,
-      sourceSelection: 'ocr_raster_region',
+  return {
+    pageOutput,
+    debug: {
+      canvas,
+      dedupedAtoms: [],
+      droppedAtoms: [],
+      lines: ocrLines,
+      invalidLines: invalid,
+      regions,
+      blocks: pageOutput.blocks,
+      pageBounds: [0, 0, viewport.width, viewport.height],
+      furniture: regions.furniture,
     },
-    blocks,
-    validationWarnings: [],
   };
-
-  pageOutput.validationWarnings = runValidations(pageOutput);
-  return { pageOutput, debug: { canvas, dedupedAtoms: [], droppedAtoms: [], lines: ocrLines, regions, blocks } };
 };
 
 const extractVectorPage = async (page, pageNumber, pageDiagnostics) => {
   const textContent = await page.getTextContent();
-  const rawAtoms = extractNativeTextAtoms(textContent.items || [], pageDiagnostics.height);
+  const rawAtoms = extractNativeTextAtoms(textContent.items || [], pageDiagnostics.pageHeight);
   const { deduped: dedupedAtoms, dropped: droppedAtoms } = dedupeOverlappingTextAtoms(rawAtoms);
-  const lines = groupAtomsIntoLines(dedupedAtoms);
-  const regions = segmentPageRegions(lines, pageDiagnostics.width, pageDiagnostics.height);
+  const rawLines = groupAtomsIntoLines(dedupedAtoms);
+  const { normalized: lines, invalid } = normalizeLineCoordinates(rawLines, pageDiagnostics.pageWidth, pageDiagnostics.pageHeight);
+  const regions = segmentPageRegions(lines, pageDiagnostics.pageWidth, pageDiagnostics.pageHeight);
+  const pageOutput = composePageResult(pageNumber, lines, regions, pageDiagnostics, 'native_pdf_text', invalid);
 
-  const notesBlock = parseNotesBlock(lines, regions.notes);
-  const tableBlock = detectTable(lines, regions.schedule);
-  const consumed = new Set();
-  const blocks = [];
-
-  if (notesBlock) {
-    blocks.push(notesBlock);
-    lines.filter((line) => inBox(line.bbox, notesBlock.bbox)).forEach((line) => consumed.add(line.id));
-  }
-
-  if (tableBlock) {
-    blocks.push(tableBlock);
-    lines.filter((line) => inBox(line.bbox, tableBlock.bbox)).forEach((line) => consumed.add(line.id));
-  }
-
-  blocks.push(...classifyLineBlocks(lines, regions, consumed));
-
-  const metaLines = lines.filter((line) => regions.title_block && inBox(line.bbox, regions.title_block));
-  const sheetMeta = extractMetadata(metaLines, pageDiagnostics.suspectedDiscipline);
-
-  const pageOutput = {
-    pageNumber,
-    sheetMeta,
-    pageDiagnostics: {
-      hasNativeText: pageDiagnostics.hasNativeText,
-      hasRasterRegions: pageDiagnostics.hasRasterRegions,
-      nativeTextDensity: pageDiagnostics.nativeTextDensity,
-      imageCoverageRatio: pageDiagnostics.imageCoverageRatio,
-      suspectedSheetType: pageDiagnostics.suspectedSheetType,
-      suspectedDiscipline: pageDiagnostics.suspectedDiscipline,
-      sourceSelection: 'native_pdf_text',
-    },
-    blocks,
-    validationWarnings: [],
-  };
-
-  pageOutput.validationWarnings = runValidations(pageOutput);
   const { canvas } = await renderPageToCanvas(page, 1);
   return {
     pageOutput,
@@ -618,8 +847,11 @@ const extractVectorPage = async (page, pageNumber, pageDiagnostics) => {
       dedupedAtoms,
       droppedAtoms,
       lines,
+      invalidLines: invalid,
       regions,
-      blocks,
+      blocks: pageOutput.blocks,
+      pageBounds: [0, 0, pageDiagnostics.pageWidth, pageDiagnostics.pageHeight],
+      furniture: regions.furniture,
     },
   };
 };
@@ -653,16 +885,20 @@ const renderDebugOverlay = (pageNumber, debugData) => {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(debugData.canvas, 0, 0);
 
-  debugData.dedupedAtoms.forEach((atom) => drawBox(ctx, atom.bbox, 'rgba(56,189,248,0.9)', 0.7));
-  debugData.droppedAtoms.forEach((atom) => drawBox(ctx, atom.bbox, 'rgba(239,68,68,0.9)', 0.9));
-  debugData.lines.forEach((line) => drawBox(ctx, line.bbox, 'rgba(34,197,94,0.65)', 1));
+  drawBox(ctx, debugData.pageBounds, 'rgba(255,255,255,0.8)', 1, 'page_bounds');
+  debugData.dedupedAtoms.forEach((atom) => drawBox(ctx, atom.bbox, 'rgba(56,189,248,0.7)', 0.7));
+  debugData.lines.forEach((line) => drawBox(ctx, line.bbox, 'rgba(250,204,21,0.45)', 1));
 
-  drawBox(ctx, debugData.regions.title_block, 'rgba(249,115,22,0.9)', 1.7, 'title_block');
-  drawBox(ctx, debugData.regions.notes, 'rgba(168,85,247,0.9)', 1.7, 'notes');
-  drawBox(ctx, debugData.regions.schedule, 'rgba(14,165,233,0.9)', 1.7, 'table');
+  drawBox(ctx, debugData.regions.title_block_region, 'rgba(59,130,246,0.9)', 1.8, 'title_block');
+  drawBox(ctx, debugData.regions.notes_region, 'rgba(34,197,94,0.9)', 1.8, 'notes_region');
+  drawBox(ctx, debugData.regions.table_region, 'rgba(168,85,247,0.9)', 1.8, 'table_region');
+  drawBox(ctx, debugData.regions.main_viewport_region, 'rgba(148,163,184,0.5)', 1.2, 'viewport');
+
+  (debugData.furniture?.borderMarkers || []).forEach((item) => drawBox(ctx, item.bbox, 'rgba(156,163,175,0.85)', 1.1, 'furniture'));
+  debugData.invalidLines.forEach((line) => drawBox(ctx, line.bbox, 'rgba(239,68,68,0.95)', 2, 'invalid bbox'));
 
   debugData.blocks.forEach((block) => {
-    if (block.confidence < 0.7) drawBox(ctx, block.bbox, 'rgba(251,191,36,0.9)', 1.6, 'low confidence');
+    if (block.confidence < 0.7) drawBox(ctx, block.bbox, 'rgba(249,115,22,0.9)', 1.6, 'low confidence');
   });
 
   wrapper.appendChild(canvas);
@@ -680,7 +916,7 @@ const processPdf = async (file) => {
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
     const page = await pdf.getPage(pageNum);
     const textContent = await page.getTextContent();
-    const pageDiagnostics = await buildPageDiagnostics(page, textContent.items || []);
+    const pageDiagnostics = await buildPageDiagnostics(page, textContent.items || [], pageNum);
 
     updateStatus(`Inspecting and processing page ${pageNum} of ${pdf.numPages}`, ((pageNum - 1) / pdf.numPages) * 100);
 
