@@ -22,7 +22,8 @@ const navigationData = [
            { label: 'Dictionary', href: 'src/miscellaneous/dictionary/index.html', keywords: 'dictionary' },
            { label: 'Cost Engine', href: 'src/ancfe/index.html', keywords: 'cost engine' },
            { label: 'Plan Diff', href: 'src/plandiff/index.html', keywords: 'plan diff' },   
-           { label: 'MarkDown Editor', href: 'src/miscellaneous/MarkDownEditor/markdown.html', keywords: 'markdown editor' }
+           { label: 'MarkDown Editor', href: 'src/miscellaneous/MarkDownEditor/markdown.html', keywords: 'markdown editor' },
+           { label: 'PDF JSON Extractor', href: 'src/miscellaneous/pdf-json-extractor/index.html', keywords: 'pdf ocr json extraction table' }
         ]
       },
       {

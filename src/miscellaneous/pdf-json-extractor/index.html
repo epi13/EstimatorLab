@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF to Structured JSON</title>
+  <link rel="stylesheet" href="../../css/base/index.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-page="pdf-json-extractor">
+  <main class="extractor-app">
+    <header>
+      <h1>PDF to Structured JSON</h1>
+      <p>Extract text, OCR scanned pages, and infer simple tables directly in your browser.</p>
+    </header>
+
+    <section class="controls" aria-label="Extraction controls">
+      <label class="file-picker">
+        <span>Select PDF</span>
+        <input id="pdfFile" type="file" accept="application/pdf">
+      </label>
+      <button id="extractBtn" type="button">Extract JSON</button>
+      <button id="downloadBtn" type="button" disabled>Download JSON</button>
+    </section>
+
+    <section class="status-panel" aria-live="polite">
+      <p id="statusText">Choose a PDF to begin.</p>
+      <progress id="statusProgress" max="100" value="0"></progress>
+    </section>
+
+    <section>
+      <h2>Output</h2>
+      <pre id="jsonOutput">{}</pre>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
