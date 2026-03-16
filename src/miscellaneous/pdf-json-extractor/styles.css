@@ -16,11 +16,21 @@ body[data-page="pdf-json-extractor"] {
   margin: 1rem 0;
 }
 
-.file-picker {
+.file-picker,
+.debug-toggle {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   font-weight: 600;
+}
+
+.debug-toggle {
+  flex-direction: row;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
 }
 
 button {
@@ -54,4 +64,22 @@ button:disabled {
   border-radius: 8px;
   padding: 0.75rem;
   background: #f8fafc;
+}
+
+.debug-canvases {
+  display: grid;
+  gap: 1rem;
+}
+
+.debug-page {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: #ffffff;
+}
+
+.debug-page canvas {
+  width: 100%;
+  height: auto;
+  border: 1px solid #e2e8f0;
 }
