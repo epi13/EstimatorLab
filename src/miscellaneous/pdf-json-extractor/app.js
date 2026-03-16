@@ -286,6 +286,16 @@ const classifyDiscipline = (lines) => {
   return best.discipline;
 };
 
+const scoreDisciplineEvidence = (lines) => {
+  const haystack = lines.map((line) => line.text.toLowerCase()).join(' ');
+  return DISCIPLINE_RULES
+    .map((rule) => ({
+      discipline: rule.discipline,
+      score: rule.terms.reduce((hits, term) => (haystack.includes(term) ? hits + 1 : hits), 0),
+    }))
+    .sort((a, b) => b.score - a.score);
+};
+
 const classifySheetTypeLegacy = (lines) => {
   const haystack = lines.slice(0, 80).map((line) => line.text.toLowerCase()).join(' ');
   let best = { type: 'detail_sheet', score: 0 };
@@ -354,21 +364,36 @@ const detectBorderMarkers = (lines, pageWidth, pageHeight) => lines.filter((line
 
 const detectTitleBlockRegion = (lines, pageWidth, pageHeight) => {
   const candidates = lines.filter((line) => {
-    const [x1, y1] = line.bbox;
-    const nearBottom = y1 > pageHeight * 0.7;
-    const nearRight = x1 > pageWidth * 0.58;
-    const labeled = Object.values(METADATA_LABEL_PATTERNS).some((pattern) => pattern.test(line.text));
-    return (nearBottom && nearRight) || labeled;
+    const [x1, y1, x2] = line.bbox;
+    const nearBottom = y1 > pageHeight * 0.68;
+    const nearRight = x1 > pageWidth * 0.54;
+    const nearCorner = nearBottom && nearRight;
+    const metadataLabel = Object.values(METADATA_LABEL_PATTERNS).some((pattern) => pattern.test(line.text));
+    const nearEdgeForMetadata = metadataLabel && (y1 > pageHeight * 0.58 || x2 > pageWidth * 0.74);
+    return nearCorner || nearEdgeForMetadata;
   });
   if (!candidates.length) return null;
-  return unionBoxes(candidates.map((line) => line.bbox));
+
+  const region = unionBoxes(candidates.map((line) => line.bbox));
+  const regionAreaRatio = area(region) / Math.max(1, pageWidth * pageHeight);
+  if (regionAreaRatio > 0.34) {
+    return [pageWidth * 0.58, pageHeight * 0.62, pageWidth, pageHeight];
+  }
+
+  return [
+    Math.max(0, region[0] - 10),
+    Math.max(0, region[1] - 10),
+    Math.min(pageWidth, region[2] + 10),
+    Math.min(pageHeight, region[3] + 10),
+  ];
 };
 
 const segmentPageRegions = (lines, pageWidth, pageHeight) => {
   const titleBlockRegion = detectTitleBlockRegion(lines, pageWidth, pageHeight);
+  const footerBandTop = pageHeight * 0.935;
 
   const notesLines = lines.filter((line) => /\b(general\s+notes?|key\s+notes?|notes?)\b/i.test(line.text) || /^\d+[\.)\-:]/.test(line.text));
-  const tableLines = lines.filter((line) => /schedule|table|legend/i.test(line.text) || line.words.length >= 4);
+  const tableLines = lines.filter((line) => /schedule|table|matrix/i.test(line.text));
   const legendLines = lines.filter((line) => /\blegend|abbreviations|symbols\b/i.test(line.text));
   const detailCaptionLines = lines.filter((line) => /\bdetail|section|elevation\b/i.test(line.text));
 
@@ -378,9 +403,13 @@ const segmentPageRegions = (lines, pageWidth, pageHeight) => {
   const legendRegion = legendLines.length >= 2 ? unionBoxes(legendLines.map((line) => line.bbox)) : null;
   const detailCaptionRegion = detailCaptionLines.length >= 2 ? unionBoxes(detailCaptionLines.map((line) => line.bbox)) : null;
 
+  const footerLines = lines.filter((line) => {
+    const [, y1] = line.bbox;
+    return y1 >= footerBandTop && (/\b(sheet|project|drawn|checked|date|revision|copyright)\b/i.test(line.text) || isFurnitureText(line.text));
+  });
   const furnitureLines = lines.filter((line) => (titleBlockRegion && inBox(line.bbox, titleBlockRegion)) || isFurnitureText(line.text));
   const borderMarkers = detectBorderMarkers(lines, pageWidth, pageHeight);
-  const furnitureIds = new Set([...furnitureLines, ...borderMarkers].map((line) => line.id));
+  const furnitureIds = new Set([...furnitureLines, ...borderMarkers, ...footerLines].map((line) => line.id));
 
   return {
     title_block_region: titleBlockRegion,
@@ -395,6 +424,7 @@ const segmentPageRegions = (lines, pageWidth, pageHeight) => {
     furniture: {
       titleBlockMeta: furnitureLines.filter((line) => titleBlockRegion && inBox(line.bbox, titleBlockRegion)).map((line) => ({ text: line.text, bbox: line.bbox })),
       borderMarkers: borderMarkers.map((line) => ({ text: line.text, bbox: line.bbox })),
+      footerLines: footerLines.map((line) => ({ text: line.text, bbox: line.bbox })),
       timestamps: lines.filter((line) => /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b.*\b\d{1,2}:\d{2}/.test(line.text)).map((line) => ({ text: line.text, bbox: line.bbox })),
       consultantInfo: lines.filter((line) => isFurnitureText(line.text) && !(titleBlockRegion && inBox(line.bbox, titleBlockRegion))).map((line) => ({ text: line.text, bbox: line.bbox })),
     },
@@ -490,7 +520,14 @@ const extractMetadata = (titleLines, fallbackDiscipline) => {
     if (!guard.ok && !warnings.includes(guard.reason)) warnings.push(guard.reason);
   });
 
-  const discipline = inferred.confidence >= 0.85 ? inferred.discipline : fallbackDiscipline;
+  const evidenceScores = scoreDisciplineEvidence(titleLines);
+  const strongestContent = evidenceScores[0] || { discipline: 'unknown', score: 0 };
+  let discipline = inferred.confidence >= 0.85 ? inferred.discipline : fallbackDiscipline;
+  if (inferred.discipline === 'civil' && strongestContent.discipline !== 'civil' && strongestContent.score >= 4) {
+    discipline = strongestContent.discipline;
+  } else if (inferred.discipline !== 'unknown') {
+    discipline = inferred.discipline;
+  }
   const confidence = clamp01(
     (sheetNumber ? 0.38 : 0)
     + (guards.sheetTitle.ok ? 0.22 : 0)
@@ -520,7 +557,7 @@ const parseNotesBlock = (lines, bbox, regions) => {
   const noteLines = lines.filter((line) => inBox(line.bbox, bbox)).sort((a, b) => a.bbox[1] - b.bbox[1]);
   if (noteLines.length < 3) return null;
 
-  const heading = noteLines.find((line) => /\b(general\s+notes?|key\s+notes?|notes?)\b/i.test(line.text));
+  const heading = noteLines.find((line) => /^\s*(general\s+notes?|key\s+notes?)\s*:?\s*$/i.test(line.text));
   const numbered = noteLines.filter((line) => /^\d+[\.)\-:]/.test(line.text));
   if (!heading || numbered.length < 2) return null;
 
@@ -540,7 +577,9 @@ const parseNotesBlock = (lines, bbox, regions) => {
   });
   if (current) items.push(current);
 
-  if (items.length < 2) return null;
+  const numbers = items.map((item) => Number(item.number)).filter((value) => Number.isFinite(value));
+  const ordered = numbers.length >= 2 && numbers[0] === 1 && numbers.every((value, idx) => idx === 0 || value === numbers[idx - 1] + 1);
+  if (!ordered) return null;
   return {
     type: 'notes_block',
     title: heading.text,
@@ -564,13 +603,19 @@ const detectTable = (lines, bbox) => {
   if (rows.length < 2) return { block: null, warning: 'table_validation_failed' };
 
   const hasScheduleTitle = tableLines.some((line) => /schedule|table|matrix/i.test(line.text));
+  const cellCountSet = new Set(rows.map((row) => row.cells.length));
+  const strongGridByColumns = rows.length >= 4 && cellCountSet.size <= 2 && Math.max(...cellCountSet) >= 3;
+  const firstCellXs = rows.map((row) => row.line.bbox[0]);
+  const avgFirstX = firstCellXs.reduce((sum, value) => sum + value, 0) / Math.max(1, firstCellXs.length);
+  const stableFirstColumn = firstCellXs.filter((value) => Math.abs(value - avgFirstX) <= 8).length >= Math.ceil(firstCellXs.length * 0.75);
+  const strongGridEvidence = strongGridByColumns && stableFirstColumn;
   const rowHeights = rows.map((row) => row.line.bbox[3] - row.line.bbox[1]);
   const avgHeight = rowHeights.reduce((sum, h) => sum + h, 0) / Math.max(1, rowHeights.length);
   const stableHeights = rowHeights.filter((h) => Math.abs(h - avgHeight) < Math.max(3, avgHeight * 0.7)).length >= Math.ceil(rows.length * 0.6);
   const columnCount = Math.round(rows.reduce((sum, row) => sum + row.cells.length, 0) / rows.length);
 
-  const strongEvidence = [hasScheduleTitle, stableHeights, columnCount > 1, rows.length > 2].filter(Boolean).length;
-  if (strongEvidence < 3) return { block: null, warning: 'table_validation_failed' };
+  const strongEvidence = [hasScheduleTitle, stableHeights, columnCount > 1, rows.length > 2, strongGridEvidence].filter(Boolean).length;
+  if (strongEvidence < 4 || !strongGridEvidence) return { block: null, warning: 'table_validation_failed' };
 
   const columns = Array.from({ length: columnCount }, (_, i) => ({ name: rows[0].cells[i] || `Column ${i + 1}` }));
   const dataRows = rows.slice(1).map((row) => {
@@ -599,10 +644,23 @@ const detectTable = (lines, bbox) => {
 };
 
 const isEquipmentLike = (text = '', discipline = 'unknown') => {
-  const hasTagPattern = /\b[A-Z]{1,4}-\d{1,4}[A-Z]?\b/.test(text);
+  const hasTagPattern = /\b(?:P|V|F|AHU|RTU|M|XFMR|PMP)-\d{1,4}[A-Z]?\b/i.test(text);
+  const looksLikeSheetRef = /\b[A-Z]-\d{1,4}[A-Z]?\b/.test(text);
   const engineeringNouns = /\b(pump|valve|fan|ahu|rtu|compressor|boiler|chiller|panel|transformer|motor)\b/i.test(text);
   const disciplineCompat = discipline === 'mechanical' || discipline === 'electrical' || discipline === 'plumbing' || discipline === 'instrumentation';
-  return hasTagPattern || (engineeringNouns && disciplineCompat);
+  return !looksLikeSheetRef && (hasTagPattern || (engineeringNouns && disciplineCompat));
+};
+
+const parseTakeoff = (text = '') => {
+  const quantityMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(LF|SF|CY|EA|TON|SY|FT|IN)\b/i);
+  const nominalSizeMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(IN|"|MM)\b/i);
+  const tail = text.replace(quantityMatch?.[0] || '', '').replace(nominalSizeMatch?.[0] || '', '').trim();
+  return {
+    quantity: quantityMatch ? Number(quantityMatch[1]) : null,
+    quantityUnit: quantityMatch ? quantityMatch[2].toUpperCase().replace('FT', 'LF').replace('"', 'IN') : null,
+    nominalSize: nominalSizeMatch ? `${nominalSizeMatch[1]} ${nominalSizeMatch[2] === '"' ? 'in' : nominalSizeMatch[2].toLowerCase()}` : null,
+    systemText: tail || null,
+  };
 };
 
 const classifyLineSemantic = (line, regions, discipline) => {
@@ -612,7 +670,8 @@ const classifyLineSemantic = (line, regions, discipline) => {
   const text = line.text || '';
   if (/^[A-H]$|^\d{1,2}$/.test(text.trim())) return 'border_marker';
   if (/\b(canada|pacific ocean|atlantic ocean|united states|mexico|city of)\b/i.test(text)) return 'map_label';
-  if (/\b(see|typ|match existing|ref\.?|detail|section)\b/i.test(text) || /\d+\s*[\/-]\s*[A-Z]-?\d+/i.test(text)) return 'reference_callout';
+  if (/\b\d+\s*[\/-]\s*[A-Z]-?\d+\b/i.test(text)) return 'detail_reference';
+  if (/\b(see|typ|match existing|ref\.?|detail|section)\b/i.test(text) || /\b[A-Z]-\d{1,4}[A-Z]?\b/.test(text)) return 'sheet_reference';
   if (/\b\d+\s*'\s*-?\s*\d*\s*"|\b\d+\s*"\s*(dia|ø)?|\bR\s*\d+/i.test(text)) return 'dimension';
   if (/\blegend\b/i.test(text)) return 'legend_block';
   if (/\b(detail|section)\b/i.test(text)) return 'detail_label';
@@ -634,21 +693,19 @@ const classifyLineBlocks = (lines, regions, consumedLineIds = new Set(), discipl
     };
 
     if (type === 'dimension') {
-      const value = line.text.match(/(\d+(?:\.\d+)?)/)?.[1];
-      const unit = /"/.test(line.text) ? 'in' : /'/.test(line.text) ? 'ft' : null;
-      block.value = value ? Number(value) : null;
-      block.unit = unit;
+      block.takeoff = parseTakeoff(line.text);
       block.context = /gate/i.test(line.text) ? 'fence_gate' : 'drawing';
     }
 
-    if (type === 'reference_callout') {
+    if (type === 'detail_reference' || type === 'sheet_reference') {
       const detail = line.text.match(/(\d+)\s*[\/-]\s*([A-Z]-?\d+)/i);
       if (detail) {
-        block.referenceType = 'detail';
+        block.referenceType = 'detail_reference';
         block.detailNumber = detail[1];
         block.targetSheet = detail[2].toUpperCase();
       } else {
-        block.referenceType = 'reference_text';
+        block.referenceType = 'sheet_reference';
+        block.targetSheet = (line.text.match(/\b([A-Z]-\d{1,4}[A-Z]?)\b/i)?.[1] || '').toUpperCase() || null;
       }
     }
 
