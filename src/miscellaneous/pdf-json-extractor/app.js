@@ -45,6 +45,14 @@ const METADATA_LABEL_PATTERNS = {
   client: /(client|owner)/i,
 };
 
+const TITLE_BLOCK_VALUE_PATTERNS = [
+  /\b[A-Z]{1,2}\s*[-.]\s*\d{1,4}[A-Z]?\b/i,
+  /\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/,
+  /\b(as shown|no scale|\d+\s*\/?\d*"\s*=\s*\d+'?-?\d*"?)\b/i,
+  /\b(for construction|for permit|for bidding|issued|revision|rev\.?\s*[A-Z0-9]+)\b/i,
+  /\b(project|owner|client|drawn|checked|approved)\b/i,
+];
+
 const FURNITURE_PATTERNS = [
   /contractor shall verify/i,
   /copyright/i,
@@ -245,7 +253,10 @@ const groupAtomsIntoLines = (atoms) => {
         const prev = atomsOrdered[i - 1];
         const next = atomsOrdered[i];
         const gap = next.bbox[0] - prev.bbox[2];
-        const maxGap = Math.max(3, line.avgFontSize * 1.3);
+        const prevWidth = Math.max(1, prev.bbox[2] - prev.bbox[0]);
+        const nextWidth = Math.max(1, next.bbox[2] - next.bbox[0]);
+        const tightGap = Math.min(prevWidth, nextWidth) * 0.42;
+        const maxGap = Math.max(1.5, Math.min(line.avgFontSize * 0.72, tightGap));
         if (gap > maxGap) {
           words.push(current);
           current = [next];
@@ -375,17 +386,32 @@ const detectTitleBlockRegion = (lines, pageWidth, pageHeight) => {
   if (!candidates.length) return null;
 
   const region = unionBoxes(candidates.map((line) => line.bbox));
-  const regionAreaRatio = area(region) / Math.max(1, pageWidth * pageHeight);
-  if (regionAreaRatio > 0.34) {
-    return [pageWidth * 0.58, pageHeight * 0.62, pageWidth, pageHeight];
+  const bounded = [
+    Math.max(pageWidth * 0.58, Math.max(0, region[0] - 8)),
+    Math.max(pageHeight * 0.62, Math.max(0, region[1] - 8)),
+    Math.min(pageWidth, region[2] + 8),
+    Math.min(pageHeight, region[3] + 8),
+  ];
+
+  if (bounded[0] >= bounded[2] || bounded[1] >= bounded[3]) {
+    return [pageWidth * 0.62, pageHeight * 0.68, pageWidth, pageHeight];
   }
 
-  return [
-    Math.max(0, region[0] - 10),
-    Math.max(0, region[1] - 10),
-    Math.min(pageWidth, region[2] + 10),
-    Math.min(pageHeight, region[3] + 10),
-  ];
+  const regionAreaRatio = area(bounded) / Math.max(1, pageWidth * pageHeight);
+  if (regionAreaRatio > 0.34) {
+    return [pageWidth * 0.62, pageHeight * 0.68, pageWidth, pageHeight];
+  }
+
+  return bounded;
+};
+
+const isTitleBlockMetaCandidate = (line, titleBlockRegion = null) => {
+  if (!titleBlockRegion || !inBox(line.bbox, titleBlockRegion)) return false;
+  const text = (line.text || '').trim();
+  if (!text) return false;
+  const hasMetadataLabel = Object.values(METADATA_LABEL_PATTERNS).some((pattern) => pattern.test(text));
+  const hasMetadataValue = TITLE_BLOCK_VALUE_PATTERNS.some((pattern) => pattern.test(text));
+  return hasMetadataLabel || hasMetadataValue;
 };
 
 const segmentPageRegions = (lines, pageWidth, pageHeight) => {
@@ -407,7 +433,8 @@ const segmentPageRegions = (lines, pageWidth, pageHeight) => {
     const [, y1] = line.bbox;
     return y1 >= footerBandTop && (/\b(sheet|project|drawn|checked|date|revision|copyright)\b/i.test(line.text) || isFurnitureText(line.text));
   });
-  const furnitureLines = lines.filter((line) => (titleBlockRegion && inBox(line.bbox, titleBlockRegion)) || isFurnitureText(line.text));
+  const titleBlockMetaLines = lines.filter((line) => isTitleBlockMetaCandidate(line, titleBlockRegion));
+  const furnitureLines = lines.filter((line) => titleBlockMetaLines.some((metaLine) => metaLine.id === line.id) || isFurnitureText(line.text));
   const borderMarkers = detectBorderMarkers(lines, pageWidth, pageHeight);
   const furnitureIds = new Set([...furnitureLines, ...borderMarkers, ...footerLines].map((line) => line.id));
 
@@ -422,7 +449,7 @@ const segmentPageRegions = (lines, pageWidth, pageHeight) => {
     likelyTitleBlockSide: titleBlockRegion ? 'bottom_right' : 'unknown',
     furnitureIds,
     furniture: {
-      titleBlockMeta: furnitureLines.filter((line) => titleBlockRegion && inBox(line.bbox, titleBlockRegion)).map((line) => ({ text: line.text, bbox: line.bbox })),
+      titleBlockMeta: titleBlockMetaLines.map((line) => ({ text: line.text, bbox: line.bbox })),
       borderMarkers: borderMarkers.map((line) => ({ text: line.text, bbox: line.bbox })),
       footerLines: footerLines.map((line) => ({ text: line.text, bbox: line.bbox })),
       timestamps: lines.filter((line) => /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b.*\b\d{1,2}:\d{2}/.test(line.text)).map((line) => ({ text: line.text, bbox: line.bbox })),
@@ -652,10 +679,17 @@ const isEquipmentLike = (text = '', discipline = 'unknown') => {
 };
 
 const parseTakeoff = (text = '') => {
+  const actionMatch = text.match(/^\s*(CONSTRUCT|INSTALL|REMOVE|REPLACE|ABANDON|DEMO|PROVIDE)\b/i);
   const quantityMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(LF|SF|CY|EA|TON|SY|FT|IN)\b/i);
   const nominalSizeMatch = text.match(/\b(\d+(?:\.\d+)?)\s*(IN|"|MM)\b/i);
-  const tail = text.replace(quantityMatch?.[0] || '', '').replace(nominalSizeMatch?.[0] || '', '').trim();
+  const tail = text
+    .replace(actionMatch?.[0] || '', '')
+    .replace(quantityMatch?.[0] || '', '')
+    .replace(nominalSizeMatch?.[0] || '', '')
+    .replace(/^[\s,:;.-]+|[\s,:;.-]+$/g, '')
+    .trim();
   return {
+    action: actionMatch ? actionMatch[1].toUpperCase() : null,
     quantity: quantityMatch ? Number(quantityMatch[1]) : null,
     quantityUnit: quantityMatch ? quantityMatch[2].toUpperCase().replace('FT', 'LF').replace('"', 'IN') : null,
     nominalSize: nominalSizeMatch ? `${nominalSizeMatch[1]} ${nominalSizeMatch[2] === '"' ? 'in' : nominalSizeMatch[2].toLowerCase()}` : null,
@@ -671,7 +705,8 @@ const classifyLineSemantic = (line, regions, discipline) => {
   if (/^[A-H]$|^\d{1,2}$/.test(text.trim())) return 'border_marker';
   if (/\b(canada|pacific ocean|atlantic ocean|united states|mexico|city of)\b/i.test(text)) return 'map_label';
   if (/\b\d+\s*[\/-]\s*[A-Z]-?\d+\b/i.test(text)) return 'detail_reference';
-  if (/\b(see|typ|match existing|ref\.?|detail|section)\b/i.test(text) || /\b[A-Z]-\d{1,4}[A-Z]?\b/.test(text)) return 'sheet_reference';
+  if (/\b[A-Z]-\d{1,4}[A-Z]?\b/.test(text)) return 'sheet_reference';
+  if (/\b(see|typ\.?|match existing|ref\.?|note\s*\d+|section|electrical|plumbing|mechanical)\b/i.test(text)) return 'reference_annotation';
   if (/\b\d+\s*'\s*-?\s*\d*\s*"|\b\d+\s*"\s*(dia|ø)?|\bR\s*\d+/i.test(text)) return 'dimension';
   if (/\blegend\b/i.test(text)) return 'legend_block';
   if (/\b(detail|section)\b/i.test(text)) return 'detail_label';
@@ -697,12 +732,15 @@ const classifyLineBlocks = (lines, regions, consumedLineIds = new Set(), discipl
       block.context = /gate/i.test(line.text) ? 'fence_gate' : 'drawing';
     }
 
-    if (type === 'detail_reference' || type === 'sheet_reference') {
+    if (type === 'detail_reference' || type === 'sheet_reference' || type === 'reference_annotation') {
       const detail = line.text.match(/(\d+)\s*[\/-]\s*([A-Z]-?\d+)/i);
       if (detail) {
         block.referenceType = 'detail_reference';
         block.detailNumber = detail[1];
         block.targetSheet = detail[2].toUpperCase();
+      } else if (type === 'reference_annotation') {
+        block.referenceType = 'reference_annotation';
+        block.targetSheet = null;
       } else {
         block.referenceType = 'sheet_reference';
         block.targetSheet = (line.text.match(/\b([A-Z]-\d{1,4}[A-Z]?)\b/i)?.[1] || '').toUpperCase() || null;
@@ -820,7 +858,7 @@ const composePageResult = (pageNumber, lines, regions, pageDiagnostics, sourceSe
     lines.filter((line) => inBox(line.bbox, tableResult.block.bbox)).forEach((line) => consumed.add(line.id));
   }
 
-  const metaLines = lines.filter((line) => regions.title_block_region && inBox(line.bbox, regions.title_block_region));
+  const metaLines = lines.filter((line) => isTitleBlockMetaCandidate(line, regions.title_block_region));
   const sheetMeta = extractMetadata(metaLines, pageDiagnostics.suspectedDiscipline);
   if (tableResult.warning && !sheetMeta.warnings.includes(tableResult.warning)) sheetMeta.warnings.push(tableResult.warning);
 
