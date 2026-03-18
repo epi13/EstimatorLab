@@ -23,7 +23,8 @@ const navigationData = [
            { label: 'Cost Engine', href: 'src/ancfe/index.html', keywords: 'cost engine' },
            { label: 'Plan Diff', href: 'src/plandiff/index.html', keywords: 'plan diff' },   
            { label: 'MarkDown Editor', href: 'src/miscellaneous/MarkDownEditor/markdown.html', keywords: 'markdown editor' },
-           { label: 'PDF JSON Extractor', href: 'src/miscellaneous/pdf-json-extractor/index.html', keywords: 'pdf ocr json extraction table' }
+           { label: 'PDF JSON Extractor', href: 'src/miscellaneous/pdf-json-extractor/index.html', keywords: 'pdf ocr json extraction table' },
+           { label: 'PDF Combiner', href: 'src/miscellaneous/pdf-combiner/index.html', keywords: 'merge combine split documents' }
         ]
       },
       {

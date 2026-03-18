@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Combiner</title>
+  <link rel="stylesheet" href="../../css/base/index.css">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js" defer></script>
+  <script type="module" src="./app.js"></script>
+</head>
+<body data-page="pdf-combiner">
+  <main class="combiner-app">
+    <header class="combiner-header">
+      <h1>PDF Combiner</h1>
+      <p>Merge large batches of PDF files into one combined output directly in your browser.</p>
+    </header>
+
+    <section class="controls" aria-label="PDF combiner controls">
+      <label class="file-picker">
+        <span>Add PDF files</span>
+        <input id="pdfInput" type="file" accept="application/pdf" multiple>
+      </label>
+      <button id="combineBtn" type="button" disabled>Combine PDFs</button>
+      <button id="clearBtn" type="button" class="secondary" disabled>Clear list</button>
+    </section>
+
+    <section id="dropZone" class="drop-zone" aria-label="Drop PDFs here" tabindex="0">
+      Drag and drop PDFs here, or use <strong>Add PDF files</strong>.
+    </section>
+
+    <section class="status-panel" aria-live="polite">
+      <p id="statusText">No PDF files loaded yet.</p>
+      <progress id="statusProgress" max="100" value="0"></progress>
+    </section>
+
+    <section>
+      <div class="list-header">
+        <h2>Queued files</h2>
+        <span id="fileCount">0 files</span>
+      </div>
+      <ul id="fileList" class="file-list"></ul>
+    </section>
+  </main>
+</body>
+</html>
