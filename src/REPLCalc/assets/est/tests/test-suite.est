@@ -170,6 +170,8 @@ so test_suite() = vec(
   t("productivity cy/hr", "to((3600 cyhr) * (1 hr), cf)", 97200),
   t("percent token waste", "to_sf(waste(100 sf, 10%))", 110),
   t("percent token markup", "markup(100, 10%)", 110),
+  t("subtract scalar percent token stays scalar", "85 - 16.5%", 84.835),
+  t("add scalar percent token stays scalar", "85 + 16.5%", 85.165),
   t("currency composite formatting", "unit(1200 $, 300 sf)", expect_qty(4, "cur*len^-2", 0.000001)),
   t("clamp qty", "clamp(12 ft, 0 ft, 10 ft)", expect_qty(10, "len", 0.000001)),
   ts("user solution", vec("so crew_cost(rate, hours) = rate * hours", "crew_cost(85, 12)"), 1020),
