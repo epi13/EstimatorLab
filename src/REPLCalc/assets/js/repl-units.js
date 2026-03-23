@@ -407,8 +407,7 @@ export function add(a, b){
   }
   if (!isQty(a) && isQty(b)){
     if (!isScalarKind(b.kind)) throw new Error("Cannot add scalar to a unit quantity without a unit.");
-    const rightUnit = isDim(b) ? b.unit : null;
-    return makeQty(a + b.value, "scalar", rightUnit);
+    return makeQty(a + b.value, "scalar", null);
   }
   return a + b;
 }
@@ -434,8 +433,7 @@ export function sub(a, b){
   }
   if (!isQty(a) && isQty(b)){
     if (!isScalarKind(b.kind)) throw new Error("Cannot subtract unit quantity from scalar.");
-    const rightUnit = isDim(b) ? b.unit : null;
-    return makeQty(a - b.value, "scalar", rightUnit);
+    return makeQty(a - b.value, "scalar", null);
   }
   return a - b;
 }
