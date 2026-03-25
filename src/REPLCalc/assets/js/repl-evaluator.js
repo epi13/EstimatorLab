@@ -288,12 +288,30 @@ export function createEvaluator({
     };
   }
 
+  function formatNestedValue(value, depth = 0){
+    if (isQty(value)) return qtyToString(value);
+    if (Array.isArray(value)){
+      if (!value.length) return "[]";
+      if (depth >= 2) return `[${value.length} items]`;
+      return `[${value.map((item) => formatNestedValue(item, depth + 1)).join(", ")}]`;
+    }
+    if (value && typeof value === "object"){
+      if (isAssembly(value)) return formatAssemblySummary(value);
+      const entries = Object.entries(value);
+      if (!entries.length) return "{}";
+      if (depth >= 2) return "{…}";
+      const rendered = entries.map(([key, entryValue]) => `${key}: ${formatNestedValue(entryValue, depth + 1)}`);
+      return `{ ${rendered.join("; ")} }`;
+    }
+    return String(value);
+  }
+
   function formatAssemblySummary(assy){
     const fields = assy.fields || {};
     const entries = Object.entries(fields).map(([key, info]) => {
       const value = info?.value;
       const note = info?.note;
-      let rendered = isQty(value) ? qtyToString(value) : String(value);
+      let rendered = formatNestedValue(value);
       if (note) rendered += ` ${note}`;
       return `${key} = ${rendered}`;
     });
