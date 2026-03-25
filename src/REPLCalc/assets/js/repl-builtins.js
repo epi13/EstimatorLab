@@ -1071,6 +1071,35 @@ export function createBaseFns(){
     return div(sub(0, b), a);
   });
 
+  baseFns.split_ratio = defFn("split_ratio", 2, {
+    args: [
+      { label: "total", kinds: ["scalar", "dim"] },
+      { label: "ratio", kinds: ["scalar"] },
+    ],
+    returns: { kinds: ["assy"] },
+  }, (total, ratio) => {
+    const [ratioValue] = normalizeCompare(ratio, 0);
+    if (!Number.isFinite(ratioValue) || ratioValue <= 0){
+      throw new Error("split_ratio expects ratio > 0");
+    }
+    const parts = 1 + ratioValue;
+    const totalValue = isQty(total) ? total.value : Number(total);
+    if (!Number.isFinite(totalValue)){
+      throw new Error("split_ratio expects numeric total");
+    }
+    const baseValue = totalValue / parts;
+    const scaledValue = baseValue * ratioValue;
+    const base = isQty(total) ? makeQty(baseValue, total.kind) : baseValue;
+    const scaled = isQty(total) ? makeQty(scaledValue, total.kind) : scaledValue;
+    return buildAssy("split_ratio", {
+      total: fieldInfo(total),
+      ratio: fieldInfo(ratioValue),
+      parts: fieldInfo(parts),
+      base: fieldInfo(base),
+      scaled: fieldInfo(scaled),
+    });
+  });
+
   function normalizeStep(value, label){
     if (isQty(value)) return value;
     const n = Number(value);
