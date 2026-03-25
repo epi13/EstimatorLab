@@ -65,8 +65,38 @@ export function createEvaluator({
     return true;
   }
 
+  function expandTrailingNumericIdentifiers(tokens, vars, fnNames){
+    const out = [];
+    const suffixPattern = /^([A-Za-z_$%][A-Za-z0-9_$%.]*?)(\d+)$/;
+    for (const token of tokens){
+      if (!token || token.type !== "id"){
+        out.push(token);
+        continue;
+      }
+      const name = token.value;
+      if (Object.prototype.hasOwnProperty.call(vars, name) || isUnitToken(name) || name === "pi" || name === "e" || (fnNames && fnNames.has(name))){
+        out.push(token);
+        continue;
+      }
+      const match = name.match(suffixPattern);
+      if (!match){
+        out.push(token);
+        continue;
+      }
+      const baseName = match[1];
+      const numericSuffix = Number(match[2]);
+      if (!Object.prototype.hasOwnProperty.call(vars, baseName) || !Number.isFinite(numericSuffix)){
+        out.push(token);
+        continue;
+      }
+      out.push({ type: "id", value: baseName });
+      out.push({ type: "num", value: numericSuffix });
+    }
+    return out;
+  }
+
   function findEquationUnknowns(expr, vars, fns){
-    const tokens = tokenize(expr);
+    const tokens = expandTrailingNumericIdentifiers(tokenize(expr), vars, fns);
     const unknowns = [];
     for (let i = 0; i < tokens.length; i++){
       const t = tokens[i];
@@ -196,10 +226,12 @@ export function createEvaluator({
   }
 
   function runExpressionWithContext(expr, vars, options = null){
-    const tokens = insertImplicitMultiplication(tokenize(expr));
-    maybeEnsureSymbols(tokens);
     const fns = getFns();
-    const aliasMap = buildAliasMap(tokens, vars, new Set(Object.keys(fns)));
+    const fnNames = new Set(Object.keys(fns));
+    const expanded = expandTrailingNumericIdentifiers(tokenize(expr), vars, fnNames);
+    const tokens = insertImplicitMultiplication(expanded);
+    maybeEnsureSymbols(tokens);
+    const aliasMap = buildAliasMap(tokens, vars, fnNames);
     const rpn = toRPN(tokens);
     const opts = normalizeEvalOptions(options);
     return evalRPN(rpn, {
@@ -221,10 +253,12 @@ export function createEvaluator({
   }
 
   function runExpressionWithOverrides(expr, vars, unitOverrides, aliasMap = null, options = null){
-    const tokens = insertImplicitMultiplication(tokenize(expr));
-    maybeEnsureSymbols(tokens);
     const fns = getFns();
-    const resolvedAliases = aliasMap || buildAliasMap(tokens, vars, new Set(Object.keys(fns)));
+    const fnNames = new Set(Object.keys(fns));
+    const expanded = expandTrailingNumericIdentifiers(tokenize(expr), vars, fnNames);
+    const tokens = insertImplicitMultiplication(expanded);
+    maybeEnsureSymbols(tokens);
+    const resolvedAliases = aliasMap || buildAliasMap(tokens, vars, fnNames);
     const rpn = toRPN(tokens);
     const opts = normalizeEvalOptions(options);
     return evalRPN(rpn, {
