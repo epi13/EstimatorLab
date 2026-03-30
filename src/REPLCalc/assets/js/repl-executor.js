@@ -326,6 +326,15 @@ export function createReplExecutor({
         fromState: beforeStateRef,
         toState: execState,
         record,
+        statementNodeId: null,
+        canonicalKey: "noop|empty-statement",
+        sourceModule: "repl-executor",
+        strategy: "empty-statement",
+        reasoningTags: ["noop", "empty-input"],
+        meta: {
+          mode: execState.mode,
+          contextPath: execState.contextPath.slice(),
+        },
       })];
     }
     if (!isStatementNode(statementNode)){
@@ -370,6 +379,17 @@ export function createReplExecutor({
         toState: nextState,
         record,
         ...transitionInput,
+        statementNodeId: statementNode.nodeId || record.statementNodeId || null,
+        canonicalKey: transitionInput.canonicalKey || `${record.type || statementNode.kind || "unknown"}|${statementNode.nodeId || "no-node"}`,
+        sourceModule: "repl-executor",
+        strategy: transitionInput.strategy || "statement-default",
+        reasoningTags: transitionInput.reasoningTags || [statementNode.kind || "unknown"],
+        meta: {
+          mode: execState.mode,
+          contextPath: execState.contextPath.slice(),
+          statementKind: statementNode.kind || null,
+          ...(transitionInput.meta || {}),
+        },
       })];
     };
 
@@ -434,6 +454,12 @@ export function createReplExecutor({
         }, {
           scoreDelta: Number.isFinite(candidate.scoreDelta) ? candidate.scoreDelta : 0,
           confidence: Number.isFinite(candidate.confidence) ? candidate.confidence : 1,
+          canonicalKey: `assign|${statementNode.nodeId || "no-node"}|${statementNode.name}|${candidate.transitionType || "expression-default"}`,
+          strategy: candidate.transitionType || "expression-default",
+          reasoningTags: ["assign", "expression-eval"],
+          meta: {
+            assignedName: statementNode.name,
+          },
         });
       }
       throw new Error("Assignment produced no expression candidates.");
@@ -448,6 +474,12 @@ export function createReplExecutor({
         const transitionInput = {
           scoreDelta: Number.isFinite(solved?.scoreDelta) ? solved.scoreDelta : 0,
           confidence: Number.isFinite(solved?.confidence) ? solved.confidence : 1,
+          canonicalKey: `equation|${statementNode.nodeId || "no-node"}|${solved?.unknown?.name || "unknown"}|${solved?.strategy || "numeric-solve"}`,
+          strategy: solved?.strategy || "numeric-solve",
+          reasoningTags: ["equation", "solver"],
+          meta: {
+            unknownName: solved?.unknown?.name || null,
+          },
         };
         if (solved.unknown.unitToken){
           return finalizeTransition({
@@ -621,6 +653,9 @@ export function createReplExecutor({
       }, {
         scoreDelta: Number.isFinite(candidate.scoreDelta) ? candidate.scoreDelta : 0,
         confidence: Number.isFinite(candidate.confidence) ? candidate.confidence : 1,
+        canonicalKey: `expr|${statementNode.nodeId || "no-node"}|${candidate.transitionType || "expression-default"}`,
+        strategy: candidate.transitionType || "expression-default",
+        reasoningTags: ["expr", "expression-eval"],
       }));
       if (transitions.length) return transitions;
       throw new Error("Expression produced no candidates.");
