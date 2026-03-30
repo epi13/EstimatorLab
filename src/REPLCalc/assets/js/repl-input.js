@@ -356,7 +356,7 @@ export function createInputHandlers({
 
         try{
           let statementResult;
-          if (stmt.type === "cmd"){
+          if ((stmt.type || stmt.kind) === "cmd"){
             statementResult = await executeCommand(stmt);
           }else{
             const defExistedBefore = stmt.type === "def"
@@ -401,6 +401,10 @@ export function createInputHandlers({
               writeLine(`${unknownName} = ${fr.main}`, "ok");
               if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
             }else if (statementResult?.type === "expr"){
+              const fr = formatValueDisplay(statementResult.value);
+              writeLine(fr.main, "out");
+              if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
+            }else if (statementResult && Object.prototype.hasOwnProperty.call(statementResult, "value")){
               const fr = formatValueDisplay(statementResult.value);
               writeLine(fr.main, "out");
               if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");

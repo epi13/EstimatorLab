@@ -29,7 +29,8 @@ export function createTests({
       throw new Error(`${label}: expected parser to return an AST block node.`);
     }
     for (const stmt of programBlock.statements || []){
-      if (stmt.type === STATEMENT_TYPE.IF || stmt.type === STATEMENT_TYPE.FOR || stmt.type === STATEMENT_TYPE.REPEAT){
+      const stmtType = stmt.type || stmt.kind;
+      if (stmtType === STATEMENT_TYPE.IF || stmtType === STATEMENT_TYPE.FOR || stmtType === STATEMENT_TYPE.REPEAT){
         throw new Error(`${label} may not contain flow statements`);
       }
     }
@@ -158,7 +159,7 @@ export function createTests({
     if (!isBlockNode(programBlock)){
       throw new Error("Tests: expected parser to return an AST block node.");
     }
-    const cmdStmt = (programBlock.statements || []).find((stmt) => stmt.type === STATEMENT_TYPE.CMD);
+    const cmdStmt = (programBlock.statements || []).find((stmt) => (stmt.type || stmt.kind) === STATEMENT_TYPE.CMD);
     if (cmdStmt) throw new Error(`Test cannot use command :${cmdStmt.cmd}`);
     return executeProgram(programBlock, state.vars, "commit", {
       allowCommands: false,
