@@ -1,9 +1,9 @@
 # Map traversal and analysis utilities
 # Functions for traversing and analyzing 2D grid maps
 
-# Map dimensions
-so map_width(map) = mw(map)
-so map_height(map) = mh(map)
+# Map dimension built-ins are provided by the runtime:
+# - map_width(map)
+# - map_height(map)
 
 # Coordinate validation
 so in_bounds(map, x, y) = x >= 0 && y >= 0 && x < map_width(map) && y < map_height(map)
