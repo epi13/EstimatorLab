@@ -183,7 +183,6 @@ export function createReplTraversal({
       statementNode,
       traversalState: baseState.execState,
       mode: traversalConfig.mode || "speculate",
-      detachFromCommit: traversalConfig.detachFromCommit !== false,
     });
 
     const transitions = Array.isArray(expansions) ? expansions : [];
@@ -211,7 +210,6 @@ export function createReplTraversal({
     beamWidth = 4,
     prune = null,
     mode = "speculate",
-    detachFromCommit = true,
   } = {}) => {
     const normalizedPolicy = normalizePolicy(policy);
     const normalizedBudget = makeBudget({ ...budget, ...(normalizedPolicy === TRAVERSAL_POLICIES.EXHAUSTIVE_SMALL
@@ -248,7 +246,7 @@ export function createReplTraversal({
       expanded.push(current);
       expansions += 1;
 
-      const successors = expandTraversalState(statementNode, current, { mode, detachFromCommit });
+      const successors = expandTraversalState(statementNode, current, { mode });
       const accepted = [];
 
       for (const successor of successors){
