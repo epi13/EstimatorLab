@@ -598,11 +598,13 @@ export function createBaseFns(){
   }, (...values) => values.map(valueToString).join(""));
 
   baseFns.len = defFn("len", 1, {
-    args: [{ label: "s", kinds: ["string"] }],
+    args: [{ label: "s", kinds: ["string", "vec", "mat"] }],
     returns: { kinds: ["scalar"] },
   }, (s) => {
-    if (typeof s !== "string") throw new Error("len expects a string");
-    return s.length;
+    if (typeof s === "string") return s.length;
+    if (s && typeof s === "object" && s.__vec && Array.isArray(s.data)) return s.data.length;
+    if (s && typeof s === "object" && s.__mat && Array.isArray(s.data)) return s.data.length;
+    throw new Error("len expects a string, vec, or mat");
   });
 
   baseFns.char_code = defFn("char_code", 2, {

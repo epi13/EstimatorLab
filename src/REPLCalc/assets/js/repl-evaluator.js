@@ -49,26 +49,56 @@ export function createEvaluator({
       const right = runExpressionWithOverrides(rightExpr, vars, overrides, null, Object.create(null));
       return diffValues(left, right);
     };
+    const evaluateDiffSafe = (x) => {
+      try{
+        const y = evaluateDiff(x);
+        return Number.isFinite(y) ? y : Number.NaN;
+      }catch{
+        return Number.NaN;
+      }
+    };
 
     const tol = 1e-9;
     let a = 0;
-    let fa = evaluateDiff(a);
+    let fa = evaluateDiffSafe(a);
     if (Math.abs(fa) <= tol) return { unknown, value: a };
     let b = 1;
-    let fb = evaluateDiff(b);
+    let fb = evaluateDiffSafe(b);
     if (Math.abs(fb) <= tol) return { unknown, value: b };
 
     let step = 1;
-    let bracketed = fa * fb < 0;
+    let bracketed = Number.isFinite(fa) && Number.isFinite(fb) && fa * fb < 0;
     for (let i = 0; i < 30 && !bracketed; i++){
       step *= 2;
       a -= step;
       b += step;
-      fa = evaluateDiff(a);
-      fb = evaluateDiff(b);
+      fa = evaluateDiffSafe(a);
+      fb = evaluateDiffSafe(b);
       if (Math.abs(fa) <= tol) return { unknown, value: a };
       if (Math.abs(fb) <= tol) return { unknown, value: b };
-      bracketed = fa * fb < 0;
+      bracketed = Number.isFinite(fa) && Number.isFinite(fb) && fa * fb < 0;
+    }
+
+    if (!bracketed){
+      const probes = [];
+      for (let i = -128; i <= 128; i++) probes.push(i);
+      let prevX = null;
+      let prevY = null;
+      for (const x of probes){
+        const y = evaluateDiffSafe(x);
+        if (!Number.isFinite(y)) continue;
+        if (Math.abs(y) <= tol) return { unknown, value: x };
+        if (prevX !== null && Number.isFinite(prevY) && prevY * y < 0){
+          a = prevX;
+          fa = prevY;
+          b = x;
+          fb = y;
+          bracketed = true;
+          break;
+        }
+        prevX = x;
+        prevY = y;
+      }
     }
 
     let x0 = a;
@@ -79,7 +109,8 @@ export function createEvaluator({
       if (Math.abs(f1 - f0) < 1e-12) break;
       const x2 = x1 - (f1 * (x1 - x0)) / (f1 - f0);
       if (!Number.isFinite(x2)) break;
-      const f2 = evaluateDiff(x2);
+      const f2 = evaluateDiffSafe(x2);
+      if (!Number.isFinite(f2)) break;
       if (Math.abs(f2) <= tol) return { unknown, value: x2 };
       x0 = x1;
       f0 = f1;
@@ -99,7 +130,8 @@ export function createEvaluator({
       let fl = fa;
       for (let i = 0; i < 80; i++){
         const mid = (left + right) / 2;
-        const fm = evaluateDiff(mid);
+        const fm = evaluateDiffSafe(mid);
+        if (!Number.isFinite(fm)) break;
         if (Math.abs(fm) <= tol) return { unknown, value: mid };
         if (fl * fm < 0){
           right = mid;
