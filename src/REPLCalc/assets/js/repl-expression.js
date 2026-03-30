@@ -360,7 +360,7 @@ export function toRPN(tokens){
     for (let i = stack.length - 1; i >= 0; i--){
       const entry = stack[i];
       if (!entry || entry.type !== "(") continue;
-      if (!entry.call) return;
+      if (!entry.call) continue;
       if (!entry.expectingValue) return;
       entry.argc += 1;
       entry.expectingValue = false;

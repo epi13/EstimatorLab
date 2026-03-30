@@ -270,7 +270,7 @@ export function createReplLowering({
       if (isUnitToken(name)){
         if (isBareUnitToken(tokens, i)){
           const nextId = tokens[i + 1];
-          if (nextId && nextId.type === "id" && isUnitToken(nextId.value)){
+          if (nextId && nextId.type === "id"){
             unknowns.push({ name, kind: "scalar", unitToken: false });
           }else{
             const unit = UNIT[name];
