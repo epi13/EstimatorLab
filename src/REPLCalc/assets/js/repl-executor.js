@@ -416,10 +416,10 @@ export function createReplExecutor({
       const valueCandidates = typeof runExpressionCandidatesWithContext === "function"
         ? runExpressionCandidatesWithContext(exprInput, execState.env, execState)
         : [{ value: runExpression(exprInput, execState, expressionTrace), scoreDelta: 0, confidence: 1 }];
-      const transitions = [];
-      for (const candidate of valueCandidates){
+      const candidate = valueCandidates[0];
+      if (candidate){
         env[statementNode.name] = candidate.value;
-        transitions.push(...finalizeTransition({
+        return finalizeTransition({
           type: "assign",
           value: candidate.value,
           meta: {
@@ -432,10 +432,8 @@ export function createReplExecutor({
         }, {
           scoreDelta: Number.isFinite(candidate.scoreDelta) ? candidate.scoreDelta : 0,
           confidence: Number.isFinite(candidate.confidence) ? candidate.confidence : 1,
-        }));
-        delete env[statementNode.name];
+        });
       }
-      if (transitions.length) return transitions;
       throw new Error("Assignment produced no expression candidates.");
     }
 
@@ -443,14 +441,14 @@ export function createReplExecutor({
       const solvedCandidates = typeof solveEquationCandidates === "function"
         ? solveEquationCandidates(statementNode.left, statementNode.right)
         : [solveEquation(statementNode.left, statementNode.right)];
-      const transitions = [];
-      for (const solved of solvedCandidates){
+      const solved = solvedCandidates[0];
+      if (solved){
         const transitionInput = {
           scoreDelta: Number.isFinite(solved?.scoreDelta) ? solved.scoreDelta : 0,
           confidence: Number.isFinite(solved?.confidence) ? solved.confidence : 1,
         };
         if (solved.unknown.unitToken){
-          transitions.push(...finalizeTransition({
+          return finalizeTransition({
             type: "equation",
             value: makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind),
             meta: {
@@ -459,11 +457,10 @@ export function createReplExecutor({
               strategy: solved.strategy || "numeric-solve",
               expressionTrace: expressionTrace || [],
             },
-          }, transitionInput));
-          continue;
+          }, transitionInput);
         }
         env[solved.unknown.name] = solved.value;
-        transitions.push(...finalizeTransition({
+        return finalizeTransition({
           type: "equation",
           value: solved.value,
           meta: {
@@ -474,10 +471,8 @@ export function createReplExecutor({
           },
           changedSymbols: [solved.unknown.name],
           effects: [{ kind: "write-symbol", symbol: solved.unknown.name, value: solved.value }],
-        }, transitionInput));
-        delete env[solved.unknown.name];
+        }, transitionInput);
       }
-      if (transitions.length) return transitions;
       throw new Error("Equation solver produced no candidates.");
     }
 
