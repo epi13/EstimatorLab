@@ -157,7 +157,9 @@ export function initRepl(){
 
   const executor = createExecutor({
     runExpressionWithContext: evaluator.runExpressionWithContext,
+    runExpressionCandidatesWithContext: evaluator.runExpressionCandidatesWithContext,
     solveEquation: evaluator.solveEquation,
+    solveEquationCandidates: evaluator.solveEquationCandidates,
     createAssembly: evaluator.createAssembly,
     defineUserFn: runtime.defineUserFn,
     cmdRunner,
