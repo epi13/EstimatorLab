@@ -198,7 +198,7 @@ export function createReplExecutor({
     }
 
     if (parsed.kind === STATEMENT_TYPE.ASSY){
-      const assembly = createAssembly(parsed.name, parsed.fields);
+      const assembly = createAssembly(parsed.name, parsed.fields, env, options);
       env[parsed.name] = assembly;
       return makeStatementResult("assy", assembly, {
         changedSymbols: [parsed.name],

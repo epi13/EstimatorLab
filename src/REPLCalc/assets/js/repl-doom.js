@@ -14,7 +14,7 @@ async function fetchText(url){
   return await res.text();
 }
 
-async function ensureDoomModulesLoaded({ state, evaluator, runtime, writeLine }){
+async function ensureDoomModulesLoaded({ state, evaluator, frontend, runtime, writeLine }){
   const DOOM_MODULES_VERSION = 4;
   if (state.__doomModulesLoaded && state.__doomModulesVersion === DOOM_MODULES_VERSION){
     state.__doomModulesLoaded = true;
@@ -32,7 +32,7 @@ async function ensureDoomModulesLoaded({ state, evaluator, runtime, writeLine })
   const applyModuleSource = (source, label) => {
     const statements = splitStatements(source);
     for (const stmt of statements){
-      const parsed = evaluator.evaluate(stmt);
+      const parsed = frontend.evaluate(stmt);
       if (!parsed) continue;
 
       if (parsed.type === "cmd"){
@@ -122,17 +122,17 @@ async function loadDoomDemoScript(){
   return await fetchText("assets/est/systems/doom-demo.est");
 }
 
-export async function runDoomDemo({ gfx, writeLine, writeInputEcho, state, evaluator, runtime }) {
+export async function runDoomDemo({ gfx, writeLine, writeInputEcho, state, evaluator, frontend, runtime }) {
   writeLine("Doom level - playable EST DSL raycaster", "muted");
   writeLine("Click the canvas to capture the mouse.", "muted");
   writeLine("Controls: Mouse look • WASD move/strafe • Shift run • Space use • LMB shoot • E view • Q panel • F upgrade", "muted");
   writeLine("Loop UI: P play/pause (when mouse not captured) • Arrows step/fps • R reset", "muted");
 
-  if (!state || !evaluator || !runtime){
-    throw new Error("runDoomDemo requires state/evaluator/runtime (update caller to pass these)");
+  if (!state || !evaluator || !frontend || !runtime){
+    throw new Error("runDoomDemo requires state/evaluator/frontend/runtime (update caller to pass these)");
   }
 
-  await ensureDoomModulesLoaded({ state, evaluator, runtime, writeLine });
+  await ensureDoomModulesLoaded({ state, evaluator, frontend, runtime, writeLine });
   const script = await loadDoomDemoScript();
 
   if (typeof gfx.setActiveBackend === "function"){

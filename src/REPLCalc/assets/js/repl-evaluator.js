@@ -1,43 +1,15 @@
-import {
-  findTopLevelChar,
-  findTopLevelEquals,
-  findTopLevelKeyword,
-  findTopLevelRange,
-  parseForStatement,
-  parseIfStatement,
-  parseBlockStatements,
-  parseRepeatStatement,
-  parseParams,
-  splitAssemblyEntries,
-} from "./repl-parser.js";
-import { irFromRPN } from "./repl-expression-ir.js";
-import {
-  STATEMENT_TYPE,
-  createBlockNode,
-  createStatementNode,
-} from "./repl-ast.js";
-
-
 export function createEvaluator({
   state,
   getFns,
-  isTruthy,
   normalizeCompare,
-  tokenize,
-  toRPN,
-  evalRPN,
   evalExpressionIR,
-  insertImplicitMultiplication,
-  buildAliasMap,
-  UNIT,
-  isQty,
-  isUnitToken,
   makeQty,
+  isQty,
   qtyToString,
   formatResult,
-  ensureSymbolsLoaded,
   usageTracker,
   cmdRunner,
+  lowering,
 }){
   function normalizeEvalOptions(options){
     if (!options || typeof options !== "object") return null;
@@ -47,92 +19,10 @@ export function createEvaluator({
     if (typeof options.expressionTraceSink === "function") out.expressionTraceSink = options.expressionTraceSink;
     return out;
   }
-  function collectIdentifierNames(tokens){
-    const names = new Set();
-    for (let i = 0; i < tokens.length; i++){
-      const t = tokens[i];
-      if (t.type !== "id") continue;
-      names.add(t.value);
-    }
-    return names;
-  }
-
-  function maybeEnsureSymbols(tokens){
-    if (!ensureSymbolsLoaded) return;
-    const names = collectIdentifierNames(tokens);
-    if (names.size) ensureSymbolsLoaded(names);
-  }
 
   function getUsageHooks(){
     if (!usageTracker) return {};
     return usageTracker.getHooks();
-  }
-  function isBareUnitToken(tokens, idx){
-    const token = tokens[idx];
-    if (!token || token.type !== "id" || !isUnitToken(token.value)) return false;
-    const prev = tokens[idx - 1];
-    if (!prev) return true;
-    if (prev.type === "num" || prev.type === "id" || prev.type === ")") return false;
-    return true;
-  }
-
-  function expandTrailingNumericIdentifiers(tokens, vars, fnNames){
-    const out = [];
-    const suffixPattern = /^([A-Za-z_$%][A-Za-z0-9_$%.]*?)(\d+)$/;
-    for (const token of tokens){
-      if (!token || token.type !== "id"){
-        out.push(token);
-        continue;
-      }
-      const name = token.value;
-      if (Object.prototype.hasOwnProperty.call(vars, name) || isUnitToken(name) || name === "pi" || name === "e" || (fnNames && fnNames.has(name))){
-        out.push(token);
-        continue;
-      }
-      const match = name.match(suffixPattern);
-      if (!match){
-        out.push(token);
-        continue;
-      }
-      const baseName = match[1];
-      const numericSuffix = Number(match[2]);
-      if (!Object.prototype.hasOwnProperty.call(vars, baseName) || !Number.isFinite(numericSuffix)){
-        out.push(token);
-        continue;
-      }
-      out.push({ type: "id", value: baseName });
-      out.push({ type: "num", value: numericSuffix });
-    }
-    return out;
-  }
-
-  function findEquationUnknowns(expr, vars, fns){
-    const tokens = expandTrailingNumericIdentifiers(tokenize(expr), vars, fns);
-    const unknowns = [];
-    for (let i = 0; i < tokens.length; i++){
-      const t = tokens[i];
-      if (t.type !== "id") continue;
-      const name = t.value;
-      const next = tokens[i + 1];
-      if (next && next.type === "(") continue;
-      if (name === "pi" || name === "e") continue;
-      if (Object.prototype.hasOwnProperty.call(vars, name)) continue;
-      if (fns && fns.has(name)) continue;
-      if (isUnitToken(name)){
-        if (isBareUnitToken(tokens, i)){
-          const nextId = tokens[i + 1];
-          if (nextId && nextId.type === "id" && isUnitToken(nextId.value)){
-            unknowns.push({ name, kind: "scalar", unitToken: false });
-          }else{
-            const unit = UNIT[name];
-            unknowns.push({ name, kind: unit.kind, toBase: unit.toBase, unitToken: true });
-          }
-        }
-        continue;
-      }
-      unknowns.push({ name, kind: "scalar", unitToken: false });
-    }
-    return unknowns;
   }
 
   function diffValues(left, right){
@@ -141,16 +31,7 @@ export function createEvaluator({
   }
 
   function solveEquation(leftExpr, rightExpr){
-    const fns = new Set(Object.keys(getFns()));
-    const unknowns = [
-      ...findEquationUnknowns(leftExpr, state.vars, fns),
-      ...findEquationUnknowns(rightExpr, state.vars, fns),
-    ];
-    const unique = new Map();
-    for (const item of unknowns){
-      if (!unique.has(item.name)) unique.set(item.name, item);
-    }
-    const unknownList = Array.from(unique.values());
+    const unknownList = lowering.analyzeEquationUnknowns(leftExpr, rightExpr, state.vars);
     if (unknownList.length !== 1){
       throw new Error("Equation must contain exactly one unknown identifier.");
     }
@@ -165,8 +46,8 @@ export function createEvaluator({
       }else{
         vars[unknown.name] = x;
       }
-      const left = runExpressionWithOverrides(leftExpr, vars, overrides, Object.create(null));
-      const right = runExpressionWithOverrides(rightExpr, vars, overrides, Object.create(null));
+      const left = runExpressionWithOverrides(leftExpr, vars, overrides, null, Object.create(null));
+      const right = runExpressionWithOverrides(rightExpr, vars, overrides, null, Object.create(null));
       return diffValues(left, right);
     };
 
@@ -217,14 +98,12 @@ export function createEvaluator({
       let left = a;
       let right = b;
       let fl = fa;
-      let fr = fb;
       for (let i = 0; i < 80; i++){
         const mid = (left + right) / 2;
         const fm = evaluateDiff(mid);
         if (Math.abs(fm) <= tol) return { unknown, value: mid };
         if (fl * fm < 0){
           right = mid;
-          fr = fm;
         }else{
           left = mid;
           fl = fm;
@@ -247,29 +126,16 @@ export function createEvaluator({
   }
 
   function parseExpressionIR(expr, vars = state.vars){
-    if (expr && typeof expr === "object" && expr.kind) return expr;
-    const source = String(expr ?? "");
-    const fns = getFns();
-    const fnNames = new Set(Object.keys(fns));
-    const expanded = expandTrailingNumericIdentifiers(tokenize(source), vars, fnNames);
-    const tokens = insertImplicitMultiplication(expanded);
-    return irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
+    return lowering.parseExpressionIR(expr, vars);
   }
 
   function runExpressionStringWithContext(expr, vars, options = null){
-    const source = String(expr ?? "");
-    const fns = getFns();
-    const fnNames = new Set(Object.keys(fns));
-    const expanded = expandTrailingNumericIdentifiers(tokenize(source), vars, fnNames);
-    const tokens = insertImplicitMultiplication(expanded);
-    maybeEnsureSymbols(tokens);
-    const aliasMap = buildAliasMap(tokens, vars, fnNames);
-    const ir = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
+    const analyzed = lowering.analyzeExpression(expr, vars);
     const opts = normalizeEvalOptions(options);
-    const result = evalExpressionIR(ir, {
+    const result = evalExpressionIR(analyzed.ir, {
       vars,
-      fns,
-      aliases: aliasMap,
+      fns: getFns(),
+      aliases: analyzed.aliases,
       allowedEffects: opts?.allowedEffects,
       evalExpr: (innerIr, overrides = null) => {
         const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
@@ -284,9 +150,9 @@ export function createEvaluator({
     });
     if (opts?.traceExpressions && typeof opts.expressionTraceSink === "function"){
       opts.expressionTraceSink({
-        expr: source,
-        tokenCount: tokens.length,
-        irKind: ir.kind,
+        expr: analyzed.source,
+        tokenCount: analyzed.tokens.length,
+        irKind: analyzed.ir.kind,
         result,
       });
     }
@@ -294,16 +160,12 @@ export function createEvaluator({
   }
 
   function runExpressionIRWithContext(ir, vars, options = null){
-    const fns = getFns();
-    const fnNames = new Set(Object.keys(fns));
-    const tokens = tokenizeExpressionIR(ir);
-    maybeEnsureSymbols(tokens);
-    const aliasMap = buildAliasMap(tokens, vars, fnNames);
+    const analyzed = lowering.analyzeExpressionIR(ir, vars);
     const opts = normalizeEvalOptions(options);
     const result = evalExpressionIR(ir, {
       vars,
-      fns,
-      aliases: aliasMap,
+      fns: getFns(),
+      aliases: analyzed.aliases,
       allowedEffects: opts?.allowedEffects,
       evalExpr: (innerIr, overrides = null) => {
         const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
@@ -319,7 +181,7 @@ export function createEvaluator({
     if (opts?.traceExpressions && typeof opts.expressionTraceSink === "function"){
       opts.expressionTraceSink({
         expr: "<ir>",
-        tokenCount: tokens.length,
+        tokenCount: analyzed.tokens.length,
         irKind: ir.kind,
         result,
       });
@@ -342,19 +204,12 @@ export function createEvaluator({
   }
 
   function runExpressionStringWithOverrides(expr, vars, unitOverrides, aliasMap = null, options = null){
-    const source = String(expr ?? "");
-    const fns = getFns();
-    const fnNames = new Set(Object.keys(fns));
-    const expanded = expandTrailingNumericIdentifiers(tokenize(source), vars, fnNames);
-    const tokens = insertImplicitMultiplication(expanded);
-    maybeEnsureSymbols(tokens);
-    const resolvedAliases = aliasMap || buildAliasMap(tokens, vars, fnNames);
-    const ir = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
+    const analyzed = lowering.analyzeExpression(expr, vars);
     const opts = normalizeEvalOptions(options);
-    return evalExpressionIR(ir, {
+    return evalExpressionIR(analyzed.ir, {
       vars,
-      fns,
-      aliases: resolvedAliases,
+      fns: getFns(),
+      aliases: aliasMap || analyzed.aliases,
       unitOverrides,
       allowedEffects: opts?.allowedEffects,
       evalExpr: (innerIr, overrides = null) => {
@@ -371,16 +226,12 @@ export function createEvaluator({
   }
 
   function runExpressionIRWithOverrides(ir, vars, unitOverrides, aliasMap = null, options = null){
-    const fns = getFns();
-    const fnNames = new Set(Object.keys(fns));
-    const tokens = tokenizeExpressionIR(ir);
-    maybeEnsureSymbols(tokens);
-    const resolvedAliases = aliasMap || buildAliasMap(tokens, vars, fnNames);
+    const analyzed = lowering.analyzeExpressionIR(ir, vars);
     const opts = normalizeEvalOptions(options);
     return evalExpressionIR(ir, {
       vars,
-      fns,
-      aliases: resolvedAliases,
+      fns: getFns(),
+      aliases: aliasMap || analyzed.aliases,
       unitOverrides,
       allowedEffects: opts?.allowedEffects,
       evalExpr: (innerIr, overrides = null) => {
@@ -396,42 +247,42 @@ export function createEvaluator({
     });
   }
 
-  function tokenizeExpressionIR(ir){
-    const out = [];
-    function walk(node){
-      if (!node || typeof node !== "object") return;
-      if (node.kind === "identifier"){
-        out.push({ type: "id", value: node.name });
-        return;
-      }
-      if (node.kind === "binary"){
-        walk(node.left);
-        walk(node.right);
-        return;
-      }
-      if (node.kind === "call"){
-        for (const arg of (node.args || [])) walk(arg);
-        return;
-      }
-      if (node.kind === "conditional"){
-        walk(node.cond);
-        walk(node.then);
-        walk(node.else);
-      }
-    }
-    walk(ir);
-    return out;
-  }
-
   function isAssembly(value){
     return value && typeof value === "object" && value.__assy;
   }
 
-  function createAssembly(name, fields){
+  function evaluateAssemblyFields(fields, vars = state.vars, options = null){
+    const out = Object.create(null);
+    const input = fields || {};
+    for (const [key, entry] of Object.entries(input)){
+      if (entry && typeof entry === "object" && Object.prototype.hasOwnProperty.call(entry, "value") && !Object.prototype.hasOwnProperty.call(entry, "expr")){
+        out[key] = entry;
+        continue;
+      }
+      const note = entry?.note || "";
+      if (entry?.exprIr || entry?.expr){
+        const expr = entry.exprIr || entry.expr;
+        out[key] = {
+          value: runExpressionWithContext(expr, vars, options),
+          note,
+          raw: entry.raw,
+        };
+      }else{
+        out[key] = {
+          value: entry?.raw,
+          note,
+          raw: entry?.raw,
+        };
+      }
+    }
+    return out;
+  }
+
+  function createAssembly(name, fields, vars = state.vars, options = null){
     return {
       __assy: true,
       name,
-      fields,
+      fields: evaluateAssemblyFields(fields, vars, options),
     };
   }
 
@@ -471,125 +322,13 @@ export function createEvaluator({
     return formatResult(value);
   }
 
-  function parseAssemblyValue(valueStr){
-    const raw = valueStr.trim();
-    if (!raw) throw new Error("Assembly entry missing value.");
-
-    const tryExpr = (expr) => {
-      try{
-        return { ok: true, value: runExpressionWithContext(expr, state.vars) };
-      }catch{
-        return { ok: false };
-      }
-    };
-
-    const direct = tryExpr(raw);
-    if (direct.ok) return { value: direct.value, note: "", raw };
-
-    const parts = raw.split(/\s+/);
-    for (let idx = parts.length - 1; idx >= 1; idx--){
-      const candidate = parts.slice(0, idx).join(" ");
-      const attempt = tryExpr(candidate);
-      if (attempt.ok){
-        const note = parts.slice(idx).join(" ");
-        return { value: attempt.value, note, raw };
-      }
-    }
-
-    return { value: raw, note: "", raw };
-  }
-
-  function parseAssemblyStatement(src){
-    const assyMatch = src.match(/^assy\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\{([\s\S]*)\}$/i);
-    if (!assyMatch) return null;
-    const name = assyMatch[1];
-    const body = assyMatch[2].trim();
-    const entries = body ? splitAssemblyEntries(body) : [];
-    const fields = Object.create(null);
-    for (const entry of entries){
-      const eqIdx = findTopLevelEquals(entry);
-      if (eqIdx < 0) throw new Error("Assembly entries must be key = value.");
-      const key = entry.slice(0, eqIdx).trim();
-      if (!key) throw new Error("Assembly entry missing key.");
-      const valueStr = entry.slice(eqIdx + 1).trim();
-      const parsed = parseAssemblyValue(valueStr);
-      fields[key] = parsed;
-    }
-    return createStatementNode(STATEMENT_TYPE.ASSY, { name, fields });
-  }
-
-  function evaluate(line, origin = null){
-    const raw = line.trimEnd();
-    const src = raw.trim();
-    if (!src) return null;
-
-    if (src.startsWith(":")){
-      const parts = src.slice(1).trim().split(/\s+/);
-      const cmd = (parts[0] || "").toLowerCase();
-      const arg = parts.slice(1).join(" ");
-      return createStatementNode(STATEMENT_TYPE.CMD, { cmd, arg }, origin);
-    }
-
-    if (/^if\s+/i.test(src)){
-      return parseIfStatement(raw, evaluate, origin, origin);
-    }
-
-    if (/^for\s+/i.test(src)){
-      return parseForStatement(raw, evaluate, origin, origin);
-    }
-
-    if (/^repeat\s+/i.test(src)){
-      return parseRepeatStatement(raw, evaluate, origin, origin);
-    }
-
-    if (/^assy\b/i.test(src)){
-      const parsed = parseAssemblyStatement(src);
-      if (!parsed) throw new Error("Assembly must use: assy name = { key = value }");
-      return createStatementNode(STATEMENT_TYPE.ASSY, { name: parsed.name, fields: parsed.fields }, origin);
-    }
-
-    if (src.startsWith("#")) return null;
-
-    const defMatch = src.match(/^(?:def|fn|so|function)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*=\s*([\s\S]+)$/);
-    if (defMatch){
-      const name = defMatch[1];
-      const params = parseParams(defMatch[2]);
-      return createStatementNode(STATEMENT_TYPE.DEF, { name, params, expr:defMatch[3] }, origin);
-    }
-
-    const m = src.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]+)$/);
-    if (m){
-      return createStatementNode(STATEMENT_TYPE.ASSIGN, { name:m[1], expr:m[2], exprIr: parseExpressionIR(m[2]) }, origin);
-    }
-
-    const eqIdx = findTopLevelEquals(src);
-    if (eqIdx >= 0){
-      const left = src.slice(0, eqIdx).trim();
-      const right = src.slice(eqIdx + 1).trim();
-      if (!left || !right) throw new Error("Equation must have left and right expressions.");
-      return createStatementNode(STATEMENT_TYPE.EQUATION, { left, right }, origin);
-    }
-
-    return createStatementNode(STATEMENT_TYPE.EXPR, { expr:src, exprIr: parseExpressionIR(src) }, origin);
-  }
-
-  function parseSource(source, origin = null){
-    const src = String(source || "");
-    if (!src.trim()){
-      return createBlockNode([], origin && typeof origin === "object" ? origin : null);
-    }
-    const parsed = parseBlockStatements(src, evaluate, origin || null);
-    return parsed;
-  }
-
   return {
-    evaluate,
-    parseSource,
     runExpression,
     runExpressionWithContext,
     parseExpressionIR,
     runExpressionWithOverrides,
     solveEquation,
+    evaluateAssemblyFields,
     createAssembly,
     formatAssemblySummary,
     formatValueDisplay,
