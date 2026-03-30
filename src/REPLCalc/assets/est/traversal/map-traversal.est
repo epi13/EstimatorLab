@@ -52,7 +52,9 @@ so count_if(map, predicate) = {
   h = map_height(map);
   for y in 0..(h - 1):
     for x in 0..(w - 1):
-      if predicate(mget(map, x, y)): count = count + 1 else: 0
+      tile = mget(map, x, y);
+      value = if(tile == 2, 0, tile);
+      if predicate(value): count = count + 1 else: 0
   count
 }
 
@@ -63,7 +65,9 @@ so find_if(map, predicate) = {
   h = map_height(map);
   for y in 0..(h - 1):
     for x in 0..(w - 1):
-      if predicate(mget(map, x, y)): positions = positions + [{x: x, y: y}] else: 0
+      tile = mget(map, x, y);
+      value = if(tile == 2, 0, tile);
+      if predicate(value): positions = positions + [{x: x, y: y}] else: 0
   positions
 }
 

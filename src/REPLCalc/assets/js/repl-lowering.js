@@ -263,6 +263,24 @@ export function createReplLowering({
       if (t.type !== "id") continue;
       const name = t.value;
       const next = tokens[i + 1];
+      if (
+        next
+        && next.type === "id"
+        && isUnitToken(next.value)
+        && isBareUnitToken(tokens, i + 1)
+      ){
+        if (
+          name !== "pi"
+          && name !== "e"
+          && !Object.prototype.hasOwnProperty.call(variableMap, name)
+          && !fns.has(name)
+        ){
+          const unit = UNIT[next.value];
+          unknowns.push({ name, kind: unit.kind, toBase: unit.toBase, unitToken: true });
+        }
+        i += 1;
+        continue;
+      }
       if (next && next.type === "(") continue;
       if (name === "pi" || name === "e") continue;
       if (Object.prototype.hasOwnProperty.call(variableMap, name)) continue;
