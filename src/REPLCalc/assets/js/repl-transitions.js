@@ -111,7 +111,6 @@ export function createTransition({
   scoreDelta = 0,
   confidence = 1,
   cost = 0,
-  meta = {},
   id = null,
   sourceModule = "repl-transitions",
   strategy = "default",
