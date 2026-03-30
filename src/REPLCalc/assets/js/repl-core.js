@@ -140,7 +140,6 @@ export function initRepl(){
   const MAX_LOOP_ITERATIONS = 100000;
 
   const executor = createExecutor({
-    evaluate: evaluator.evaluate,
     runExpressionWithContext: evaluator.runExpressionWithContext,
     solveEquation: evaluator.solveEquation,
     createAssembly: evaluator.createAssembly,
@@ -163,7 +162,8 @@ export function initRepl(){
       commandErrorMessage: "Commands are not supported in gfx loop scripts.",
     });
 
-    executor.executeSource(source, state.vars, opts);
+    const ast = evaluator.parseSource(source);
+    executor.executeSource(ast, state.vars, opts);
   };
 
   const executeBlock = (source, options = null) => {
@@ -174,7 +174,8 @@ export function initRepl(){
       captureResults: true,
       commandErrorMessage: "Commands are not supported in function bodies.",
     });
-    return executor.executeSource(source, state.vars, opts);
+    const ast = evaluator.parseSource(source);
+    return executor.executeSource(ast, state.vars, opts);
   };
   const executeSource = (source, options) => executeBlock(source, options);
   const runBlockBody = (source, options) => executeBlock(source, options).lastValue;
@@ -195,7 +196,8 @@ export function initRepl(){
       captureResults: false,
       commandErrorMessage: "Commands are not supported in gfx loop scripts.",
     });
-    return executor.executeSource(source, state.vars, opts);
+    const ast = evaluator.parseSource(source);
+    return executor.executeSource(ast, state.vars, opts);
   });
 
   editor = createEditor({

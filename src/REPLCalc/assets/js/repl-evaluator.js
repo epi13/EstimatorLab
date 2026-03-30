@@ -5,14 +5,16 @@ import {
   findTopLevelRange,
   parseForStatement,
   parseIfStatement,
+  parseBlockStatements,
   parseRepeatStatement,
   parseParams,
   splitAssemblyEntries,
 } from "./repl-parser.js";
 import {
   STATEMENT_TYPE,
+  createBlockNode,
   createStatementNode,
-} from "./repl-statement-schema.js";
+} from "./repl-ast.js";
 
 
 export function createEvaluator({
@@ -442,8 +444,18 @@ export function createEvaluator({
     return createStatementNode(STATEMENT_TYPE.EXPR, { expr:src }, origin);
   }
 
+  function parseSource(source, origin = null){
+    const src = String(source || "");
+    if (!src.trim()){
+      return createBlockNode([], origin && typeof origin === "object" ? origin : null);
+    }
+    const parsed = parseBlockStatements(src, evaluate, origin || null);
+    return parsed;
+  }
+
   return {
     evaluate,
+    parseSource,
     runExpression,
     runExpressionWithContext,
     runExpressionWithOverrides,
