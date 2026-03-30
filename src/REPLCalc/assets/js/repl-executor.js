@@ -156,3 +156,5 @@ export function createReplExecutor({
     withScopedVar,
   };
 }
+
+export const createExecutor = createReplExecutor;
