@@ -26,6 +26,7 @@ import { createEditor } from "./repl-editor.js";
 import { createTests } from "./repl-tests.js";
 import { createInputHandlers } from "./repl-input.js";
 import { createUserFunctionUi } from "./repl-user-functions.js";
+import { createExecutor } from "./repl-executor.js";
 import { parseParams, splitStatements } from "./repl-parser.js";
 
 export function initRepl(){
@@ -138,259 +139,36 @@ export function initRepl(){
   });
   state.formatValueDisplay = evaluator.formatValueDisplay;
 
-  const runLoopStatements = (source, context = null) => {
-    const loopOptions = { allowedEffects: EFFECT.ALL };
-    const statementList = splitStatements(source);
-    const ctx = Array.isArray(context) ? context : [];
+  const executor = createExecutor({
+    state,
+    evaluator,
+    runtime,
+    splitStatements,
+    isTruthy,
+    normalizeCompare,
+    isQty,
+    makeQty,
+    maxLoopIterations: MAX_LOOP_ITERATIONS,
+  });
 
-    const previewStmt = (s) => {
-      const trimmed = String(s || "").trim();
-      if (!trimmed) return "";
-      const maxLen = 220;
-      return trimmed.length > maxLen ? `${trimmed.slice(0, maxLen)}…` : trimmed;
-    };
+  const runBlockBody = (source, options) => executor.executeSource(source, {
+    captureLastValue: true,
+    allowCommands: false,
+    wrapErrors: false,
+    cleanStatement: true,
+    expressionOptions: options || { allowedEffects: EFFECT.ALL },
+    commandErrorMessage: "Commands are not supported in function bodies.",
+  });
 
-    for (let stmtIdx = 0; stmtIdx < statementList.length; stmtIdx++){
-      const stmt = statementList[stmtIdx];
-      if (!stmt) continue;
-      try{
-        const parsed = evaluator.evaluate(stmt);
-        if (!parsed) continue;
-
-        if (parsed.type === "cmd"){
-          throw new Error("Commands are not supported in gfx loop scripts.");
-        }
-
-        if (parsed.type === "def"){
-          runtime.defineUserFn(parsed.name, parsed.params, parsed.expr);
-          continue;
-        }
-
-        if (parsed.type === "assy"){
-          const assembly = evaluator.createAssembly(parsed.name, parsed.fields);
-          state.vars[parsed.name] = assembly;
-          continue;
-        }
-
-        if (parsed.type === "assign"){
-          state.vars[parsed.name] = evaluator.runExpressionWithContext(parsed.expr, state.vars, loopOptions);
-          continue;
-        }
-
-        if (parsed.type === "equation"){
-          const solved = evaluator.solveEquation(parsed.left, parsed.right);
-          if (!solved.unknown.unitToken){
-            state.vars[solved.unknown.name] = solved.value;
-          }
-          continue;
-        }
-
-        if (parsed.type === "if"){
-          const cond = evaluator.runExpressionWithContext(parsed.condition, state.vars, loopOptions);
-          const childCtx = ctx.concat([`if#${stmtIdx + 1}`]);
-          if (isTruthy(cond)){
-            runLoopStatements(parsed.thenBody, childCtx);
-          }else if (parsed.elseBody){
-            runLoopStatements(parsed.elseBody, childCtx);
-          }
-          continue;
-        }
-
-        if (parsed.type === "for"){
-          const startVal = evaluator.runExpressionWithContext(parsed.startExpr, state.vars, loopOptions);
-          const endVal = evaluator.runExpressionWithContext(parsed.endExpr, state.vars, loopOptions);
-          const stepVal = parsed.stepExpr ? evaluator.runExpressionWithContext(parsed.stepExpr, state.vars, loopOptions) : 1;
-          let start;
-          let end;
-          let step;
-          let loopKind = null;
-          if (isQty(startVal) || isQty(endVal)){
-            if (!isQty(startVal) || !isQty(endVal)){
-              throw new Error("for loop range must use matching unit quantities");
-            }
-            if (startVal.kind !== endVal.kind){
-              throw new Error("for loop range units must match");
-            }
-            loopKind = startVal.kind;
-            start = startVal.value;
-            end = endVal.value;
-            if (isQty(stepVal)){
-              if (stepVal.kind !== loopKind) throw new Error("for loop step unit mismatch");
-              step = stepVal.value;
-            }else{
-              step = stepVal;
-            }
-          }else{
-            [start, end] = normalizeCompare(startVal, endVal);
-            step = normalizeCompare(stepVal, 0)[0];
-          }
-          if (step === 0) throw new Error("for loop step cannot be 0");
-          const hadVar = Object.prototype.hasOwnProperty.call(state.vars, parsed.varName);
-          const prevVal = state.vars[parsed.varName];
-          const forward = step > 0;
-          let iter = 0;
-          const childCtx = ctx.concat([`for#${stmtIdx + 1}`]);
-          for (let i = start; forward ? i <= end : i >= end; i += step){
-            iter += 1;
-            if (iter > MAX_LOOP_ITERATIONS){
-              throw new Error(`for loop exceeded ${MAX_LOOP_ITERATIONS} iterations`);
-            }
-            state.vars[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
-            runLoopStatements(parsed.body, childCtx);
-          }
-          if (hadVar) state.vars[parsed.varName] = prevVal;
-          else delete state.vars[parsed.varName];
-          continue;
-        }
-
-      if (parsed.type === "repeat"){
-        const countVal = evaluator.runExpressionWithContext(parsed.countExpr, state.vars, loopOptions);
-        const count = normalizeCompare(countVal, 0)[0];
-        if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
-        const n = Math.floor(count);
-        if (n > MAX_LOOP_ITERATIONS){
-          throw new Error(`repeat exceeded ${MAX_LOOP_ITERATIONS} iterations`);
-        }
-        const childCtx = ctx.concat([`repeat#${stmtIdx + 1}`]);
-        for (let i = 0; i < n; i++){
-          runLoopStatements(parsed.body, childCtx);
-        }
-        continue;
-      }
-
-      if (parsed.type === "expr"){
-        evaluator.runExpressionWithContext(parsed.expr, state.vars, loopOptions);
-      }
-      }catch(err){
-        const msg = err?.message || String(err);
-        if (typeof msg === "string" && msg.startsWith("Loop error at ")){
-          throw err;
-        }
-        const where = ctx.length ? `${ctx.join(" > ")} > ` : "";
-        const preview = previewStmt(stmt);
-        const rendered = preview ? JSON.stringify(preview) : "(empty statement)";
-        throw new Error(`Loop error at ${where}stmt#${stmtIdx + 1} ${rendered}: ${msg}`);
-      }
-    }
-  };
-
-  const runBlockBody = (source, options) => {
-    const opts = options || { allowedEffects: EFFECT.ALL };
-    const statementList = splitStatements(source);
-    let lastResult = null;
-
-    for (let stmtIdx = 0; stmtIdx < statementList.length; stmtIdx++){
-      const stmt = statementList[stmtIdx];
-      if (!stmt) continue;
-      const cleaned = stmt.replace(/;\s*$/, "");
-      const parsed = evaluator.evaluate(cleaned);
-      if (!parsed) continue;
-
-      if (parsed.type === "cmd"){
-        throw new Error("Commands are not supported in function bodies.");
-      }
-
-      if (parsed.type === "def"){
-        runtime.defineUserFn(parsed.name, parsed.params, parsed.expr);
-        continue;
-      }
-
-      if (parsed.type === "assy"){
-        const assembly = evaluator.createAssembly(parsed.name, parsed.fields);
-        state.vars[parsed.name] = assembly;
-        continue;
-      }
-
-      if (parsed.type === "assign"){
-        lastResult = evaluator.runExpressionWithContext(parsed.expr, state.vars, opts);
-        state.vars[parsed.name] = lastResult;
-        continue;
-      }
-
-      if (parsed.type === "equation"){
-        const solved = evaluator.solveEquation(parsed.left, parsed.right);
-        if (!solved.unknown.unitToken){
-          state.vars[solved.unknown.name] = solved.value;
-        }
-        lastResult = solved.value;
-        continue;
-      }
-
-      if (parsed.type === "if"){
-        const cond = evaluator.runExpressionWithContext(parsed.condition, state.vars, opts);
-        if (isTruthy(cond)){
-          lastResult = runBlockBody(parsed.thenBody, opts);
-        }else if (parsed.elseBody){
-          lastResult = runBlockBody(parsed.elseBody, opts);
-        }
-        continue;
-      }
-
-      if (parsed.type === "for"){
-        const startVal = evaluator.runExpressionWithContext(parsed.startExpr, state.vars, opts);
-        const endVal = evaluator.runExpressionWithContext(parsed.endExpr, state.vars, opts);
-        const stepVal = parsed.stepExpr ? evaluator.runExpressionWithContext(parsed.stepExpr, state.vars, opts) : 1;
-        let start, end, step;
-        let loopKind = null;
-        if (isQty(startVal) || isQty(endVal)){
-          if (!isQty(startVal) || !isQty(endVal)){
-            throw new Error("for loop range must use matching unit quantities");
-          }
-          if (startVal.kind !== endVal.kind){
-            throw new Error("for loop range units must match");
-          }
-          loopKind = startVal.kind;
-          start = startVal.value;
-          end = endVal.value;
-          if (isQty(stepVal)){
-            if (stepVal.kind !== loopKind) throw new Error("for loop step unit mismatch");
-            step = stepVal.value;
-          }else{
-            step = stepVal;
-          }
-        }else{
-          [start, end] = normalizeCompare(startVal, endVal);
-          step = normalizeCompare(stepVal, 0)[0];
-        }
-        if (step === 0) throw new Error("for loop step cannot be 0");
-        const hadVar = Object.prototype.hasOwnProperty.call(state.vars, parsed.varName);
-        const prevVal = state.vars[parsed.varName];
-        const forward = step > 0;
-        let iter = 0;
-        for (let i = start; forward ? i <= end : i >= end; i += step){
-          iter += 1;
-          if (iter > MAX_LOOP_ITERATIONS){
-            throw new Error(`for loop exceeded ${MAX_LOOP_ITERATIONS} iterations`);
-          }
-          state.vars[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
-          lastResult = runBlockBody(parsed.body, opts);
-        }
-        if (hadVar) state.vars[parsed.varName] = prevVal;
-        else delete state.vars[parsed.varName];
-        continue;
-      }
-
-      if (parsed.type === "repeat"){
-        const countVal = evaluator.runExpressionWithContext(parsed.countExpr, state.vars, opts);
-        const count = normalizeCompare(countVal, 0)[0];
-        if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
-        const n = Math.floor(count);
-        if (n > MAX_LOOP_ITERATIONS){
-          throw new Error(`repeat exceeded ${MAX_LOOP_ITERATIONS} iterations`);
-        }
-        for (let i = 0; i < n; i++){
-          lastResult = runBlockBody(parsed.body, opts);
-        }
-        continue;
-      }
-
-      if (parsed.type === "expr"){
-        lastResult = evaluator.runExpressionWithContext(parsed.expr, state.vars, opts);
-      }
-    }
-
-    return lastResult;
-  };
+  const runLoopStatements = (source, context = null) => executor.executeSource(source, {
+    captureLastValue: false,
+    allowCommands: false,
+    wrapErrors: true,
+    cleanStatement: false,
+    expressionOptions: { allowedEffects: EFFECT.ALL },
+    context: Array.isArray(context) ? context : [],
+    commandErrorMessage: "Commands are not supported in gfx loop scripts.",
+  });
 
   runtime.setRunExpressionWithContext(evaluator.runExpressionWithContext);
   runtime.setRunBlockBody(runBlockBody);
