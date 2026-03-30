@@ -145,6 +145,7 @@ export function initRepl(){
     solveEquation: evaluator.solveEquation,
     createAssembly: evaluator.createAssembly,
     defineUserFn: runtime.defineUserFn,
+    cmdRunner,
     isTruthy,
     normalizeCompare,
     isQty,
