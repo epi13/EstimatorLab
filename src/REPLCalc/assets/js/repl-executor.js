@@ -160,7 +160,7 @@ function withModeAppliedState(state, envOverride = null){
   };
 }
 
-export function createReplExecutor({
+function createReplExecutor({
   expandStatement,
 }){
   if (typeof expandStatement !== "function"){
@@ -799,4 +799,5 @@ export function createReplExecutor({
   };
 }
 
+export { createReplExecutor };
 export const createExecutor = createReplExecutor;
