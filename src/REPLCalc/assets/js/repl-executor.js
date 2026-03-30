@@ -147,7 +147,9 @@ function withModeAppliedState(state, envOverride = null){
 
 export function createReplExecutor({
   runExpressionWithContext,
+  runExpressionCandidatesWithContext = null,
   solveEquation,
+  solveEquationCandidates,
   createAssembly,
   defineUserFn,
   cmdRunner,
@@ -410,45 +412,73 @@ export function createReplExecutor({
     }
 
     if (statementNode.kind === STATEMENT_TYPE.ASSIGN){
-      const value = runExpression(statementNode.exprIr || statementNode.expr, execState, expressionTrace);
-      env[statementNode.name] = value;
-      return finalizeTransition({
-        type: "assign",
-        value,
-        meta: {
-          assignedName: statementNode.name,
-          expressionTrace: expressionTrace || [],
-        },
-        changedSymbols: [statementNode.name],
-        effects: [{ kind: "write-symbol", symbol: statementNode.name, value }],
-      });
+      const exprInput = statementNode.exprIr || statementNode.expr;
+      const valueCandidates = typeof runExpressionCandidatesWithContext === "function"
+        ? runExpressionCandidatesWithContext(exprInput, execState.env, execState)
+        : [{ value: runExpression(exprInput, execState, expressionTrace), scoreDelta: 0, confidence: 1 }];
+      const transitions = [];
+      for (const candidate of valueCandidates){
+        env[statementNode.name] = candidate.value;
+        transitions.push(...finalizeTransition({
+          type: "assign",
+          value: candidate.value,
+          meta: {
+            assignedName: statementNode.name,
+            expressionStrategy: candidate.transitionType || "expression-default",
+            expressionTrace: expressionTrace || [],
+          },
+          changedSymbols: [statementNode.name],
+          effects: [{ kind: "write-symbol", symbol: statementNode.name, value: candidate.value }],
+        }, {
+          scoreDelta: Number.isFinite(candidate.scoreDelta) ? candidate.scoreDelta : 0,
+          confidence: Number.isFinite(candidate.confidence) ? candidate.confidence : 1,
+        }));
+        delete env[statementNode.name];
+      }
+      if (transitions.length) return transitions;
+      throw new Error("Assignment produced no expression candidates.");
     }
 
     if (statementNode.kind === STATEMENT_TYPE.EQUATION){
-      const solved = solveEquation(statementNode.left, statementNode.right);
-      if (solved.unknown.unitToken){
-        return finalizeTransition({
+      const solvedCandidates = typeof solveEquationCandidates === "function"
+        ? solveEquationCandidates(statementNode.left, statementNode.right)
+        : [solveEquation(statementNode.left, statementNode.right)];
+      const transitions = [];
+      for (const solved of solvedCandidates){
+        const transitionInput = {
+          scoreDelta: Number.isFinite(solved?.scoreDelta) ? solved.scoreDelta : 0,
+          confidence: Number.isFinite(solved?.confidence) ? solved.confidence : 1,
+        };
+        if (solved.unknown.unitToken){
+          transitions.push(...finalizeTransition({
+            type: "equation",
+            value: makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind),
+            meta: {
+              unknownName: solved.unknown.name,
+              usedUnitToken: true,
+              strategy: solved.strategy || "numeric-solve",
+              expressionTrace: expressionTrace || [],
+            },
+          }, transitionInput));
+          continue;
+        }
+        env[solved.unknown.name] = solved.value;
+        transitions.push(...finalizeTransition({
           type: "equation",
-          value: makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind),
+          value: solved.value,
           meta: {
             unknownName: solved.unknown.name,
-            usedUnitToken: true,
+            usedUnitToken: false,
+            strategy: solved.strategy || "numeric-solve",
             expressionTrace: expressionTrace || [],
           },
-        });
+          changedSymbols: [solved.unknown.name],
+          effects: [{ kind: "write-symbol", symbol: solved.unknown.name, value: solved.value }],
+        }, transitionInput));
+        delete env[solved.unknown.name];
       }
-      env[solved.unknown.name] = solved.value;
-      return finalizeTransition({
-        type: "equation",
-        value: solved.value,
-        meta: {
-          unknownName: solved.unknown.name,
-          usedUnitToken: false,
-          expressionTrace: expressionTrace || [],
-        },
-        changedSymbols: [solved.unknown.name],
-        effects: [{ kind: "write-symbol", symbol: solved.unknown.name, value: solved.value }],
-      });
+      if (transitions.length) return transitions;
+      throw new Error("Equation solver produced no candidates.");
     }
 
     if (statementNode.kind === STATEMENT_TYPE.IF){
@@ -580,14 +610,23 @@ export function createReplExecutor({
     }
 
     if (statementNode.kind === STATEMENT_TYPE.EXPR){
-      const value = runExpression(statementNode.exprIr || statementNode.expr, execState, expressionTrace);
-      return finalizeTransition({
+      const exprInput = statementNode.exprIr || statementNode.expr;
+      const valueCandidates = typeof runExpressionCandidatesWithContext === "function"
+        ? runExpressionCandidatesWithContext(exprInput, execState.env, execState)
+        : [{ value: runExpression(exprInput, execState, expressionTrace), scoreDelta: 0, confidence: 1 }];
+      const transitions = valueCandidates.flatMap((candidate) => finalizeTransition({
         type: "expr",
-        value,
+        value: candidate.value,
         meta: {
+          expressionStrategy: candidate.transitionType || "expression-default",
           expressionTrace: expressionTrace || [],
         },
-      });
+      }, {
+        scoreDelta: Number.isFinite(candidate.scoreDelta) ? candidate.scoreDelta : 0,
+        confidence: Number.isFinite(candidate.confidence) ? candidate.confidence : 1,
+      }));
+      if (transitions.length) return transitions;
+      throw new Error("Expression produced no candidates.");
     }
 
     return finalizeTransition({
