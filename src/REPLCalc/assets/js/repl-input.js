@@ -1,6 +1,6 @@
 import { runDoomDemo } from "./repl-doom.js";
 import { runLatentCommand } from "./repl-latent.js";
-import { parseParams, splitStatements } from "./repl-parser.js";
+import { parseParams } from "./repl-parser.js";
 import { EFFECT } from "./repl-effects.js";
 
 export function createInputHandlers({
@@ -14,10 +14,7 @@ export function createInputHandlers({
   frontend,
   runtime,
   gfx,
-  isTruthy,
-  normalizeCompare,
-  isQty,
-  makeQty,
+  executeProgram,
 }){
   const {
     inputEl,
@@ -94,15 +91,10 @@ export function createInputHandlers({
   const {
     runExpression,
     runExpressionWithContext,
-    solveEquation,
-    createAssembly,
     formatValueDisplay,
   } = evaluator;
-  const { evaluate } = frontend;
-  const { defineUserFn, getFns } = runtime;
+  const { getFns } = runtime;
   const { flushGfxOutput } = gfx;
-
-  const MAX_LOOP_ITERATIONS = 100000;
 
 
   function pushHistory(line){
@@ -179,54 +171,14 @@ export function createInputHandlers({
       return;
     }
 
-    const runExpressionAll = (expr) => runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL });
-    const applyModuleSource = (source, label) => {
-      const statements = splitStatements(source);
-      for (const stmt of statements){
-        const parsed = evaluate(stmt);
-        if (!parsed) continue;
-
-        if (parsed.type === "cmd"){
-          throw new Error(`${label} may not contain commands`);
-        }
-
-        if (parsed.type === "def"){
-          defineUserFn(parsed.name, parsed.params, parsed.expr);
-          continue;
-        }
-
-        if (parsed.type === "assy"){
-          const assembly = createAssembly(parsed.name, parsed.fields);
-          state.vars[parsed.name] = assembly;
-          continue;
-        }
-
-        if (parsed.type === "assign"){
-          state.vars[parsed.name] = runExpressionAll(parsed.expr);
-          continue;
-        }
-
-        if (parsed.type === "equation"){
-          const solved = solveEquation(parsed.left, parsed.right);
-          if (!solved.unknown.unitToken){
-            state.vars[solved.unknown.name] = solved.value;
-          }
-          continue;
-        }
-
-        if (parsed.type === "expr"){
-          runExpressionAll(parsed.expr);
-          continue;
-        }
-
-        if (parsed.type === "if" || parsed.type === "for" || parsed.type === "repeat"){
-          throw new Error(`${label} may not contain flow statements`);
-        }
-      }
-    };
-
     const docsSource = await fetchText("assets/est/core/docs.est");
-    applyModuleSource(docsSource, "docs");
+    executeProgram(docsSource, state.vars, "commit", {
+      allowedEffects: EFFECT.ALL,
+      allowCommands: false,
+      wrapErrors: false,
+      captureResults: false,
+      commandErrorMessage: "docs may not contain commands",
+    });
     state.__docsModulesVersion = DOCS_MODULES_VERSION;
     state.__docsModuleLoaded = true;
   }
@@ -237,85 +189,28 @@ export function createInputHandlers({
       return;
     }
 
-    const runExpressionAll = (expr) => runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL });
-    const applyModuleSource = (source, label) => {
-      const statements = splitStatements(source);
-      for (const stmt of statements){
-        const parsed = evaluate(stmt);
-        if (!parsed) continue;
-
-        if (parsed.type === "cmd"){
-          throw new Error(`${label} may not contain commands`);
-        }
-
-        if (parsed.type === "def"){
-          defineUserFn(parsed.name, parsed.params, parsed.expr);
-          continue;
-        }
-
-        if (parsed.type === "assy"){
-          const assembly = createAssembly(parsed.name, parsed.fields);
-          state.vars[parsed.name] = assembly;
-          continue;
-        }
-
-        if (parsed.type === "assign"){
-          state.vars[parsed.name] = runExpressionAll(parsed.expr);
-          continue;
-        }
-
-        if (parsed.type === "equation"){
-          const solved = solveEquation(parsed.left, parsed.right);
-          if (!solved.unknown.unitToken){
-            state.vars[solved.unknown.name] = solved.value;
-          }
-          continue;
-        }
-
-        if (parsed.type === "expr"){
-          runExpressionAll(parsed.expr);
-          continue;
-        }
-
-        if (parsed.type === "if" || parsed.type === "for" || parsed.type === "repeat"){
-          throw new Error(`${label} may not contain flow statements`);
-        }
-      }
-    };
-
     const source = await fetchText("assets/est/construction/construction-helpers.est");
-    applyModuleSource(source, "construction helpers");
+    executeProgram(source, state.vars, "commit", {
+      allowedEffects: EFFECT.ALL,
+      allowCommands: false,
+      wrapErrors: false,
+      captureResults: false,
+      commandErrorMessage: "construction helpers may not contain commands",
+    });
     state.__constructionModulesVersion = CONSTRUCTION_MODULES_VERSION;
     state.__constructionModuleLoaded = true;
   }
 
-  const collectChangedSymbols = (results) => {
-    const changed = [];
-    const seen = new Set();
-    for (const result of results || []){
-      const names = Array.isArray(result?.changedSymbols) ? result.changedSymbols : [];
-      for (const name of names){
-        if (!seen.has(name)){
-          seen.add(name);
-          changed.push(name);
-        }
-      }
-    }
-    return changed;
-  };
-
   async function handleLine(line){
-    const runExpressionAll = (expr) => runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL });
-    const statementList = Array.isArray(line) ? line : splitStatements(line);
+    const ast = frontend.parseSource(line);
     const sourceResult = { lastValue: null, results: [] };
-    if (!statementList.length) return sourceResult;
+    if (!ast?.statements?.length) return sourceResult;
 
-    const executeParsed = async (parsed, stmt) => {
-      if (parsed.type === "cmd"){
-        const {cmd,arg} = parsed;
+    const executeCommand = async (parsed) => {
+      const { cmd, arg } = parsed;
         if (cmd === "docs"){
           await ensureDocsModuleLoaded();
-          runExpressionAll("show_docs()");
+          runExpressionWithContext("show_docs()", state.vars, { allowedEffects: EFFECT.ALL });
           return { type: "cmd", value: null };
         }
         if (cmd === "construction"){
@@ -342,21 +237,14 @@ export function createInputHandlers({
         if (cmd === "diff"){ diffSymbol(arg); return { type: "cmd", value: null }; }
         if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); return { type: "cmd", value: state.theme }; }
         if (cmd === "doom"){
-          await runDoomDemo({ gfx, writeLine, writeInputEcho, state, evaluator, frontend, runtime });
+          await runDoomDemo({ gfx, writeLine, writeInputEcho, state, executeProgram });
           return { type: "cmd", value: null };
         }
         if (cmd === "latent"){
           await runLatentCommand({
             arg,
             state,
-            evaluator,
-            frontend,
-            runtime,
-            runExpressionAll,
-            solveEquation,
-            createAssembly,
-            defineUserFn,
-            makeQty,
+            executeProgram,
             recordSymbolDefinition,
             writeLine,
           });
@@ -456,172 +344,63 @@ export function createInputHandlers({
           return { type: "cmd", value: state.vars[name] };
         }
         throw new Error(`Unknown command: :${cmd}`);
-      }
-
-      if (parsed.type === "def"){
-        const existed = Object.prototype.hasOwnProperty.call(state.userFns, parsed.name);
-        defineUserFn(parsed.name, parsed.params, parsed.expr);
-        const verb = existed ? "Updated" : "Added";
-        writeLine(`${verb} function ${parsed.name}(${parsed.params.join(", ")}).`, "ok");
-        return { type: "def", value: null, changedSymbols: [parsed.name] };
-      }
-
-      if (parsed.type === "assy"){
-        const assembly = createAssembly(parsed.name, parsed.fields);
-        state.vars[parsed.name] = assembly;
-        recordSymbolDefinition({
-          name: parsed.name,
-          kind: "assy",
-          fields: parsed.fields,
-          value: assembly,
-        });
-        const fr = formatValueDisplay(assembly);
-        writeLine(`${parsed.name} = ${fr.main}`, "ok");
-        return { type: "assy", value: assembly, changedSymbols: [parsed.name] };
-      }
-
-      if (parsed.type === "assign"){
-        const val = runExpressionAll(parsed.expr);
-        state.vars[parsed.name] = val;
-        recordSymbolDefinition({ name: parsed.name, kind: "var", expr: parsed.expr, value: val });
-        const fr = formatValueDisplay(val);
-        writeLine(`${parsed.name} = ${fr.main}`, "ok");
-        if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
-        return { type: "assign", value: val, changedSymbols: [parsed.name] };
-      }
-
-      if (parsed.type === "equation"){
-        const solved = solveEquation(parsed.left, parsed.right);
-        let solvedValue;
-        if (solved.unknown.unitToken){
-          solvedValue = makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind);
-        }else{
-          solvedValue = solved.value;
-          state.vars[solved.unknown.name] = solvedValue;
-          recordSymbolDefinition({
-            name: solved.unknown.name,
-            kind: "var",
-            expr: `${parsed.left} = ${parsed.right}`,
-            value: solvedValue,
-          });
-        }
-        const fr = formatValueDisplay(solvedValue);
-        writeLine(`${solved.unknown.name} = ${fr.main}`, "ok");
-        if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
-        const changedSymbols = solved.unknown.unitToken ? [] : [solved.unknown.name];
-        return { type: "equation", value: solvedValue, changedSymbols };
-      }
-
-      if (parsed.type === "if"){
-        const cond = runExpressionAll(parsed.condition);
-        let branch = { lastValue: null, results: [] };
-        if (isTruthy(cond)){
-          branch = await handleLine(parsed.thenBody);
-        }else if (parsed.elseBody){
-          branch = await handleLine(parsed.elseBody);
-        }
-        return {
-          type: "if",
-          value: branch.lastValue,
-          results: branch.results,
-          changedSymbols: collectChangedSymbols(branch.results),
-        };
-      }
-
-      if (parsed.type === "for"){
-        const startVal = runExpressionAll(parsed.startExpr);
-        const endVal = runExpressionAll(parsed.endExpr);
-        const stepVal = parsed.stepExpr ? runExpressionAll(parsed.stepExpr) : 1;
-        let start;
-        let end;
-        let step;
-        let loopKind = null;
-        if (isQty(startVal) || isQty(endVal)){
-          if (!isQty(startVal) || !isQty(endVal)){
-            throw new Error("for loop range must use matching unit quantities");
-          }
-          if (startVal.kind !== endVal.kind){
-            throw new Error("for loop range units must match");
-          }
-          loopKind = startVal.kind;
-          start = startVal.value;
-          end = endVal.value;
-          if (isQty(stepVal)){
-            if (stepVal.kind !== loopKind) throw new Error("for loop step unit mismatch");
-            step = stepVal.value;
-          }else{
-            step = stepVal;
-          }
-        }else{
-          [start, end] = normalizeCompare(startVal, endVal);
-          step = normalizeCompare(stepVal, 0)[0];
-        }
-        if (step === 0) throw new Error("for loop step cannot be 0");
-        const hadVar = Object.prototype.hasOwnProperty.call(state.vars, parsed.varName);
-        const prevVal = state.vars[parsed.varName];
-        const forward = step > 0;
-        let iter = 0;
-        const iterResults = [];
-        for (let i = start; forward ? i <= end : i >= end; i += step){
-          iter += 1;
-          if (iter > MAX_LOOP_ITERATIONS){
-            throw new Error(`for loop exceeded ${MAX_LOOP_ITERATIONS} iterations`);
-          }
-          state.vars[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
-          const loopResult = await handleLine(parsed.body);
-          iterResults.push(loopResult);
-        }
-        if (hadVar) state.vars[parsed.varName] = prevVal;
-        else delete state.vars[parsed.varName];
-        const nestedResults = iterResults.flatMap((entry) => entry.results);
-        return {
-          type: "for",
-          value: iterResults.length ? iterResults[iterResults.length - 1].lastValue : null,
-          results: nestedResults,
-          changedSymbols: collectChangedSymbols(nestedResults),
-        };
-      }
-
-      if (parsed.type === "repeat"){
-        const countVal = runExpressionAll(parsed.countExpr);
-        const count = normalizeCompare(countVal, 0)[0];
-        if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
-        const n = Math.floor(count);
-        if (n > MAX_LOOP_ITERATIONS){
-          throw new Error(`repeat exceeded ${MAX_LOOP_ITERATIONS} iterations`);
-        }
-        const iterResults = [];
-        for (let i = 0; i < n; i++){
-          const loopResult = await handleLine(parsed.body);
-          iterResults.push(loopResult);
-        }
-        const nestedResults = iterResults.flatMap((entry) => entry.results);
-        return {
-          type: "repeat",
-          value: iterResults.length ? iterResults[iterResults.length - 1].lastValue : null,
-          results: nestedResults,
-          changedSymbols: collectChangedSymbols(nestedResults),
-        };
-      }
-
-      if (parsed.type === "expr"){
-        const val = runExpressionAll(parsed.expr);
-        const fr = formatValueDisplay(val);
-        writeLine(fr.main, "out");
-        if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
-        return { type: "expr", value: val };
-      }
-      return { type: parsed.type, value: null };
     };
 
     try{
-      for (const stmt of statementList){
-        const parsed = evaluate(stmt);
-        if (!parsed) continue;
-        const usageEntry = beginUsage(parsed, stmt);
+      for (const stmt of ast.statements){
+        const usageEntry = beginUsage(stmt, stmt.stmt || "");
 
         try{
-          const statementResult = await executeParsed(parsed, stmt);
+          let statementResult;
+          if (stmt.type === "cmd"){
+            statementResult = await executeCommand(stmt);
+          }else{
+            const defExistedBefore = stmt.type === "def"
+              ? Object.prototype.hasOwnProperty.call(state.userFns, stmt.name)
+              : false;
+            const result = executeProgram([stmt], state.vars, "commit", {
+              allowedEffects: EFFECT.ALL,
+              allowCommands: false,
+              wrapErrors: false,
+              captureResults: true,
+            });
+            statementResult = Array.isArray(result.results) ? result.results[0] : null;
+            if (statementResult?.type === "def"){
+              const verb = defExistedBefore ? "Updated" : "Added";
+              writeLine(`${verb} function ${stmt.name}(${(stmt.params || []).join(", ")}).`, "ok");
+            }else if (statementResult?.type === "assy"){
+              recordSymbolDefinition({
+                name: stmt.name,
+                kind: "assy",
+                fields: stmt.fields,
+                value: statementResult.value,
+              });
+              const fr = formatValueDisplay(statementResult.value);
+              writeLine(`${stmt.name} = ${fr.main}`, "ok");
+            }else if (statementResult?.type === "assign"){
+              recordSymbolDefinition({ name: stmt.name, kind: "var", expr: stmt.expr, value: statementResult.value });
+              const fr = formatValueDisplay(statementResult.value);
+              writeLine(`${stmt.name} = ${fr.main}`, "ok");
+              if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
+            }else if (statementResult?.type === "equation"){
+              const unknownName = statementResult?.meta?.unknownName || "?";
+              if (!statementResult?.meta?.usedUnitToken){
+                recordSymbolDefinition({
+                  name: unknownName,
+                  kind: "var",
+                  expr: `${stmt.left} = ${stmt.right}`,
+                  value: statementResult.value,
+                });
+              }
+              const fr = formatValueDisplay(statementResult.value);
+              writeLine(`${unknownName} = ${fr.main}`, "ok");
+              if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
+            }else if (statementResult?.type === "expr"){
+              const fr = formatValueDisplay(statementResult.value);
+              writeLine(fr.main, "out");
+              if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
+            }
+          }
           if (statementResult){
             sourceResult.results.push(statementResult);
             if (Object.prototype.hasOwnProperty.call(statementResult, "value")){
