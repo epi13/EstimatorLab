@@ -1,3 +1,5 @@
+import { STATEMENT_TYPE } from "./repl-statement-schema.js";
+
 export function createTests({
   state,
   setStatus,
@@ -32,27 +34,27 @@ export function createTests({
       const parsed = evaluate(stmt);
       if (!parsed) continue;
 
-      if (parsed.type === "cmd"){
+      if (parsed.type === STATEMENT_TYPE.CMD){
         throw new Error(`${label} may not contain commands`);
       }
 
-      if (parsed.type === "def"){
+      if (parsed.type === STATEMENT_TYPE.DEF){
         defineUserFn(parsed.name, parsed.params, parsed.expr);
         continue;
       }
 
-      if (parsed.type === "assy"){
+      if (parsed.type === STATEMENT_TYPE.ASSY){
         const assembly = createAssembly(parsed.name, parsed.fields);
         state.vars[parsed.name] = assembly;
         continue;
       }
 
-      if (parsed.type === "assign"){
+      if (parsed.type === STATEMENT_TYPE.ASSIGN){
         state.vars[parsed.name] = runExpression(parsed.expr);
         continue;
       }
 
-      if (parsed.type === "equation"){
+      if (parsed.type === STATEMENT_TYPE.EQUATION){
         const solved = solveEquation(parsed.left, parsed.right);
         if (!solved.unknown.unitToken){
           state.vars[solved.unknown.name] = solved.value;
@@ -60,12 +62,12 @@ export function createTests({
         continue;
       }
 
-      if (parsed.type === "expr"){
+      if (parsed.type === STATEMENT_TYPE.EXPR){
         runExpression(parsed.expr);
         continue;
       }
 
-      if (parsed.type === "if" || parsed.type === "for" || parsed.type === "repeat"){
+      if (parsed.type === STATEMENT_TYPE.IF || parsed.type === STATEMENT_TYPE.FOR || parsed.type === STATEMENT_TYPE.REPEAT){
         throw new Error(`${label} may not contain flow statements`);
       }
     }
@@ -185,24 +187,24 @@ export function createTests({
     for (const stmt of statements){
       const parsed = evaluate(stmt);
       if (!parsed) continue;
-      if (parsed.type === "cmd") throw new Error(`Test cannot use command :${parsed.cmd}`);
-      if (parsed.type === "def"){
+      if (parsed.type === STATEMENT_TYPE.CMD) throw new Error(`Test cannot use command :${parsed.cmd}`);
+      if (parsed.type === STATEMENT_TYPE.DEF){
         defineUserFn(parsed.name, parsed.params, parsed.expr);
         continue;
       }
-      if (parsed.type === "assy"){
+      if (parsed.type === STATEMENT_TYPE.ASSY){
         const assembly = createAssembly(parsed.name, parsed.fields);
         state.vars[parsed.name] = assembly;
         lastValue = assembly;
         continue;
       }
-      if (parsed.type === "assign"){
+      if (parsed.type === STATEMENT_TYPE.ASSIGN){
         const val = runExpression(parsed.expr);
         state.vars[parsed.name] = val;
         lastValue = val;
         continue;
       }
-      if (parsed.type === "equation"){
+      if (parsed.type === STATEMENT_TYPE.EQUATION){
         const solved = solveEquation(parsed.left, parsed.right);
         if (solved.unknown.unitToken){
           lastValue = makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind);
@@ -212,7 +214,7 @@ export function createTests({
         }
         continue;
       }
-      if (parsed.type === "if"){
+      if (parsed.type === STATEMENT_TYPE.IF){
         const cond = runExpression(parsed.condition);
         if (isTruthy(cond)){
           lastValue = evaluateTestStatements(parsed.thenBody);
@@ -221,7 +223,7 @@ export function createTests({
         }
         continue;
       }
-      if (parsed.type === "for"){
+      if (parsed.type === STATEMENT_TYPE.FOR){
         const startVal = runExpression(parsed.startExpr);
         const endVal = runExpression(parsed.endExpr);
         const stepVal = parsed.stepExpr ? runExpression(parsed.stepExpr) : 1;
@@ -261,7 +263,7 @@ export function createTests({
         else delete state.vars[parsed.varName];
         continue;
       }
-      if (parsed.type === "repeat"){
+      if (parsed.type === STATEMENT_TYPE.REPEAT){
         const countVal = runExpression(parsed.countExpr);
         const count = normalizeCompare(countVal, 0)[0];
         if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
@@ -270,7 +272,7 @@ export function createTests({
         }
         continue;
       }
-      if (parsed.type === "expr"){
+      if (parsed.type === STATEMENT_TYPE.EXPR){
         lastValue = runExpression(parsed.expr);
       }
     }

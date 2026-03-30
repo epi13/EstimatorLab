@@ -1,3 +1,10 @@
+import {
+  STATEMENT_TYPE,
+  createBlockContext,
+  createChildBlockContext,
+  createStatementNode,
+} from "./repl-statement-schema.js";
+
 export function splitStatements(source){
   const out = [];
   const lines = source.split("\n");
@@ -245,10 +252,20 @@ export function splitStatements(source){
   return out;
 }
 
-export function parseBlockStatements(source, parseStatement){
+export function parseBlockStatements(source, parseStatement, blockContext = null){
   const statements = splitStatements(source || "");
   if (typeof parseStatement !== "function") return statements;
-  return statements.map((stmt) => parseStatement(stmt)).filter(Boolean);
+  const context = createBlockContext(blockContext || {});
+  return statements
+    .map((stmt, statementIndex) => parseStatement(stmt, {
+      source: stmt,
+      parentStatementType: context.parentStatementType,
+      blockRole: context.blockRole,
+      blockDepth: context.blockDepth,
+      sourceSpan: context.sourceSpan,
+      statementIndex,
+    }))
+    .filter(Boolean);
 }
 
 export function findTopLevelChar(source, char){
@@ -353,7 +370,7 @@ export function splitAssemblyEntries(source){
   return out;
 }
 
-export function parseIfStatement(src, parseStatement){
+export function parseIfStatement(src, parseStatement, blockContext = null, origin = null){
   const lines = src.split("\n");
   const firstRaw = lines[0] || "";
   const first = firstRaw.trim();
@@ -369,18 +386,17 @@ export function parseIfStatement(src, parseStatement){
     const rest = inlineRest;
     const elseIdx = findTopLevelKeyword(rest, "else");
     if (elseIdx < 0){
-      return { type:"if", condition, thenBody: parseBlockStatements(rest, parseStatement), elseBody: null };
+      return createStatementNode(STATEMENT_TYPE.IF, { condition, thenBody: parseBlockStatements(rest, parseStatement, createChildBlockContext(blockContext, { parentStatementType: STATEMENT_TYPE.IF, blockRole: "then" })), elseBody: null }, origin);
     }
     const thenBody = rest.slice(0, elseIdx).trim();
     let elseBody = rest.slice(elseIdx + 4).trim();
     if (elseBody.startsWith(":")) elseBody = elseBody.slice(1).trim();
     if (!elseBody) throw new Error("else statement missing body");
-    return {
-      type:"if",
+    return createStatementNode(STATEMENT_TYPE.IF, {
       condition,
-      thenBody: parseBlockStatements(thenBody, parseStatement),
-      elseBody: parseBlockStatements(elseBody, parseStatement),
-    };
+      thenBody: parseBlockStatements(thenBody, parseStatement, createChildBlockContext(blockContext, { parentStatementType: STATEMENT_TYPE.IF, blockRole: "then" })),
+      elseBody: parseBlockStatements(elseBody, parseStatement, createChildBlockContext(blockContext, { parentStatementType: STATEMENT_TYPE.IF, blockRole: "else" })),
+    }, origin);
   }
 
   const thenLines = [];
@@ -419,24 +435,22 @@ export function parseIfStatement(src, parseStatement){
       let actualElse = thenBody.slice(inlineElse + 4).trim();
       if (actualElse.startsWith(":")) actualElse = actualElse.slice(1).trim();
       if (actualThen && actualElse){
-        return {
-          type:"if",
+        return createStatementNode(STATEMENT_TYPE.IF, {
           condition,
-          thenBody: parseBlockStatements(actualThen, parseStatement),
-          elseBody: parseBlockStatements(actualElse, parseStatement),
-        };
+          thenBody: parseBlockStatements(actualThen, parseStatement, createChildBlockContext(blockContext, { parentStatementType: STATEMENT_TYPE.IF, blockRole: "then" })),
+          elseBody: parseBlockStatements(actualElse, parseStatement, createChildBlockContext(blockContext, { parentStatementType: STATEMENT_TYPE.IF, blockRole: "else" })),
+        }, origin);
       }
     }
   }
-  return {
-    type:"if",
+  return createStatementNode(STATEMENT_TYPE.IF, {
     condition,
-    thenBody: parseBlockStatements(thenBody, parseStatement),
-    elseBody: elseBody ? parseBlockStatements(elseBody, parseStatement) : null,
-  };
+    thenBody: parseBlockStatements(thenBody, parseStatement, createChildBlockContext(blockContext, { parentStatementType: STATEMENT_TYPE.IF, blockRole: "then" })),
+    elseBody: elseBody ? parseBlockStatements(elseBody, parseStatement, createChildBlockContext(blockContext, { parentStatementType: STATEMENT_TYPE.IF, blockRole: "else" })) : null,
+  }, origin);
 }
 
-export function parseForStatement(src, parseStatement){
+export function parseForStatement(src, parseStatement, blockContext = null, origin = null){
   const lines = src.split("\n");
   const firstRaw = lines[0] || "";
   const first = firstRaw.trim();
@@ -458,8 +472,9 @@ export function parseForStatement(src, parseStatement){
   const endExpr = rangeExpr.slice(rangeIdx + 2).trim();
 
   if (lines.length === 1){
-    const body = parseBlockStatements(inlineBody, parseStatement);
-    return { type:"for", varName, startExpr, endExpr, stepExpr, body };
+    const bodyContext = createChildBlockContext(blockContext, { parentStatementType: STATEMENT_TYPE.FOR, blockRole: "body" });
+    const body = parseBlockStatements(inlineBody, parseStatement, bodyContext);
+    return createStatementNode(STATEMENT_TYPE.FOR, { varName, startExpr, endExpr, stepExpr, body }, origin);
   }
 
   const baseIndent = (firstRaw.match(/^\s*/) || [""])[0].length;
@@ -476,10 +491,16 @@ export function parseForStatement(src, parseStatement){
   }
   const body = bodyLines.join("\n").trimEnd();
   if (!body) throw new Error("for statement missing body");
-  return { type:"for", varName, startExpr, endExpr, stepExpr, body: parseBlockStatements(body, parseStatement) };
+  return createStatementNode(STATEMENT_TYPE.FOR, {
+    varName,
+    startExpr,
+    endExpr,
+    stepExpr,
+    body: parseBlockStatements(body, parseStatement, createChildBlockContext(blockContext, { parentStatementType: STATEMENT_TYPE.FOR, blockRole: "body" })),
+  }, origin);
 }
 
-export function parseRepeatStatement(src, parseStatement){
+export function parseRepeatStatement(src, parseStatement, blockContext = null, origin = null){
   const lines = src.split("\n");
   const firstRaw = lines[0] || "";
   const first = firstRaw.trim();
@@ -493,7 +514,10 @@ export function parseRepeatStatement(src, parseStatement){
   if (lines.length === 1){
     const body = inlineBody;
     if (!body) throw new Error("repeat statement requires count and body");
-    return { type:"repeat", countExpr, body: parseBlockStatements(body, parseStatement) };
+    return createStatementNode(STATEMENT_TYPE.REPEAT, {
+      countExpr,
+      body: parseBlockStatements(body, parseStatement, createChildBlockContext(blockContext, { parentStatementType: STATEMENT_TYPE.REPEAT, blockRole: "body" })),
+    }, origin);
   }
 
   const baseIndent = (firstRaw.match(/^\s*/) || [""])[0].length;
@@ -510,7 +534,10 @@ export function parseRepeatStatement(src, parseStatement){
   }
   const body = bodyLines.join("\n").trimEnd();
   if (!body) throw new Error("repeat statement requires count and body");
-  return { type:"repeat", countExpr, body: parseBlockStatements(body, parseStatement) };
+  return createStatementNode(STATEMENT_TYPE.REPEAT, {
+    countExpr,
+    body: parseBlockStatements(body, parseStatement, createChildBlockContext(blockContext, { parentStatementType: STATEMENT_TYPE.REPEAT, blockRole: "body" })),
+  }, origin);
 }
 
 export function parseParams(paramText){
