@@ -201,12 +201,10 @@ export function createReplExecutor({
   }
 
   function executeSource(source, envOrState, options = {}){
-    const statements = Array.isArray(source)
-      ? source
-      : (isBlockNode(source) ? source.statements : null);
-    if (!statements){
-      throw new Error("executeSource expects AST block nodes or statement-node arrays.");
+    if (!isBlockNode(source)){
+      throw new Error("executeSource expects an AST block node with a statements array.");
     }
+    const statements = source.statements;
 
     const baseState = isExecutionState(envOrState)
       ? withModeAppliedState(envOrState)

@@ -189,7 +189,7 @@ export function initRepl(){
     const ast = frontend.parseSource(source);
     return executor.executeSource(ast, state.vars, opts);
   };
-  const normalizeProgramInput = (programInput) => {
+  const toProgramBlockNode = (programInput) => {
     if (typeof programInput === "string"){
       return frontend.parseSource(programInput);
     }
@@ -199,7 +199,7 @@ export function initRepl(){
     if (Array.isArray(programInput)){
       return createBlockNode(programInput, { sourceKind: "statement-array" });
     }
-    throw new Error("executeProgram expects a source string, AST block node, or statement-node array.");
+    throw new Error("executeProgram expects a source string, an AST block node, or a legacy statement-node array convertible to a block node.");
   };
 
   const executeProgram = (sourceOrAst, env = state.vars, mode = "commit", options = null) => {
@@ -207,7 +207,7 @@ export function initRepl(){
       ...(options || {}),
       mode,
     });
-    const ast = normalizeProgramInput(sourceOrAst);
+    const ast = toProgramBlockNode(sourceOrAst);
     return executor.executeSource(ast, env, normalized);
   };
   const executeSource = (source, options) => executeBlock(source, options);

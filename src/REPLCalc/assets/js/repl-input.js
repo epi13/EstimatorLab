@@ -2,7 +2,7 @@ import { runDoomDemo } from "./repl-doom.js";
 import { runLatentCommand } from "./repl-latent.js";
 import { parseParams } from "./repl-parser.js";
 import { EFFECT } from "./repl-effects.js";
-import { createBlockNode } from "./repl-ast.js";
+import { createBlockNode, isBlockNode } from "./repl-ast.js";
 
 export function createInputHandlers({
   state,
@@ -203,9 +203,12 @@ export function createInputHandlers({
   }
 
   async function handleLine(line){
-    const ast = frontend.parseSource(line);
+    const programBlock = frontend.parseSource(line);
+    if (!isBlockNode(programBlock)){
+      throw new Error("REPL input expected parser to return an AST block node.");
+    }
     const sourceResult = { lastValue: null, results: [] };
-    if (!ast?.statements?.length) return sourceResult;
+    if (!programBlock.statements?.length) return sourceResult;
 
     const executeCommand = async (parsed) => {
       const { cmd, arg } = parsed;
@@ -348,7 +351,7 @@ export function createInputHandlers({
     };
 
     try{
-      for (const stmt of ast.statements){
+      for (const stmt of programBlock.statements){
         const usageEntry = beginUsage(stmt, stmt.stmt || "");
 
         try{
