@@ -288,10 +288,26 @@ export function createInputHandlers({
     state.__constructionModuleLoaded = true;
   }
 
+  const collectChangedSymbols = (results) => {
+    const changed = [];
+    const seen = new Set();
+    for (const result of results || []){
+      const names = Array.isArray(result?.changedSymbols) ? result.changedSymbols : [];
+      for (const name of names){
+        if (!seen.has(name)){
+          seen.add(name);
+          changed.push(name);
+        }
+      }
+    }
+    return changed;
+  };
+
   async function handleLine(line){
     const runExpressionAll = (expr) => runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL });
     const statementList = splitStatements(line);
-    if (!statementList.length) return;
+    const sourceResult = { lastValue: null, results: [] };
+    if (!statementList.length) return sourceResult;
 
     const executeParsed = async (parsed, stmt) => {
       if (parsed.type === "cmd"){
@@ -299,34 +315,34 @@ export function createInputHandlers({
         if (cmd === "docs"){
           await ensureDocsModuleLoaded();
           runExpressionAll("show_docs()");
-          return;
+          return { type: "cmd", value: null };
         }
         if (cmd === "construction"){
           await ensureConstructionModuleLoaded();
           writeLine("Loaded construction helpers.", "ok");
-          return;
+          return { type: "cmd", value: null };
         }
-        if (cmd === "clear"){ clearTerminal(); return; }
-        if (cmd === "vars"){ listVars(); return; }
-        if (cmd === "methods"){ listMethods(); return; }
+        if (cmd === "clear"){ clearTerminal(); return { type: "cmd", value: null }; }
+        if (cmd === "vars"){ listVars(); return { type: "cmd", value: null }; }
+        if (cmd === "methods"){ listMethods(); return { type: "cmd", value: null }; }
         if (cmd === "reset"){
           resetAll();
           clearAutosave();
-          return;
+          return { type: "cmd", value: null };
         }
-        if (cmd === "save"){ saveProfile(arg); return; }
-        if (cmd === "mux"){ muxProfile(arg); return; }
-        if (cmd === "load"){ loadProfile(arg); return; }
-        if (cmd === "profiles"){ listProfiles(); return; }
-        if (cmd === "pin"){ pinSymbol(arg); return; }
-        if (cmd === "unpin"){ unpinSymbol(arg); return; }
-        if (cmd === "which"){ whichSymbol(arg); return; }
-        if (cmd === "use"){ useSymbolFromProfile(arg); return; }
-        if (cmd === "diff"){ diffSymbol(arg); return; }
-        if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); return; }
+        if (cmd === "save"){ saveProfile(arg); return { type: "cmd", value: null }; }
+        if (cmd === "mux"){ muxProfile(arg); return { type: "cmd", value: null }; }
+        if (cmd === "load"){ loadProfile(arg); return { type: "cmd", value: null }; }
+        if (cmd === "profiles"){ listProfiles(); return { type: "cmd", value: null }; }
+        if (cmd === "pin"){ pinSymbol(arg); return { type: "cmd", value: null }; }
+        if (cmd === "unpin"){ unpinSymbol(arg); return { type: "cmd", value: null }; }
+        if (cmd === "which"){ whichSymbol(arg); return { type: "cmd", value: null }; }
+        if (cmd === "use"){ useSymbolFromProfile(arg); return { type: "cmd", value: null }; }
+        if (cmd === "diff"){ diffSymbol(arg); return { type: "cmd", value: null }; }
+        if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); return { type: "cmd", value: state.theme }; }
         if (cmd === "doom"){
           await runDoomDemo({ gfx, writeLine, writeInputEcho, state, evaluator, runtime });
-          return;
+          return { type: "cmd", value: null };
         }
         if (cmd === "latent"){
           await runLatentCommand({
@@ -342,20 +358,20 @@ export function createInputHandlers({
             recordSymbolDefinition,
             writeLine,
           });
-          return;
+          return { type: "cmd", value: null };
         }
-        if (cmd === "test"){ await runTestSuite(); return; }
+        if (cmd === "test"){ await runTestSuite(); return { type: "cmd", value: null }; }
 
         if (cmd === "export"){
           const text = exportSession();
           await copyText(text);
-          return;
+          return { type: "cmd", value: text };
         }
         if (cmd === "import"){
           const text = await readClipboard();
           importSession(text);
           writeLine("Imported profile from clipboard.", "ok");
-          return;
+          return { type: "cmd", value: null };
         }
 
         if (cmd === "upload"){
@@ -381,7 +397,7 @@ export function createInputHandlers({
               if (parsedJson && typeof parsedJson === "object" && parsedJson.version === 2 && parsedJson.profiles){
                 importSession(text);
                 writeLine(`Imported profile from ${file.name}.`, "ok");
-                return;
+                return { type: "cmd", value: null };
               }
             }catch{}
           }
@@ -397,7 +413,7 @@ export function createInputHandlers({
           state.vars[name] = stored;
           recordSymbolDefinition({ name, kind: "var", expr: `:upload ${file.name}`, value: stored });
           writeLine(`Uploaded ${file.name} -> ${name}.`, "ok");
-          return;
+          return { type: "cmd", value: stored, changedSymbols: [name] };
         }
 
         if (cmd === "download"){
@@ -435,7 +451,7 @@ export function createInputHandlers({
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
           writeLine(`Downloaded ${name} -> ${outName}.`, "ok");
-          return;
+          return { type: "cmd", value: state.vars[name] };
         }
         throw new Error(`Unknown command: :${cmd}`);
       }
@@ -445,7 +461,7 @@ export function createInputHandlers({
         defineUserFn(parsed.name, parsed.params, parsed.expr);
         const verb = existed ? "Updated" : "Added";
         writeLine(`${verb} function ${parsed.name}(${parsed.params.join(", ")}).`, "ok");
-        return;
+        return { type: "def", value: null, changedSymbols: [parsed.name] };
       }
 
       if (parsed.type === "assy"){
@@ -459,7 +475,7 @@ export function createInputHandlers({
         });
         const fr = formatValueDisplay(assembly);
         writeLine(`${parsed.name} = ${fr.main}`, "ok");
-        return;
+        return { type: "assy", value: assembly, changedSymbols: [parsed.name] };
       }
 
       if (parsed.type === "assign"){
@@ -469,7 +485,7 @@ export function createInputHandlers({
         const fr = formatValueDisplay(val);
         writeLine(`${parsed.name} = ${fr.main}`, "ok");
         if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
-        return;
+        return { type: "assign", value: val, changedSymbols: [parsed.name] };
       }
 
       if (parsed.type === "equation"){
@@ -490,17 +506,24 @@ export function createInputHandlers({
         const fr = formatValueDisplay(solvedValue);
         writeLine(`${solved.unknown.name} = ${fr.main}`, "ok");
         if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
-        return;
+        const changedSymbols = solved.unknown.unitToken ? [] : [solved.unknown.name];
+        return { type: "equation", value: solvedValue, changedSymbols };
       }
 
       if (parsed.type === "if"){
         const cond = runExpressionAll(parsed.condition);
+        let branch = { lastValue: null, results: [] };
         if (isTruthy(cond)){
-          await handleLine(parsed.thenBody);
+          branch = await handleLine(parsed.thenBody);
         }else if (parsed.elseBody){
-          await handleLine(parsed.elseBody);
+          branch = await handleLine(parsed.elseBody);
         }
-        return;
+        return {
+          type: "if",
+          value: branch.lastValue,
+          results: branch.results,
+          changedSymbols: collectChangedSymbols(branch.results),
+        };
       }
 
       if (parsed.type === "for"){
@@ -536,17 +559,25 @@ export function createInputHandlers({
         const prevVal = state.vars[parsed.varName];
         const forward = step > 0;
         let iter = 0;
+        const iterResults = [];
         for (let i = start; forward ? i <= end : i >= end; i += step){
           iter += 1;
           if (iter > MAX_LOOP_ITERATIONS){
             throw new Error(`for loop exceeded ${MAX_LOOP_ITERATIONS} iterations`);
           }
           state.vars[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
-          await handleLine(parsed.body);
+          const loopResult = await handleLine(parsed.body);
+          iterResults.push(loopResult);
         }
         if (hadVar) state.vars[parsed.varName] = prevVal;
         else delete state.vars[parsed.varName];
-        return;
+        const nestedResults = iterResults.flatMap((entry) => entry.results);
+        return {
+          type: "for",
+          value: iterResults.length ? iterResults[iterResults.length - 1].lastValue : null,
+          results: nestedResults,
+          changedSymbols: collectChangedSymbols(nestedResults),
+        };
       }
 
       if (parsed.type === "repeat"){
@@ -557,10 +588,18 @@ export function createInputHandlers({
         if (n > MAX_LOOP_ITERATIONS){
           throw new Error(`repeat exceeded ${MAX_LOOP_ITERATIONS} iterations`);
         }
+        const iterResults = [];
         for (let i = 0; i < n; i++){
-          await handleLine(parsed.body);
+          const loopResult = await handleLine(parsed.body);
+          iterResults.push(loopResult);
         }
-        return;
+        const nestedResults = iterResults.flatMap((entry) => entry.results);
+        return {
+          type: "repeat",
+          value: iterResults.length ? iterResults[iterResults.length - 1].lastValue : null,
+          results: nestedResults,
+          changedSymbols: collectChangedSymbols(nestedResults),
+        };
       }
 
       if (parsed.type === "expr"){
@@ -568,8 +607,9 @@ export function createInputHandlers({
         const fr = formatValueDisplay(val);
         writeLine(fr.main, "out");
         if (fr.extra) writeLine(`↳ ${fr.extra}`, "muted");
-        return;
+        return { type: "expr", value: val };
       }
+      return { type: parsed.type, value: null };
     };
 
     try{
@@ -579,7 +619,13 @@ export function createInputHandlers({
         const usageEntry = beginUsage(parsed, stmt);
 
         try{
-          await executeParsed(parsed, stmt);
+          const statementResult = await executeParsed(parsed, stmt);
+          if (statementResult){
+            sourceResult.results.push(statementResult);
+            if (Object.prototype.hasOwnProperty.call(statementResult, "value")){
+              sourceResult.lastValue = statementResult.value;
+            }
+          }
         }finally{
           endUsage(usageEntry);
         }
@@ -597,6 +643,7 @@ export function createInputHandlers({
       flushGfxOutput();
       setStatus("Ready", "ok");
     }
+    return sourceResult;
   }
 
   async function submitInput(){

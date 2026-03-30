@@ -263,10 +263,25 @@ export function initRepl(){
     }
   };
 
-  const runBlockBody = (source, options) => {
+  const mergeChangedSymbols = (entries) => {
+    const changed = [];
+    const seen = new Set();
+    for (const entry of entries || []){
+      const symbols = Array.isArray(entry?.changedSymbols) ? entry.changedSymbols : [];
+      for (const name of symbols){
+        if (!seen.has(name)){
+          seen.add(name);
+          changed.push(name);
+        }
+      }
+    }
+    return changed;
+  };
+
+  const executeBlock = (source, options) => {
     const opts = options || { allowedEffects: EFFECT.ALL };
     const statementList = splitStatements(source);
-    let lastResult = null;
+    const blockResult = { lastValue: null, results: [] };
 
     for (let stmtIdx = 0; stmtIdx < statementList.length; stmtIdx++){
       const stmt = statementList[stmtIdx];
@@ -274,6 +289,7 @@ export function initRepl(){
       const cleaned = stmt.replace(/;\s*$/, "");
       const parsed = evaluator.evaluate(cleaned);
       if (!parsed) continue;
+      let statementResult = { type: parsed.type, value: null };
 
       if (parsed.type === "cmd"){
         throw new Error("Commands are not supported in function bodies.");
@@ -281,37 +297,58 @@ export function initRepl(){
 
       if (parsed.type === "def"){
         runtime.defineUserFn(parsed.name, parsed.params, parsed.expr);
+        statementResult = { type: "def", value: null, changedSymbols: [parsed.name] };
+        blockResult.results.push(statementResult);
         continue;
       }
 
       if (parsed.type === "assy"){
         const assembly = evaluator.createAssembly(parsed.name, parsed.fields);
         state.vars[parsed.name] = assembly;
+        statementResult = { type: "assy", value: assembly, changedSymbols: [parsed.name] };
+        blockResult.lastValue = assembly;
+        blockResult.results.push(statementResult);
         continue;
       }
 
       if (parsed.type === "assign"){
-        lastResult = evaluator.runExpressionWithContext(parsed.expr, state.vars, opts);
-        state.vars[parsed.name] = lastResult;
+        const assignedValue = evaluator.runExpressionWithContext(parsed.expr, state.vars, opts);
+        state.vars[parsed.name] = assignedValue;
+        statementResult = { type: "assign", value: assignedValue, changedSymbols: [parsed.name] };
+        blockResult.lastValue = assignedValue;
+        blockResult.results.push(statementResult);
         continue;
       }
 
       if (parsed.type === "equation"){
         const solved = evaluator.solveEquation(parsed.left, parsed.right);
+        const changedSymbols = [];
         if (!solved.unknown.unitToken){
           state.vars[solved.unknown.name] = solved.value;
+          changedSymbols.push(solved.unknown.name);
         }
-        lastResult = solved.value;
+        statementResult = { type: "equation", value: solved.value, changedSymbols };
+        blockResult.lastValue = solved.value;
+        blockResult.results.push(statementResult);
         continue;
       }
 
       if (parsed.type === "if"){
         const cond = evaluator.runExpressionWithContext(parsed.condition, state.vars, opts);
+        let branchResult = { lastValue: null, results: [] };
         if (isTruthy(cond)){
-          lastResult = runBlockBody(parsed.thenBody, opts);
+          branchResult = executeBlock(parsed.thenBody, opts);
         }else if (parsed.elseBody){
-          lastResult = runBlockBody(parsed.elseBody, opts);
+          branchResult = executeBlock(parsed.elseBody, opts);
         }
+        statementResult = {
+          type: "if",
+          value: branchResult.lastValue,
+          results: branchResult.results,
+          changedSymbols: mergeChangedSymbols(branchResult.results),
+        };
+        blockResult.lastValue = branchResult.lastValue;
+        blockResult.results.push(statementResult);
         continue;
       }
 
@@ -346,16 +383,28 @@ export function initRepl(){
         const prevVal = state.vars[parsed.varName];
         const forward = step > 0;
         let iter = 0;
+        const nestedResults = [];
         for (let i = start; forward ? i <= end : i >= end; i += step){
           iter += 1;
           if (iter > MAX_LOOP_ITERATIONS){
             throw new Error(`for loop exceeded ${MAX_LOOP_ITERATIONS} iterations`);
           }
           state.vars[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
-          lastResult = runBlockBody(parsed.body, opts);
+          const iterResult = executeBlock(parsed.body, opts);
+          nestedResults.push(iterResult);
         }
         if (hadVar) state.vars[parsed.varName] = prevVal;
         else delete state.vars[parsed.varName];
+        const flattened = nestedResults.flatMap((entry) => entry.results);
+        const forValue = nestedResults.length ? nestedResults[nestedResults.length - 1].lastValue : null;
+        statementResult = {
+          type: "for",
+          value: forValue,
+          results: flattened,
+          changedSymbols: mergeChangedSymbols(flattened),
+        };
+        blockResult.lastValue = forValue;
+        blockResult.results.push(statementResult);
         continue;
       }
 
@@ -367,30 +416,38 @@ export function initRepl(){
         if (n > MAX_LOOP_ITERATIONS){
           throw new Error(`repeat exceeded ${MAX_LOOP_ITERATIONS} iterations`);
         }
+        const nestedResults = [];
         for (let i = 0; i < n; i++){
-          lastResult = runBlockBody(parsed.body, opts);
+          const iterResult = executeBlock(parsed.body, opts);
+          nestedResults.push(iterResult);
         }
+        const flattened = nestedResults.flatMap((entry) => entry.results);
+        const repeatValue = nestedResults.length ? nestedResults[nestedResults.length - 1].lastValue : null;
+        statementResult = {
+          type: "repeat",
+          value: repeatValue,
+          results: flattened,
+          changedSymbols: mergeChangedSymbols(flattened),
+        };
+        blockResult.lastValue = repeatValue;
+        blockResult.results.push(statementResult);
         continue;
       }
 
-  const runBlockBody = (source, options) => executor.executeSource(source, {
-    captureLastValue: true,
-    allowCommands: false,
-    wrapErrors: false,
-    cleanStatement: true,
-    expressionOptions: options || { allowedEffects: EFFECT.ALL },
-    commandErrorMessage: "Commands are not supported in function bodies.",
-  });
+      if (parsed.type === "expr"){
+        const exprValue = evaluator.runExpressionWithContext(parsed.expr, state.vars, opts);
+        statementResult = { type: "expr", value: exprValue };
+        blockResult.lastValue = exprValue;
+        blockResult.results.push(statementResult);
+      }
+    }
 
-  const runLoopStatements = (source, context = null) => executor.executeSource(source, {
-    captureLastValue: false,
-    allowCommands: false,
-    wrapErrors: true,
-    cleanStatement: false,
-    expressionOptions: { allowedEffects: EFFECT.ALL },
-    context: Array.isArray(context) ? context : [],
-    commandErrorMessage: "Commands are not supported in gfx loop scripts.",
-  });
+    return blockResult;
+  };
+  const executeSource = (source, options) => executeBlock(source, options);
+  const runBlockBody = (source, options) => executeBlock(source, options).lastValue;
+  state.executeBlock = executeBlock;
+  state.executeSource = executeSource;
 
   runtime.setRunExpressionWithContext(evaluator.runExpressionWithContext);
   runtime.setRunBlockBody(runBlockBody);
