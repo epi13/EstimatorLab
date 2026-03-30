@@ -1584,7 +1584,7 @@ export function createBaseFns(){
     mul,
   });
 
-  attachMapBuiltins(baseFns, { defFn, isQty });
+  attachMapBuiltins(baseFns, { defFn, defFnCtx, isQty });
 
   attachCsiBuiltins(baseFns, {
     defFn,

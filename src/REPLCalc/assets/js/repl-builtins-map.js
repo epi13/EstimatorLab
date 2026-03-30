@@ -1,6 +1,6 @@
 import { EFFECT } from "./repl-effects.js";
 
-export function attachMapBuiltins(baseFns, { defFn, isQty }){
+export function attachMapBuiltins(baseFns, { defFn, defFnCtx, isQty }){
   function requireMap(value, label){
     if (!value || typeof value !== "object" || !value.__map){
       throw new Error(`${label} expects a map as the first argument.`);
@@ -254,5 +254,184 @@ export function attachMapBuiltins(baseFns, { defFn, isQty }){
     if (!Number.isFinite(v) || v < 0 || v > 255) throw new Error("mset value must be 0..255");
     mapObj.data[iy * mapObj.w + ix] = v;
     return 1;
+  });
+
+  const toInt = (value) => Math.floor(isQty(value) ? value.value : value);
+  const point = (x, y, tile = null) => {
+    const fields = {
+      x: { value: x, note: "", raw: "" },
+      y: { value: y, note: "", raw: "" },
+    };
+    if (tile !== null) fields.tile = { value: tile, note: "", raw: "" };
+    return { __assy: true, name: "point", fields };
+  };
+  const vec = (data) => ({ __vec: true, data });
+  const makePredicate = (ctx, pred, fnName) => {
+    if (pred && typeof pred === "object" && pred.__lambda && typeof pred.param === "string" && typeof pred.body === "string"){
+      if (typeof ctx?.evalString !== "function"){
+        throw new Error(`${fnName} predicate requires evaluator context`);
+      }
+      return (v) => {
+        const prevHas = Object.prototype.hasOwnProperty.call(ctx.vars, pred.param);
+        const prev = ctx.vars[pred.param];
+        ctx.vars[pred.param] = v;
+        try{
+          return ctx.evalString(pred.body);
+        }finally{
+          if (prevHas) ctx.vars[pred.param] = prev;
+          else delete ctx.vars[pred.param];
+        }
+      };
+    }
+    throw new Error(`${fnName} predicate must be lambda def(v)=...`);
+  };
+  const predTruthy = (value) => (isQty(value) ? value.value : value) ? 1 : 0;
+  const inBoundsRaw = (mapObj, x, y) => x >= 0 && y >= 0 && x < mapObj.w && y < mapObj.h;
+
+  baseFns.map_width = defFn("map_width", 1, {
+    args: [{ label: "m", kinds: ["map"] }],
+    returns: { kinds: ["scalar"] },
+  }, (m) => requireMap(m, "map_width").w);
+  baseFns.map_height = defFn("map_height", 1, {
+    args: [{ label: "m", kinds: ["map"] }],
+    returns: { kinds: ["scalar"] },
+  }, (m) => requireMap(m, "map_height").h);
+
+  baseFns.in_bounds = defFn("in_bounds", 3, {
+    args: [
+      { label: "m", kinds: ["map"] },
+      { label: "x", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "y", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (m, x, y) => {
+    const mapObj = requireMap(m, "in_bounds");
+    return inBoundsRaw(mapObj, toInt(x), toInt(y)) ? 1 : 0;
+  });
+
+  baseFns.safe_get = defFn("safe_get", 3, {
+    args: [
+      { label: "m", kinds: ["map"] },
+      { label: "x", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "y", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["scalar"] },
+  }, (m, x, y) => {
+    const mapObj = requireMap(m, "safe_get");
+    const ix = toInt(x);
+    const iy = toInt(y);
+    if (!inBoundsRaw(mapObj, ix, iy)) return 0;
+    return mapObj.data[iy * mapObj.w + ix];
+  });
+
+  baseFns.get_neighbors = defFn("get_neighbors", 3, {
+    args: [
+      { label: "m", kinds: ["map"] },
+      { label: "x", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "y", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["vec"] },
+  }, (m, x, y) => {
+    const mapObj = requireMap(m, "get_neighbors");
+    const cx = toInt(x);
+    const cy = toInt(y);
+    const out = [];
+    const deltas = [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
+    for (const [dx, dy] of deltas){
+      const nx = cx + dx;
+      const ny = cy + dy;
+      if (!inBoundsRaw(mapObj, nx, ny)) continue;
+      out.push(point(nx, ny, mapObj.data[ny * mapObj.w + nx]));
+    }
+    return vec(out);
+  });
+
+  baseFns.count_tiles = defFn("count_tiles", 2, {
+    args: [{ label: "m", kinds: ["map"] }, { label: "tile", kinds: ["scalar", "dim"], dim: "scalar" }],
+    returns: { kinds: ["scalar"] },
+  }, (m, tile) => {
+    const mapObj = requireMap(m, "count_tiles");
+    const target = toInt(tile);
+    let total = 0;
+    for (let i = 0; i < mapObj.data.length; i++) if (mapObj.data[i] === target) total += 1;
+    return total;
+  });
+
+  baseFns.count_if = defFnCtx("count_if", 2, {
+    args: [{ label: "m", kinds: ["map"] }, { label: "pred", kinds: ["any"] }],
+    returns: { kinds: ["scalar"] },
+  }, (ctx, m, pred) => {
+    const mapObj = requireMap(m, "count_if");
+    const predicate = makePredicate(ctx, pred, "count_if");
+    let total = 0;
+    for (let i = 0; i < mapObj.data.length; i++) total += predTruthy(predicate(mapObj.data[i])) ? 1 : 0;
+    return total;
+  });
+
+  baseFns.find_tiles = defFn("find_tiles", 2, {
+    args: [{ label: "m", kinds: ["map"] }, { label: "tile", kinds: ["scalar", "dim"], dim: "scalar" }],
+    returns: { kinds: ["vec"] },
+  }, (m, tile) => {
+    const mapObj = requireMap(m, "find_tiles");
+    const target = toInt(tile);
+    const found = [];
+    if (target === 2){
+      found.push(point(Math.floor(mapObj.spawnX), Math.floor(mapObj.spawnY)));
+    }
+    for (let y = 0; y < mapObj.h; y++){
+      for (let x = 0; x < mapObj.w; x++){
+        if (mapObj.data[y * mapObj.w + x] === target) found.push(point(x, y));
+      }
+    }
+    return vec(found);
+  });
+
+  baseFns.find_if = defFnCtx("find_if", 2, {
+    args: [{ label: "m", kinds: ["map"] }, { label: "pred", kinds: ["any"] }],
+    returns: { kinds: ["vec"] },
+  }, (ctx, m, pred) => {
+    const mapObj = requireMap(m, "find_if");
+    const predicate = makePredicate(ctx, pred, "find_if");
+    const found = [];
+    for (let y = 0; y < mapObj.h; y++){
+      for (let x = 0; x < mapObj.w; x++){
+        const v = mapObj.data[y * mapObj.w + x];
+        if (predTruthy(predicate(v))) found.push(point(x, y));
+      }
+    }
+    return vec(found);
+  });
+
+  baseFns.flood_fill = defFnCtx("flood_fill", 4, {
+    args: [
+      { label: "m", kinds: ["map"] },
+      { label: "x", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "y", kinds: ["scalar", "dim"], dim: "scalar" },
+      { label: "pred", kinds: ["any"] },
+    ],
+    returns: { kinds: ["vec"] },
+  }, (ctx, m, x, y, pred) => {
+    const mapObj = requireMap(m, "flood_fill");
+    const startX = toInt(x);
+    const startY = toInt(y);
+    if (!inBoundsRaw(mapObj, startX, startY)) return vec([]);
+    const predicate = makePredicate(ctx, pred, "flood_fill");
+    const seen = new Set();
+    const out = [];
+    const stack = [[startX, startY]];
+    while (stack.length){
+      const [cx, cy] = stack.pop();
+      const key = `${cx},${cy}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const value = mapObj.data[cy * mapObj.w + cx];
+      if (!predTruthy(predicate(value))) continue;
+      out.push(point(cx, cy));
+      if (cx + 1 < mapObj.w) stack.push([cx + 1, cy]);
+      if (cx - 1 >= 0) stack.push([cx - 1, cy]);
+      if (cy + 1 < mapObj.h) stack.push([cx, cy + 1]);
+      if (cy - 1 >= 0) stack.push([cx, cy - 1]);
+    }
+    return vec(out);
   });
 }
