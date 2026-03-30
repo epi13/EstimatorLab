@@ -13,6 +13,7 @@ import {
   toBool,
   toScalarNumber,
 } from "./repl-values.js";
+import { getIRNodeChildren, toCanonicalIRNode } from "./repl-expression-ir.js";
 
 const OPS = {
   "||": { prec: 0, assoc: "L", fn: (a, b) => scalar((isTruthy(a) || isTruthy(b)) ? 1 : 0) },
@@ -691,23 +692,25 @@ export function evalExpressionIR(ir, ctx){
   }
 
   function run(node){
-    if (!node || typeof node !== "object") throw new Error("Invalid IR node.");
-    if (node.kind === "literal"){
-      if (node.valueType === "number") return scalar(node.value);
-      if (node.valueType === "string") return string(node.value);
-      return box(node.value);
+    const canonicalNode = toCanonicalIRNode(node);
+    if (!canonicalNode) throw new Error("Invalid IR node.");
+    if (canonicalNode.kind === "literal"){
+      if (canonicalNode.valueType === "number") return scalar(canonicalNode.value);
+      if (canonicalNode.valueType === "string") return string(canonicalNode.value);
+      return box(canonicalNode.value);
     }
-    if (node.kind === "identifier"){
-      return getVar(node.name);
+    if (canonicalNode.kind === "identifier"){
+      return getVar(canonicalNode.name);
     }
-    if (node.kind === "binary"){
-      const left = run(node.left);
-      const right = run(node.right);
-      if (!OPS[node.op]) throw new Error(`Unsupported operator in IR: ${node.op}`);
-      return OPS[node.op].fn(left, right);
+    if (canonicalNode.kind === "binary"){
+      const [leftNode, rightNode] = getIRNodeChildren(canonicalNode);
+      const left = run(leftNode);
+      const right = run(rightNode);
+      if (!OPS[canonicalNode.op]) throw new Error(`Unsupported operator in IR: ${canonicalNode.op}`);
+      return OPS[canonicalNode.op].fn(left, right);
     }
-    if (node.kind === "call"){
-      const fnName = node.name;
+    if (canonicalNode.kind === "call"){
+      const fnName = canonicalNode.name;
       if (onCall) onCall(fnName);
       const fn = ctx.fns[fnName];
       if (!fn) throw new Error(`Unknown function: ${fnName}()`);
@@ -717,24 +720,25 @@ export function evalExpressionIR(ir, ctx){
         const allowNames = effectNames(allowedEffects).join("|");
         throw new Error(`ERR[E_EFFECT] ${fnName}(): effect ${needNames} not allowed in this context (allowed: ${allowNames})`);
       }
-      const args = (Array.isArray(node.args) ? node.args : []).map((arg) => run(arg));
+      const args = getIRNodeChildren(canonicalNode).map((arg) => run(arg));
       if (fn.arity >= 0 && args.length !== fn.arity){
         throw new Error(`${fnName}() expected ${fn.arity} args, got ${args.length}`);
       }
       return fn.ctx ? fn.impl(ctx, ...args) : fn.impl(...args);
     }
-    if (node.kind === "object"){
+    if (canonicalNode.kind === "object"){
       if (resolveExpr){
-        const assy = tryBuildObjAssy(node.raw, resolveExpr);
+        const assy = tryBuildObjAssy(canonicalNode.raw, resolveExpr);
         if (assy) return assy;
       }
-      return { __obj: true, raw: node.raw };
+      return { __obj: true, raw: canonicalNode.raw };
     }
-    if (node.kind === "conditional"){
-      const condVal = run(node.cond);
-      return isTruthy(condVal) ? run(node.then) : run(node.else);
+    if (canonicalNode.kind === "conditional"){
+      const [condNode, thenNode, elseNode] = getIRNodeChildren(canonicalNode);
+      const condVal = run(condNode);
+      return isTruthy(condVal) ? run(thenNode) : run(elseNode);
     }
-    throw new Error(`Unknown IR kind: ${node.kind}`);
+    throw new Error(`Unknown IR kind: ${canonicalNode.kind}`);
   }
 
   return run(ir);

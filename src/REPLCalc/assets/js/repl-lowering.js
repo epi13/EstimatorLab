@@ -1,4 +1,4 @@
-import { irFromRPN } from "./repl-expression-ir.js";
+import { getIRNodeChildren, irFromRPN, toCanonicalIRNode } from "./repl-expression-ir.js";
 
 export function createReplLowering({
   getFns,
@@ -68,24 +68,15 @@ export function createReplLowering({
   function tokenizeExpressionIR(ir){
     const out = [];
     function walk(node){
-      if (!node || typeof node !== "object") return;
-      if (node.kind === "identifier"){
-        out.push({ type: "id", value: node.name });
+      const canonicalNode = toCanonicalIRNode(node);
+      if (!canonicalNode) return;
+      if (canonicalNode.kind === "identifier"){
+        out.push({ type: "id", value: canonicalNode.name });
         return;
       }
-      if (node.kind === "binary"){
-        walk(node.left);
-        walk(node.right);
-        return;
-      }
-      if (node.kind === "call"){
-        for (const arg of (node.args || [])) walk(arg);
-        return;
-      }
-      if (node.kind === "conditional"){
-        walk(node.cond);
-        walk(node.then);
-        walk(node.else);
+      const children = getIRNodeChildren(canonicalNode);
+      for (const child of children){
+        walk(child);
       }
     }
     walk(ir);
@@ -93,7 +84,7 @@ export function createReplLowering({
   }
 
   function parseExpressionIR(expr, vars){
-    if (expr && typeof expr === "object" && expr.kind) return expr;
+    if (expr && typeof expr === "object" && expr.kind) return toCanonicalIRNode(expr);
     const source = String(expr ?? "");
     const fnNames = new Set(Object.keys(getFns()));
     const expanded = expandTrailingNumericIdentifiers(tokenize(source), vars, fnNames);
