@@ -185,6 +185,65 @@ export function tokenize(src){
       continue;
     }
 
+    if (s.startsWith("def(", i)){
+      let j = i + 4;
+      let param = "";
+      while (j < s.length && /\s/.test(s[j])) j += 1;
+      const pStart = j;
+      while (j < s.length && /[A-Za-z0-9_$]/.test(s[j])) j += 1;
+      param = s.slice(pStart, j);
+      while (j < s.length && /\s/.test(s[j])) j += 1;
+      if (!param || s[j] !== ")"){
+        throw new Error("lambda def(...) requires a single parameter");
+      }
+      j += 1;
+      while (j < s.length && /\s/.test(s[j])) j += 1;
+      if (s[j] !== "="){
+        throw new Error("lambda def(param)=expr requires '='");
+      }
+      j += 1;
+      while (j < s.length && /\s/.test(s[j])) j += 1;
+      const bodyStart = j;
+      let depth = 0;
+      let braceDepth = 0;
+      let quote = null;
+      while (j < s.length){
+        const ch = s[j];
+        if (quote){
+          if (ch === "\\"){
+            j += 2;
+            continue;
+          }
+          if (ch === quote) quote = null;
+          j += 1;
+          continue;
+        }
+        if (ch === "\"" || ch === "'"){
+          quote = ch;
+          j += 1;
+          continue;
+        }
+        if (ch === "(") depth += 1;
+        else if (ch === ")"){
+          if (depth === 0) break;
+          depth -= 1;
+        }else if (ch === "{") braceDepth += 1;
+        else if (ch === "}"){
+          if (braceDepth > 0) braceDepth -= 1;
+        }else if (ch === "," && depth === 0 && braceDepth === 0){
+          break;
+        }
+        j += 1;
+      }
+      const body = s.slice(bodyStart, j).trim();
+      if (!body){
+        throw new Error("lambda def(param)=expr requires a body expression");
+      }
+      out.push({ type: "lambda", param, body });
+      i = j;
+      continue;
+    }
+
     if (isIdentStart(c)){
       let j = i + 1;
       while (j < s.length && isIdent(s[j])) j += 1;
@@ -382,6 +441,9 @@ export function toRPN(tokens){
       markCallArgIfNeeded();
       output.push(t);
     }else if (t.type === "lazy_if"){
+      markCallArgIfNeeded();
+      output.push(t);
+    }else if (t.type === "lambda"){
       markCallArgIfNeeded();
       output.push(t);
     }else if (t.type === "id"){
@@ -596,6 +658,8 @@ export function evalRPN(rpn, ctx){
       const condVal = resolveExpr(t.cond);
       const branch = isTruthy(condVal) ? t.then : t.else;
       st.push(resolveExpr(branch));
+    }else if (t.type === "lambda"){
+      st.push({ __lambda: true, param: t.param, body: t.body });
     }else if (t.type === "id"){
       st.push(getVar(t.value));
     }else if (t.type === "op"){

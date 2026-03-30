@@ -233,7 +233,7 @@ export function attachConstructionBuiltins(baseFns, {
   baseFns.vol_rect = defFn("vol_rect", 2, {
     args: [
       { label: "area", kinds: ["scalar", "dim"], dim: "area" },
-      { label: "thickness_in", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "thickness_in", kinds: ["scalar", "dim"] },
     ],
     returns: { kinds: ["dim"], dim: "vol" },
   }, (area, thickness_in) => {
@@ -241,7 +241,6 @@ export function attachConstructionBuiltins(baseFns, {
     if (a.kind !== "area") throw new Error("vol_rect expects area as first arg");
     let t;
     if (isQty(thickness_in)){
-      if (thickness_in.kind !== "len") throw new Error("thickness must be length");
       t = thickness_in.value;
     }else{
       t = (thickness_in / 12);
@@ -252,7 +251,7 @@ export function attachConstructionBuiltins(baseFns, {
   baseFns.concrete_cy = defFn("concrete_cy", 2, {
     args: [
       { label: "area", kinds: ["scalar", "dim"], dim: "area" },
-      { label: "thickness_in", kinds: ["scalar", "dim"], dim: "len" },
+      { label: "thickness_in", kinds: ["scalar", "dim"] },
     ],
     returns: { kinds: ["dim"], dim: "vol" },
   }, (area, thickness_in) => {
