@@ -12,6 +12,7 @@
  * @property {number} scoreDelta
  * @property {number} confidence
  * @property {number} cost
+ * @property {object} meta
  * @property {string} id
  */
 
@@ -110,6 +111,7 @@ export function createTransition({
   scoreDelta = 0,
   confidence = 1,
   cost = 0,
+  meta = {},
   id = null,
   sourceModule = "repl-transitions",
   strategy = "default",
@@ -148,6 +150,11 @@ export function createTransition({
     fromStateId: resolvedFromStateId,
     toStateId: resolvedToStateId,
     record,
+    scoreDelta,
+    confidence,
+    cost,
+    meta: meta && typeof meta === "object" ? { ...meta } : {},
+    id: id || nextTransitionId(transitionType),
     statementNodeId: resolvedStatementNodeId,
     canonicalKey: resolvedCanonicalKey,
     meta: withProvenance(meta, { sourceModule, strategy, reasoningTags, sequence }),
