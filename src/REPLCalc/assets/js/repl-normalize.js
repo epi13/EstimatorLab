@@ -30,22 +30,7 @@ function stableSerialize(value){
   return JSON.stringify(String(value));
 }
 
-function buildUnitCanonicalMap(UNIT){
-  const bySignature = new Map();
-  const out = Object.create(null);
-  for (const [name, info] of Object.entries(UNIT || {})){
-    if (!info || typeof info !== "object") continue;
-    const kind = typeof info.kind === "string" ? info.kind : "";
-    const toBase = Number(info.toBase);
-    const signature = `${kind}|${Number.isFinite(toBase) ? toBase : "nan"}`;
-    if (!bySignature.has(signature)) bySignature.set(signature, name);
-    out[name] = bySignature.get(signature);
-  }
-  return out;
-}
-
-export function createReplNormalize({ UNIT, isUnitToken }){
-  const unitCanonical = buildUnitCanonicalMap(UNIT);
+export function createReplNormalize(){
 
   function normalizeIdentifier(name, aliasMap = null){
     let next = String(name || "").trim();
@@ -57,7 +42,6 @@ export function createReplNormalize({ UNIT, isUnitToken }){
       if (typeof mapped !== "string" || !mapped.trim()) break;
       next = mapped.trim();
     }
-    if (isUnitToken(next)) return unitCanonical[next] || next;
     return next;
   }
 
