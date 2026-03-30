@@ -147,7 +147,14 @@ export function createReplExecutor({
       if (!stmt) continue;
 
       try{
-        const parsed = typeof stmt === "string" ? evaluate(stmt) : stmt;
+        let parsed = null;
+        if (typeof stmt === "string"){
+          parsed = evaluate(stmt);
+        }else if (typeof stmt === "object"){
+          parsed = stmt;
+        }else{
+          parsed = evaluate(String(stmt));
+        }
         if (!parsed) continue;
 
         const statementResult = executeStatement(parsed, env, opts);
