@@ -180,7 +180,7 @@ export function createTests({
   }
 
   function evaluateTestStatements(source){
-    const statements = splitStatements(source);
+    const statements = Array.isArray(source) ? source : splitStatements(source);
     let lastValue = null;
     for (const stmt of statements){
       const parsed = evaluate(stmt);

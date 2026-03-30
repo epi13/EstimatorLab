@@ -139,7 +139,7 @@ export function initRepl(){
 
   const runLoopStatements = (source, context = null) => {
     const loopOptions = { allowedEffects: EFFECT.ALL };
-    const statementList = splitStatements(source);
+    const statementList = Array.isArray(source) ? source : splitStatements(source);
     const ctx = Array.isArray(context) ? context : [];
 
     const executeLoopParsedStatement = (parsed, stmtIdx) => {
@@ -279,7 +279,7 @@ export function initRepl(){
 
   const executeBlock = (source, options) => {
     const opts = options || { allowedEffects: EFFECT.ALL };
-    const statementList = splitStatements(source);
+    const statementList = Array.isArray(source) ? source : splitStatements(source);
     const blockResult = { lastValue: null, results: [] };
 
     for (let stmtIdx = 0; stmtIdx < statementList.length; stmtIdx++){

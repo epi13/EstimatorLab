@@ -305,7 +305,7 @@ export function createInputHandlers({
 
   async function handleLine(line){
     const runExpressionAll = (expr) => runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL });
-    const statementList = splitStatements(line);
+    const statementList = Array.isArray(line) ? line : splitStatements(line);
     const sourceResult = { lastValue: null, results: [] };
     if (!statementList.length) return sourceResult;
 
