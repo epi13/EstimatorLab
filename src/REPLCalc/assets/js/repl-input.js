@@ -11,6 +11,7 @@ export function createInputHandlers({
   session,
   tests,
   evaluator,
+  frontend,
   runtime,
   gfx,
   isTruthy,
@@ -91,13 +92,13 @@ export function createInputHandlers({
   } = session;
   const { runTestSuite } = tests;
   const {
-    evaluate,
     runExpression,
     runExpressionWithContext,
     solveEquation,
     createAssembly,
     formatValueDisplay,
   } = evaluator;
+  const { evaluate } = frontend;
   const { defineUserFn, getFns } = runtime;
   const { flushGfxOutput } = gfx;
 
@@ -341,7 +342,7 @@ export function createInputHandlers({
         if (cmd === "diff"){ diffSymbol(arg); return { type: "cmd", value: null }; }
         if (cmd === "theme"){ setTheme((arg||"").trim()); writeLine(`Theme set to ${state.theme}.`, "ok"); return { type: "cmd", value: state.theme }; }
         if (cmd === "doom"){
-          await runDoomDemo({ gfx, writeLine, writeInputEcho, state, evaluator, runtime });
+          await runDoomDemo({ gfx, writeLine, writeInputEcho, state, evaluator, frontend, runtime });
           return { type: "cmd", value: null };
         }
         if (cmd === "latent"){
@@ -349,6 +350,7 @@ export function createInputHandlers({
             arg,
             state,
             evaluator,
+            frontend,
             runtime,
             runExpressionAll,
             solveEquation,

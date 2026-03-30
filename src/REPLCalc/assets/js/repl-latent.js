@@ -12,6 +12,7 @@ async function fetchText(url){
 export async function ensureLatentModuleLoaded({
   state,
   evaluator,
+  frontend,
   runtime,
   runExpressionAll,
   solveEquation,
@@ -32,7 +33,7 @@ export async function ensureLatentModuleLoaded({
   const statements = splitStatements(source);
 
   for (const stmt of statements){
-    const parsed = evaluator.evaluate(stmt);
+    const parsed = frontend.evaluate(stmt);
     if (!parsed) continue;
 
     if (parsed.type === "cmd"){
@@ -97,6 +98,7 @@ export async function runLatentCommand({
   arg,
   state,
   evaluator,
+  frontend,
   runtime,
   runExpressionAll,
   solveEquation,
@@ -113,6 +115,7 @@ export async function runLatentCommand({
       arg: "test",
       state,
       evaluator,
+      frontend,
       runtime,
       runExpressionAll,
       solveEquation,
@@ -129,6 +132,7 @@ export async function runLatentCommand({
     await ensureLatentModuleLoaded({
       state,
       evaluator,
+      frontend,
       runtime,
       runExpressionAll,
       solveEquation,
@@ -146,6 +150,7 @@ export async function runLatentCommand({
     await ensureLatentModuleLoaded({
       state,
       evaluator,
+      frontend,
       runtime,
       runExpressionAll,
       solveEquation,

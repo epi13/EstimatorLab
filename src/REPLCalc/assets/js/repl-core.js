@@ -1,14 +1,13 @@
 import { createBaseFns, defFn, defFnCtx } from "./repl-builtins.js";
 import { EFFECT } from "./repl-effects.js";
 import {
-  buildAliasMap,
   evalExpressionIR,
-  evalRPN,
-  insertImplicitMultiplication,
   isTruthy,
   normalizeCompare,
   tokenize,
   toRPN,
+  insertImplicitMultiplication,
+  buildAliasMap,
 } from "./repl-expression.js";
 import {
   UNIT,
@@ -22,6 +21,8 @@ import { createUi } from "./repl-ui.js";
 import { createGfxTools } from "./repl-gfx.js";
 import { createRuntime } from "./repl-runtime.js";
 import { createEvaluator } from "./repl-evaluator.js";
+import { createReplLowering } from "./repl-lowering.js";
+import { createReplFrontend } from "./repl-frontend.js";
 import { createSession } from "./repl-session.js";
 import { createEditor } from "./repl-editor.js";
 import { createTests } from "./repl-tests.js";
@@ -116,26 +117,34 @@ export function initRepl(){
     throw new Error(`cmd(): unsupported command: ${name}`);
   };
 
+  const lowering = createReplLowering({
+    getFns: runtime.getFns,
+    tokenize,
+    toRPN,
+    insertImplicitMultiplication,
+    buildAliasMap,
+    ensureSymbolsLoaded: session.ensureSymbolsLoaded,
+    isUnitToken,
+    UNIT,
+  });
+
+  const frontend = createReplFrontend({
+    parseExpressionIR: lowering.parseExpressionIR,
+  });
+
   const evaluator = createEvaluator({
     state,
     getFns: runtime.getFns,
     isTruthy,
     normalizeCompare,
-    tokenize,
-    toRPN,
-    evalRPN,
     evalExpressionIR,
-    insertImplicitMultiplication,
-    buildAliasMap,
-    UNIT,
-    isQty,
-    isUnitToken,
     makeQty,
+    isQty,
     qtyToString,
     formatResult,
-    ensureSymbolsLoaded: session.ensureSymbolsLoaded,
     usageTracker: session.usageTracker,
     cmdRunner,
+    lowering,
   });
   state.formatValueDisplay = evaluator.formatValueDisplay;
 
@@ -164,7 +173,7 @@ export function initRepl(){
       commandErrorMessage: "Commands are not supported in gfx loop scripts.",
     });
 
-    const ast = evaluator.parseSource(source);
+    const ast = frontend.parseSource(source);
     executor.executeSource(ast, state.vars, opts);
   };
 
@@ -176,7 +185,7 @@ export function initRepl(){
       captureResults: true,
       commandErrorMessage: "Commands are not supported in function bodies.",
     });
-    const ast = evaluator.parseSource(source);
+    const ast = frontend.parseSource(source);
     return executor.executeSource(ast, state.vars, opts);
   };
   const executeSource = (source, options) => executeBlock(source, options);
@@ -198,7 +207,7 @@ export function initRepl(){
       captureResults: false,
       commandErrorMessage: "Commands are not supported in gfx loop scripts.",
     });
-    const ast = evaluator.parseSource(source);
+    const ast = frontend.parseSource(source);
     return executor.executeSource(ast, state.vars, opts);
   });
 
@@ -209,7 +218,7 @@ export function initRepl(){
     autocompleteEl: ui.autocompleteEl,
     liveResultEl: ui.liveResultEl,
     getFns: runtime.getFns,
-    evaluate: evaluator.evaluate,
+    evaluate: frontend.evaluate,
     runExpressionWithContext: evaluator.runExpressionWithContext,
     solveEquation: evaluator.solveEquation,
     formatValueDisplay: evaluator.formatValueDisplay,
@@ -223,7 +232,7 @@ export function initRepl(){
     setStatus: ui.setStatus,
     writeLine: ui.writeLine,
     renderUserFunctions: userFnUi.renderUserFunctions,
-    evaluate: evaluator.evaluate,
+    evaluate: frontend.evaluate,
     runExpression: (expr) => evaluator.runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL }),
     solveEquation: evaluator.solveEquation,
     defineUserFn: runtime.defineUserFn,
@@ -246,6 +255,7 @@ export function initRepl(){
     session,
     tests,
     evaluator,
+    frontend,
     runtime,
     gfx,
     isTruthy,
