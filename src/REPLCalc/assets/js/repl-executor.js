@@ -36,15 +36,53 @@ function normalizeOptions(options = {}){
   });
 }
 
-function makeStatementResult(type, value = null, extra = {}){
+function snapshotStateRef(state){
+  return {
+    mode: state.mode || "commit",
+    contextPath: Array.isArray(state.contextPath) ? state.contextPath.slice() : [],
+    env: cloneEnv(state.env || Object.create(null)),
+  };
+}
+
+function makeExecutionRecord({
+  statementNode = null,
+  mode = "commit",
+  before = null,
+  after = null,
+  type = "unknown",
+  value = null,
+  meta = {},
+  effects = [],
+  changedSymbols = [],
+  children = [],
+  ...extra
+} = {}){
+  const statementText = statementNode?.stmt || extra.statement || "";
   return {
     type,
     value,
-    meta: {},
-    changedSymbols: [],
-    results: [],
+    statement: statementText,
+    statementKind: statementNode?.kind || extra.statementKind || type,
+    mode,
+    before,
+    after,
+    effects: Array.isArray(effects) ? effects : [],
+    children: Array.isArray(children) ? children : [],
+    meta: meta || {},
+    changedSymbols: Array.isArray(changedSymbols) ? changedSymbols : [],
     ...extra,
   };
+}
+
+export function flattenExecutionRecord(record){
+  if (!record) return [];
+  const children = Array.isArray(record.children) ? record.children : [];
+  const flatChildren = children.flatMap((child) => flattenExecutionRecord(child));
+  return [record, ...flatChildren];
+}
+
+export function flattenExecutionRecords(records){
+  return (Array.isArray(records) ? records : []).flatMap((record) => flattenExecutionRecord(record));
 }
 
 function mergeChangedSymbols(entries){
@@ -205,12 +243,23 @@ export function createReplExecutor({
 
   function executeStatement(statementNode, state){
     const execState = withModeAppliedState(state);
-    if (!statementNode) return { nextState: execState, record: makeStatementResult("noop", null) };
+    if (!statementNode){
+      return {
+        nextState: execState,
+        record: makeExecutionRecord({
+          type: "noop",
+          mode: execState.mode,
+          before: snapshotStateRef(execState),
+          after: snapshotStateRef(execState),
+        }),
+      };
+    }
     if (!isStatementNode(statementNode)){
       throw new Error("executeStatement expects an AST statement node.");
     }
     const expressionTrace = execState.traceExpressions ? [] : null;
     const env = execState.env;
+    const beforeStateRef = snapshotStateRef(execState);
 
     const provenanceEntry = {
       kind: statementNode.kind,
@@ -218,7 +267,14 @@ export function createReplExecutor({
       statement: statementNode.stmt || "",
     };
 
-    const finalize = (record) => {
+    const finalize = (recordInput) => {
+      const record = makeExecutionRecord({
+        statementNode,
+        mode: execState.mode,
+        before: beforeStateRef,
+        after: snapshotStateRef(execState),
+        ...recordInput,
+      });
       const nextState = {
         ...execState,
         trace: [...(execState.trace || []), record],
@@ -246,67 +302,79 @@ export function createReplExecutor({
       const value = typeof cmdRunner === "function"
         ? cmdRunner(statementNode.cmd, statementNode.arg)
         : null;
-      return finalize(makeStatementResult("cmd", value, {
+      return finalize({
+        type: "cmd",
+        value,
         meta: {
           command: statementNode.cmd,
           arg: statementNode.arg,
         },
-      }));
+      });
     }
 
     if (statementNode.kind === STATEMENT_TYPE.DEF){
       if (typeof defineUserFn === "function"){
         defineUserFn(statementNode.name, statementNode.params, statementNode.expr);
       }
-      return finalize(makeStatementResult("def", null, {
+      return finalize({
+        type: "def",
+        value: null,
         changedSymbols: [statementNode.name],
-      }));
+        effects: [{ kind: "define-function", symbol: statementNode.name }],
+      });
     }
 
     if (statementNode.kind === STATEMENT_TYPE.ASSY){
       const assembly = createAssembly(statementNode.name, statementNode.fields, env, execState);
       env[statementNode.name] = assembly;
-      return finalize(makeStatementResult("assy", assembly, {
+      return finalize({
+        type: "assy",
+        value: assembly,
         changedSymbols: [statementNode.name],
-      }));
+        effects: [{ kind: "write-symbol", symbol: statementNode.name, value: assembly }],
+      });
     }
 
     if (statementNode.kind === STATEMENT_TYPE.ASSIGN){
       const value = runExpression(statementNode.exprIr || statementNode.expr, execState, expressionTrace);
       env[statementNode.name] = value;
-      return finalize(makeStatementResult("assign", value, {
+      return finalize({
+        type: "assign",
+        value,
         meta: {
           assignedName: statementNode.name,
           expressionTrace: expressionTrace || [],
         },
         changedSymbols: [statementNode.name],
-      }));
+        effects: [{ kind: "write-symbol", symbol: statementNode.name, value }],
+      });
     }
 
     if (statementNode.kind === STATEMENT_TYPE.EQUATION){
       const solved = solveEquation(statementNode.left, statementNode.right);
       if (solved.unknown.unitToken){
-        return finalize(makeStatementResult(
-          "equation",
-          makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind),
-          {
-            meta: {
-              unknownName: solved.unknown.name,
-              usedUnitToken: true,
-              expressionTrace: expressionTrace || [],
-            },
-          }
-        ));
+        return finalize({
+          type: "equation",
+          value: makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind),
+          meta: {
+            unknownName: solved.unknown.name,
+            usedUnitToken: true,
+            expressionTrace: expressionTrace || [],
+          },
+        });
       }
       env[solved.unknown.name] = solved.value;
-      return finalize(makeStatementResult("equation", solved.value, {
+      return finalize({
+        type: "equation",
+        value: solved.value,
         meta: {
           unknownName: solved.unknown.name,
           usedUnitToken: false,
           expressionTrace: expressionTrace || [],
         },
         changedSymbols: [solved.unknown.name],
-      }));
+        effects: [{ kind: "write-symbol", symbol: solved.unknown.name, value: solved.value }],
+      });
     }
 
     if (statementNode.kind === STATEMENT_TYPE.IF){
@@ -322,21 +390,24 @@ export function createReplExecutor({
         branchResult = executeSource(statementNode.elseBody, stateWithContext(execState, "if:else"));
       }
 
-      return finalize(makeStatementResult("if", branchResult.lastValue, {
+      const branchChildren = Array.isArray(branchResult.results) ? branchResult.results : [];
+      return finalize({
+        type: "if",
+        value: branchResult.lastValue,
         meta: {
           branchTaken,
           expressionTrace: expressionTrace || [],
         },
-        results: branchResult.results,
-        changedSymbols: mergeChangedSymbols(branchResult.results),
-      }));
+        children: branchChildren,
+        changedSymbols: mergeChangedSymbols(flattenExecutionRecords(branchChildren)),
+      });
     }
 
     if (statementNode.kind === STATEMENT_TYPE.FOR){
       const { start, end, step, loopKind } = resolveForRange(statementNode, execState);
       const forward = step > 0;
       let iter = 0;
-      const nestedResults = [];
+      const iterationRecords = [];
 
       const record = withScopedVar(env, statementNode.varName, () => {
         for (let i = start; forward ? i <= end : i >= end; i += step){
@@ -344,33 +415,43 @@ export function createReplExecutor({
           if (iter > maxLoopIterations){
             throw new Error(`for loop exceeded ${maxLoopIterations} iterations`);
           }
+          const iterStateBefore = snapshotStateRef(execState);
           env[statementNode.varName] = loopKind ? makeQty(i, loopKind) : i;
           const iterResult = executeSource(
             statementNode.body,
             stateWithContext(execState, `for:${statementNode.varName}`, `iter:${iter}`)
           );
-          nestedResults.push(iterResult);
+          iterationRecords.push(makeExecutionRecord({
+            type: "for-iteration",
+            statement: `for ${statementNode.varName} iteration ${iter}`,
+            statementKind: "for-iteration",
+            mode: execState.mode,
+            before: iterStateBefore,
+            after: snapshotStateRef(execState),
+            value: iterResult.lastValue,
+            meta: {
+              index: iter,
+              loopVar: statementNode.varName,
+              loopValue: env[statementNode.varName],
+            },
+            children: Array.isArray(iterResult.results) ? iterResult.results : [],
+            changedSymbols: mergeChangedSymbols(flattenExecutionRecords(iterResult.results)),
+          }));
         }
-
-        const flattened = nestedResults.flatMap((entry) => entry.results || []);
-        const lastValue = nestedResults.length
-          ? nestedResults[nestedResults.length - 1].lastValue
+        const lastValue = iterationRecords.length
+          ? iterationRecords[iterationRecords.length - 1].value
           : null;
 
-        return makeStatementResult("for", lastValue, {
+        return {
+          type: "for",
+          value: lastValue,
           meta: {
             iterationCount: iter,
-            flattenedSummary: {
-              iterationCount: iter,
-              statementCount: flattened.length,
-            },
-            nestedExecution: nestedResults,
+            expressionTrace: expressionTrace || [],
           },
-          flattenedResults: flattened,
-          nestedResults,
-          results: flattened,
-          changedSymbols: mergeChangedSymbols(flattened),
-        });
+          children: iterationRecords,
+          changedSymbols: mergeChangedSymbols(flattenExecutionRecords(iterationRecords)),
+        };
       });
 
       return finalize(record);
@@ -384,47 +465,59 @@ export function createReplExecutor({
       if (n > maxLoopIterations){
         throw new Error(`repeat exceeded ${maxLoopIterations} iterations`);
       }
-      const nestedResults = [];
+      const iterationRecords = [];
       for (let i = 0; i < n; i++){
+        const iterStateBefore = snapshotStateRef(execState);
         const iterResult = executeSource(
           statementNode.body,
           stateWithContext(execState, "repeat", `iter:${i + 1}`)
         );
-        nestedResults.push(iterResult);
+        iterationRecords.push(makeExecutionRecord({
+          type: "repeat-iteration",
+          statement: `repeat iteration ${i + 1}`,
+          statementKind: "repeat-iteration",
+          mode: execState.mode,
+          before: iterStateBefore,
+          after: snapshotStateRef(execState),
+          value: iterResult.lastValue,
+          meta: {
+            index: i + 1,
+          },
+          children: Array.isArray(iterResult.results) ? iterResult.results : [],
+          changedSymbols: mergeChangedSymbols(flattenExecutionRecords(iterResult.results)),
+        }));
       }
-
-      const flattened = nestedResults.flatMap((entry) => entry.results || []);
-      const lastValue = nestedResults.length
-        ? nestedResults[nestedResults.length - 1].lastValue
+      const lastValue = iterationRecords.length
+        ? iterationRecords[iterationRecords.length - 1].value
         : null;
 
-      return finalize(makeStatementResult("repeat", lastValue, {
+      return finalize({
+        type: "repeat",
+        value: lastValue,
         meta: {
           repeatCount: n,
           expressionTrace: expressionTrace || [],
-          flattenedSummary: {
-            repeatCount: n,
-            statementCount: flattened.length,
-          },
-          nestedExecution: nestedResults,
         },
-        flattenedResults: flattened,
-        nestedResults,
-        results: flattened,
-        changedSymbols: mergeChangedSymbols(flattened),
-      }));
+        children: iterationRecords,
+        changedSymbols: mergeChangedSymbols(flattenExecutionRecords(iterationRecords)),
+      });
     }
 
     if (statementNode.kind === STATEMENT_TYPE.EXPR){
       const value = runExpression(statementNode.exprIr || statementNode.expr, execState, expressionTrace);
-      return finalize(makeStatementResult("expr", value, {
+      return finalize({
+        type: "expr",
+        value,
         meta: {
           expressionTrace: expressionTrace || [],
         },
-      }));
+      });
     }
 
-    return finalize(makeStatementResult(statementNode.kind || "unknown", null));
+    return finalize({
+      type: statementNode.kind || "unknown",
+      value: null,
+    });
   }
 
   return {
@@ -433,6 +526,8 @@ export function createReplExecutor({
     withScopedVar,
     normalizeOptions,
     mergeChangedSymbols,
+    flattenExecutionRecord,
+    flattenExecutionRecords,
   };
 }
 
