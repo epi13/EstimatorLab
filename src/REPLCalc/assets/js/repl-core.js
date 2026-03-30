@@ -131,7 +131,10 @@ export function initRepl(){
 
   const frontend = createReplFrontend({
     parseExpressionIR: lowering.parseExpressionIR,
+    normalizeBlockNode: lowering.normalizeBlockNode,
   });
+
+  state.canonicalKey = lowering.canonicalKey;
 
   const evaluator = createEvaluator({
     state,
