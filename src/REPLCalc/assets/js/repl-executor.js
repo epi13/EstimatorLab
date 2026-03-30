@@ -1,5 +1,6 @@
 import { STATEMENT_TYPE, isBlockNode, isStatementNode } from "./repl-ast.js";
 import { createTransition } from "./repl-transitions.js";
+import { EFFECT } from "./repl-effects.js";
 import {
   cloneEnv,
   createExecutionState,
@@ -20,10 +21,11 @@ export function withScopedVar(env, name, fn){
 }
 
 function normalizeOptions(options = {}){
+  const effectsAllowed = options.effectsAllowed ?? options.allowedEffects;
   return createExecutionState({
     env: options.env || Object.create(null),
     mode: options.mode || "commit",
-    effectsAllowed: options.effectsAllowed ?? options.allowedEffects,
+    effectsAllowed: typeof effectsAllowed === "number" ? effectsAllowed : EFFECT.ALL,
     contextPath: Array.isArray(options.contextPath) ? options.contextPath : [],
     trace: Array.isArray(options.trace) ? options.trace : [],
     diagnostics: Array.isArray(options.diagnostics) ? options.diagnostics : [],
