@@ -26,8 +26,9 @@ import { createEditor } from "./repl-editor.js";
 import { createTests } from "./repl-tests.js";
 import { createInputHandlers } from "./repl-input.js";
 import { createUserFunctionUi } from "./repl-user-functions.js";
+import { createExecutor } from "./repl-executor.js";
 import { parseParams, splitStatements } from "./repl-parser.js";
-import { executeStatementSafely } from "./repl-executor.js";
+import { createExecutor } from "./repl-executor.js";
 
 export function initRepl(){
   const state = {
@@ -78,8 +79,6 @@ export function initRepl(){
     scheduleLiveResult: () => editor?.scheduleLiveResult(),
     writeLine: ui.writeLine,
   });
-
-  const MAX_LOOP_ITERATIONS = 100000;
 
   const runtime = createRuntime({
     state,
@@ -374,18 +373,35 @@ export function initRepl(){
         continue;
       }
 
-      if (parsed.type === "expr"){
-        lastResult = evaluator.runExpressionWithContext(parsed.expr, state.vars, opts);
-      }
-    }
+  const runBlockBody = (source, options) => executor.executeSource(source, {
+    captureLastValue: true,
+    allowCommands: false,
+    wrapErrors: false,
+    cleanStatement: true,
+    expressionOptions: options || { allowedEffects: EFFECT.ALL },
+    commandErrorMessage: "Commands are not supported in function bodies.",
+  });
 
-    return lastResult;
-  };
+  const runLoopStatements = (source, context = null) => executor.executeSource(source, {
+    captureLastValue: false,
+    allowCommands: false,
+    wrapErrors: true,
+    cleanStatement: false,
+    expressionOptions: { allowedEffects: EFFECT.ALL },
+    context: Array.isArray(context) ? context : [],
+    commandErrorMessage: "Commands are not supported in gfx loop scripts.",
+  });
 
   runtime.setRunExpressionWithContext(evaluator.runExpressionWithContext);
   runtime.setRunBlockBody(runBlockBody);
-  gfx.setRunExpressionWithContext((expr, vars) => evaluator.runExpressionWithContext(expr, vars, { allowedEffects: EFFECT.ALL }));
-  gfx.setRunLoopStatementRunner(runLoopStatements);
+  gfx.setRunExpressionWithContext((expr, vars, options = null) => {
+    const opts = executor.normalizeOptions(options);
+    return evaluator.runExpressionWithContext(expr, vars, opts);
+  });
+  gfx.setRunLoopStatementRunner((source, options = null) => {
+    const opts = executor.normalizeOptions(options);
+    return runLoopStatements(source, opts);
+  });
 
   editor = createEditor({
     state,
