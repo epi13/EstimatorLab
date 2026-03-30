@@ -7,34 +7,89 @@ export const IR_KIND = Object.freeze({
   CONDITIONAL: "conditional",
 });
 
-export function literalNode(valueType, value){
-  return { kind: IR_KIND.LITERAL, valueType, value };
+let nextNodeId = 1;
+
+function genNodeId(){
+  const id = `ir_${nextNodeId}`;
+  nextNodeId += 1;
+  return id;
 }
 
-export function identifierNode(name){
-  return { kind: IR_KIND.IDENTIFIER, name };
+function withSharedFields(kind, payload, options = {}){
+  const children = Array.isArray(options.children)
+    ? options.children.filter((child) => child && typeof child === "object")
+    : [];
+  const node = {
+    id: options.id || genNodeId(),
+    kind,
+    children,
+    annotations: options.annotations && typeof options.annotations === "object" ? options.annotations : {},
+    normalization: options.normalization && typeof options.normalization === "object" ? options.normalization : {},
+    origin: options.origin && typeof options.origin === "object" ? options.origin : {},
+    ...payload,
+  };
+  if (options.inferred && typeof options.inferred === "object"){
+    node.inferred = options.inferred;
+  }
+  return node;
 }
 
-export function binaryNode(op, left, right){
-  return { kind: IR_KIND.BINARY, op, left, right };
+export function literalNode(valueType, value, options = {}){
+  return withSharedFields(IR_KIND.LITERAL, { valueType, value }, options);
 }
 
-export function callNode(name, args = []){
-  return { kind: IR_KIND.CALL, name, args };
+export function identifierNode(name, options = {}){
+  return withSharedFields(IR_KIND.IDENTIFIER, { name }, options);
 }
 
-export function objectNode(raw){
-  return { kind: IR_KIND.OBJECT, raw };
+export function binaryNode(op, left, right, options = {}){
+  return withSharedFields(IR_KIND.BINARY, { op, left, right }, { ...options, children: [left, right] });
 }
 
-export function conditionalNode(cond, thenBranch, elseBranch, lazy = true){
-  return {
-    kind: IR_KIND.CONDITIONAL,
+export function callNode(name, args = [], options = {}){
+  return withSharedFields(IR_KIND.CALL, { name, args }, { ...options, children: args });
+}
+
+export function objectNode(raw, options = {}){
+  return withSharedFields(IR_KIND.OBJECT, { raw }, options);
+}
+
+export function conditionalNode(cond, thenBranch, elseBranch, lazy = true, options = {}){
+  return withSharedFields(IR_KIND.CONDITIONAL, {
     lazy: Boolean(lazy),
     cond,
     then: thenBranch,
     else: elseBranch,
+  }, { ...options, children: [cond, thenBranch, elseBranch] });
+}
+
+export function toCanonicalIRNode(node){
+  if (!node || typeof node !== "object") return null;
+  const base = {
+    ...node,
+    id: typeof node.id === "string" ? node.id : genNodeId(),
+    annotations: node.annotations && typeof node.annotations === "object" ? node.annotations : {},
+    normalization: node.normalization && typeof node.normalization === "object" ? node.normalization : {},
+    origin: node.origin && typeof node.origin === "object" ? node.origin : {},
   };
+  if (Array.isArray(node.children) && node.children.every((child) => child && typeof child === "object")){
+    return base;
+  }
+  if (node.kind === IR_KIND.BINARY){
+    return { ...base, children: [node.left, node.right].filter(Boolean) };
+  }
+  if (node.kind === IR_KIND.CALL){
+    return { ...base, children: Array.isArray(node.args) ? node.args.filter(Boolean) : [] };
+  }
+  if (node.kind === IR_KIND.CONDITIONAL){
+    return { ...base, children: [node.cond, node.then, node.else].filter(Boolean) };
+  }
+  return { ...base, children: [] };
+}
+
+export function getIRNodeChildren(node){
+  const canonical = toCanonicalIRNode(node);
+  return canonical && Array.isArray(canonical.children) ? canonical.children : [];
 }
 
 export function irFromRPN(rpn, parseExpressionIR){
@@ -93,4 +148,3 @@ export function irFromRPN(rpn, parseExpressionIR){
   }
   return stack[0];
 }
-
