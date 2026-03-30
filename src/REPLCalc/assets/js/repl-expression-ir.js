@@ -111,6 +111,14 @@ export function irFromRPN(rpn, parseExpressionIR){
       stack.push(objectNode(token.value));
       continue;
     }
+    if (token.type === "lambda"){
+      stack.push(literalNode("lambda", {
+        __lambda: true,
+        param: token.param,
+        body: token.body,
+      }));
+      continue;
+    }
     if (token.type === "lazy_if"){
       if (typeof parseExpressionIR !== "function"){
         throw new Error("IR conversion for lazy_if requires parseExpressionIR");
