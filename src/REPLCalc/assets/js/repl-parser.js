@@ -6,6 +6,14 @@ import {
   createStatementNode,
 } from "./repl-ast.js";
 
+function createStatementNodeId(blockContext, statementIndex){
+  const blockId = typeof blockContext?.blockId === "string" ? blockContext.blockId.trim() : "";
+  if (!blockId || !Number.isInteger(statementIndex) || statementIndex < 0){
+    return null;
+  }
+  return `${blockId}:stmt:${statementIndex}`;
+}
+
 export function splitStatements(source){
   const out = [];
   const lines = source.split("\n");
@@ -266,6 +274,7 @@ export function parseBlockStatements(source, parseStatement, blockContext = null
       span: context.sourceSpan,
       blockId: context.blockId,
       statementIndex,
+      nodeId: createStatementNodeId(context, statementIndex),
     }))
     .filter(Boolean) : []);
   return createBlockNode(parsedStatements, context);

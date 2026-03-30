@@ -41,7 +41,7 @@ export function parseAssemblyValue(valueStr, parseExpressionIR){
   return { expr: null, exprIr: null, note: "", raw };
 }
 
-export function parseAssemblyStatement(src, parseExpressionIR){
+export function parseAssemblyStatement(src, parseExpressionIR, origin = null){
   const assyMatch = src.match(/^assy\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*\{([\s\S]*)\}$/i);
   if (!assyMatch) return null;
   const name = assyMatch[1];
@@ -57,7 +57,7 @@ export function parseAssemblyStatement(src, parseExpressionIR){
     const parsed = parseAssemblyValue(valueStr, parseExpressionIR);
     fields[key] = parsed;
   }
-  return createStatementNode(STATEMENT_TYPE.ASSY, { name, fields });
+  return createStatementNode(STATEMENT_TYPE.ASSY, { name, fields }, origin);
 }
 
 export function createReplFrontend({ parseExpressionIR }){
@@ -86,9 +86,9 @@ export function createReplFrontend({ parseExpressionIR }){
     }
 
     if (/^assy\b/i.test(src)){
-      const parsed = parseAssemblyStatement(src, parseExpressionIR);
+      const parsed = parseAssemblyStatement(src, parseExpressionIR, origin);
       if (!parsed) throw new Error("Assembly must use: assy name = { key = value }");
-      return createStatementNode(STATEMENT_TYPE.ASSY, { name: parsed.name, fields: parsed.fields }, origin);
+      return parsed;
     }
 
     if (src.startsWith("#")) return null;
