@@ -1082,9 +1082,9 @@ export function createBaseFns(){
     if (!Number.isFinite(ratioValue) || ratioValue <= 0){
       throw new Error("split_ratio expects ratio > 0");
     }
-    const parts = add(1, ratioValue);
-    const base = div(total, parts);
-    const scaled = mul(base, ratioValue);
+    const parts = 1 + ratioValue;
+    const base = isQty(total) ? div(total, parts) : (Number(total) / parts);
+    const scaled = isQty(base) ? mul(base, ratioValue) : (base * ratioValue);
     return buildAssy("split_ratio", {
       total: fieldInfo(total),
       ratio: fieldInfo(ratioValue),
