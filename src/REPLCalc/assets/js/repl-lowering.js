@@ -39,6 +39,7 @@ export function createReplLowering({
   }
 
   function expandTrailingNumericIdentifiers(tokens, vars, fnNames){
+    const variableMap = vars || {};
     const out = [];
     const suffixPattern = /^([A-Za-z_$%][A-Za-z0-9_$%.]*?)(\d+)$/;
     for (const token of tokens){
@@ -47,7 +48,7 @@ export function createReplLowering({
         continue;
       }
       const name = token.value;
-      if (Object.prototype.hasOwnProperty.call(vars, name) || isUnitToken(name) || name === "pi" || name === "e" || (fnNames && fnNames.has(name))){
+      if (Object.prototype.hasOwnProperty.call(variableMap, name) || isUnitToken(name) || name === "pi" || name === "e" || (fnNames && fnNames.has(name))){
         out.push(token);
         continue;
       }
@@ -58,7 +59,7 @@ export function createReplLowering({
       }
       const baseName = match[1];
       const numericSuffix = Number(match[2]);
-      if (!Object.prototype.hasOwnProperty.call(vars, baseName) || !Number.isFinite(numericSuffix)){
+      if (!Object.prototype.hasOwnProperty.call(variableMap, baseName) || !Number.isFinite(numericSuffix)){
         out.push(token);
         continue;
       }
@@ -87,25 +88,27 @@ export function createReplLowering({
   }
 
   function parseExpressionIR(expr, vars){
+    const variableMap = vars || {};
     if (expr && typeof expr === "object" && expr.kind){
       return normalizer.normalizeExpressionIR(toCanonicalIRNode(expr));
     }
     const source = String(expr ?? "");
     const fnNames = new Set(Object.keys(getFns()));
-    const expanded = expandTrailingNumericIdentifiers(tokenize(source), vars, fnNames);
+    const expanded = expandTrailingNumericIdentifiers(tokenize(source), variableMap, fnNames);
     const tokens = insertImplicitMultiplication(expanded);
-    const ir = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
+    const ir = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, variableMap));
     return normalizer.normalizeExpressionIR(ir);
   }
 
   function analyzeExpression(expr, vars){
+    const variableMap = vars || {};
     const source = String(expr ?? "");
     const fnNames = new Set(Object.keys(getFns()));
-    const expanded = expandTrailingNumericIdentifiers(tokenize(source), vars, fnNames);
+    const expanded = expandTrailingNumericIdentifiers(tokenize(source), variableMap, fnNames);
     const tokens = insertImplicitMultiplication(expanded);
     maybeEnsureSymbols(tokens);
-    const aliases = buildAliasMap(tokens, vars, fnNames);
-    const irRaw = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
+    const aliases = buildAliasMap(tokens, variableMap, fnNames);
+    const irRaw = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, variableMap));
     const ir = normalizer.normalizeExpressionIR(irRaw, aliases);
     const canonicalKey = normalizer.canonicalExpressionKey(ir, aliases);
     return { source, tokens, aliases, ir, canonicalKey };
@@ -144,8 +147,9 @@ export function createReplLowering({
   }
 
   function analyzeAliasAmbiguityCandidates(tokens, vars, fnNames){
-    const defaultAliases = buildAliasMap(tokens, vars, fnNames);
-    const available = new Set(Object.keys(vars || {}));
+    const variableMap = vars || {};
+    const defaultAliases = buildAliasMap(tokens, variableMap, fnNames);
+    const available = new Set(Object.keys(variableMap));
     const referenced = new Set();
     const unknown = new Set();
 
@@ -155,7 +159,7 @@ export function createReplLowering({
       const name = token.value;
       const next = tokens[i + 1];
       if (next && next.type === "(") continue;
-      if (Object.prototype.hasOwnProperty.call(vars, name)){
+      if (Object.prototype.hasOwnProperty.call(variableMap, name)){
         referenced.add(name);
         continue;
       }
@@ -212,13 +216,14 @@ export function createReplLowering({
   }
 
   function analyzeExpressionTransitions(expr, vars){
+    const variableMap = vars || {};
     const source = String(expr ?? "");
     const fnNames = new Set(Object.keys(getFns()));
-    const expanded = expandTrailingNumericIdentifiers(tokenize(source), vars, fnNames);
+    const expanded = expandTrailingNumericIdentifiers(tokenize(source), variableMap, fnNames);
     const tokens = insertImplicitMultiplication(expanded);
     maybeEnsureSymbols(tokens);
-    const irRaw = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
-    const aliasCandidates = analyzeAliasAmbiguityCandidates(tokens, vars, fnNames);
+    const irRaw = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, variableMap));
+    const aliasCandidates = analyzeAliasAmbiguityCandidates(tokens, variableMap, fnNames);
     return aliasCandidates.map((candidate) => {
       const ir = normalizer.normalizeExpressionIR(irRaw, candidate.aliases);
       const canonicalKey = normalizer.canonicalExpressionKey(ir, candidate.aliases);
@@ -237,19 +242,21 @@ export function createReplLowering({
   }
 
   function analyzeExpressionIR(ir, vars){
+    const variableMap = vars || {};
     const normalizedIr = normalizer.normalizeExpressionIR(ir);
     const fnNames = new Set(Object.keys(getFns()));
     const tokens = tokenizeExpressionIR(normalizedIr);
     maybeEnsureSymbols(tokens);
-    const aliases = buildAliasMap(tokens, vars, fnNames);
+    const aliases = buildAliasMap(tokens, variableMap, fnNames);
     const irWithAliases = normalizer.normalizeExpressionIR(normalizedIr, aliases);
     const canonicalKey = normalizer.canonicalExpressionKey(irWithAliases, aliases);
     return { tokens, aliases, ir: irWithAliases, canonicalKey };
   }
 
   function findEquationUnknowns(expr, vars){
+    const variableMap = vars || {};
     const fns = new Set(Object.keys(getFns()));
-    const tokens = expandTrailingNumericIdentifiers(tokenize(expr), vars, fns);
+    const tokens = expandTrailingNumericIdentifiers(tokenize(expr), variableMap, fns);
     const unknowns = [];
     for (let i = 0; i < tokens.length; i++){
       const t = tokens[i];
@@ -258,7 +265,7 @@ export function createReplLowering({
       const next = tokens[i + 1];
       if (next && next.type === "(") continue;
       if (name === "pi" || name === "e") continue;
-      if (Object.prototype.hasOwnProperty.call(vars, name)) continue;
+      if (Object.prototype.hasOwnProperty.call(variableMap, name)) continue;
       if (fns.has(name)) continue;
       if (isUnitToken(name)){
         if (isBareUnitToken(tokens, i)){
