@@ -1,4 +1,3 @@
-import { splitStatements } from "./repl-parser.js";
 import { EFFECT } from "./repl-effects.js";
 
 const DOOM_W = 256;
@@ -14,7 +13,7 @@ async function fetchText(url){
   return await res.text();
 }
 
-async function ensureDoomModulesLoaded({ state, evaluator, frontend, runtime, writeLine }){
+async function ensureDoomModulesLoaded({ state, executeProgram, writeLine }){
   const DOOM_MODULES_VERSION = 4;
   if (state.__doomModulesLoaded && state.__doomModulesVersion === DOOM_MODULES_VERSION){
     state.__doomModulesLoaded = true;
@@ -27,52 +26,13 @@ async function ensureDoomModulesLoaded({ state, evaluator, frontend, runtime, wr
     return;
   }
 
-  const runExpressionAll = (expr) => evaluator.runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL });
-
-  const applyModuleSource = (source, label) => {
-    const statements = splitStatements(source);
-    for (const stmt of statements){
-      const parsed = frontend.evaluate(stmt);
-      if (!parsed) continue;
-
-      if (parsed.type === "cmd"){
-        throw new Error(`${label} may not contain commands`);
-      }
-
-      if (parsed.type === "def"){
-        runtime.defineUserFn(parsed.name, parsed.params, parsed.expr);
-        continue;
-      }
-
-      if (parsed.type === "assy"){
-        const assembly = evaluator.createAssembly(parsed.name, parsed.fields);
-        state.vars[parsed.name] = assembly;
-        continue;
-      }
-
-      if (parsed.type === "assign"){
-        state.vars[parsed.name] = runExpressionAll(parsed.expr);
-        continue;
-      }
-
-      if (parsed.type === "equation"){
-        const solved = evaluator.solveEquation(parsed.left, parsed.right);
-        if (!solved.unknown.unitToken){
-          state.vars[solved.unknown.name] = solved.value;
-        }
-        continue;
-      }
-
-      if (parsed.type === "expr"){
-        runExpressionAll(parsed.expr);
-        continue;
-      }
-
-      if (parsed.type === "if" || parsed.type === "for" || parsed.type === "repeat"){
-        throw new Error(`${label} may not contain flow statements`);
-      }
-    }
-  };
+  const applyModuleSource = (source, label) => executeProgram(source, state.vars, "commit", {
+    allowedEffects: EFFECT.ALL,
+    allowCommands: false,
+    wrapErrors: false,
+    captureResults: false,
+    commandErrorMessage: `${label} may not contain commands`,
+  });
 
   const ltwSource = await fetchText("assets/est/math/latent-mux-walker.est");
   applyModuleSource(ltwSource, "latent mux walker");
@@ -122,17 +82,17 @@ async function loadDoomDemoScript(){
   return await fetchText("assets/est/systems/doom-demo.est");
 }
 
-export async function runDoomDemo({ gfx, writeLine, writeInputEcho, state, evaluator, frontend, runtime }) {
+export async function runDoomDemo({ gfx, writeLine, writeInputEcho, state, executeProgram }) {
   writeLine("Doom level - playable EST DSL raycaster", "muted");
   writeLine("Click the canvas to capture the mouse.", "muted");
   writeLine("Controls: Mouse look • WASD move/strafe • Shift run • Space use • LMB shoot • E view • Q panel • F upgrade", "muted");
   writeLine("Loop UI: P play/pause (when mouse not captured) • Arrows step/fps • R reset", "muted");
 
-  if (!state || !evaluator || !frontend || !runtime){
-    throw new Error("runDoomDemo requires state/evaluator/frontend/runtime (update caller to pass these)");
+  if (!state || typeof executeProgram !== "function"){
+    throw new Error("runDoomDemo requires state/executeProgram (update caller to pass these)");
   }
 
-  await ensureDoomModulesLoaded({ state, evaluator, frontend, runtime, writeLine });
+  await ensureDoomModulesLoaded({ state, executeProgram, writeLine });
   const script = await loadDoomDemoScript();
 
   if (typeof gfx.setActiveBackend === "function"){

@@ -29,7 +29,7 @@ import { createTests } from "./repl-tests.js";
 import { createInputHandlers } from "./repl-input.js";
 import { createUserFunctionUi } from "./repl-user-functions.js";
 import { createExecutor } from "./repl-executor.js";
-import { parseParams, splitStatements } from "./repl-parser.js";
+import { parseParams } from "./repl-parser.js";
 
 export function initRepl(){
   const state = {
@@ -188,10 +188,21 @@ export function initRepl(){
     const ast = frontend.parseSource(source);
     return executor.executeSource(ast, state.vars, opts);
   };
+  const executeProgram = (sourceOrAst, env = state.vars, mode = "commit", options = null) => {
+    const normalized = executor.normalizeOptions({
+      ...(options || {}),
+      mode,
+    });
+    const ast = (typeof sourceOrAst === "string" || Array.isArray(sourceOrAst))
+      ? frontend.parseSource(sourceOrAst)
+      : sourceOrAst;
+    return executor.executeSource(ast, env, normalized);
+  };
   const executeSource = (source, options) => executeBlock(source, options);
   const runBlockBody = (source, options) => executeBlock(source, options).lastValue;
   state.executeBlock = executeBlock;
   state.executeSource = executeSource;
+  state.executeProgram = executeProgram;
 
   runtime.setRunExpressionWithContext(evaluator.runExpressionWithContext);
   runtime.setRunBlockBody(runBlockBody);
@@ -200,15 +211,14 @@ export function initRepl(){
     return evaluator.runExpressionWithContext(expr, vars, opts);
   });
   gfx.setRunLoopStatementRunner((source, options = null) => {
-    const opts = executor.normalizeOptions({
+    const opts = {
       ...(options || {}),
       allowCommands: false,
       wrapErrors: true,
       captureResults: false,
       commandErrorMessage: "Commands are not supported in gfx loop scripts.",
-    });
-    const ast = frontend.parseSource(source);
-    return executor.executeSource(ast, state.vars, opts);
+    };
+    return executeProgram(source, state.vars, "commit", opts);
   });
 
   editor = createEditor({
@@ -232,19 +242,13 @@ export function initRepl(){
     setStatus: ui.setStatus,
     writeLine: ui.writeLine,
     renderUserFunctions: userFnUi.renderUserFunctions,
-    evaluate: frontend.evaluate,
-    runExpression: (expr) => evaluator.runExpressionWithContext(expr, state.vars, { allowedEffects: EFFECT.ALL }),
-    solveEquation: evaluator.solveEquation,
-    defineUserFn: runtime.defineUserFn,
-    createAssembly: evaluator.createAssembly,
     formatAssemblySummary: evaluator.formatAssemblySummary,
-    splitStatements,
-    isTruthy,
-    normalizeCompare,
     makeQty,
     isQty,
     formatInput: editor.formatInput,
     qtyToString,
+    frontend,
+    executeProgram,
   });
 
   createInputHandlers({
@@ -258,9 +262,6 @@ export function initRepl(){
     frontend,
     runtime,
     gfx,
-    isTruthy,
-    normalizeCompare,
-    isQty,
-    makeQty,
+    executeProgram,
   });
 }

@@ -5,19 +5,13 @@ export function createTests({
   setStatus,
   writeLine,
   renderUserFunctions,
-  evaluate,
-  runExpression,
-  solveEquation,
-  defineUserFn,
-  createAssembly,
   formatAssemblySummary,
-  splitStatements,
-  isTruthy,
-  normalizeCompare,
   makeQty,
   isQty,
   formatInput,
   qtyToString,
+  frontend,
+  executeProgram,
 }){
 
   async function fetchText(url){
@@ -29,48 +23,18 @@ export function createTests({
   }
 
   function applyModuleSource(source, label){
-    const statements = splitStatements(source);
-    for (const stmt of statements){
-      const parsed = evaluate(stmt);
-      if (!parsed) continue;
-
-      if (parsed.type === STATEMENT_TYPE.CMD){
-        throw new Error(`${label} may not contain commands`);
-      }
-
-      if (parsed.type === STATEMENT_TYPE.DEF){
-        defineUserFn(parsed.name, parsed.params, parsed.expr);
-        continue;
-      }
-
-      if (parsed.type === STATEMENT_TYPE.ASSY){
-        const assembly = createAssembly(parsed.name, parsed.fields);
-        state.vars[parsed.name] = assembly;
-        continue;
-      }
-
-      if (parsed.type === STATEMENT_TYPE.ASSIGN){
-        state.vars[parsed.name] = runExpression(parsed.expr);
-        continue;
-      }
-
-      if (parsed.type === STATEMENT_TYPE.EQUATION){
-        const solved = solveEquation(parsed.left, parsed.right);
-        if (!solved.unknown.unitToken){
-          state.vars[solved.unknown.name] = solved.value;
-        }
-        continue;
-      }
-
-      if (parsed.type === STATEMENT_TYPE.EXPR){
-        runExpression(parsed.expr);
-        continue;
-      }
-
-      if (parsed.type === STATEMENT_TYPE.IF || parsed.type === STATEMENT_TYPE.FOR || parsed.type === STATEMENT_TYPE.REPEAT){
+    const ast = frontend.parseSource(source);
+    for (const stmt of ast.statements || []){
+      if (stmt.type === STATEMENT_TYPE.IF || stmt.type === STATEMENT_TYPE.FOR || stmt.type === STATEMENT_TYPE.REPEAT){
         throw new Error(`${label} may not contain flow statements`);
       }
     }
+    executeProgram(ast, state.vars, "commit", {
+      allowCommands: false,
+      wrapErrors: false,
+      captureResults: false,
+      commandErrorMessage: `${label} may not contain commands`,
+    });
   }
 
   function assyField(assy, name){
@@ -140,7 +104,11 @@ export function createTests({
     const constructionSource = await fetchText("assets/est/construction/construction-helpers.est");
     applyModuleSource(constructionSource, "construction helpers");
 
-    const suite = runExpression("test_suite()");
+    const suite = executeProgram("test_suite()", state.vars, "commit", {
+      allowCommands: false,
+      wrapErrors: false,
+      captureResults: true,
+    }).lastValue;
     if (!suite || typeof suite !== "object" || !suite.__vec || !Array.isArray(suite.data)){
       throw new Error("test_suite(): expected vec");
     }
@@ -182,101 +150,15 @@ export function createTests({
   }
 
   function evaluateTestStatements(source){
-    const statements = Array.isArray(source) ? source : splitStatements(source);
-    let lastValue = null;
-    for (const stmt of statements){
-      const parsed = evaluate(stmt);
-      if (!parsed) continue;
-      if (parsed.type === STATEMENT_TYPE.CMD) throw new Error(`Test cannot use command :${parsed.cmd}`);
-      if (parsed.type === STATEMENT_TYPE.DEF){
-        defineUserFn(parsed.name, parsed.params, parsed.expr);
-        continue;
-      }
-      if (parsed.type === STATEMENT_TYPE.ASSY){
-        const assembly = createAssembly(parsed.name, parsed.fields);
-        state.vars[parsed.name] = assembly;
-        lastValue = assembly;
-        continue;
-      }
-      if (parsed.type === STATEMENT_TYPE.ASSIGN){
-        const val = runExpression(parsed.expr);
-        state.vars[parsed.name] = val;
-        lastValue = val;
-        continue;
-      }
-      if (parsed.type === STATEMENT_TYPE.EQUATION){
-        const solved = solveEquation(parsed.left, parsed.right);
-        if (solved.unknown.unitToken){
-          lastValue = makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind);
-        }else{
-          lastValue = solved.value;
-          state.vars[solved.unknown.name] = solved.value;
-        }
-        continue;
-      }
-      if (parsed.type === STATEMENT_TYPE.IF){
-        const cond = runExpression(parsed.condition);
-        if (isTruthy(cond)){
-          lastValue = evaluateTestStatements(parsed.thenBody);
-        }else if (parsed.elseBody){
-          lastValue = evaluateTestStatements(parsed.elseBody);
-        }
-        continue;
-      }
-      if (parsed.type === STATEMENT_TYPE.FOR){
-        const startVal = runExpression(parsed.startExpr);
-        const endVal = runExpression(parsed.endExpr);
-        const stepVal = parsed.stepExpr ? runExpression(parsed.stepExpr) : 1;
-        let start;
-        let end;
-        let step;
-        let loopKind = null;
-        if (isQty(startVal) || isQty(endVal)){
-          if (!isQty(startVal) || !isQty(endVal)){
-            throw new Error("for loop range must use matching unit quantities");
-          }
-          if (startVal.kind !== endVal.kind){
-            throw new Error("for loop range units must match");
-          }
-          loopKind = startVal.kind;
-          start = startVal.value;
-          end = endVal.value;
-          if (isQty(stepVal)){
-            if (stepVal.kind !== loopKind) throw new Error("for loop step unit mismatch");
-            step = stepVal.value;
-          }else{
-            step = stepVal;
-          }
-        }else{
-          [start, end] = normalizeCompare(startVal, endVal);
-          step = normalizeCompare(stepVal, 0)[0];
-        }
-        if (step === 0) throw new Error("for loop step cannot be 0");
-        const hadVar = Object.prototype.hasOwnProperty.call(state.vars, parsed.varName);
-        const prevVal = state.vars[parsed.varName];
-        const forward = step > 0;
-        for (let i = start; forward ? i <= end : i >= end; i += step){
-          state.vars[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
-          lastValue = evaluateTestStatements(parsed.body);
-        }
-        if (hadVar) state.vars[parsed.varName] = prevVal;
-        else delete state.vars[parsed.varName];
-        continue;
-      }
-      if (parsed.type === STATEMENT_TYPE.REPEAT){
-        const countVal = runExpression(parsed.countExpr);
-        const count = normalizeCompare(countVal, 0)[0];
-        if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
-        for (let i = 0; i < Math.floor(count); i++){
-          lastValue = evaluateTestStatements(parsed.body);
-        }
-        continue;
-      }
-      if (parsed.type === STATEMENT_TYPE.EXPR){
-        lastValue = runExpression(parsed.expr);
-      }
-    }
-    return lastValue;
+    const ast = frontend.parseSource(source);
+    const cmdStmt = (ast.statements || []).find((stmt) => stmt.type === STATEMENT_TYPE.CMD);
+    if (cmdStmt) throw new Error(`Test cannot use command :${cmdStmt.cmd}`);
+    return executeProgram(ast, state.vars, "commit", {
+      allowCommands: false,
+      wrapErrors: false,
+      captureResults: true,
+      commandErrorMessage: "Test cannot use commands",
+    }).lastValue;
   }
 
   function matchExpected(actual, expected){

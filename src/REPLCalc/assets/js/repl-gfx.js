@@ -1,4 +1,3 @@
-import { splitStatements, findTopLevelEquals } from "./repl-parser.js";
 import { isQty } from "./repl-units.js";
 import { EFFECT } from "./repl-effects.js";
 import { getFinishTexture, sampleFinishTexture, __internal as FIN_TEX_INTERNAL } from "./repl-textures-finishes.js";
@@ -61,7 +60,7 @@ export function createGfxTools({ state, terminalEl, writeLine }){
 
   const loopState = {
     expr: null,
-    statements: null,
+    programAst: null,
     fps: GFX_LOOP_DEFAULT_FPS,
     playing: false,
     wasPlayingBeforeHide: false,
@@ -1049,35 +1048,10 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       throw new Error("Loop runner not ready.");
     }
     if (runLoopStatement){
-      runLoopStatement(loopState.expr);
+      runLoopStatement(loopState.programAst || loopState.expr);
       return;
     }
-
-    const statements = loopState.statements || splitStatements(loopState.expr);
-    // Use a persistent scope for gfx loops so scripts can maintain state across frames.
-    const vars = state.vars;
-
-    for (const stmt of statements){
-      if (!stmt) continue;
-      if (stmt.trim().startsWith("#")) continue;
-      try{
-        // Check if this is an assignment statement
-        const equalsIdx = findTopLevelEquals(stmt);
-        if (equalsIdx >= 0){
-          // Handle assignment: update frameVars
-          const name = stmt.slice(0, equalsIdx).trim();
-          const expr = stmt.slice(equalsIdx + 1).trim();
-          const val = runExpressionWithContext(expr, vars);
-          vars[name] = val;
-        }else{
-          // Handle regular expression
-          runExpressionWithContext(stmt, vars);
-        }
-      }catch(err){
-        // Enhance error with statement context for debugging
-        throw new Error(`GFX loop error in statement "${stmt.trim()}": ${err.message || String(err)}`);
-      }
-    }
+    runExpressionWithContext(loopState.expr, state.vars);
   }
 
   function runLoopFrame(){
@@ -1169,7 +1143,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     if (!script) throw new Error("gfxloop requires a non-empty script");
     requireGfxBuffer();
     loopState.expr = script;
-    loopState.statements = splitStatements(script);
+    loopState.programAst = null;
     loopState.frame = 0;
     loopState.playing = false;
     loopState.lastTick = 0;

@@ -1,5 +1,5 @@
-import { splitStatements } from "./repl-parser.js";
 import { unbox } from "./repl-values.js";
+import { EFFECT } from "./repl-effects.js";
 
 async function fetchText(url){
   const res = await fetch(url, { cache: "no-cache" });
@@ -11,14 +11,7 @@ async function fetchText(url){
 
 export async function ensureLatentModuleLoaded({
   state,
-  evaluator,
-  frontend,
-  runtime,
-  runExpressionAll,
-  solveEquation,
-  createAssembly,
-  defineUserFn,
-  makeQty,
+  executeProgram,
   recordSymbolDefinition,
   writeLine,
   url = "assets/est/latent-mux-walker.est",
@@ -30,63 +23,33 @@ export async function ensureLatentModuleLoaded({
   }
 
   const source = await fetchText(url);
-  const statements = splitStatements(source);
-
-  for (const stmt of statements){
-    const parsed = frontend.evaluate(stmt);
-    if (!parsed) continue;
-
-    if (parsed.type === "cmd"){
-      throw new Error("latent module may not contain commands");
-    }
-
-    if (parsed.type === "def"){
-      defineUserFn(parsed.name, parsed.params, parsed.expr);
-      continue;
-    }
-
-    if (parsed.type === "assy"){
-      const assembly = createAssembly(parsed.name, parsed.fields);
-      state.vars[parsed.name] = assembly;
+  const parsed = executeProgram(source, state.vars, "commit", {
+    allowedEffects: EFFECT.ALL,
+    allowCommands: false,
+    wrapErrors: false,
+    captureResults: true,
+    commandErrorMessage: "latent module may not contain commands",
+  });
+  for (const record of parsed.results || []){
+    if (record.type === "assy"){
+      const name = record.changedSymbols?.[0];
+      if (!name) continue;
       recordSymbolDefinition({
-        name: parsed.name,
+        name,
         kind: "assy",
-        fields: parsed.fields,
-        value: assembly,
+        value: state.vars[name],
       });
-      continue;
-    }
-
-    if (parsed.type === "assign"){
-      const val = runExpressionAll(parsed.expr);
-      state.vars[parsed.name] = val;
-      recordSymbolDefinition({ name: parsed.name, kind: "var", expr: parsed.expr, value: val });
-      continue;
-    }
-
-    if (parsed.type === "equation"){
-      const solved = solveEquation(parsed.left, parsed.right);
-      if (solved.unknown.unitToken){
-        continue;
-      }
-      const solvedValue = solved.value;
-      state.vars[solved.unknown.name] = solvedValue;
+    }else if (record.type === "assign"){
+      const name = record.changedSymbols?.[0];
+      if (!name) continue;
+      recordSymbolDefinition({ name, kind: "var", expr: record.statement, value: state.vars[name] });
+    }else if (record.type === "equation" && !record?.meta?.usedUnitToken){
       recordSymbolDefinition({
-        name: solved.unknown.name,
+        name: record.meta.unknownName,
         kind: "var",
-        expr: `${parsed.left} = ${parsed.right}`,
-        value: solvedValue,
+        expr: record.statement,
+        value: state.vars[record.meta.unknownName],
       });
-      continue;
-    }
-
-    if (parsed.type === "expr"){
-      runExpressionAll(parsed.expr);
-      continue;
-    }
-
-    if (parsed.type === "if" || parsed.type === "for" || parsed.type === "repeat"){
-      throw new Error("latent module may not contain flow statements");
     }
   }
 
@@ -97,14 +60,7 @@ export async function ensureLatentModuleLoaded({
 export async function runLatentCommand({
   arg,
   state,
-  evaluator,
-  frontend,
-  runtime,
-  runExpressionAll,
-  solveEquation,
-  createAssembly,
-  defineUserFn,
-  makeQty,
+  executeProgram,
   recordSymbolDefinition,
   writeLine,
 }){
@@ -114,14 +70,7 @@ export async function runLatentCommand({
     await runLatentCommand({
       arg: "test",
       state,
-      evaluator,
-      frontend,
-      runtime,
-      runExpressionAll,
-      solveEquation,
-      createAssembly,
-      defineUserFn,
-      makeQty,
+      executeProgram,
       recordSymbolDefinition,
       writeLine,
     });
@@ -131,14 +80,7 @@ export async function runLatentCommand({
   if (a === "load"){
     await ensureLatentModuleLoaded({
       state,
-      evaluator,
-      frontend,
-      runtime,
-      runExpressionAll,
-      solveEquation,
-      createAssembly,
-      defineUserFn,
-      makeQty,
+      executeProgram,
       recordSymbolDefinition,
       writeLine,
     });
@@ -149,14 +91,7 @@ export async function runLatentCommand({
   if (a === "test"){
     await ensureLatentModuleLoaded({
       state,
-      evaluator,
-      frontend,
-      runtime,
-      runExpressionAll,
-      solveEquation,
-      createAssembly,
-      defineUserFn,
-      makeQty,
+      executeProgram,
       recordSymbolDefinition,
       writeLine,
     });
@@ -165,9 +100,19 @@ export async function runLatentCommand({
     const steps = 50;
     const s0 = 0;
     const tmpName = "__latent_tmp";
-    const s1 = runExpressionAll(`ltw_seek_csi(${s0}, ${JSON.stringify(csi)}, ${steps})`);
+    const s1 = executeProgram(`__latent_tmp = ltw_seek_csi(${s0}, ${JSON.stringify(csi)}, ${steps})`, state.vars, "commit", {
+      allowedEffects: EFFECT.ALL,
+      allowCommands: false,
+      wrapErrors: false,
+      captureResults: true,
+    }).lastValue;
     state.vars[tmpName] = s1;
-    const s2 = runExpressionAll(`ltw_rewind_csi(${tmpName}, ${JSON.stringify(csi)}, ${steps})`);
+    const s2 = executeProgram(`ltw_rewind_csi(${tmpName}, ${JSON.stringify(csi)}, ${steps})`, state.vars, "commit", {
+      allowedEffects: EFFECT.ALL,
+      allowCommands: false,
+      wrapErrors: false,
+      captureResults: true,
+    }).lastValue;
     const s2u = unbox(s2);
     delete state.vars[tmpName];
 
