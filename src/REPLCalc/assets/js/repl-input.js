@@ -2,6 +2,7 @@ import { runDoomDemo } from "./repl-doom.js";
 import { runLatentCommand } from "./repl-latent.js";
 import { parseParams } from "./repl-parser.js";
 import { EFFECT } from "./repl-effects.js";
+import { createBlockNode } from "./repl-ast.js";
 
 export function createInputHandlers({
   state,
@@ -358,7 +359,8 @@ export function createInputHandlers({
             const defExistedBefore = stmt.type === "def"
               ? Object.prototype.hasOwnProperty.call(state.userFns, stmt.name)
               : false;
-            const result = executeProgram([stmt], state.vars, "commit", {
+            const statementBlock = createBlockNode([stmt], { sourceKind: "single-statement" });
+            const result = executeProgram(statementBlock, state.vars, "commit", {
               allowedEffects: EFFECT.ALL,
               allowCommands: false,
               wrapErrors: false,

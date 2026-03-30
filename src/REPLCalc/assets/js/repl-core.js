@@ -30,6 +30,7 @@ import { createInputHandlers } from "./repl-input.js";
 import { createUserFunctionUi } from "./repl-user-functions.js";
 import { createExecutor } from "./repl-executor.js";
 import { parseParams } from "./repl-parser.js";
+import { createBlockNode, isBlockNode } from "./repl-ast.js";
 
 export function initRepl(){
   const state = {
@@ -188,14 +189,25 @@ export function initRepl(){
     const ast = frontend.parseSource(source);
     return executor.executeSource(ast, state.vars, opts);
   };
+  const normalizeProgramInput = (programInput) => {
+    if (typeof programInput === "string"){
+      return frontend.parseSource(programInput);
+    }
+    if (isBlockNode(programInput)){
+      return programInput;
+    }
+    if (Array.isArray(programInput)){
+      return createBlockNode(programInput, { sourceKind: "statement-array" });
+    }
+    throw new Error("executeProgram expects a source string, AST block node, or statement-node array.");
+  };
+
   const executeProgram = (sourceOrAst, env = state.vars, mode = "commit", options = null) => {
     const normalized = executor.normalizeOptions({
       ...(options || {}),
       mode,
     });
-    const ast = (typeof sourceOrAst === "string" || Array.isArray(sourceOrAst))
-      ? frontend.parseSource(sourceOrAst)
-      : sourceOrAst;
+    const ast = normalizeProgramInput(sourceOrAst);
     return executor.executeSource(ast, env, normalized);
   };
   const executeSource = (source, options) => executeBlock(source, options);
