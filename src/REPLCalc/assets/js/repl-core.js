@@ -28,7 +28,6 @@ import { createInputHandlers } from "./repl-input.js";
 import { createUserFunctionUi } from "./repl-user-functions.js";
 import { createExecutor } from "./repl-executor.js";
 import { parseParams, splitStatements } from "./repl-parser.js";
-import { createExecutor } from "./repl-executor.js";
 
 export function initRepl(){
   const state = {
