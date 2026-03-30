@@ -372,7 +372,11 @@ export function attachMapBuiltins(baseFns, { defFn, defFnCtx, isQty }){
     const mapObj = requireMap(m, "count_if");
     const predicate = makePredicate(ctx, pred, "count_if");
     let total = 0;
-    for (let i = 0; i < mapObj.data.length; i++) total += predTruthy(predicate(mapObj.data[i])) ? 1 : 0;
+    for (let i = 0; i < mapObj.data.length; i++) {
+      const tile = mapObj.data[i];
+      const value = tile === 2 ? 0 : tile;
+      total += predTruthy(predicate(value)) ? 1 : 0;
+    }
     return total;
   });
 
@@ -400,8 +404,9 @@ export function attachMapBuiltins(baseFns, { defFn, defFnCtx, isQty }){
     const found = [];
     for (let y = 0; y < mapObj.h; y++){
       for (let x = 0; x < mapObj.w; x++){
-        const v = mapObj.data[y * mapObj.w + x];
-        if (predTruthy(predicate(v))) found.push(point(x, y));
+        const tile = mapObj.data[y * mapObj.w + x];
+        const value = tile === 2 ? 0 : tile;
+        if (predTruthy(predicate(value))) found.push(point(x, y));
       }
     }
     return vec(found);
