@@ -65,7 +65,7 @@ export function attachProjectBuiltins(baseFns, {
       })();
       if (entries){
         for (const entry of entries){
-          props[entry.key] = ctx.evalString(entry.expr, props);
+          props[entry.key] = ctx.evalExpr(entry.expr, props);
         }
       }
     }

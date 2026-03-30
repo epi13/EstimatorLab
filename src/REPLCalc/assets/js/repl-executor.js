@@ -206,7 +206,7 @@ export function createReplExecutor({
     }
 
     if (parsed.kind === STATEMENT_TYPE.ASSIGN){
-      const value = runExpression(parsed.expr, env, options, expressionTrace);
+      const value = runExpression(parsed.exprIr || parsed.expr, env, options, expressionTrace);
       env[parsed.name] = value;
       return makeStatementResult("assign", value, {
         meta: {
@@ -350,7 +350,7 @@ export function createReplExecutor({
     }
 
     if (parsed.kind === STATEMENT_TYPE.EXPR){
-      const value = runExpression(parsed.expr, env, options, expressionTrace);
+      const value = runExpression(parsed.exprIr || parsed.expr, env, options, expressionTrace);
       return makeStatementResult("expr", value, {
         meta: {
           expressionTrace: expressionTrace || [],

@@ -2,6 +2,7 @@ import { createBaseFns, defFn, defFnCtx } from "./repl-builtins.js";
 import { EFFECT } from "./repl-effects.js";
 import {
   buildAliasMap,
+  evalExpressionIR,
   evalRPN,
   insertImplicitMultiplication,
   isTruthy,
@@ -123,6 +124,7 @@ export function initRepl(){
     tokenize,
     toRPN,
     evalRPN,
+    evalExpressionIR,
     insertImplicitMultiplication,
     buildAliasMap,
     UNIT,

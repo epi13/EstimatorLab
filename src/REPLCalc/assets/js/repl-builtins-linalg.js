@@ -210,7 +210,7 @@ export function attachLinAlgBuiltins(baseFns, {
     ],
     returns: { kinds: ["scalar"] },
   }, (ctx, expr, varName, guess) => {
-    if (!ctx || typeof ctx.evalString !== "function") throw new Error("nsolve requires evalString support");
+    if (!ctx || typeof ctx.evalExpr !== "function") throw new Error("nsolve requires evalExpr support");
     if (typeof expr !== "string") throw new Error("nsolve expects expression string");
     if (typeof varName !== "string") throw new Error("nsolve expects variable name string");
     const v = varName.trim();
@@ -221,7 +221,7 @@ export function attachLinAlgBuiltins(baseFns, {
     const maxIter = 50;
 
     const f = (xv) => {
-      const out = ctx.evalString(expr, { [v]: xv });
+      const out = ctx.evalExpr(expr, { [v]: xv });
       return scalarNumber(out, "nsolve f(x)");
     };
 

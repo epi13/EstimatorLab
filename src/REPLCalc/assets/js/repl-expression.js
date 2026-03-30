@@ -525,7 +525,9 @@ export function evalRPN(rpn, ctx){
   const onResolve = typeof ctx.onResolve === "function" ? ctx.onResolve : null;
   const onCall = typeof ctx.onCall === "function" ? ctx.onCall : null;
   const allowedEffects = typeof ctx.allowedEffects === "number" ? ctx.allowedEffects : EFFECT.PURE;
+  const evalExpr = typeof ctx.evalExpr === "function" ? ctx.evalExpr : null;
   const evalString = typeof ctx.evalString === "function" ? ctx.evalString : null;
+  const resolveExpr = evalExpr || evalString;
 
   function recordResolve(name, resolvedName = null){
     if (!onResolve) return;
@@ -583,16 +585,16 @@ export function evalRPN(rpn, ctx){
     }else if (t.type === "str"){
       st.push(string(t.value));
     }else if (t.type === "obj"){
-      if (evalString){
-        const assy = tryBuildObjAssy(t.value, evalString);
+      if (resolveExpr){
+        const assy = tryBuildObjAssy(t.value, resolveExpr);
         if (assy){ st.push(assy); continue; }
       }
       st.push({ __obj: true, raw: t.value });
     }else if (t.type === "lazy_if"){
-      if (!evalString) throw new Error("Lazy if() requires evalString support");
-      const condVal = evalString(t.cond);
+      if (!resolveExpr) throw new Error("Lazy if() requires evalExpr support");
+      const condVal = resolveExpr(t.cond);
       const branch = isTruthy(condVal) ? t.then : t.else;
-      st.push(evalString(branch));
+      st.push(resolveExpr(branch));
     }else if (t.type === "id"){
       st.push(getVar(t.value));
     }else if (t.type === "op"){
@@ -632,6 +634,110 @@ export function evalRPN(rpn, ctx){
   }
   if (st.length !== 1) throw new Error("Expression did not reduce to a single value");
   return st[0];
+}
+
+export function evalExpressionIR(ir, ctx){
+  if (!ir || typeof ir !== "object") throw new Error("evalExpressionIR requires an IR node.");
+  const onResolve = typeof ctx.onResolve === "function" ? ctx.onResolve : null;
+  const onCall = typeof ctx.onCall === "function" ? ctx.onCall : null;
+  const allowedEffects = typeof ctx.allowedEffects === "number" ? ctx.allowedEffects : EFFECT.PURE;
+  const evalExpr = typeof ctx.evalExpr === "function" ? ctx.evalExpr : null;
+  const evalString = typeof ctx.evalString === "function" ? ctx.evalString : null;
+  const resolveExpr = evalExpr || evalString;
+
+  function recordResolve(name, resolvedName = null){
+    if (!onResolve) return;
+    onResolve(name, resolvedName);
+  }
+
+  function getVar(name){
+    if (name === "pi") return scalar(Math.PI);
+    if (name === "e") return scalar(Math.E);
+
+    if (ctx.unitOverrides && Object.prototype.hasOwnProperty.call(ctx.unitOverrides, name)){
+      recordResolve(name);
+      return ctx.unitOverrides[name];
+    }
+    if (Object.prototype.hasOwnProperty.call(ctx.aliases, name)){
+      const resolved = ctx.aliases[name];
+      recordResolve(name, resolved);
+      return ctx.vars[resolved];
+    }
+    if (Object.prototype.hasOwnProperty.call(ctx.vars, name)){
+      recordResolve(name);
+      return ctx.vars[name];
+    }
+    if (isUnitToken(name)){
+      const unit = UNIT[name];
+      recordResolve(name);
+      return makeQty(unit.toBase, unit.kind, name);
+    }
+    const dotIdx = name.indexOf(".");
+    if (dotIdx > 0){
+      const baseName = name.slice(0, dotIdx);
+      const fieldName = name.slice(dotIdx + 1);
+      let base = null;
+      if (Object.prototype.hasOwnProperty.call(ctx.vars, baseName)){
+        base = ctx.vars[baseName];
+      }else if (Object.prototype.hasOwnProperty.call(ctx.aliases, baseName)){
+        base = ctx.vars[ctx.aliases[baseName]];
+      }
+      if (base && typeof base === "object" && base.__assy && base.fields && Object.prototype.hasOwnProperty.call(base.fields, fieldName)){
+        recordResolve(name);
+        return base.fields[fieldName].value;
+      }
+    }
+    throw new Error(`Unknown identifier: ${name}`);
+  }
+
+  function run(node){
+    if (!node || typeof node !== "object") throw new Error("Invalid IR node.");
+    if (node.kind === "literal"){
+      if (node.valueType === "number") return scalar(node.value);
+      if (node.valueType === "string") return string(node.value);
+      return box(node.value);
+    }
+    if (node.kind === "identifier"){
+      return getVar(node.name);
+    }
+    if (node.kind === "binary"){
+      const left = run(node.left);
+      const right = run(node.right);
+      if (!OPS[node.op]) throw new Error(`Unsupported operator in IR: ${node.op}`);
+      return OPS[node.op].fn(left, right);
+    }
+    if (node.kind === "call"){
+      const fnName = node.name;
+      if (onCall) onCall(fnName);
+      const fn = ctx.fns[fnName];
+      if (!fn) throw new Error(`Unknown function: ${fnName}()`);
+      const need = typeof fn.effects === "number" ? fn.effects : EFFECT.PURE;
+      if ((need & ~allowedEffects) !== 0){
+        const needNames = effectNames(need).join("|");
+        const allowNames = effectNames(allowedEffects).join("|");
+        throw new Error(`ERR[E_EFFECT] ${fnName}(): effect ${needNames} not allowed in this context (allowed: ${allowNames})`);
+      }
+      const args = (Array.isArray(node.args) ? node.args : []).map((arg) => run(arg));
+      if (fn.arity >= 0 && args.length !== fn.arity){
+        throw new Error(`${fnName}() expected ${fn.arity} args, got ${args.length}`);
+      }
+      return fn.ctx ? fn.impl(ctx, ...args) : fn.impl(...args);
+    }
+    if (node.kind === "object"){
+      if (resolveExpr){
+        const assy = tryBuildObjAssy(node.raw, resolveExpr);
+        if (assy) return assy;
+      }
+      return { __obj: true, raw: node.raw };
+    }
+    if (node.kind === "conditional"){
+      const condVal = run(node.cond);
+      return isTruthy(condVal) ? run(node.then) : run(node.else);
+    }
+    throw new Error(`Unknown IR kind: ${node.kind}`);
+  }
+
+  return run(ir);
 }
 
 export function buildAliasMap(tokens, vars, fnNames){

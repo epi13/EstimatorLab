@@ -10,6 +10,7 @@ import {
   parseParams,
   splitAssemblyEntries,
 } from "./repl-parser.js";
+import { irFromRPN } from "./repl-expression-ir.js";
 import {
   STATEMENT_TYPE,
   createBlockNode,
@@ -25,6 +26,7 @@ export function createEvaluator({
   tokenize,
   toRPN,
   evalRPN,
+  evalExpressionIR,
   insertImplicitMultiplication,
   buildAliasMap,
   UNIT,
@@ -235,19 +237,44 @@ export function createEvaluator({
   }
 
   function runExpressionWithContext(expr, vars, options = null){
+    if (expr && typeof expr === "object" && expr.kind){
+      return runExpressionIRWithContext(expr, vars, options);
+    }
+    if (expr && typeof expr === "object" && expr.ir){
+      return runExpressionIRWithContext(expr.ir, vars, options);
+    }
+    return runExpressionStringWithContext(expr, vars, options);
+  }
+
+  function parseExpressionIR(expr, vars = state.vars){
+    if (expr && typeof expr === "object" && expr.kind) return expr;
+    const source = String(expr ?? "");
     const fns = getFns();
     const fnNames = new Set(Object.keys(fns));
-    const expanded = expandTrailingNumericIdentifiers(tokenize(expr), vars, fnNames);
+    const expanded = expandTrailingNumericIdentifiers(tokenize(source), vars, fnNames);
+    const tokens = insertImplicitMultiplication(expanded);
+    return irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
+  }
+
+  function runExpressionStringWithContext(expr, vars, options = null){
+    const source = String(expr ?? "");
+    const fns = getFns();
+    const fnNames = new Set(Object.keys(fns));
+    const expanded = expandTrailingNumericIdentifiers(tokenize(source), vars, fnNames);
     const tokens = insertImplicitMultiplication(expanded);
     maybeEnsureSymbols(tokens);
     const aliasMap = buildAliasMap(tokens, vars, fnNames);
-    const rpn = toRPN(tokens);
+    const ir = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
     const opts = normalizeEvalOptions(options);
-    const result = evalRPN(rpn, {
+    const result = evalExpressionIR(ir, {
       vars,
       fns,
       aliases: aliasMap,
       allowedEffects: opts?.allowedEffects,
+      evalExpr: (innerIr, overrides = null) => {
+        const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
+        return runExpressionWithContext(innerIr, merged, opts);
+      },
       evalString: (innerExpr, overrides = null) => {
         const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
         return runExpressionWithContext(innerExpr, merged, opts);
@@ -257,9 +284,43 @@ export function createEvaluator({
     });
     if (opts?.traceExpressions && typeof opts.expressionTraceSink === "function"){
       opts.expressionTraceSink({
-        expr,
+        expr: source,
         tokenCount: tokens.length,
-        rpnCount: rpn.length,
+        irKind: ir.kind,
+        result,
+      });
+    }
+    return result;
+  }
+
+  function runExpressionIRWithContext(ir, vars, options = null){
+    const fns = getFns();
+    const fnNames = new Set(Object.keys(fns));
+    const tokens = tokenizeExpressionIR(ir);
+    maybeEnsureSymbols(tokens);
+    const aliasMap = buildAliasMap(tokens, vars, fnNames);
+    const opts = normalizeEvalOptions(options);
+    const result = evalExpressionIR(ir, {
+      vars,
+      fns,
+      aliases: aliasMap,
+      allowedEffects: opts?.allowedEffects,
+      evalExpr: (innerIr, overrides = null) => {
+        const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
+        return runExpressionWithContext(innerIr, merged, opts);
+      },
+      evalString: (innerExpr, overrides = null) => {
+        const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
+        return runExpressionWithContext(innerExpr, merged, opts);
+      },
+      cmdRunner,
+      ...getUsageHooks(),
+    });
+    if (opts?.traceExpressions && typeof opts.expressionTraceSink === "function"){
+      opts.expressionTraceSink({
+        expr: "<ir>",
+        tokenCount: tokens.length,
+        irKind: ir.kind,
         result,
       });
     }
@@ -271,20 +332,35 @@ export function createEvaluator({
   }
 
   function runExpressionWithOverrides(expr, vars, unitOverrides, aliasMap = null, options = null){
+    if (expr && typeof expr === "object" && expr.kind){
+      return runExpressionIRWithOverrides(expr, vars, unitOverrides, aliasMap, options);
+    }
+    if (expr && typeof expr === "object" && expr.ir){
+      return runExpressionIRWithOverrides(expr.ir, vars, unitOverrides, aliasMap, options);
+    }
+    return runExpressionStringWithOverrides(expr, vars, unitOverrides, aliasMap, options);
+  }
+
+  function runExpressionStringWithOverrides(expr, vars, unitOverrides, aliasMap = null, options = null){
+    const source = String(expr ?? "");
     const fns = getFns();
     const fnNames = new Set(Object.keys(fns));
-    const expanded = expandTrailingNumericIdentifiers(tokenize(expr), vars, fnNames);
+    const expanded = expandTrailingNumericIdentifiers(tokenize(source), vars, fnNames);
     const tokens = insertImplicitMultiplication(expanded);
     maybeEnsureSymbols(tokens);
     const resolvedAliases = aliasMap || buildAliasMap(tokens, vars, fnNames);
-    const rpn = toRPN(tokens);
+    const ir = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
     const opts = normalizeEvalOptions(options);
-    return evalRPN(rpn, {
+    return evalExpressionIR(ir, {
       vars,
       fns,
       aliases: resolvedAliases,
       unitOverrides,
       allowedEffects: opts?.allowedEffects,
+      evalExpr: (innerIr, overrides = null) => {
+        const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
+        return runExpressionWithOverrides(innerIr, merged, unitOverrides, null, opts);
+      },
       evalString: (innerExpr, overrides = null) => {
         const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
         return runExpressionWithOverrides(innerExpr, merged, unitOverrides, null, opts);
@@ -292,6 +368,59 @@ export function createEvaluator({
       cmdRunner,
       ...getUsageHooks(),
     });
+  }
+
+  function runExpressionIRWithOverrides(ir, vars, unitOverrides, aliasMap = null, options = null){
+    const fns = getFns();
+    const fnNames = new Set(Object.keys(fns));
+    const tokens = tokenizeExpressionIR(ir);
+    maybeEnsureSymbols(tokens);
+    const resolvedAliases = aliasMap || buildAliasMap(tokens, vars, fnNames);
+    const opts = normalizeEvalOptions(options);
+    return evalExpressionIR(ir, {
+      vars,
+      fns,
+      aliases: resolvedAliases,
+      unitOverrides,
+      allowedEffects: opts?.allowedEffects,
+      evalExpr: (innerIr, overrides = null) => {
+        const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
+        return runExpressionWithOverrides(innerIr, merged, unitOverrides, null, opts);
+      },
+      evalString: (innerExpr, overrides = null) => {
+        const merged = overrides ? Object.assign(Object.create(null), vars, overrides) : vars;
+        return runExpressionWithOverrides(innerExpr, merged, unitOverrides, null, opts);
+      },
+      cmdRunner,
+      ...getUsageHooks(),
+    });
+  }
+
+  function tokenizeExpressionIR(ir){
+    const out = [];
+    function walk(node){
+      if (!node || typeof node !== "object") return;
+      if (node.kind === "identifier"){
+        out.push({ type: "id", value: node.name });
+        return;
+      }
+      if (node.kind === "binary"){
+        walk(node.left);
+        walk(node.right);
+        return;
+      }
+      if (node.kind === "call"){
+        for (const arg of (node.args || [])) walk(arg);
+        return;
+      }
+      if (node.kind === "conditional"){
+        walk(node.cond);
+        walk(node.then);
+        walk(node.else);
+      }
+    }
+    walk(ir);
+    return out;
   }
 
   function isAssembly(value){
@@ -430,7 +559,7 @@ export function createEvaluator({
 
     const m = src.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]+)$/);
     if (m){
-      return createStatementNode(STATEMENT_TYPE.ASSIGN, { name:m[1], expr:m[2] }, origin);
+      return createStatementNode(STATEMENT_TYPE.ASSIGN, { name:m[1], expr:m[2], exprIr: parseExpressionIR(m[2]) }, origin);
     }
 
     const eqIdx = findTopLevelEquals(src);
@@ -441,7 +570,7 @@ export function createEvaluator({
       return createStatementNode(STATEMENT_TYPE.EQUATION, { left, right }, origin);
     }
 
-    return createStatementNode(STATEMENT_TYPE.EXPR, { expr:src }, origin);
+    return createStatementNode(STATEMENT_TYPE.EXPR, { expr:src, exprIr: parseExpressionIR(src) }, origin);
   }
 
   function parseSource(source, origin = null){
@@ -458,6 +587,7 @@ export function createEvaluator({
     parseSource,
     runExpression,
     runExpressionWithContext,
+    parseExpressionIR,
     runExpressionWithOverrides,
     solveEquation,
     createAssembly,

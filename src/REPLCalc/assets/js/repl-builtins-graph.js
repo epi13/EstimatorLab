@@ -156,7 +156,7 @@ export function attachGraphBuiltins(baseFns, {
     returns: { kinds: ["graph"] },
   }, (ctx, g) => {
     const graph = requireGraph(g, "gcalcx");
-    if (!ctx || typeof ctx.evalString !== "function") throw new Error("gcalcx requires evalString support");
+    if (!ctx || typeof ctx.evalExpr !== "function") throw new Error("gcalcx requires evalExpr support");
 
     graph.nodes = graph.nodes || Object.create(null);
     graph.edges = Array.isArray(graph.edges) ? graph.edges : [];
@@ -198,7 +198,7 @@ export function attachGraphBuiltins(baseFns, {
       const node = graph.nodes[id] || {};
       let base = node.cost;
       if ((base === undefined || base === null) && typeof node.expr === "string" && node.expr.trim()){
-        base = ctx.evalString(node.expr, Object.assign(Object.create(null), totals));
+        base = ctx.evalExpr(node.expr, Object.assign(Object.create(null), totals));
       }
       totals[id] = (base === undefined || base === null) ? null : base;
     }
