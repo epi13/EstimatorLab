@@ -75,7 +75,17 @@ function compareValues(a, b, op){
 }
 
 export function tokenize(src){
-  const s = src.trim();
+  const rewriteBracketIndexing = (input) => {
+    let out = String(input ?? "");
+    const pattern = /([A-Za-z_$%][A-Za-z0-9_$%.]*)\s*\[([^\[\]]+)\]/g;
+    let prev = null;
+    while (out !== prev){
+      prev = out;
+      out = out.replace(pattern, "at($1, $2)");
+    }
+    return out;
+  };
+  const s = rewriteBracketIndexing(src).trim();
   const out = [];
   let i = 0;
 
