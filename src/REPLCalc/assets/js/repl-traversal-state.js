@@ -53,6 +53,7 @@ export function createTraversalNode({
   viaTransitionId = null,
   canonicalKey = null,
   status = TRAVERSAL_NODE_STATUSES.PENDING,
+  ...metadata
 } = {}){
   return {
     id: id || nextTraversalNodeId(),
@@ -64,6 +65,7 @@ export function createTraversalNode({
     viaTransitionId,
     canonicalKey,
     status: normalizeStatus(status),
+    ...metadata,
   };
 }
 
