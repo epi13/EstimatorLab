@@ -1,9 +1,10 @@
 import {
   STATEMENT_TYPE,
+  createBlockNode,
   createBlockContext,
   createChildBlockContext,
   createStatementNode,
-} from "./repl-statement-schema.js";
+} from "./repl-ast.js";
 
 export function splitStatements(source){
   const out = [];
@@ -254,18 +255,20 @@ export function splitStatements(source){
 
 export function parseBlockStatements(source, parseStatement, blockContext = null){
   const statements = splitStatements(source || "");
-  if (typeof parseStatement !== "function") return statements;
   const context = createBlockContext(blockContext || {});
-  return statements
+  const parsedStatements = (typeof parseStatement === "function" ? statements
     .map((stmt, statementIndex) => parseStatement(stmt, {
       source: stmt,
       parentStatementType: context.parentStatementType,
       blockRole: context.blockRole,
       blockDepth: context.blockDepth,
       sourceSpan: context.sourceSpan,
+      span: context.sourceSpan,
+      blockId: context.blockId,
       statementIndex,
     }))
-    .filter(Boolean);
+    .filter(Boolean) : []);
+  return createBlockNode(parsedStatements, context);
 }
 
 export function findTopLevelChar(source, char){

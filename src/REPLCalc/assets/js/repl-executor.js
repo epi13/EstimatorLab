@@ -1,5 +1,4 @@
-import { splitStatements } from "./repl-parser.js";
-import { STATEMENT_TYPE } from "./repl-statement-schema.js";
+import { STATEMENT_TYPE, isBlockNode, isStatementNode } from "./repl-ast.js";
 
 export function withScopedVar(env, name, fn){
   const hadVar = Object.prototype.hasOwnProperty.call(env, name);
@@ -69,7 +68,6 @@ function wrapExecutionError(err, stmt, stmtIdx, contextPath = []){
 }
 
 export function createReplExecutor({
-  evaluate,
   runExpressionWithContext,
   solveEquation,
   createAssembly,
@@ -137,7 +135,12 @@ export function createReplExecutor({
 
   function executeSource(source, env, options = {}){
     const opts = normalizeOptions(options);
-    const statements = Array.isArray(source) ? source : splitStatements(source);
+    const statements = Array.isArray(source)
+      ? source
+      : (isBlockNode(source) ? source.statements : null);
+    if (!statements){
+      throw new Error("executeSource expects AST block nodes or statement-node arrays.");
+    }
     const blockResult = {
       lastValue: null,
       results: [],
@@ -148,17 +151,7 @@ export function createReplExecutor({
       if (!stmt) continue;
 
       try{
-        let parsed = null;
-        if (typeof stmt === "string"){
-          parsed = evaluate(stmt);
-        }else if (typeof stmt === "object"){
-          parsed = stmt;
-        }else{
-          parsed = evaluate(String(stmt));
-        }
-        if (!parsed) continue;
-
-        const statementResult = executeStatement(parsed, env, opts);
+        const statementResult = executeStatement(stmt, env, opts);
         blockResult.lastValue = statementResult?.value ?? blockResult.lastValue;
 
         if (opts.captureResults){
@@ -175,9 +168,12 @@ export function createReplExecutor({
 
   function executeStatement(parsed, env, options = {}){
     if (!parsed) return makeStatementResult("noop", null);
+    if (!isStatementNode(parsed)){
+      throw new Error("executeStatement expects an AST statement node.");
+    }
     const expressionTrace = options.traceExpressions ? [] : null;
 
-    if (parsed.type === STATEMENT_TYPE.CMD){
+    if (parsed.kind === STATEMENT_TYPE.CMD){
       if (!options.allowCommands){
         throw new Error(options.commandErrorMessage || "Commands are not supported in this context.");
       }
@@ -192,7 +188,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === STATEMENT_TYPE.DEF){
+    if (parsed.kind === STATEMENT_TYPE.DEF){
       if (typeof defineUserFn === "function"){
         defineUserFn(parsed.name, parsed.params, parsed.expr);
       }
@@ -201,7 +197,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === STATEMENT_TYPE.ASSY){
+    if (parsed.kind === STATEMENT_TYPE.ASSY){
       const assembly = createAssembly(parsed.name, parsed.fields);
       env[parsed.name] = assembly;
       return makeStatementResult("assy", assembly, {
@@ -209,7 +205,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === STATEMENT_TYPE.ASSIGN){
+    if (parsed.kind === STATEMENT_TYPE.ASSIGN){
       const value = runExpression(parsed.expr, env, options, expressionTrace);
       env[parsed.name] = value;
       return makeStatementResult("assign", value, {
@@ -221,7 +217,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === STATEMENT_TYPE.EQUATION){
+    if (parsed.kind === STATEMENT_TYPE.EQUATION){
       const solved = solveEquation(parsed.left, parsed.right);
       if (solved.unknown.unitToken){
         return makeStatementResult(
@@ -247,7 +243,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === STATEMENT_TYPE.IF){
+    if (parsed.kind === STATEMENT_TYPE.IF){
       const cond = runExpression(parsed.condition, env, options, expressionTrace);
 
       let branchResult = { lastValue: null, results: [] };
@@ -270,7 +266,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === STATEMENT_TYPE.FOR){
+    if (parsed.kind === STATEMENT_TYPE.FOR){
       const { start, end, step, loopKind } = resolveForRange(parsed, env, options);
       const forward = step > 0;
       let iter = 0;
@@ -313,7 +309,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === STATEMENT_TYPE.REPEAT){
+    if (parsed.kind === STATEMENT_TYPE.REPEAT){
       const countVal = runExpression(parsed.countExpr, env, options, expressionTrace);
       const count = normalizeCompare(countVal, 0)[0];
       if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
@@ -353,7 +349,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === STATEMENT_TYPE.EXPR){
+    if (parsed.kind === STATEMENT_TYPE.EXPR){
       const value = runExpression(parsed.expr, env, options, expressionTrace);
       return makeStatementResult("expr", value, {
         meta: {
@@ -362,7 +358,7 @@ export function createReplExecutor({
       });
     }
 
-    return makeStatementResult(parsed.type || "unknown", null);
+    return makeStatementResult(parsed.kind || "unknown", null);
   }
 
   return {
