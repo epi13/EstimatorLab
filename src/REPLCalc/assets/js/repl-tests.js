@@ -109,9 +109,6 @@ export function createTests({
     const constructionSource = await fetchText("assets/est/construction/construction-helpers.est");
     applyModuleSource(constructionSource, "construction helpers");
 
-    const traversalSource = await fetchText("assets/est/traversal/map-traversal.est");
-    applyModuleSource(traversalSource, "map traversal");
-
     const suite = executeProgram("test_suite()", state.vars, "commit", {
       allowCommands: false,
       wrapErrors: false,
