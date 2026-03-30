@@ -28,6 +28,7 @@ import { createInputHandlers } from "./repl-input.js";
 import { createUserFunctionUi } from "./repl-user-functions.js";
 import { createExecutor } from "./repl-executor.js";
 import { parseParams, splitStatements } from "./repl-parser.js";
+import { createExecutor } from "./repl-executor.js";
 
 export function initRepl(){
   const state = {
@@ -78,8 +79,6 @@ export function initRepl(){
     scheduleLiveResult: () => editor?.scheduleLiveResult(),
     writeLine: ui.writeLine,
   });
-
-  const MAX_LOOP_ITERATIONS = 100000;
 
   const runtime = createRuntime({
     state,
@@ -172,8 +171,14 @@ export function initRepl(){
 
   runtime.setRunExpressionWithContext(evaluator.runExpressionWithContext);
   runtime.setRunBlockBody(runBlockBody);
-  gfx.setRunExpressionWithContext((expr, vars) => evaluator.runExpressionWithContext(expr, vars, { allowedEffects: EFFECT.ALL }));
-  gfx.setRunLoopStatementRunner(runLoopStatements);
+  gfx.setRunExpressionWithContext((expr, vars, options = null) => {
+    const opts = executor.normalizeOptions(options);
+    return evaluator.runExpressionWithContext(expr, vars, opts);
+  });
+  gfx.setRunLoopStatementRunner((source, options = null) => {
+    const opts = executor.normalizeOptions(options);
+    return runLoopStatements(source, opts);
+  });
 
   editor = createEditor({
     state,
