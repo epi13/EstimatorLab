@@ -226,6 +226,61 @@ export function createReplExecutor({
         transition: null,
       };
     }
+    return {
+      statementNode: statementNodeOrInput,
+      traversalState,
+      options: { ...expandOptions },
+    };
+  }
+
+  function expandStatement(statementNodeOrInput, traversalState, expandOptions = {}){
+    const { statementNode, traversalState: traversalStateInput, options } = normalizeExpandStatementArgs(
+      statementNodeOrInput,
+      traversalState,
+      expandOptions
+    );
+    const incomingState = withExecutionState(traversalStateInput);
+    const requestedMode = typeof options.mode === "string" ? options.mode : incomingState.mode;
+    const detachFromCommit = options.detachFromCommit === true;
+    const effectiveMode = detachFromCommit && requestedMode === "commit" ? "speculate" : requestedMode;
+    const execState = withModeAppliedState({ ...incomingState, mode: effectiveMode });
+    const beforeStateRef = snapshotStateRef(execState);
+    const env = execState.env;
+    const expressionTrace = execState.traceExpressions ? [] : null;
+
+    if (!statementNode){
+      const record = makeExecutionRecord({
+        type: "noop",
+        mode: execState.mode,
+        before: beforeStateRef,
+        after: snapshotStateRef(execState),
+      });
+      return [createTransition({
+        transitionType: "noop",
+        fromState: beforeStateRef,
+        toState: execState,
+        record,
+        statementNodeId: null,
+        canonicalKey: "noop|empty-statement",
+        sourceModule: "repl-executor",
+        strategy: "empty-statement",
+        reasoningTags: ["noop", "empty-input"],
+        meta: {
+          mode: execState.mode,
+          contextPath: execState.contextPath.slice(),
+        },
+      })];
+    }
+    if (!isStatementNode(statementNode)){
+      throw new Error("expandStatement expects an AST statement node.");
+    }
+
+    const provenanceEntry = {
+      kind: statementNode.kind,
+      nodeId: statementNode.nodeId || null,
+      contextPath: execState.contextPath.slice(),
+      statement: statementNode.stmt || "",
+    };
 
     let nextState = withExecutionState(transition.toState || base, base.env);
     if (mode === "speculate" || mode === "plan"){
@@ -243,6 +298,298 @@ export function createReplExecutor({
       record: transition.record || null,
       transition,
     };
+      return [createTransition({
+        transitionType: record.type || statementNode.kind || "unknown",
+        fromState: beforeStateRef,
+        toState: nextState,
+        record,
+        ...transitionInput,
+        statementNodeId: statementNode.nodeId || record.statementNodeId || null,
+        canonicalKey: transitionInput.canonicalKey || `${record.type || statementNode.kind || "unknown"}|${statementNode.nodeId || "no-node"}`,
+        sourceModule: "repl-executor",
+        strategy: transitionInput.strategy || "statement-default",
+        reasoningTags: transitionInput.reasoningTags || [statementNode.kind || "unknown"],
+        meta: {
+          mode: execState.mode,
+          contextPath: execState.contextPath.slice(),
+          statementKind: statementNode.kind || null,
+          ...(transitionInput.meta || {}),
+        },
+      })];
+    };
+
+    if (statementNode.kind === STATEMENT_TYPE.CMD){
+      if (!execState.allowCommands){
+        throw new Error(execState.commandErrorMessage || "Commands are not supported in this context.");
+      }
+      const value = typeof cmdRunner === "function"
+        ? cmdRunner(statementNode.cmd, statementNode.arg)
+        : null;
+      return finalizeTransition({
+        type: "cmd",
+        value,
+        meta: {
+          command: statementNode.cmd,
+          arg: statementNode.arg,
+        },
+      });
+    }
+
+    if (statementNode.kind === STATEMENT_TYPE.DEF){
+      if (typeof defineUserFn === "function"){
+        defineUserFn(statementNode.name, statementNode.params, statementNode.expr);
+      }
+      return finalizeTransition({
+        type: "def",
+        value: null,
+        changedSymbols: [statementNode.name],
+        effects: [{ kind: "define-function", symbol: statementNode.name }],
+      });
+    }
+
+    if (statementNode.kind === STATEMENT_TYPE.ASSY){
+      const assembly = createAssembly(statementNode.name, statementNode.fields, env, execState);
+      env[statementNode.name] = assembly;
+      return finalizeTransition({
+        type: "assy",
+        value: assembly,
+        changedSymbols: [statementNode.name],
+        effects: [{ kind: "write-symbol", symbol: statementNode.name, value: assembly }],
+      });
+    }
+
+    if (statementNode.kind === STATEMENT_TYPE.ASSIGN){
+      const exprInput = statementNode.exprIr || statementNode.expr;
+      const valueCandidates = typeof runExpressionCandidatesWithContext === "function"
+        ? runExpressionCandidatesWithContext(exprInput, execState.env, execState)
+        : [{ value: runExpression(exprInput, execState, expressionTrace), scoreDelta: 0, confidence: 1 }];
+      const candidate = valueCandidates[0];
+      if (candidate){
+        env[statementNode.name] = candidate.value;
+        return finalizeTransition({
+          type: "assign",
+          value: candidate.value,
+          meta: {
+            assignedName: statementNode.name,
+            expressionStrategy: candidate.transitionType || "expression-default",
+            expressionTrace: expressionTrace || [],
+          },
+          changedSymbols: [statementNode.name],
+          effects: [{ kind: "write-symbol", symbol: statementNode.name, value: candidate.value }],
+        }, {
+          scoreDelta: Number.isFinite(candidate.scoreDelta) ? candidate.scoreDelta : 0,
+          confidence: Number.isFinite(candidate.confidence) ? candidate.confidence : 1,
+          canonicalKey: `assign|${statementNode.nodeId || "no-node"}|${statementNode.name}|${candidate.transitionType || "expression-default"}`,
+          strategy: candidate.transitionType || "expression-default",
+          reasoningTags: ["assign", "expression-eval"],
+          meta: {
+            assignedName: statementNode.name,
+          },
+        });
+      }
+      throw new Error("Assignment produced no expression candidates.");
+    }
+
+    if (statementNode.kind === STATEMENT_TYPE.EQUATION){
+      const solvedCandidates = typeof solveEquationCandidates === "function"
+        ? solveEquationCandidates(statementNode.left, statementNode.right)
+        : [solveEquation(statementNode.left, statementNode.right)];
+      const solved = solvedCandidates[0];
+      if (solved){
+        const transitionInput = {
+          scoreDelta: Number.isFinite(solved?.scoreDelta) ? solved.scoreDelta : 0,
+          confidence: Number.isFinite(solved?.confidence) ? solved.confidence : 1,
+          canonicalKey: `equation|${statementNode.nodeId || "no-node"}|${solved?.unknown?.name || "unknown"}|${solved?.strategy || "numeric-solve"}`,
+          strategy: solved?.strategy || "numeric-solve",
+          reasoningTags: ["equation", "solver"],
+          meta: {
+            unknownName: solved?.unknown?.name || null,
+          },
+        };
+        if (solved.unknown.unitToken){
+          return finalizeTransition({
+            type: "equation",
+            value: makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind),
+            meta: {
+              unknownName: solved.unknown.name,
+              usedUnitToken: true,
+              strategy: solved.strategy || "numeric-solve",
+              expressionTrace: expressionTrace || [],
+            },
+          }, transitionInput);
+        }
+        env[solved.unknown.name] = solved.value;
+        return finalizeTransition({
+          type: "equation",
+          value: solved.value,
+          meta: {
+            unknownName: solved.unknown.name,
+            usedUnitToken: false,
+            strategy: solved.strategy || "numeric-solve",
+            expressionTrace: expressionTrace || [],
+          },
+          changedSymbols: [solved.unknown.name],
+          effects: [{ kind: "write-symbol", symbol: solved.unknown.name, value: solved.value }],
+        }, transitionInput);
+      }
+      throw new Error("Equation solver produced no candidates.");
+    }
+
+    if (statementNode.kind === STATEMENT_TYPE.IF){
+      const cond = runExpression(statementNode.condition, execState, expressionTrace);
+
+      let branchResult = { lastValue: null, results: [], nextState: execState };
+      let branchTaken = "none";
+      if (isTruthy(cond)){
+        branchTaken = "then";
+        branchResult = executeSource(statementNode.thenBody, stateWithContext(execState, "if:then"));
+      }else if (statementNode.elseBody){
+        branchTaken = "else";
+        branchResult = executeSource(statementNode.elseBody, stateWithContext(execState, "if:else"));
+      }
+
+      const branchChildren = Array.isArray(branchResult.results) ? branchResult.results : [];
+      return finalizeTransition({
+        type: "if",
+        value: branchResult.lastValue,
+        meta: {
+          branchTaken,
+          expressionTrace: expressionTrace || [],
+        },
+        children: branchChildren,
+        changedSymbols: mergeChangedSymbols(flattenExecutionRecords(branchChildren)),
+      });
+    }
+
+    if (statementNode.kind === STATEMENT_TYPE.FOR){
+      const { start, end, step, loopKind } = resolveForRange(statementNode, execState);
+      const forward = step > 0;
+      let iter = 0;
+      const iterationRecords = [];
+
+      const record = withScopedVar(env, statementNode.varName, () => {
+        for (let i = start; forward ? i <= end : i >= end; i += step){
+          iter += 1;
+          if (iter > maxLoopIterations){
+            throw new Error(`for loop exceeded ${maxLoopIterations} iterations`);
+          }
+          const iterStateBefore = snapshotStateRef(execState);
+          env[statementNode.varName] = loopKind ? makeQty(i, loopKind) : i;
+          const iterResult = executeSource(
+            statementNode.body,
+            stateWithContext(execState, `for:${statementNode.varName}`, `iter:${iter}`)
+          );
+          iterationRecords.push(makeExecutionRecord({
+            statementNode,
+            type: "for-iteration",
+            statement: `for ${statementNode.varName} iteration ${iter}`,
+            statementKind: "for-iteration",
+            mode: execState.mode,
+            before: iterStateBefore,
+            after: snapshotStateRef(execState),
+            value: iterResult.lastValue,
+            meta: {
+              index: iter,
+              loopVar: statementNode.varName,
+              loopValue: env[statementNode.varName],
+            },
+            children: Array.isArray(iterResult.results) ? iterResult.results : [],
+            changedSymbols: mergeChangedSymbols(flattenExecutionRecords(iterResult.results)),
+          }));
+        }
+        const lastValue = iterationRecords.length
+          ? iterationRecords[iterationRecords.length - 1].value
+          : null;
+
+        return {
+          type: "for",
+          value: lastValue,
+          meta: {
+            iterationCount: iter,
+            expressionTrace: expressionTrace || [],
+          },
+          children: iterationRecords,
+          changedSymbols: mergeChangedSymbols(flattenExecutionRecords(iterationRecords)),
+        };
+      });
+
+      return finalizeTransition(record);
+    }
+
+    if (statementNode.kind === STATEMENT_TYPE.REPEAT){
+      const countVal = runExpression(statementNode.countExpr, execState, expressionTrace);
+      const count = normalizeCompare(countVal, 0)[0];
+      if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
+      const n = Math.floor(count);
+      if (n > maxLoopIterations){
+        throw new Error(`repeat exceeded ${maxLoopIterations} iterations`);
+      }
+      const iterationRecords = [];
+      for (let i = 0; i < n; i++){
+        const iterStateBefore = snapshotStateRef(execState);
+        const iterResult = executeSource(
+          statementNode.body,
+          stateWithContext(execState, "repeat", `iter:${i + 1}`)
+        );
+        iterationRecords.push(makeExecutionRecord({
+          statementNode,
+          type: "repeat-iteration",
+          statement: `repeat iteration ${i + 1}`,
+          statementKind: "repeat-iteration",
+          mode: execState.mode,
+          before: iterStateBefore,
+          after: snapshotStateRef(execState),
+          value: iterResult.lastValue,
+          meta: {
+            index: i + 1,
+          },
+          children: Array.isArray(iterResult.results) ? iterResult.results : [],
+          changedSymbols: mergeChangedSymbols(flattenExecutionRecords(iterResult.results)),
+        }));
+      }
+      const lastValue = iterationRecords.length
+        ? iterationRecords[iterationRecords.length - 1].value
+        : null;
+
+      return finalizeTransition({
+        type: "repeat",
+        value: lastValue,
+        meta: {
+          repeatCount: n,
+          expressionTrace: expressionTrace || [],
+        },
+        children: iterationRecords,
+        changedSymbols: mergeChangedSymbols(flattenExecutionRecords(iterationRecords)),
+      });
+    }
+
+    if (statementNode.kind === STATEMENT_TYPE.EXPR){
+      const exprInput = statementNode.exprIr || statementNode.expr;
+      const valueCandidates = typeof runExpressionCandidatesWithContext === "function"
+        ? runExpressionCandidatesWithContext(exprInput, execState.env, execState)
+        : [{ value: runExpression(exprInput, execState, expressionTrace), scoreDelta: 0, confidence: 1 }];
+      const transitions = valueCandidates.flatMap((candidate) => finalizeTransition({
+        type: "expr",
+        value: candidate.value,
+        meta: {
+          expressionStrategy: candidate.transitionType || "expression-default",
+          expressionTrace: expressionTrace || [],
+        },
+      }, {
+        scoreDelta: Number.isFinite(candidate.scoreDelta) ? candidate.scoreDelta : 0,
+        confidence: Number.isFinite(candidate.confidence) ? candidate.confidence : 1,
+        canonicalKey: `expr|${statementNode.nodeId || "no-node"}|${candidate.transitionType || "expression-default"}`,
+        strategy: candidate.transitionType || "expression-default",
+        reasoningTags: ["expr", "expression-eval"],
+      }));
+      if (transitions.length) return transitions;
+      throw new Error("Expression produced no candidates.");
+    }
+
+    return finalizeTransition({
+      type: statementNode.kind || "unknown",
+      value: null,
+    });
   }
 
   return {
