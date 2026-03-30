@@ -274,8 +274,38 @@ export function createReplExecutor({
     return transitions[0];
   }
 
-  function expandStatement(statementNode, traversalState){
-    const execState = withModeAppliedState(traversalState);
+  function normalizeExpandStatementArgs(statementNodeOrInput, traversalState, expandOptions = {}){
+    if (statementNodeOrInput && typeof statementNodeOrInput === "object" && !isStatementNode(statementNodeOrInput) && Object.prototype.hasOwnProperty.call(statementNodeOrInput, "statementNode")){
+      const input = statementNodeOrInput;
+      return {
+        statementNode: input.statementNode || null,
+        traversalState: input.traversalState || input.execState || traversalState || null,
+        options: {
+          ...expandOptions,
+          ...(input.options || {}),
+          mode: input.mode ?? expandOptions.mode,
+          detachFromCommit: input.detachFromCommit ?? expandOptions.detachFromCommit,
+        },
+      };
+    }
+    return {
+      statementNode: statementNodeOrInput,
+      traversalState,
+      options: { ...expandOptions },
+    };
+  }
+
+  function expandStatement(statementNodeOrInput, traversalState, expandOptions = {}){
+    const { statementNode, traversalState: traversalStateInput, options } = normalizeExpandStatementArgs(
+      statementNodeOrInput,
+      traversalState,
+      expandOptions
+    );
+    const incomingState = withExecutionState(traversalStateInput);
+    const requestedMode = typeof options.mode === "string" ? options.mode : incomingState.mode;
+    const detachFromCommit = options.detachFromCommit === true;
+    const effectiveMode = detachFromCommit && requestedMode === "commit" ? "speculate" : requestedMode;
+    const execState = withModeAppliedState({ ...incomingState, mode: effectiveMode });
     const beforeStateRef = snapshotStateRef(execState);
     const env = execState.env;
     const expressionTrace = execState.traceExpressions ? [] : null;
