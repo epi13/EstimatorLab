@@ -1,4 +1,11 @@
 import { cloneEnv, withExecutionState } from "./repl-runtime-state.js";
+import {
+  createTraversalNode,
+  deriveTraversalCanonicalKey,
+  transitionTraversalNodeStatus,
+  updateTraversalNodeMetadata,
+  TRAVERSAL_NODE_STATUSES,
+} from "./repl-traversal-state.js";
 
 export const TRAVERSAL_POLICIES = Object.freeze({
   BEST_FIRST: "best_first",
@@ -7,13 +14,6 @@ export const TRAVERSAL_POLICIES = Object.freeze({
   GREEDY: "greedy",
   EXHAUSTIVE_SMALL: "exhaustive_small",
 });
-
-let traversalStateId = 0;
-
-function nextTraversalStateId(){
-  traversalStateId += 1;
-  return `ts-${traversalStateId}`;
-}
 
 function toNumber(value, fallback = 0){
   return Number.isFinite(value) ? value : fallback;
@@ -161,15 +161,6 @@ export function createReplTraversal({
     throw new Error("createReplTraversal requires an expandStatement function.");
   }
 
-  const getCanonicalKey = (execState, fallback = null) => {
-    if (typeof canonicalStateKey !== "function") return fallback;
-    try{
-      return canonicalStateKey(execState);
-    }catch {
-      return fallback;
-    }
-  };
-
   const buildWrapper = (input) => {
     const execState = withExecutionState(input.execState || input);
     const statementIndex = Number.isInteger(input.statementIndex) ? Math.max(0, input.statementIndex) : 0;
@@ -179,6 +170,8 @@ export function createReplTraversal({
       ? `${blockId || "no-block"}:stmt:${statementIndex}:${localCanonicalKey}`
       : null;
     return createTraversalState({
+    const canonicalKey = deriveTraversalCanonicalKey(execState, canonicalStateKey, input.canonicalKey || null);
+    return createTraversalNode({
       id: input.id || null,
       execState,
       score: toNumber(input.score, 0),
@@ -187,10 +180,11 @@ export function createReplTraversal({
       blockNode: input.blockNode || null,
       statementIndex,
       parentId: input.parentId || null,
-      transitionId: input.transitionId || null,
+      viaTransitionId: input.viaTransitionId || input.transitionId || null,
       canonicalKey,
       isTerminal: input.isTerminal === true,
       terminationReason: input.terminationReason || null,
+      status: input.status || TRAVERSAL_NODE_STATUSES.PENDING,
     });
   };
 
@@ -204,7 +198,6 @@ export function createReplTraversal({
       statementNode,
       traversalState: baseState.execState,
       mode: traversalConfig.mode || "speculate",
-      detachFromCommit: traversalConfig.detachFromCommit !== false,
     });
 
     const transitions = Array.isArray(expansions) ? expansions : [];
@@ -213,6 +206,7 @@ export function createReplTraversal({
       const score = scoreTransitionFn(transition, baseState.score);
       const confidence = confidenceTransitionFn(transition, baseState.confidence);
       return buildWrapper({
+      return createTraversalNode({
         execState: nextExec,
         score,
         confidence,
@@ -221,6 +215,9 @@ export function createReplTraversal({
         statementIndex: 0,
         parentId: baseState.id,
         transitionId: transition?.id || null,
+        viaTransitionId: transition?.id || null,
+        canonicalKey: deriveTraversalCanonicalKey(nextExec, canonicalStateKey, null),
+        status: TRAVERSAL_NODE_STATUSES.PENDING,
       });
     });
   };
@@ -306,7 +303,6 @@ export function createReplTraversal({
     beamWidth = 4,
     prune = null,
     mode = "speculate",
-    detachFromCommit = true,
   } = {}) => {
     const normalizedGoal = normalizeGoal(goal);
     const normalizedPolicy = normalizePolicy(policy);
@@ -326,6 +322,8 @@ export function createReplTraversal({
       blockNode: blockNode || null,
       statementIndex: 0,
     });
+    let start = buildWrapper(initialState || { execState: withExecutionState({ env: Object.create(null), mode }) });
+    start = transitionTraversalNodeStatus(start, TRAVERSAL_NODE_STATUSES.FRONTIER);
     const visited = new Map();
     const expanded = [];
     const goalMatches = [];
@@ -340,6 +338,7 @@ export function createReplTraversal({
         statementIndex: start.statementIndex,
         blockId: start.blockNode?.blockId || null,
         isTerminal: start.isTerminal,
+        status: start.status,
       }],
       edges: [],
     };
@@ -355,7 +354,8 @@ export function createReplTraversal({
       if (expanded.length >= normalizedBudget.nodeBudget) break;
       if (expansions >= normalizedBudget.expansionBudget) break;
 
-      const current = frontier.pop();
+      const popped = frontier.pop();
+      const current = popped ? transitionTraversalNodeStatus(popped, TRAVERSAL_NODE_STATUSES.EXPANDED) : null;
       if (!current) break;
       if (current.depth >= normalizedBudget.depthLimit){
         diagnostics.push({ kind: "depth-limit", stateId: current.id, depth: current.depth });
@@ -365,7 +365,7 @@ export function createReplTraversal({
       expanded.push(current);
       expansions += 1;
 
-      const successors = expandTraversalState(statementNode, current, { mode, detachFromCommit });
+      const successors = expandTraversalState(statementNode, current, { mode });
       const accepted = [];
 
       for (const successor of successors){
@@ -385,6 +385,10 @@ export function createReplTraversal({
           visited.set(successor.canonicalKey, successor);
         }
 
+        const frontierSuccessor = updateTraversalNodeMetadata(
+          transitionTraversalNodeStatus(successor, TRAVERSAL_NODE_STATUSES.FRONTIER),
+          {},
+        );
         traceGraph.nodes.push({
           id: successor.id,
           parentId: successor.parentId,
@@ -395,11 +399,18 @@ export function createReplTraversal({
           statementIndex: successor.statementIndex,
           blockId: successor.blockNode?.blockId || null,
           isTerminal: successor.isTerminal,
+          id: frontierSuccessor.id,
+          parentId: frontierSuccessor.parentId,
+          depth: frontierSuccessor.depth,
+          score: frontierSuccessor.score,
+          confidence: frontierSuccessor.confidence,
+          canonicalKey: frontierSuccessor.canonicalKey,
+          status: frontierSuccessor.status,
         });
         traceGraph.edges.push({
           from: current.id,
-          to: successor.id,
-          transitionId: successor.transitionId,
+          to: frontierSuccessor.id,
+          viaTransitionId: frontierSuccessor.viaTransitionId,
         });
 
         if (isValidGoalState(successor, normalizedGoal.threshold)){
@@ -411,6 +422,7 @@ export function createReplTraversal({
           }
         }
         accepted.push(successor);
+        accepted.push(frontierSuccessor);
       }
 
       frontier.pushAll(accepted);
