@@ -26,6 +26,7 @@ import { createEditor } from "./repl-editor.js";
 import { createTests } from "./repl-tests.js";
 import { createInputHandlers } from "./repl-input.js";
 import { createUserFunctionUi } from "./repl-user-functions.js";
+import { createExecutor } from "./repl-executor.js";
 import { parseParams, splitStatements } from "./repl-parser.js";
 import { createExecutor } from "./repl-executor.js";
 
@@ -136,6 +137,7 @@ export function initRepl(){
     cmdRunner,
   });
   state.formatValueDisplay = evaluator.formatValueDisplay;
+
   const executor = createExecutor({
     state,
     evaluator,
@@ -145,10 +147,27 @@ export function initRepl(){
     normalizeCompare,
     isQty,
     makeQty,
-    runCommand: cmdRunner,
+    maxLoopIterations: MAX_LOOP_ITERATIONS,
   });
-  const runLoopStatements = executor.runLoopStatements;
-  const runBlockBody = executor.runBlockBody;
+
+  const runBlockBody = (source, options) => executor.executeSource(source, {
+    captureLastValue: true,
+    allowCommands: false,
+    wrapErrors: false,
+    cleanStatement: true,
+    expressionOptions: options || { allowedEffects: EFFECT.ALL },
+    commandErrorMessage: "Commands are not supported in function bodies.",
+  });
+
+  const runLoopStatements = (source, context = null) => executor.executeSource(source, {
+    captureLastValue: false,
+    allowCommands: false,
+    wrapErrors: true,
+    cleanStatement: false,
+    expressionOptions: { allowedEffects: EFFECT.ALL },
+    context: Array.isArray(context) ? context : [],
+    commandErrorMessage: "Commands are not supported in gfx loop scripts.",
+  });
 
   runtime.setRunExpressionWithContext(evaluator.runExpressionWithContext);
   runtime.setRunBlockBody(runBlockBody);
