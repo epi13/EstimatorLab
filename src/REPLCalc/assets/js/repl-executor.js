@@ -1,4 +1,5 @@
 import { splitStatements } from "./repl-parser.js";
+import { STATEMENT_TYPE } from "./repl-statement-schema.js";
 
 export function withScopedVar(env, name, fn){
   const hadVar = Object.prototype.hasOwnProperty.call(env, name);
@@ -176,7 +177,7 @@ export function createReplExecutor({
     if (!parsed) return makeStatementResult("noop", null);
     const expressionTrace = options.traceExpressions ? [] : null;
 
-    if (parsed.type === "cmd"){
+    if (parsed.type === STATEMENT_TYPE.CMD){
       if (!options.allowCommands){
         throw new Error(options.commandErrorMessage || "Commands are not supported in this context.");
       }
@@ -191,7 +192,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === "def"){
+    if (parsed.type === STATEMENT_TYPE.DEF){
       if (typeof defineUserFn === "function"){
         defineUserFn(parsed.name, parsed.params, parsed.expr);
       }
@@ -200,7 +201,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === "assy"){
+    if (parsed.type === STATEMENT_TYPE.ASSY){
       const assembly = createAssembly(parsed.name, parsed.fields);
       env[parsed.name] = assembly;
       return makeStatementResult("assy", assembly, {
@@ -208,7 +209,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === "assign"){
+    if (parsed.type === STATEMENT_TYPE.ASSIGN){
       const value = runExpression(parsed.expr, env, options, expressionTrace);
       env[parsed.name] = value;
       return makeStatementResult("assign", value, {
@@ -220,7 +221,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === "equation"){
+    if (parsed.type === STATEMENT_TYPE.EQUATION){
       const solved = solveEquation(parsed.left, parsed.right);
       if (solved.unknown.unitToken){
         return makeStatementResult(
@@ -246,7 +247,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === "if"){
+    if (parsed.type === STATEMENT_TYPE.IF){
       const cond = runExpression(parsed.condition, env, options, expressionTrace);
 
       let branchResult = { lastValue: null, results: [] };
@@ -269,7 +270,7 @@ export function createReplExecutor({
       });
     }
 
-    if (parsed.type === "for"){
+    if (parsed.type === STATEMENT_TYPE.FOR){
       const { start, end, step, loopKind } = resolveForRange(parsed, env, options);
       const forward = step > 0;
       let iter = 0;
@@ -298,14 +299,21 @@ export function createReplExecutor({
         return makeStatementResult("for", lastValue, {
           meta: {
             iterationCount: iter,
+            flattenedSummary: {
+              iterationCount: iter,
+              statementCount: flattened.length,
+            },
+            nestedExecution: nestedResults,
           },
+          flattenedResults: flattened,
+          nestedResults,
           results: flattened,
           changedSymbols: mergeChangedSymbols(flattened),
         });
       });
     }
 
-    if (parsed.type === "repeat"){
+    if (parsed.type === STATEMENT_TYPE.REPEAT){
       const countVal = runExpression(parsed.countExpr, env, options, expressionTrace);
       const count = normalizeCompare(countVal, 0)[0];
       if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
@@ -332,13 +340,20 @@ export function createReplExecutor({
         meta: {
           repeatCount: n,
           expressionTrace: expressionTrace || [],
+          flattenedSummary: {
+            repeatCount: n,
+            statementCount: flattened.length,
+          },
+          nestedExecution: nestedResults,
         },
+        flattenedResults: flattened,
+        nestedResults,
         results: flattened,
         changedSymbols: mergeChangedSymbols(flattened),
       });
     }
 
-    if (parsed.type === "expr"){
+    if (parsed.type === STATEMENT_TYPE.EXPR){
       const value = runExpression(parsed.expr, env, options, expressionTrace);
       return makeStatementResult("expr", value, {
         meta: {

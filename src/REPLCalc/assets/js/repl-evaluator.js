@@ -9,6 +9,11 @@ import {
   parseParams,
   splitAssemblyEntries,
 } from "./repl-parser.js";
+import {
+  STATEMENT_TYPE,
+  createStatementNode,
+} from "./repl-statement-schema.js";
+
 
 export function createEvaluator({
   state,
@@ -379,10 +384,10 @@ export function createEvaluator({
       const parsed = parseAssemblyValue(valueStr);
       fields[key] = parsed;
     }
-    return { type: "assy", name, fields };
+    return createStatementNode(STATEMENT_TYPE.ASSY, { name, fields });
   }
 
-  function evaluate(line){
+  function evaluate(line, origin = null){
     const raw = line.trimEnd();
     const src = raw.trim();
     if (!src) return null;
@@ -391,25 +396,25 @@ export function createEvaluator({
       const parts = src.slice(1).trim().split(/\s+/);
       const cmd = (parts[0] || "").toLowerCase();
       const arg = parts.slice(1).join(" ");
-      return { type:"cmd", cmd, arg };
+      return createStatementNode(STATEMENT_TYPE.CMD, { cmd, arg }, origin);
     }
 
     if (/^if\s+/i.test(src)){
-      return parseIfStatement(raw, evaluate);
+      return parseIfStatement(raw, evaluate, origin, origin);
     }
 
     if (/^for\s+/i.test(src)){
-      return parseForStatement(raw, evaluate);
+      return parseForStatement(raw, evaluate, origin, origin);
     }
 
     if (/^repeat\s+/i.test(src)){
-      return parseRepeatStatement(raw, evaluate);
+      return parseRepeatStatement(raw, evaluate, origin, origin);
     }
 
     if (/^assy\b/i.test(src)){
       const parsed = parseAssemblyStatement(src);
       if (!parsed) throw new Error("Assembly must use: assy name = { key = value }");
-      return parsed;
+      return createStatementNode(STATEMENT_TYPE.ASSY, { name: parsed.name, fields: parsed.fields }, origin);
     }
 
     if (src.startsWith("#")) return null;
@@ -418,12 +423,12 @@ export function createEvaluator({
     if (defMatch){
       const name = defMatch[1];
       const params = parseParams(defMatch[2]);
-      return { type:"def", name, params, expr:defMatch[3] };
+      return createStatementNode(STATEMENT_TYPE.DEF, { name, params, expr:defMatch[3] }, origin);
     }
 
     const m = src.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]+)$/);
     if (m){
-      return { type:"assign", name:m[1], expr:m[2] };
+      return createStatementNode(STATEMENT_TYPE.ASSIGN, { name:m[1], expr:m[2] }, origin);
     }
 
     const eqIdx = findTopLevelEquals(src);
@@ -431,10 +436,10 @@ export function createEvaluator({
       const left = src.slice(0, eqIdx).trim();
       const right = src.slice(eqIdx + 1).trim();
       if (!left || !right) throw new Error("Equation must have left and right expressions.");
-      return { type:"equation", left, right };
+      return createStatementNode(STATEMENT_TYPE.EQUATION, { left, right }, origin);
     }
 
-    return { type:"expr", expr:src };
+    return createStatementNode(STATEMENT_TYPE.EXPR, { expr:src }, origin);
   }
 
   return {
