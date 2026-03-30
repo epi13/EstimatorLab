@@ -245,6 +245,12 @@ export function splitStatements(source){
   return out;
 }
 
+export function parseBlockStatements(source, parseStatement){
+  const statements = splitStatements(source || "");
+  if (typeof parseStatement !== "function") return statements;
+  return statements.map((stmt) => parseStatement(stmt)).filter(Boolean);
+}
+
 export function findTopLevelChar(source, char){
   let depth = 0;
   let braceDepth = 0;
@@ -347,7 +353,7 @@ export function splitAssemblyEntries(source){
   return out;
 }
 
-export function parseIfStatement(src){
+export function parseIfStatement(src, parseStatement){
   const lines = src.split("\n");
   const firstRaw = lines[0] || "";
   const first = firstRaw.trim();
@@ -363,13 +369,18 @@ export function parseIfStatement(src){
     const rest = inlineRest;
     const elseIdx = findTopLevelKeyword(rest, "else");
     if (elseIdx < 0){
-      return { type:"if", condition, thenBody: splitStatements(rest), elseBody: null };
+      return { type:"if", condition, thenBody: parseBlockStatements(rest, parseStatement), elseBody: null };
     }
     const thenBody = rest.slice(0, elseIdx).trim();
     let elseBody = rest.slice(elseIdx + 4).trim();
     if (elseBody.startsWith(":")) elseBody = elseBody.slice(1).trim();
     if (!elseBody) throw new Error("else statement missing body");
-    return { type:"if", condition, thenBody: splitStatements(thenBody), elseBody: splitStatements(elseBody) };
+    return {
+      type:"if",
+      condition,
+      thenBody: parseBlockStatements(thenBody, parseStatement),
+      elseBody: parseBlockStatements(elseBody, parseStatement),
+    };
   }
 
   const thenLines = [];
@@ -408,19 +419,24 @@ export function parseIfStatement(src){
       let actualElse = thenBody.slice(inlineElse + 4).trim();
       if (actualElse.startsWith(":")) actualElse = actualElse.slice(1).trim();
       if (actualThen && actualElse){
-        return { type:"if", condition, thenBody: splitStatements(actualThen), elseBody: splitStatements(actualElse) };
+        return {
+          type:"if",
+          condition,
+          thenBody: parseBlockStatements(actualThen, parseStatement),
+          elseBody: parseBlockStatements(actualElse, parseStatement),
+        };
       }
     }
   }
   return {
     type:"if",
     condition,
-    thenBody: splitStatements(thenBody),
-    elseBody: elseBody ? splitStatements(elseBody) : null,
+    thenBody: parseBlockStatements(thenBody, parseStatement),
+    elseBody: elseBody ? parseBlockStatements(elseBody, parseStatement) : null,
   };
 }
 
-export function parseForStatement(src){
+export function parseForStatement(src, parseStatement){
   const lines = src.split("\n");
   const firstRaw = lines[0] || "";
   const first = firstRaw.trim();
@@ -442,7 +458,7 @@ export function parseForStatement(src){
   const endExpr = rangeExpr.slice(rangeIdx + 2).trim();
 
   if (lines.length === 1){
-    const body = splitStatements(inlineBody);
+    const body = parseBlockStatements(inlineBody, parseStatement);
     return { type:"for", varName, startExpr, endExpr, stepExpr, body };
   }
 
@@ -460,10 +476,10 @@ export function parseForStatement(src){
   }
   const body = bodyLines.join("\n").trimEnd();
   if (!body) throw new Error("for statement missing body");
-  return { type:"for", varName, startExpr, endExpr, stepExpr, body: splitStatements(body) };
+  return { type:"for", varName, startExpr, endExpr, stepExpr, body: parseBlockStatements(body, parseStatement) };
 }
 
-export function parseRepeatStatement(src){
+export function parseRepeatStatement(src, parseStatement){
   const lines = src.split("\n");
   const firstRaw = lines[0] || "";
   const first = firstRaw.trim();
@@ -477,7 +493,7 @@ export function parseRepeatStatement(src){
   if (lines.length === 1){
     const body = inlineBody;
     if (!body) throw new Error("repeat statement requires count and body");
-    return { type:"repeat", countExpr, body: splitStatements(body) };
+    return { type:"repeat", countExpr, body: parseBlockStatements(body, parseStatement) };
   }
 
   const baseIndent = (firstRaw.match(/^\s*/) || [""])[0].length;
@@ -494,7 +510,7 @@ export function parseRepeatStatement(src){
   }
   const body = bodyLines.join("\n").trimEnd();
   if (!body) throw new Error("repeat statement requires count and body");
-  return { type:"repeat", countExpr, body: splitStatements(body) };
+  return { type:"repeat", countExpr, body: parseBlockStatements(body, parseStatement) };
 }
 
 export function parseParams(paramText){

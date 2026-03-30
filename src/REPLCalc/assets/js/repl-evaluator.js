@@ -395,22 +395,15 @@ export function createEvaluator({
     }
 
     if (/^if\s+/i.test(src)){
-      const parsed = parseIfStatement(raw);
-      parsed.thenBody = parsed.thenBody.map((stmt) => evaluate(stmt)).filter(Boolean);
-      parsed.elseBody = parsed.elseBody ? parsed.elseBody.map((stmt) => evaluate(stmt)).filter(Boolean) : null;
-      return parsed;
+      return parseIfStatement(raw, evaluate);
     }
 
     if (/^for\s+/i.test(src)){
-      const parsed = parseForStatement(raw);
-      parsed.body = parsed.body.map((stmt) => evaluate(stmt)).filter(Boolean);
-      return parsed;
+      return parseForStatement(raw, evaluate);
     }
 
     if (/^repeat\s+/i.test(src)){
-      const parsed = parseRepeatStatement(raw);
-      parsed.body = parsed.body.map((stmt) => evaluate(stmt)).filter(Boolean);
-      return parsed;
+      return parseRepeatStatement(raw, evaluate);
     }
 
     if (/^assy\b/i.test(src)){
