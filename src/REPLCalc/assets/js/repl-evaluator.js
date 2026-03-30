@@ -34,6 +34,8 @@ export function createEvaluator({
     if (!options || typeof options !== "object") return null;
     const out = Object.create(null);
     if (typeof options.allowedEffects === "number") out.allowedEffects = options.allowedEffects;
+    if (typeof options.traceExpressions === "boolean") out.traceExpressions = options.traceExpressions;
+    if (typeof options.expressionTraceSink === "function") out.expressionTraceSink = options.expressionTraceSink;
     return out;
   }
   function collectIdentifierNames(tokens){
@@ -234,7 +236,7 @@ export function createEvaluator({
     const aliasMap = buildAliasMap(tokens, vars, fnNames);
     const rpn = toRPN(tokens);
     const opts = normalizeEvalOptions(options);
-    return evalRPN(rpn, {
+    const result = evalRPN(rpn, {
       vars,
       fns,
       aliases: aliasMap,
@@ -246,6 +248,15 @@ export function createEvaluator({
       cmdRunner,
       ...getUsageHooks(),
     });
+    if (opts?.traceExpressions && typeof opts.expressionTraceSink === "function"){
+      opts.expressionTraceSink({
+        expr,
+        tokenCount: tokens.length,
+        rpnCount: rpn.length,
+        result,
+      });
+    }
+    return result;
   }
 
   function runExpression(expr){
@@ -384,15 +395,22 @@ export function createEvaluator({
     }
 
     if (/^if\s+/i.test(src)){
-      return parseIfStatement(raw);
+      const parsed = parseIfStatement(raw);
+      parsed.thenBody = parsed.thenBody.map((stmt) => evaluate(stmt)).filter(Boolean);
+      parsed.elseBody = parsed.elseBody ? parsed.elseBody.map((stmt) => evaluate(stmt)).filter(Boolean) : null;
+      return parsed;
     }
 
     if (/^for\s+/i.test(src)){
-      return parseForStatement(raw);
+      const parsed = parseForStatement(raw);
+      parsed.body = parsed.body.map((stmt) => evaluate(stmt)).filter(Boolean);
+      return parsed;
     }
 
     if (/^repeat\s+/i.test(src)){
-      return parseRepeatStatement(raw);
+      const parsed = parseRepeatStatement(raw);
+      parsed.body = parsed.body.map((stmt) => evaluate(stmt)).filter(Boolean);
+      return parsed;
     }
 
     if (/^assy\b/i.test(src)){

@@ -16,6 +16,7 @@ function normalizeOptions(options = {}){
     allowedEffects: options.allowedEffects,
     allowCommands: Boolean(options.allowCommands),
     wrapErrors: Boolean(options.wrapErrors),
+    traceExpressions: Boolean(options.traceExpressions),
     contextPath: Array.isArray(options.contextPath) ? options.contextPath : [],
     captureResults: options.captureResults !== false,
     commandErrorMessage: options.commandErrorMessage,
@@ -26,6 +27,7 @@ function makeStatementResult(type, value = null, extra = {}){
   return {
     type,
     value,
+    meta: {},
     changedSymbols: [],
     results: [],
     ...extra,
@@ -71,13 +73,32 @@ export function createReplExecutor({
   solveEquation,
   createAssembly,
   defineUserFn,
+  cmdRunner,
   isTruthy,
   normalizeCompare,
   isQty,
   makeQty,
   maxLoopIterations = 100000,
 }){
-  const runExpression = (expr, env, options) => runExpressionWithContext(expr, env, options);
+  function extendContext(options, ...labels){
+    const ctx = Array.isArray(options?.contextPath) ? options.contextPath : [];
+    const nextLabels = labels.filter((label) => typeof label === "string" && label.trim());
+    return {
+      ...options,
+      contextPath: [...ctx, ...nextLabels],
+    };
+  }
+
+  const runExpression = (expr, env, options, traceBuffer = null) => {
+    const traceSink = Array.isArray(traceBuffer)
+      ? (entry) => traceBuffer.push(entry)
+      : null;
+    return runExpressionWithContext(expr, env, {
+      ...(options || {}),
+      traceExpressions: Boolean(options?.traceExpressions),
+      expressionTraceSink: traceSink,
+    });
+  };
 
   function resolveForRange(parsed, env, options){
     const startVal = runExpression(parsed.startExpr, env, options);
@@ -126,7 +147,7 @@ export function createReplExecutor({
       if (!stmt) continue;
 
       try{
-        const parsed = evaluate(stmt);
+        const parsed = typeof stmt === "string" ? evaluate(stmt) : stmt;
         if (!parsed) continue;
 
         const statementResult = executeStatement(parsed, env, opts);
@@ -146,12 +167,21 @@ export function createReplExecutor({
 
   function executeStatement(parsed, env, options = {}){
     if (!parsed) return makeStatementResult("noop", null);
+    const expressionTrace = options.traceExpressions ? [] : null;
 
     if (parsed.type === "cmd"){
       if (!options.allowCommands){
         throw new Error(options.commandErrorMessage || "Commands are not supported in this context.");
       }
-      throw new Error(`Unsupported command: :${parsed.cmd}`);
+      const value = typeof cmdRunner === "function"
+        ? cmdRunner(parsed.cmd, parsed.arg)
+        : null;
+      return makeStatementResult("cmd", value, {
+        meta: {
+          command: parsed.cmd,
+          arg: parsed.arg,
+        },
+      });
     }
 
     if (parsed.type === "def"){
@@ -172,9 +202,13 @@ export function createReplExecutor({
     }
 
     if (parsed.type === "assign"){
-      const value = runExpression(parsed.expr, env, options);
+      const value = runExpression(parsed.expr, env, options, expressionTrace);
       env[parsed.name] = value;
       return makeStatementResult("assign", value, {
+        meta: {
+          assignedName: parsed.name,
+          expressionTrace: expressionTrace || [],
+        },
         changedSymbols: [parsed.name],
       });
     }
@@ -184,30 +218,45 @@ export function createReplExecutor({
       if (solved.unknown.unitToken){
         return makeStatementResult(
           "equation",
-          makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind)
+          makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind),
+          {
+            meta: {
+              unknownName: solved.unknown.name,
+              usedUnitToken: true,
+              expressionTrace: expressionTrace || [],
+            },
+          }
         );
       }
       env[solved.unknown.name] = solved.value;
       return makeStatementResult("equation", solved.value, {
+        meta: {
+          unknownName: solved.unknown.name,
+          usedUnitToken: false,
+          expressionTrace: expressionTrace || [],
+        },
         changedSymbols: [solved.unknown.name],
       });
     }
 
     if (parsed.type === "if"){
-      const cond = runExpression(parsed.condition, env, options);
-      const childOptions = {
-        ...options,
-        contextPath: options.contextPath,
-      };
+      const cond = runExpression(parsed.condition, env, options, expressionTrace);
 
       let branchResult = { lastValue: null, results: [] };
+      let branchTaken = "none";
       if (isTruthy(cond)){
-        branchResult = executeSource(parsed.thenBody, env, childOptions);
+        branchTaken = "then";
+        branchResult = executeSource(parsed.thenBody, env, extendContext(options, "if:then"));
       }else if (parsed.elseBody){
-        branchResult = executeSource(parsed.elseBody, env, childOptions);
+        branchTaken = "else";
+        branchResult = executeSource(parsed.elseBody, env, extendContext(options, "if:else"));
       }
 
       return makeStatementResult("if", branchResult.lastValue, {
+        meta: {
+          branchTaken,
+          expressionTrace: expressionTrace || [],
+        },
         results: branchResult.results,
         changedSymbols: mergeChangedSymbols(branchResult.results),
       });
@@ -226,7 +275,11 @@ export function createReplExecutor({
             throw new Error(`for loop exceeded ${maxLoopIterations} iterations`);
           }
           env[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
-          const iterResult = executeSource(parsed.body, env, options);
+          const iterResult = executeSource(
+            parsed.body,
+            env,
+            extendContext(options, `for:${parsed.varName}`, `iter:${iter}`)
+          );
           nestedResults.push(iterResult);
         }
 
@@ -236,6 +289,9 @@ export function createReplExecutor({
           : null;
 
         return makeStatementResult("for", lastValue, {
+          meta: {
+            iterationCount: iter,
+          },
           results: flattened,
           changedSymbols: mergeChangedSymbols(flattened),
         });
@@ -243,7 +299,7 @@ export function createReplExecutor({
     }
 
     if (parsed.type === "repeat"){
-      const countVal = runExpression(parsed.countExpr, env, options);
+      const countVal = runExpression(parsed.countExpr, env, options, expressionTrace);
       const count = normalizeCompare(countVal, 0)[0];
       if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
       const n = Math.floor(count);
@@ -252,7 +308,11 @@ export function createReplExecutor({
       }
       const nestedResults = [];
       for (let i = 0; i < n; i++){
-        const iterResult = executeSource(parsed.body, env, options);
+        const iterResult = executeSource(
+          parsed.body,
+          env,
+          extendContext(options, "repeat", `iter:${i + 1}`)
+        );
         nestedResults.push(iterResult);
       }
 
@@ -262,13 +322,22 @@ export function createReplExecutor({
         : null;
 
       return makeStatementResult("repeat", lastValue, {
+        meta: {
+          repeatCount: n,
+          expressionTrace: expressionTrace || [],
+        },
         results: flattened,
         changedSymbols: mergeChangedSymbols(flattened),
       });
     }
 
     if (parsed.type === "expr"){
-      return makeStatementResult("expr", runExpression(parsed.expr, env, options));
+      const value = runExpression(parsed.expr, env, options, expressionTrace);
+      return makeStatementResult("expr", value, {
+        meta: {
+          expressionTrace: expressionTrace || [],
+        },
+      });
     }
 
     return makeStatementResult(parsed.type || "unknown", null);
