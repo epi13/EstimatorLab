@@ -26,7 +26,7 @@ export function createReplExecutor({
   const runExpression = (expr, env, options) => runExpressionWithContext(expr, env, options);
 
   function executeSource(source, env, options = {}){
-    const statements = splitStatements(source);
+    const statements = Array.isArray(source) ? source : splitStatements(source);
     let lastValue = null;
 
     for (const stmt of statements){
