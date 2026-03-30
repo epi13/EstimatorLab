@@ -53,36 +53,6 @@ function makeBudget(options = {}){
   };
 }
 
-function createTraversalState({
-  execState,
-  score = 0,
-  confidence = 1,
-  depth = 0,
-  blockNode = null,
-  statementIndex = 0,
-  parentId = null,
-  transitionId = null,
-  canonicalKey = null,
-  isTerminal = false,
-  terminationReason = null,
-  id = null,
-}){
-  return {
-    id: id || nextTraversalStateId(),
-    execState,
-    score,
-    confidence,
-    depth,
-    blockNode,
-    statementIndex,
-    parentId,
-    transitionId,
-    canonicalKey,
-    isTerminal,
-    terminationReason,
-  };
-}
-
 function createFrontier(policy, beamWidth = 4){
   const entries = [];
 
@@ -165,12 +135,10 @@ export function createReplTraversal({
     const execState = withExecutionState(input.execState || input);
     const statementIndex = Number.isInteger(input.statementIndex) ? Math.max(0, input.statementIndex) : 0;
     const blockId = input.blockNode?.blockId || null;
-    const localCanonicalKey = getCanonicalKey(execState, input.canonicalKey || null);
+    const localCanonicalKey = deriveTraversalCanonicalKey(execState, canonicalStateKey, input.canonicalKey || null);
     const canonicalKey = localCanonicalKey
       ? `${blockId || "no-block"}:stmt:${statementIndex}:${localCanonicalKey}`
       : null;
-    return createTraversalState({
-    const canonicalKey = deriveTraversalCanonicalKey(execState, canonicalStateKey, input.canonicalKey || null);
     return createTraversalNode({
       id: input.id || null,
       execState,
@@ -206,7 +174,6 @@ export function createReplTraversal({
       const score = scoreTransitionFn(transition, baseState.score);
       const confidence = confidenceTransitionFn(transition, baseState.confidence);
       return buildWrapper({
-      return createTraversalNode({
         execState: nextExec,
         score,
         confidence,
@@ -227,7 +194,7 @@ export function createReplTraversal({
     const statements = Array.isArray(blockNode?.statements) ? blockNode.statements : [];
 
     if (baseState.statementIndex >= statements.length){
-      return [createTraversalState({
+      return [buildWrapper({
         execState: baseState.execState,
         score: baseState.score,
         confidence: baseState.confidence,
@@ -317,12 +284,11 @@ export function createReplTraversal({
     });
 
     const frontier = createFrontier(normalizedPolicy, Math.max(1, Math.floor(beamWidth)));
-    const start = buildWrapper(initialState || {
+    let start = buildWrapper(initialState || {
       execState: withExecutionState({ env: Object.create(null), mode }),
       blockNode: blockNode || null,
       statementIndex: 0,
     });
-    let start = buildWrapper(initialState || { execState: withExecutionState({ env: Object.create(null), mode }) });
     start = transitionTraversalNodeStatus(start, TRAVERSAL_NODE_STATUSES.FRONTIER);
     const visited = new Map();
     const expanded = [];
@@ -390,21 +356,15 @@ export function createReplTraversal({
           {},
         );
         traceGraph.nodes.push({
-          id: successor.id,
-          parentId: successor.parentId,
-          depth: successor.depth,
-          score: successor.score,
-          confidence: successor.confidence,
-          canonicalKey: successor.canonicalKey,
-          statementIndex: successor.statementIndex,
-          blockId: successor.blockNode?.blockId || null,
-          isTerminal: successor.isTerminal,
           id: frontierSuccessor.id,
           parentId: frontierSuccessor.parentId,
           depth: frontierSuccessor.depth,
           score: frontierSuccessor.score,
           confidence: frontierSuccessor.confidence,
           canonicalKey: frontierSuccessor.canonicalKey,
+          statementIndex: frontierSuccessor.statementIndex,
+          blockId: frontierSuccessor.blockNode?.blockId || null,
+          isTerminal: frontierSuccessor.isTerminal,
           status: frontierSuccessor.status,
         });
         traceGraph.edges.push({
@@ -421,7 +381,6 @@ export function createReplTraversal({
             break;
           }
         }
-        accepted.push(successor);
         accepted.push(frontierSuccessor);
       }
 
