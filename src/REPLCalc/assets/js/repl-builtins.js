@@ -173,7 +173,9 @@ export function createBaseFns(){
   }
 
   function requireAssemblyArg(value, label){
-    if (!value || typeof value !== "object" || !value.__assy) throw new Error(`${label} expects an assembly`);
+    if (!value || typeof value !== "object" || (!value.__assy && !value.__vec && !value.__mat && !value.__range)){
+      throw new Error(`${label} expects an assembly`);
+    }
     return value;
   }
 
@@ -1247,6 +1249,20 @@ export function createBaseFns(){
     const defaultVal = data[data.length - 1];
     if (idx < 0) return defaultVal;
     if (idx >= data.length - 1) return defaultVal;
+    return data[idx];
+  });
+
+  baseFns.at = defFn("at", 2, {
+    args: [
+      { label: "items", kinds: ["vec"] },
+      { label: "index", kinds: ["scalar", "dim"], dim: "scalar" },
+    ],
+    returns: { kinds: ["any"] },
+  }, (items, index) => {
+    const v = requireVecArg(items, "at");
+    const data = Array.isArray(v.data) ? v.data : [];
+    const idx = toIndex(index, "at index");
+    if (idx < 0 || idx >= data.length) throw new Error(`at(): index ${idx} out of bounds`);
     return data[idx];
   });
 

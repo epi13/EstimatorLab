@@ -51,7 +51,7 @@ export function attachMapBuiltins(baseFns, { defFn, defFnCtx, isQty }){
         else if (ch === ">") v = 10;
         else if (ch === "<") v = 11;
         else if (ch === "S"){
-          v = 0;
+          v = 2;
           if (!foundSpawn){
             spawnX = x + 0.5;
             spawnY = y + 0.5;
@@ -285,7 +285,15 @@ export function attachMapBuiltins(baseFns, { defFn, defFnCtx, isQty }){
     }
     throw new Error(`${fnName} predicate must be lambda def(v)=...`);
   };
-  const predTruthy = (value) => (isQty(value) ? value.value : value) ? 1 : 0;
+  const predTruthy = (value) => {
+    if (isQty(value)) return value.value ? 1 : 0;
+    if (value && typeof value === "object"){
+      if (value.__kind === "bool") return value.value ? 1 : 0;
+      if (value.__kind === "scalar") return value.value ? 1 : 0;
+      if (value.__kind === "null") return 0;
+    }
+    return value ? 1 : 0;
+  };
   const inBoundsRaw = (mapObj, x, y) => x >= 0 && y >= 0 && x < mapObj.w && y < mapObj.h;
 
   baseFns.map_width = defFn("map_width", 1, {
@@ -375,9 +383,6 @@ export function attachMapBuiltins(baseFns, { defFn, defFnCtx, isQty }){
     const mapObj = requireMap(m, "find_tiles");
     const target = toInt(tile);
     const found = [];
-    if (target === 2){
-      found.push(point(Math.floor(mapObj.spawnX), Math.floor(mapObj.spawnY)));
-    }
     for (let y = 0; y < mapObj.h; y++){
       for (let x = 0; x < mapObj.w; x++){
         if (mapObj.data[y * mapObj.w + x] === target) found.push(point(x, y));
