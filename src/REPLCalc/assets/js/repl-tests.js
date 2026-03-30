@@ -265,95 +265,98 @@ export function createTests({
     state.witness = [];
     state.witnessLog = [];
     renderUserFunctions();
+    try{
+      const tests = await loadTestSuite();
+      let passCount = 0;
+      const failures = [];
 
-    const tests = await loadTestSuite();
-    let passCount = 0;
-    const failures = [];
+      writeLine(`Test plan: ${tests.length} checks.`, "muted");
 
-    writeLine(`Test plan: ${tests.length} checks.`, "muted");
-
-    for (const test of tests){
-      try{
-        state.vars = Object.create(null);
-        state.userFns = Object.create(null);
-        state.history = [];
-        state.histIdx = -1;
-        state.witness = [];
-        state.witnessLog = [];
-        const source = test.steps ? test.steps.join("\n") : test.expr;
-        const formattedSource = formatInput(source);
-        const formattedExpected = formatExpectedValue(test.expect);
-        const result = evaluateTestStatements(source);
-        if (test.expect && typeof test.expect === "object" && test.expect.type === "error"){
-          failures.push({ name: test.name, reason: "expected error, got value" });
+      for (const test of tests){
+        try{
+          state.vars = Object.create(null);
+          state.userFns = Object.create(null);
+          state.history = [];
+          state.histIdx = -1;
+          state.witness = [];
+          state.witnessLog = [];
+          const source = test.steps ? test.steps.join("\n") : test.expr;
+          const formattedSource = formatInput(source);
+          const formattedExpected = formatExpectedValue(test.expect);
+          const result = evaluateTestStatements(source);
+          if (test.expect && typeof test.expect === "object" && test.expect.type === "error"){
+            failures.push({ name: test.name, reason: "expected error, got value" });
+            writeLine(`• ${test.name}`, "muted");
+            writeLine(`  input: ${formattedSource}`, "muted");
+            writeLine(`  outcome: ${formatTestValue(result)}`, "muted");
+            writeLine(`  expected: ${formattedExpected}`, "muted");
+            writeLine(`✗ ${test.name}: expected error, got value`, "err");
+            continue;
+          }
+          const match = matchExpected(result, test.expect);
           writeLine(`• ${test.name}`, "muted");
           writeLine(`  input: ${formattedSource}`, "muted");
           writeLine(`  outcome: ${formatTestValue(result)}`, "muted");
           writeLine(`  expected: ${formattedExpected}`, "muted");
-          writeLine(`✗ ${test.name}: expected error, got value`, "err");
-          continue;
-        }
-        const match = matchExpected(result, test.expect);
-        writeLine(`• ${test.name}`, "muted");
-        writeLine(`  input: ${formattedSource}`, "muted");
-        writeLine(`  outcome: ${formatTestValue(result)}`, "muted");
-        writeLine(`  expected: ${formattedExpected}`, "muted");
-        if (match.pass){
-          passCount += 1;
-          writeLine(`✓ ${test.name}`, "ok");
-        }else{
-          failures.push({ name: test.name, reason: match.message || "failed" });
-          writeLine(`✗ ${test.name}: ${match.message || "failed"}`, "err");
-        }
-      }catch(err){
-        const source = test.steps ? test.steps.join("\n") : test.expr;
-        const formattedSource = formatInput(source);
-        const formattedExpected = formatExpectedValue(test.expect);
-        if (test.expect && typeof test.expect === "object" && test.expect.type === "error"){
-          const match = matchExpectedError(err, test.expect);
           if (match.pass){
             passCount += 1;
+            writeLine(`✓ ${test.name}`, "ok");
+          }else{
+            failures.push({ name: test.name, reason: match.message || "failed" });
+            writeLine(`✗ ${test.name}: ${match.message || "failed"}`, "err");
+          }
+        }catch(err){
+          const source = test.steps ? test.steps.join("\n") : test.expr;
+          const formattedSource = formatInput(source);
+          const formattedExpected = formatExpectedValue(test.expect);
+          if (test.expect && typeof test.expect === "object" && test.expect.type === "error"){
+            const match = matchExpectedError(err, test.expect);
+            if (match.pass){
+              passCount += 1;
+              writeLine(`• ${test.name}`, "muted");
+              writeLine(`  input: ${formattedSource}`, "muted");
+              writeLine(`  outcome: error (${err.message || String(err)})`, "muted");
+              writeLine(`  expected: ${formattedExpected}`, "muted");
+              writeLine(`✓ ${test.name}`, "ok");
+              continue;
+            }
+            failures.push({ name: test.name, reason: match.message || err.message || String(err) });
             writeLine(`• ${test.name}`, "muted");
             writeLine(`  input: ${formattedSource}`, "muted");
             writeLine(`  outcome: error (${err.message || String(err)})`, "muted");
             writeLine(`  expected: ${formattedExpected}`, "muted");
-            writeLine(`✓ ${test.name}`, "ok");
+            writeLine(`✗ ${test.name}: ${match.message || err.message || String(err)}`, "err");
             continue;
           }
-          failures.push({ name: test.name, reason: match.message || err.message || String(err) });
+          failures.push({ name: test.name, reason: err.message || String(err) });
           writeLine(`• ${test.name}`, "muted");
           writeLine(`  input: ${formattedSource}`, "muted");
           writeLine(`  outcome: error (${err.message || String(err)})`, "muted");
           writeLine(`  expected: ${formattedExpected}`, "muted");
-          writeLine(`✗ ${test.name}: ${match.message || err.message || String(err)}`, "err");
-          continue;
+          writeLine(`✗ ${test.name}: ${err.message || String(err)}`, "err");
         }
-        failures.push({ name: test.name, reason: err.message || String(err) });
-        writeLine(`• ${test.name}`, "muted");
-        writeLine(`  input: ${formattedSource}`, "muted");
-        writeLine(`  outcome: error (${err.message || String(err)})`, "muted");
-        writeLine(`  expected: ${formattedExpected}`, "muted");
-        writeLine(`✗ ${test.name}: ${err.message || String(err)}`, "err");
       }
-    }
 
-    state.vars = savedState.vars;
-    state.userFns = savedState.userFns;
-    state.history = savedState.history;
-    state.histIdx = savedState.histIdx;
-    state.witness = savedState.witness;
-    state.witnessLog = savedState.witnessLog;
-    renderUserFunctions();
-
-    if (!failures.length){
-      writeLine(`Tests complete: ${passCount}/${tests.length} passed.`, "ok");
-    }else{
-      writeLine(`Tests complete: ${passCount}/${tests.length} passed.`, "warn");
-      failures.forEach((fail) => {
-        writeLine(`✗ ${fail.name}: ${fail.reason}`, "err");
-      });
+      if (!failures.length){
+        writeLine(`Tests complete: ${passCount}/${tests.length} passed.`, "ok");
+      }else{
+        writeLine(`Tests complete: ${passCount}/${tests.length} passed.`, "warn");
+        failures.forEach((fail) => {
+          writeLine(`✗ ${fail.name}: ${fail.reason}`, "err");
+        });
+      }
+    }catch(err){
+      writeLine(err?.message || String(err), "err");
+    }finally{
+      state.vars = savedState.vars;
+      state.userFns = savedState.userFns;
+      state.history = savedState.history;
+      state.histIdx = savedState.histIdx;
+      state.witness = savedState.witness;
+      state.witnessLog = savedState.witnessLog;
+      renderUserFunctions();
+      setStatus("Ready", "ok");
     }
-    setStatus("Ready", "ok");
   }
 
   return {
