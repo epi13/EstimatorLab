@@ -60,7 +60,7 @@ export function parseAssemblyStatement(src, parseExpressionIR, origin = null){
   return createStatementNode(STATEMENT_TYPE.ASSY, { name, fields }, origin);
 }
 
-export function createReplFrontend({ parseExpressionIR }){
+export function createReplFrontend({ parseExpressionIR, normalizeBlockNode = null }){
   function evaluate(line, origin = null){
     const raw = line.trimEnd();
     const src = raw.trim();
@@ -122,7 +122,7 @@ export function createReplFrontend({ parseExpressionIR }){
       return createBlockNode([], origin && typeof origin === "object" ? origin : null);
     }
     const parsed = parseBlockStatements(src, evaluate, origin || null);
-    return parsed;
+    return typeof normalizeBlockNode === "function" ? normalizeBlockNode(parsed) : parsed;
   }
 
   return {

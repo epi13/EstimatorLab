@@ -1,4 +1,5 @@
 import { getIRNodeChildren, irFromRPN, toCanonicalIRNode } from "./repl-expression-ir.js";
+import { createReplNormalize } from "./repl-normalize.js";
 
 export function createReplLowering({
   getFns,
@@ -10,6 +11,8 @@ export function createReplLowering({
   isUnitToken,
   UNIT,
 }){
+  const normalizer = createReplNormalize({ UNIT, isUnitToken });
+
   function collectIdentifierNames(tokens){
     const names = new Set();
     for (let i = 0; i < tokens.length; i++){
@@ -84,12 +87,15 @@ export function createReplLowering({
   }
 
   function parseExpressionIR(expr, vars){
-    if (expr && typeof expr === "object" && expr.kind) return toCanonicalIRNode(expr);
+    if (expr && typeof expr === "object" && expr.kind){
+      return normalizer.normalizeExpressionIR(toCanonicalIRNode(expr));
+    }
     const source = String(expr ?? "");
     const fnNames = new Set(Object.keys(getFns()));
     const expanded = expandTrailingNumericIdentifiers(tokenize(source), vars, fnNames);
     const tokens = insertImplicitMultiplication(expanded);
-    return irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
+    const ir = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
+    return normalizer.normalizeExpressionIR(ir);
   }
 
   function analyzeExpression(expr, vars){
@@ -99,16 +105,21 @@ export function createReplLowering({
     const tokens = insertImplicitMultiplication(expanded);
     maybeEnsureSymbols(tokens);
     const aliases = buildAliasMap(tokens, vars, fnNames);
-    const ir = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
-    return { source, tokens, aliases, ir };
+    const irRaw = irFromRPN(toRPN(tokens), (innerExpr) => parseExpressionIR(innerExpr, vars));
+    const ir = normalizer.normalizeExpressionIR(irRaw, aliases);
+    const canonicalKey = normalizer.canonicalExpressionKey(ir, aliases);
+    return { source, tokens, aliases, ir, canonicalKey };
   }
 
   function analyzeExpressionIR(ir, vars){
+    const normalizedIr = normalizer.normalizeExpressionIR(ir);
     const fnNames = new Set(Object.keys(getFns()));
-    const tokens = tokenizeExpressionIR(ir);
+    const tokens = tokenizeExpressionIR(normalizedIr);
     maybeEnsureSymbols(tokens);
     const aliases = buildAliasMap(tokens, vars, fnNames);
-    return { tokens, aliases };
+    const irWithAliases = normalizer.normalizeExpressionIR(normalizedIr, aliases);
+    const canonicalKey = normalizer.canonicalExpressionKey(irWithAliases, aliases);
+    return { tokens, aliases, ir: irWithAliases, canonicalKey };
   }
 
   function findEquationUnknowns(expr, vars){
@@ -158,5 +169,13 @@ export function createReplLowering({
     analyzeExpression,
     analyzeExpressionIR,
     analyzeEquationUnknowns,
+    normalizeExpressionIR: normalizer.normalizeExpressionIR,
+    normalizeIdentifier: normalizer.normalizeIdentifier,
+    normalizeStatementNode: normalizer.normalizeStatementNode,
+    normalizeBlockNode: normalizer.normalizeBlockNode,
+    canonicalKey: {
+      expression: normalizer.canonicalExpressionKey,
+      state: normalizer.canonicalStateKey,
+    },
   };
 }
