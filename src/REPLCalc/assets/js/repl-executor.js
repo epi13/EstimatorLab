@@ -1,11 +1,9 @@
-import { STATEMENT_TYPE, isBlockNode, isStatementNode } from "./repl-ast.js";
-import { createTransition } from "./repl-transitions.js";
+import { isBlockNode } from "./repl-ast.js";
 import { EFFECT } from "./repl-effects.js";
 import {
   cloneEnv,
   createExecutionState,
   isExecutionState,
-  stateWithContext,
   withExecutionState,
 } from "./repl-runtime-state.js";
 
@@ -148,64 +146,10 @@ function withModeAppliedState(state, envOverride = null){
 }
 
 export function createReplExecutor({
-  runExpressionWithContext,
-  runExpressionCandidatesWithContext = null,
-  solveEquation,
-  solveEquationCandidates,
-  createAssembly,
-  defineUserFn,
-  cmdRunner,
-  isTruthy,
-  normalizeCompare,
-  isQty,
-  makeQty,
-  maxLoopIterations = 100000,
+  expandStatement,
 }){
-  const runExpression = (expr, execState, traceBuffer = null) => {
-    const traceSink = Array.isArray(traceBuffer)
-      ? (entry) => traceBuffer.push(entry)
-      : null;
-    return runExpressionWithContext(expr, execState.env, {
-      ...execState,
-      allowedEffects: execState.effectsAllowed,
-      effectsAllowed: execState.effectsAllowed,
-      traceExpressions: Boolean(execState.traceExpressions || execState.mode === "trace"),
-      expressionTraceSink: traceSink,
-    });
-  };
-
-  function resolveForRange(parsed, execState){
-    const startVal = runExpression(parsed.startExpr, execState);
-    const endVal = runExpression(parsed.endExpr, execState);
-    const stepVal = parsed.stepExpr ? runExpression(parsed.stepExpr, execState) : 1;
-    let start;
-    let end;
-    let step;
-    let loopKind = null;
-
-    if (isQty(startVal) || isQty(endVal)){
-      if (!isQty(startVal) || !isQty(endVal)){
-        throw new Error("for loop range must use matching unit quantities");
-      }
-      if (startVal.kind !== endVal.kind){
-        throw new Error("for loop range units must match");
-      }
-      loopKind = startVal.kind;
-      start = startVal.value;
-      end = endVal.value;
-      if (isQty(stepVal)){
-        if (stepVal.kind !== loopKind) throw new Error("for loop step unit mismatch");
-        step = stepVal.value;
-      }else{
-        step = stepVal;
-      }
-    }else{
-      [start, end] = normalizeCompare(startVal, endVal);
-      step = normalizeCompare(stepVal, 0)[0];
-    }
-
-    if (step === 0) throw new Error("for loop step cannot be 0");
-    return { start, end, step, loopKind };
+  if (typeof expandStatement !== "function"){
+    throw new Error("createReplExecutor requires an expandStatement function.");
   }
 
   function executeSource(source, envOrState, options = {}){
@@ -247,49 +191,39 @@ export function createReplExecutor({
     return blockResult;
   }
 
-  function executeStatement(statementNode, state){
-    const transitions = expandStatement(statementNode, state);
-    const transition = selectTransitionForMode(transitions, state?.mode);
-    if (!transition){
-      const execState = withModeAppliedState(state);
-      return {
-        nextState: execState,
-        record: makeExecutionRecord({
-          statementNode,
-          type: "noop",
-          mode: execState.mode,
-          before: snapshotStateRef(execState),
-          after: snapshotStateRef(execState),
-        }),
-      };
-    }
-    return {
-      nextState: transition.toState || withModeAppliedState(state),
-      record: transition.record || null,
-      transition,
-    };
+  function executeStatement(statementNode, state, options = {}){
+    const mode = options.mode || state?.mode;
+    const transitions = expandStatement({ statementNode, traversalState: state, mode });
+    const transition = selectTransitionForPolicy(transitions, mode, options);
+    return applyTransition(transition, state, { ...options, statementNode, mode });
   }
 
-  function selectTransitionForMode(transitions, mode = "commit"){
+  function selectTransitionForPolicy(transitions, mode = "commit", options = {}){
     if (!Array.isArray(transitions) || transitions.length === 0) return null;
-    if (mode === "commit"){
-      return transitions[0];
+    if (typeof options.selector === "function"){
+      return options.selector(transitions, mode) || transitions[0];
+    }
+    if (mode === "plan"){
+      return transitions.slice().sort((a, b) => (b?.scoreDelta || 0) - (a?.scoreDelta || 0))[0];
     }
     return transitions[0];
   }
 
-  function normalizeExpandStatementArgs(statementNodeOrInput, traversalState, expandOptions = {}){
-    if (statementNodeOrInput && typeof statementNodeOrInput === "object" && !isStatementNode(statementNodeOrInput) && Object.prototype.hasOwnProperty.call(statementNodeOrInput, "statementNode")){
-      const input = statementNodeOrInput;
+  function applyTransition(transition, traversalStateOrExecState, options = {}){
+    const incoming = withExecutionState(traversalStateOrExecState);
+    const mode = typeof options.mode === "string" ? options.mode : incoming.mode;
+    const base = withModeAppliedState({ ...incoming, mode });
+    if (!transition){
       return {
-        statementNode: input.statementNode || null,
-        traversalState: input.traversalState || input.execState || traversalState || null,
-        options: {
-          ...expandOptions,
-          ...(input.options || {}),
-          mode: input.mode ?? expandOptions.mode,
-          detachFromCommit: input.detachFromCommit ?? expandOptions.detachFromCommit,
-        },
+        nextState: base,
+        record: makeExecutionRecord({
+          statementNode: options.statementNode || null,
+          type: "noop",
+          mode: base.mode,
+          before: snapshotStateRef(base),
+          after: snapshotStateRef(base),
+        }),
+        transition: null,
       };
     }
     return {
@@ -348,31 +282,22 @@ export function createReplExecutor({
       statement: statementNode.stmt || "",
     };
 
-    const finalizeTransition = (recordInput, transitionInput = {}) => {
-      const record = makeExecutionRecord({
-        statementNode,
-        mode: execState.mode,
-        before: beforeStateRef,
-        after: snapshotStateRef(execState),
-        ...recordInput,
-      });
-      const nextState = {
-        ...execState,
-        trace: [...(execState.trace || []), record],
-      };
-      if (execState.mode === "trace"){
-        nextState.provenance = [...(execState.provenance || []), provenanceEntry];
-        record.provenance = provenanceEntry;
+    let nextState = withExecutionState(transition.toState || base, base.env);
+    if (mode === "speculate" || mode === "plan"){
+      nextState = { ...nextState, env: cloneEnv(nextState.env) };
+    }else if (mode === "commit" && base.primaryEnv && nextState.env !== base.primaryEnv){
+      const nextEnv = nextState.env || Object.create(null);
+      for (const key of Object.keys(base.primaryEnv)){
+        if (!Object.prototype.hasOwnProperty.call(nextEnv, key)) delete base.primaryEnv[key];
       }
-      if (execState.mode === "plan"){
-        const candidate = createExecutionState({
-          ...nextState,
-          env: cloneEnv(nextState.env),
-          mode: "plan",
-          score: typeof nextState.score === "number" ? nextState.score : undefined,
-        });
-        record.candidates = [candidate];
-      }
+      Object.assign(base.primaryEnv, nextEnv);
+      nextState = { ...nextState, env: base.primaryEnv };
+    }
+    return {
+      nextState,
+      record: transition.record || null,
+      transition,
+    };
       return [createTransition({
         transitionType: record.type || statementNode.kind || "unknown",
         fromState: beforeStateRef,
@@ -670,7 +595,8 @@ export function createReplExecutor({
   return {
     executeSource,
     executeStatement,
-    expandStatement,
+    applyTransition,
+    selectTransitionForPolicy,
     withScopedVar,
     normalizeOptions,
     mergeChangedSymbols,
