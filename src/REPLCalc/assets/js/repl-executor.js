@@ -9,6 +9,13 @@ import {
   withExecutionState,
 } from "./repl-runtime-state.js";
 
+export const TRANSITION_SELECTION_STRATEGY = Object.freeze({
+  BEST_SCORE: "best-score",
+  MAX_CONFIDENCE: "max-confidence",
+  DETERMINISTIC_FIRST: "deterministic-first",
+  RANDOM_SEEDED: "random-seeded",
+});
+
 export function withScopedVar(env, name, fn){
   const hadVar = Object.prototype.hasOwnProperty.call(env, name);
   const prevVal = env[name];
@@ -36,6 +43,10 @@ function normalizeOptions(options = {}){
     traceExpressions: Boolean(options.traceExpressions),
     captureResults: options.captureResults !== false,
     commandErrorMessage: options.commandErrorMessage,
+    transitionSelectionStrategy: options.transitionSelectionStrategy
+      || options.selectionStrategy
+      || TRANSITION_SELECTION_STRATEGY.DETERMINISTIC_FIRST,
+    transitionSelectionSeed: options.transitionSelectionSeed ?? options.selectionSeed ?? 0,
   });
 }
 
@@ -144,6 +155,10 @@ function withModeAppliedState(state, envOverride = null){
     traceExpressions: Boolean(incoming.traceExpressions || mode === "trace"),
     captureResults: incoming.captureResults !== false,
     commandErrorMessage: incoming.commandErrorMessage,
+    transitionSelectionStrategy: incoming.transitionSelectionStrategy
+      || incoming.selectionStrategy
+      || TRANSITION_SELECTION_STRATEGY.DETERMINISTIC_FIRST,
+    transitionSelectionSeed: incoming.transitionSelectionSeed ?? incoming.selectionSeed ?? 0,
   };
 }
 
@@ -249,7 +264,8 @@ export function createReplExecutor({
 
   function executeStatement(statementNode, state){
     const transitions = expandStatement(statementNode, state);
-    const transition = selectTransitionForMode(transitions, state?.mode);
+    const selection = selectTransitionForMode(transitions, state);
+    const transition = selection?.transition || null;
     if (!transition){
       const execState = withModeAppliedState(state);
       return {
@@ -263,6 +279,15 @@ export function createReplExecutor({
         }),
       };
     }
+    if (selection?.diagnostics?.length){
+      const currentDiagnostics = Array.isArray(transition.toState?.diagnostics)
+        ? transition.toState.diagnostics
+        : [];
+      transition.toState = {
+        ...transition.toState,
+        diagnostics: [...currentDiagnostics, ...selection.diagnostics],
+      };
+    }
     return {
       nextState: transition.toState || withModeAppliedState(state),
       record: transition.record || null,
@@ -270,12 +295,91 @@ export function createReplExecutor({
     };
   }
 
-  function selectTransitionForMode(transitions, mode = "commit"){
-    if (!Array.isArray(transitions) || transitions.length === 0) return null;
-    if (mode === "commit"){
-      return transitions[0];
+  function toFiniteNumber(value, fallback){
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function normalizeSeed(seed){
+    if (typeof seed === "number" && Number.isFinite(seed)){
+      return Math.floor(seed) >>> 0;
     }
-    return transitions[0];
+    const str = String(seed ?? "");
+    let hash = 2166136261;
+    for (let i = 0; i < str.length; i += 1){
+      hash ^= str.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  }
+
+  function seededRandom01(seed){
+    const s = normalizeSeed(seed);
+    let x = s || 1;
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    return ((x >>> 0) / 4294967296);
+  }
+
+  function rankTransitions(transitions, strategy, seed){
+    const entries = transitions.map((transition, index) => {
+      const scoreDelta = toFiniteNumber(transition?.scoreDelta, 0);
+      const confidence = toFiniteNumber(transition?.confidence, 1);
+      return {
+        transition,
+        index,
+        scoreDelta,
+        confidence,
+        combined: scoreDelta + confidence,
+        randomScore: seededRandom01(`${seed}:${index}:${transition?.id || transition?.transitionType || "transition"}`),
+      };
+    });
+
+    entries.sort((a, b) => {
+      if (strategy === "max-confidence"){
+        if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+        if (b.scoreDelta !== a.scoreDelta) return b.scoreDelta - a.scoreDelta;
+      }else if (strategy === "best-score"){
+        if (b.combined !== a.combined) return b.combined - a.combined;
+        if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+        if (b.scoreDelta !== a.scoreDelta) return b.scoreDelta - a.scoreDelta;
+      }else if (strategy === "random-seeded"){
+        if (b.randomScore !== a.randomScore) return b.randomScore - a.randomScore;
+      }
+      return a.index - b.index;
+    });
+    return entries;
+  }
+
+  function selectTransitionForMode(transitions, stateInput = null){
+    if (!Array.isArray(transitions) || transitions.length === 0){
+      return { transition: null, diagnostics: [] };
+    }
+    const state = withModeAppliedState(stateInput);
+    const mode = state.mode || "commit";
+    const requestedStrategy = String(state.transitionSelectionStrategy || "deterministic-first");
+    const validStrategies = new Set(Object.values(TRANSITION_SELECTION_STRATEGY));
+    const strategy = validStrategies.has(requestedStrategy)
+      ? requestedStrategy
+      : TRANSITION_SELECTION_STRATEGY.DETERMINISTIC_FIRST;
+    const seed = state.transitionSelectionSeed ?? `${mode}:${transitions.length}`;
+    const ranking = rankTransitions(transitions, strategy, seed);
+    const winner = ranking[0]?.transition || transitions[0];
+    const dropped = ranking.slice(1);
+    const diagnostics = dropped.map((entry, rankOffset) => ({
+      kind: "candidate-dropped",
+      reason: "not-selected-by-policy",
+      mode,
+      policy: strategy,
+      selectedTransitionId: winner?.id || null,
+      droppedTransitionId: entry.transition?.id || null,
+      ranking: rankOffset + 2,
+      totalCandidates: ranking.length,
+      scoreDelta: entry.scoreDelta,
+      confidence: entry.confidence,
+      meta: entry.transition?.meta || {},
+    }));
+    return { transition: winner, diagnostics };
   }
 
   function normalizeExpandStatementArgs(statementNodeOrInput, traversalState, expandOptions = {}){
@@ -373,6 +477,36 @@ export function createReplExecutor({
       })];
     };
 
+    const buildCandidateTransitions = (candidates, buildTransition) => {
+      const transitions = [];
+      const droppedDiagnostics = [];
+      (Array.isArray(candidates) ? candidates : []).forEach((candidate, index) => {
+        if (!candidate || typeof candidate !== "object"){
+          droppedDiagnostics.push({
+            kind: "candidate-dropped",
+            reason: "invalid-candidate",
+            mode: execState.mode,
+            statementKind: statementNode.kind,
+            ranking: index + 1,
+          });
+          return;
+        }
+        const built = buildTransition(candidate, index);
+        if (built) transitions.push(built);
+        else{
+          droppedDiagnostics.push({
+            kind: "candidate-dropped",
+            reason: "candidate-builder-returned-null",
+            mode: execState.mode,
+            statementKind: statementNode.kind,
+            ranking: index + 1,
+            meta: candidate.meta || {},
+          });
+        }
+      });
+      return { transitions, droppedDiagnostics };
+    };
+
     if (statementNode.kind === STATEMENT_TYPE.CMD){
       if (!execState.allowCommands){
         throw new Error(execState.commandErrorMessage || "Commands are not supported in this context.");
@@ -418,23 +552,42 @@ export function createReplExecutor({
       const valueCandidates = typeof runExpressionCandidatesWithContext === "function"
         ? runExpressionCandidatesWithContext(exprInput, execState.env, execState)
         : [{ value: runExpression(exprInput, execState, expressionTrace), scoreDelta: 0, confidence: 1 }];
-      const candidate = valueCandidates[0];
-      if (candidate){
-        env[statementNode.name] = candidate.value;
-        return finalizeTransition({
+      const { transitions, droppedDiagnostics } = buildCandidateTransitions(valueCandidates, (candidate) => {
+        const candidateEnv = cloneEnv(execState.env);
+        candidateEnv[statementNode.name] = candidate.value;
+        const transitionType = candidate.transitionType || "expression-default";
+        const transitionMeta = candidate.meta || {};
+        const [transition] = finalizeTransition({
           type: "assign",
           value: candidate.value,
           meta: {
             assignedName: statementNode.name,
-            expressionStrategy: candidate.transitionType || "expression-default",
+            expressionStrategy: transitionType,
             expressionTrace: expressionTrace || [],
+            ...transitionMeta,
           },
           changedSymbols: [statementNode.name],
           effects: [{ kind: "write-symbol", symbol: statementNode.name, value: candidate.value }],
         }, {
+          transitionType,
           scoreDelta: Number.isFinite(candidate.scoreDelta) ? candidate.scoreDelta : 0,
           confidence: Number.isFinite(candidate.confidence) ? candidate.confidence : 1,
+          meta: transitionMeta,
         });
+        transition.toState = { ...transition.toState, env: candidateEnv };
+        transition.record.after = snapshotStateRef(transition.toState);
+        return transition;
+      });
+      if (transitions.length){
+        if (droppedDiagnostics.length){
+          transitions.forEach((transition) => {
+            transition.toState = {
+              ...transition.toState,
+              diagnostics: [...(transition.toState.diagnostics || []), ...droppedDiagnostics],
+            };
+          });
+        }
+        return transitions;
       }
       throw new Error("Assignment produced no expression candidates.");
     }
@@ -443,14 +596,17 @@ export function createReplExecutor({
       const solvedCandidates = typeof solveEquationCandidates === "function"
         ? solveEquationCandidates(statementNode.left, statementNode.right)
         : [solveEquation(statementNode.left, statementNode.right)];
-      const solved = solvedCandidates[0];
-      if (solved){
+      const { transitions, droppedDiagnostics } = buildCandidateTransitions(solvedCandidates, (solved) => {
+        const transitionType = solved.transitionType || "equation-solve";
+        const transitionMeta = solved.meta || {};
         const transitionInput = {
+          transitionType,
           scoreDelta: Number.isFinite(solved?.scoreDelta) ? solved.scoreDelta : 0,
           confidence: Number.isFinite(solved?.confidence) ? solved.confidence : 1,
+          meta: transitionMeta,
         };
-        if (solved.unknown.unitToken){
-          return finalizeTransition({
+        if (solved?.unknown?.unitToken){
+          const [transition] = finalizeTransition({
             type: "equation",
             value: makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind),
             meta: {
@@ -458,11 +614,16 @@ export function createReplExecutor({
               usedUnitToken: true,
               strategy: solved.strategy || "numeric-solve",
               expressionTrace: expressionTrace || [],
+              ...transitionMeta,
             },
           }, transitionInput);
+          transition.toState = { ...transition.toState, env: cloneEnv(execState.env) };
+          transition.record.after = snapshotStateRef(transition.toState);
+          return transition;
         }
-        env[solved.unknown.name] = solved.value;
-        return finalizeTransition({
+        const candidateEnv = cloneEnv(execState.env);
+        candidateEnv[solved.unknown.name] = solved.value;
+        const [transition] = finalizeTransition({
           type: "equation",
           value: solved.value,
           meta: {
@@ -470,10 +631,25 @@ export function createReplExecutor({
             usedUnitToken: false,
             strategy: solved.strategy || "numeric-solve",
             expressionTrace: expressionTrace || [],
+            ...transitionMeta,
           },
           changedSymbols: [solved.unknown.name],
           effects: [{ kind: "write-symbol", symbol: solved.unknown.name, value: solved.value }],
         }, transitionInput);
+        transition.toState = { ...transition.toState, env: candidateEnv };
+        transition.record.after = snapshotStateRef(transition.toState);
+        return transition;
+      });
+      if (transitions.length){
+        if (droppedDiagnostics.length){
+          transitions.forEach((transition) => {
+            transition.toState = {
+              ...transition.toState,
+              diagnostics: [...(transition.toState.diagnostics || []), ...droppedDiagnostics],
+            };
+          });
+        }
+        return transitions;
       }
       throw new Error("Equation solver produced no candidates.");
     }
@@ -617,10 +793,13 @@ export function createReplExecutor({
         meta: {
           expressionStrategy: candidate.transitionType || "expression-default",
           expressionTrace: expressionTrace || [],
+          ...(candidate.meta || {}),
         },
       }, {
+        transitionType: candidate.transitionType || "expression-default",
         scoreDelta: Number.isFinite(candidate.scoreDelta) ? candidate.scoreDelta : 0,
         confidence: Number.isFinite(candidate.confidence) ? candidate.confidence : 1,
+        meta: candidate.meta || {},
       }));
       if (transitions.length) return transitions;
       throw new Error("Expression produced no candidates.");
@@ -636,6 +815,7 @@ export function createReplExecutor({
     executeSource,
     executeStatement,
     expandStatement,
+    selectTransitionForMode,
     withScopedVar,
     normalizeOptions,
     mergeChangedSymbols,

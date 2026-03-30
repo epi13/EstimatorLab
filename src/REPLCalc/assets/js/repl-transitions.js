@@ -7,6 +7,7 @@
  * @property {number} scoreDelta
  * @property {number} confidence
  * @property {number} cost
+ * @property {object} meta
  * @property {string} id
  */
 
@@ -25,6 +26,7 @@ export function createTransition({
   scoreDelta = 0,
   confidence = 1,
   cost = 0,
+  meta = {},
   id = null,
 } = {}){
   return {
@@ -35,6 +37,7 @@ export function createTransition({
     scoreDelta,
     confidence,
     cost,
+    meta: meta && typeof meta === "object" ? { ...meta } : {},
     id: id || nextTransitionId(transitionType),
   };
 }

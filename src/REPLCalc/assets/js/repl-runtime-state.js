@@ -30,6 +30,8 @@ export function createExecutionState({
   traceExpressions = false,
   captureResults = true,
   commandErrorMessage = null,
+  transitionSelectionStrategy = "deterministic-first",
+  transitionSelectionSeed = 0,
 } = {}){
   if (!env || typeof env !== "object"){
     throw new Error("ExecutionState requires an env object.");
@@ -50,6 +52,8 @@ export function createExecutionState({
     traceExpressions: Boolean(traceExpressions),
     captureResults: captureResults !== false,
     commandErrorMessage: commandErrorMessage || null,
+    transitionSelectionStrategy: transitionSelectionStrategy || "deterministic-first",
+    transitionSelectionSeed: transitionSelectionSeed ?? 0,
   };
 }
 
@@ -77,6 +81,8 @@ export function withExecutionState(input, fallbackEnv = null){
     traceExpressions: Boolean(input.traceExpressions),
     captureResults: input.captureResults !== false,
     commandErrorMessage: input.commandErrorMessage || null,
+    transitionSelectionStrategy: input.transitionSelectionStrategy || input.selectionStrategy || "deterministic-first",
+    transitionSelectionSeed: input.transitionSelectionSeed ?? input.selectionSeed ?? 0,
   });
 }
 
