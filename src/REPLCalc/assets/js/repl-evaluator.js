@@ -39,9 +39,7 @@ export function createEvaluator({
       const vars = Object.assign(Object.create(null), state.vars);
       let overrides = null;
       if (unknown.unitToken){
-        overrides = {
-          [unknown.name]: makeQty(x * unknown.toBase, unknown.kind),
-        };
+        vars[unknown.name] = x;
       }else{
         vars[unknown.name] = x;
       }
@@ -156,9 +154,7 @@ export function createEvaluator({
       const vars = Object.assign(Object.create(null), state.vars);
       let overrides = null;
       if (unknown.unitToken){
-        overrides = {
-          [unknown.name]: makeQty(x * unknown.toBase, unknown.kind),
-        };
+        vars[unknown.name] = x;
       }else{
         vars[unknown.name] = x;
       }
