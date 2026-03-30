@@ -298,20 +298,6 @@ export function createReplExecutor({
   function selectTransitionForMode(transitions, stateInput = null){
     if (!Array.isArray(transitions) || transitions.length === 0){
       return { transition: null, diagnostics: [] };
-  function executeStatement(statementNode, state, options = {}){
-    const mode = options.mode || state?.mode;
-    const transitions = expandStatement({ statementNode, traversalState: state, mode });
-    const transition = selectTransitionForPolicy(transitions, mode, options);
-    return applyTransition(transition, state, { ...options, statementNode, mode });
-  }
-
-  function selectTransitionForPolicy(transitions, mode = "commit", options = {}){
-    if (!Array.isArray(transitions) || transitions.length === 0) return null;
-    if (typeof options.selector === "function"){
-      return options.selector(transitions, mode) || transitions[0];
-    }
-    if (mode === "plan"){
-      return transitions.slice().sort((a, b) => (b?.scoreDelta || 0) - (a?.scoreDelta || 0))[0];
     }
     const state = withModeAppliedState(stateInput);
     const mode = state.mode || "commit";
