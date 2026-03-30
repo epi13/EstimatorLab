@@ -29,6 +29,7 @@ import { createTests } from "./repl-tests.js";
 import { createInputHandlers } from "./repl-input.js";
 import { createUserFunctionUi } from "./repl-user-functions.js";
 import { createExecutor } from "./repl-executor.js";
+import { createReplTraversal } from "./repl-traversal.js";
 import { parseParams } from "./repl-parser.js";
 import { createBlockNode, isBlockNode } from "./repl-ast.js";
 
@@ -166,6 +167,11 @@ export function initRepl(){
     makeQty,
     maxLoopIterations: MAX_LOOP_ITERATIONS,
   });
+  const traversal = createReplTraversal({
+    expandStatement: executor.expandStatement,
+    canonicalStateKey: lowering.canonicalKey.state,
+  });
+  state.traversal = traversal;
 
   const runLoopStatements = (source, context = null) => {
     const opts = executor.normalizeOptions({
