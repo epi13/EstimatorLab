@@ -58,11 +58,14 @@ function makeExecutionRecord({
   ...extra
 } = {}){
   const statementText = statementNode?.stmt || extra.statement || "";
+  const statementNodeId = statementNode?.nodeId || extra.statementNodeId || null;
   return {
     type,
     value,
     statement: statementText,
     statementKind: statementNode?.kind || extra.statementKind || type,
+    statementNode,
+    statementNodeId,
     mode,
     before,
     after,
@@ -261,6 +264,7 @@ export function createReplExecutor({
 
     const provenanceEntry = {
       kind: statementNode.kind,
+      nodeId: statementNode.nodeId || null,
       contextPath: execState.contextPath.slice(),
       statement: statementNode.stmt || "",
     };
@@ -420,6 +424,7 @@ export function createReplExecutor({
             stateWithContext(execState, `for:${statementNode.varName}`, `iter:${iter}`)
           );
           iterationRecords.push(makeExecutionRecord({
+            statementNode,
             type: "for-iteration",
             statement: `for ${statementNode.varName} iteration ${iter}`,
             statementKind: "for-iteration",
@@ -471,6 +476,7 @@ export function createReplExecutor({
           stateWithContext(execState, "repeat", `iter:${i + 1}`)
         );
         iterationRecords.push(makeExecutionRecord({
+          statementNode,
           type: "repeat-iteration",
           statement: `repeat iteration ${i + 1}`,
           statementKind: "repeat-iteration",

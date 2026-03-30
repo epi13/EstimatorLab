@@ -20,16 +20,31 @@ function nextBlockId(){
   return `block-${id}`;
 }
 
+function deriveStatementNodeId(metadata = null){
+  if (!metadata || typeof metadata !== "object") return null;
+  if (typeof metadata.nodeId === "string" && metadata.nodeId.trim()){
+    return metadata.nodeId;
+  }
+  const blockId = typeof metadata.blockId === "string" ? metadata.blockId.trim() : "";
+  const statementIndex = metadata.statementIndex;
+  if (!blockId || !Number.isInteger(statementIndex) || statementIndex < 0){
+    return null;
+  }
+  return `${blockId}:stmt:${statementIndex}`;
+}
+
 export function createStatementNode(kind, payload = {}, metadata = null){
   if (!STATEMENT_TYPES.includes(kind)){
     throw new Error(`Unknown statement kind: ${kind}`);
   }
   const span = metadata?.span || null;
   const blockId = metadata?.blockId || null;
+  const nodeId = deriveStatementNodeId(metadata);
   const node = {
     nodeType: "statement",
     kind,
     type: kind,
+    nodeId,
     span,
     blockId,
     ...payload,
