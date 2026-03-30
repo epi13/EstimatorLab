@@ -1,4 +1,11 @@
 import { cloneEnv, withExecutionState } from "./repl-runtime-state.js";
+import {
+  createTraversalNode,
+  deriveTraversalCanonicalKey,
+  transitionTraversalNodeStatus,
+  updateTraversalNodeMetadata,
+  TRAVERSAL_NODE_STATUSES,
+} from "./repl-traversal-state.js";
 
 export const TRAVERSAL_POLICIES = Object.freeze({
   BEST_FIRST: "best_first",
@@ -7,13 +14,6 @@ export const TRAVERSAL_POLICIES = Object.freeze({
   GREEDY: "greedy",
   EXHAUSTIVE_SMALL: "exhaustive_small",
 });
-
-let traversalStateId = 0;
-
-function nextTraversalStateId(){
-  traversalStateId += 1;
-  return `ts-${traversalStateId}`;
-}
 
 function toNumber(value, fallback = 0){
   return Number.isFinite(value) ? value : fallback;
@@ -58,9 +58,13 @@ function createTraversalState({
   score = 0,
   confidence = 1,
   depth = 0,
+  blockNode = null,
+  statementIndex = 0,
   parentId = null,
   transitionId = null,
   canonicalKey = null,
+  isTerminal = false,
+  terminationReason = null,
   id = null,
 }){
   return {
@@ -69,9 +73,13 @@ function createTraversalState({
     score,
     confidence,
     depth,
+    blockNode,
+    statementIndex,
     parentId,
     transitionId,
     canonicalKey,
+    isTerminal,
+    terminationReason,
   };
 }
 
@@ -153,37 +161,43 @@ export function createReplTraversal({
     throw new Error("createReplTraversal requires an expandStatement function.");
   }
 
-  const getCanonicalKey = (execState, fallback = null) => {
-    if (typeof canonicalStateKey !== "function") return fallback;
-    try{
-      return canonicalStateKey(execState);
-    }catch {
-      return fallback;
-    }
-  };
-
   const buildWrapper = (input) => {
     const execState = withExecutionState(input.execState || input);
-    const canonicalKey = getCanonicalKey(execState, input.canonicalKey || null);
+    const statementIndex = Number.isInteger(input.statementIndex) ? Math.max(0, input.statementIndex) : 0;
+    const blockId = input.blockNode?.blockId || null;
+    const localCanonicalKey = getCanonicalKey(execState, input.canonicalKey || null);
+    const canonicalKey = localCanonicalKey
+      ? `${blockId || "no-block"}:stmt:${statementIndex}:${localCanonicalKey}`
+      : null;
     return createTraversalState({
+    const canonicalKey = deriveTraversalCanonicalKey(execState, canonicalStateKey, input.canonicalKey || null);
+    return createTraversalNode({
       id: input.id || null,
       execState,
       score: toNumber(input.score, 0),
       confidence: toNumber(input.confidence, 1),
       depth: Math.max(0, Math.floor(toNumber(input.depth, 0))),
+      blockNode: input.blockNode || null,
+      statementIndex,
       parentId: input.parentId || null,
-      transitionId: input.transitionId || null,
+      viaTransitionId: input.viaTransitionId || input.transitionId || null,
       canonicalKey,
+      isTerminal: input.isTerminal === true,
+      terminationReason: input.terminationReason || null,
+      status: input.status || TRAVERSAL_NODE_STATUSES.PENDING,
     });
   };
 
   const expandTraversalState = (statementNode, wrapperState, traversalConfig = {}) => {
     const baseState = buildWrapper(wrapperState);
+    const targetBlock = baseState.blockNode;
+    if (targetBlock){
+      return expandBlock(targetBlock, baseState, traversalConfig);
+    }
     const expansions = expandStatement({
       statementNode,
       traversalState: baseState.execState,
       mode: traversalConfig.mode || "speculate",
-      detachFromCommit: traversalConfig.detachFromCommit !== false,
     });
 
     const transitions = Array.isArray(expansions) ? expansions : [];
@@ -191,39 +205,141 @@ export function createReplTraversal({
       const nextExec = withExecutionState(transition?.toState || baseState.execState, cloneEnv(baseState.execState.env));
       const score = scoreTransitionFn(transition, baseState.score);
       const confidence = confidenceTransitionFn(transition, baseState.confidence);
-      return createTraversalState({
+      return buildWrapper({
+      return createTraversalNode({
         execState: nextExec,
         score,
         confidence,
         depth: baseState.depth + 1,
+        blockNode: null,
+        statementIndex: 0,
         parentId: baseState.id,
         transitionId: transition?.id || null,
-        canonicalKey: getCanonicalKey(nextExec, null),
+        viaTransitionId: transition?.id || null,
+        canonicalKey: deriveTraversalCanonicalKey(nextExec, canonicalStateKey, null),
+        status: TRAVERSAL_NODE_STATUSES.PENDING,
       });
     });
   };
 
+  const expandBlock = (blockNode, traversalNode, traversalConfig = {}) => {
+    const baseState = buildWrapper({ ...traversalNode, blockNode });
+    const statements = Array.isArray(blockNode?.statements) ? blockNode.statements : [];
+
+    if (baseState.statementIndex >= statements.length){
+      return [createTraversalState({
+        execState: baseState.execState,
+        score: baseState.score,
+        confidence: baseState.confidence,
+        depth: baseState.depth,
+        blockNode,
+        statementIndex: baseState.statementIndex,
+        parentId: baseState.id,
+        transitionId: null,
+        canonicalKey: baseState.canonicalKey,
+        isTerminal: true,
+        terminationReason: "end-of-block",
+      })];
+    }
+
+    const statementNode = statements[baseState.statementIndex];
+    const expansions = expandStatement({
+      statementNode,
+      traversalState: baseState.execState,
+      mode: traversalConfig.mode || "speculate",
+      detachFromCommit: traversalConfig.detachFromCommit !== false,
+    });
+    const transitions = Array.isArray(expansions) ? expansions : [];
+    const nextStatementIndex = baseState.statementIndex + 1;
+
+    return transitions.map((transition) => {
+      const nextExec = withExecutionState(transition?.toState || baseState.execState, cloneEnv(baseState.execState.env));
+      const score = scoreTransitionFn(transition, baseState.score);
+      const confidence = confidenceTransitionFn(transition, baseState.confidence);
+      const isTerminal = nextStatementIndex >= statements.length;
+      return buildWrapper({
+        execState: nextExec,
+        score,
+        confidence,
+        depth: baseState.depth + 1,
+        blockNode,
+        statementIndex: nextStatementIndex,
+        parentId: baseState.id,
+        transitionId: transition?.id || null,
+        isTerminal,
+        terminationReason: isTerminal ? "end-of-block" : null,
+      });
+    });
+  };
+
+  const isValidGoalState = (state, threshold) => {
+    if (!state || state.isTerminal !== true) return false;
+    if (!Number.isFinite(threshold)) return true;
+    return rankState(state) >= threshold;
+  };
+
+  const normalizeGoal = (goalInput = null) => {
+    if (typeof goalInput === "string"){
+      return { strategy: goalInput, topN: 1, threshold: null };
+    }
+    const goal = goalInput && typeof goalInput === "object" ? goalInput : {};
+    return {
+      strategy: goal.strategy || goal.kind || "first-valid",
+      topN: Number.isFinite(goal.topN) ? Math.max(1, Math.floor(goal.topN)) : 1,
+      threshold: Number.isFinite(goal.threshold) ? goal.threshold : null,
+      depthLimit: Number.isFinite(goal.depthLimit) ? Math.max(0, Math.floor(goal.depthLimit)) : null,
+      nodeBudget: Number.isFinite(goal.nodeBudget) ? Math.max(1, Math.floor(goal.nodeBudget)) : null,
+      expansionBudget: Number.isFinite(goal.expansionBudget) ? Math.max(1, Math.floor(goal.expansionBudget)) : null,
+    };
+  };
+
   const runTraversal = ({
     statementNode,
+    blockNode = null,
     initialState,
     policy = TRAVERSAL_POLICIES.BEST_FIRST,
     budget = {},
+    goal = null,
     beamWidth = 4,
     prune = null,
     mode = "speculate",
-    detachFromCommit = true,
   } = {}) => {
+    const normalizedGoal = normalizeGoal(goal);
     const normalizedPolicy = normalizePolicy(policy);
-    const normalizedBudget = makeBudget({ ...budget, ...(normalizedPolicy === TRAVERSAL_POLICIES.EXHAUSTIVE_SMALL
+    const normalizedBudget = makeBudget({
+      ...budget,
+      ...(normalizedPolicy === TRAVERSAL_POLICIES.EXHAUSTIVE_SMALL
       ? { nodeBudget: budget.nodeBudget ?? 128, expansionBudget: budget.expansionBudget ?? 128 }
-      : {}) });
+      : {}),
+      ...(normalizedGoal.depthLimit !== null ? { depthLimit: normalizedGoal.depthLimit } : {}),
+      ...(normalizedGoal.nodeBudget !== null ? { nodeBudget: normalizedGoal.nodeBudget } : {}),
+      ...(normalizedGoal.expansionBudget !== null ? { expansionBudget: normalizedGoal.expansionBudget } : {}),
+    });
 
     const frontier = createFrontier(normalizedPolicy, Math.max(1, Math.floor(beamWidth)));
-    const start = buildWrapper(initialState || { execState: withExecutionState({ env: Object.create(null), mode }) });
+    const start = buildWrapper(initialState || {
+      execState: withExecutionState({ env: Object.create(null), mode }),
+      blockNode: blockNode || null,
+      statementIndex: 0,
+    });
+    let start = buildWrapper(initialState || { execState: withExecutionState({ env: Object.create(null), mode }) });
+    start = transitionTraversalNodeStatus(start, TRAVERSAL_NODE_STATUSES.FRONTIER);
     const visited = new Map();
     const expanded = [];
+    const goalMatches = [];
     const traceGraph = {
-      nodes: [{ id: start.id, parentId: null, depth: start.depth, score: start.score, confidence: start.confidence, canonicalKey: start.canonicalKey }],
+      nodes: [{
+        id: start.id,
+        parentId: null,
+        depth: start.depth,
+        score: start.score,
+        confidence: start.confidence,
+        canonicalKey: start.canonicalKey,
+        statementIndex: start.statementIndex,
+        blockId: start.blockNode?.blockId || null,
+        isTerminal: start.isTerminal,
+        status: start.status,
+      }],
       edges: [],
     };
     const diagnostics = [];
@@ -238,7 +354,8 @@ export function createReplTraversal({
       if (expanded.length >= normalizedBudget.nodeBudget) break;
       if (expansions >= normalizedBudget.expansionBudget) break;
 
-      const current = frontier.pop();
+      const popped = frontier.pop();
+      const current = popped ? transitionTraversalNodeStatus(popped, TRAVERSAL_NODE_STATUSES.EXPANDED) : null;
       if (!current) break;
       if (current.depth >= normalizedBudget.depthLimit){
         diagnostics.push({ kind: "depth-limit", stateId: current.id, depth: current.depth });
@@ -248,7 +365,7 @@ export function createReplTraversal({
       expanded.push(current);
       expansions += 1;
 
-      const successors = expandTraversalState(statementNode, current, { mode, detachFromCommit });
+      const successors = expandTraversalState(statementNode, current, { mode });
       const accepted = [];
 
       for (const successor of successors){
@@ -268,6 +385,10 @@ export function createReplTraversal({
           visited.set(successor.canonicalKey, successor);
         }
 
+        const frontierSuccessor = updateTraversalNodeMetadata(
+          transitionTraversalNodeStatus(successor, TRAVERSAL_NODE_STATUSES.FRONTIER),
+          {},
+        );
         traceGraph.nodes.push({
           id: successor.id,
           parentId: successor.parentId,
@@ -275,27 +396,61 @@ export function createReplTraversal({
           score: successor.score,
           confidence: successor.confidence,
           canonicalKey: successor.canonicalKey,
+          statementIndex: successor.statementIndex,
+          blockId: successor.blockNode?.blockId || null,
+          isTerminal: successor.isTerminal,
+          id: frontierSuccessor.id,
+          parentId: frontierSuccessor.parentId,
+          depth: frontierSuccessor.depth,
+          score: frontierSuccessor.score,
+          confidence: frontierSuccessor.confidence,
+          canonicalKey: frontierSuccessor.canonicalKey,
+          status: frontierSuccessor.status,
         });
         traceGraph.edges.push({
           from: current.id,
-          to: successor.id,
-          transitionId: successor.transitionId,
+          to: frontierSuccessor.id,
+          viaTransitionId: frontierSuccessor.viaTransitionId,
         });
+
+        if (isValidGoalState(successor, normalizedGoal.threshold)){
+          goalMatches.push(successor);
+          if (normalizedGoal.strategy === "first-valid"){
+            frontier.clear();
+            accepted.length = 0;
+            break;
+          }
+        }
         accepted.push(successor);
+        accepted.push(frontierSuccessor);
       }
 
       frontier.pushAll(accepted);
       frontier.trim(normalizedBudget.frontierBudget);
+
+      if (normalizedGoal.strategy === "first-valid" && goalMatches.length > 0){
+        diagnostics.push({ kind: "goal-hit", stateId: goalMatches[0].id, strategy: normalizedGoal.strategy });
+        break;
+      }
+      if (normalizedGoal.strategy === "top-N" && goalMatches.length >= normalizedGoal.topN){
+        diagnostics.push({ kind: "goal-hit", stateId: goalMatches[goalMatches.length - 1].id, strategy: normalizedGoal.strategy });
+        break;
+      }
     }
 
     const ranked = expanded.slice().sort((a, b) => rankState(b) - rankState(a));
+    const rankedGoalMatches = goalMatches.slice().sort((a, b) => rankState(b) - rankState(a));
     return {
       policy: normalizedPolicy,
       budget: normalizedBudget,
+      goal: normalizedGoal,
       expanded,
       frontier: frontier.toArray(),
       visited,
-      best: ranked[0] || start,
+      best: rankedGoalMatches[0] || ranked[0] || start,
+      goalMatches: normalizedGoal.strategy === "top-N"
+        ? rankedGoalMatches.slice(0, normalizedGoal.topN)
+        : rankedGoalMatches,
       diagnostics,
       metrics: {
         expandedCount: expanded.length,
@@ -309,6 +464,7 @@ export function createReplTraversal({
   return {
     buildWrapper,
     expandTraversalState,
+    expandBlock,
     runTraversal,
   };
 }

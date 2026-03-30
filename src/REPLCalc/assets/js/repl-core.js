@@ -29,6 +29,7 @@ import { createTests } from "./repl-tests.js";
 import { createInputHandlers } from "./repl-input.js";
 import { createUserFunctionUi } from "./repl-user-functions.js";
 import { createExecutor } from "./repl-executor.js";
+import { createReplExpander } from "./repl-expander.js";
 import { createReplTraversal } from "./repl-traversal.js";
 import { parseParams } from "./repl-parser.js";
 import { createBlockNode, isBlockNode } from "./repl-ast.js";
@@ -155,7 +156,20 @@ export function initRepl(){
 
   const MAX_LOOP_ITERATIONS = 100000;
 
-  const executor = createExecutor({
+  let executeSourceRef = null;
+  const expander = createReplExpander({
+    runExpression: (expr, execState, traceBuffer = null) => {
+      const traceSink = Array.isArray(traceBuffer)
+        ? (entry) => traceBuffer.push(entry)
+        : null;
+      return evaluator.runExpressionWithContext(expr, execState.env, {
+        ...execState,
+        allowedEffects: execState.effectsAllowed,
+        effectsAllowed: execState.effectsAllowed,
+        traceExpressions: Boolean(execState.traceExpressions || execState.mode === "trace"),
+        expressionTraceSink: traceSink,
+      });
+    },
     runExpressionWithContext: evaluator.runExpressionWithContext,
     runExpressionCandidatesWithContext: evaluator.runExpressionCandidatesWithContext,
     solveEquation: evaluator.solveEquation,
@@ -168,9 +182,14 @@ export function initRepl(){
     isQty,
     makeQty,
     maxLoopIterations: MAX_LOOP_ITERATIONS,
+    executeSource: (...args) => executeSourceRef(...args),
   });
+  const executor = createExecutor({
+    expandStatement: expander.expandStatement,
+  });
+  executeSourceRef = executor.executeSource;
   const traversal = createReplTraversal({
-    expandStatement: executor.expandStatement,
+    expandStatement: expander.expandStatement,
     canonicalStateKey: lowering.canonicalKey.state,
   });
   state.traversal = traversal;
