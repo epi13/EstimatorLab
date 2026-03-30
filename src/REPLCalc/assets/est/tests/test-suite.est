@@ -63,6 +63,7 @@ so test_suite() = vec(
   t("argmin4 chooses best", "argmin4(1, -5, 3, 4)", 1),
   t("argmax4 tie picks first", "argmax4(5, 5, 1, 5)", 0),
   t("select_best4 pair form", "field(select_best4(\"a\", 1, \"b\", 3, \"c\", 2, \"d\", 0), \"lane\")", 1),
+  t("split_ratio base field", "field(split_ratio(1000, 2), \"base\")", expect_near(333.3333333333333, 0.000001)),
   ts("select_best4 candidate assy form", vec("c0 = record(\"state\", \"a\", \"score\", 1)", "c1 = record(\"state\", \"b\", \"score\", 3)", "c2 = record(\"state\", \"c\", \"score\", 2)", "c3 = record(\"state\", \"d\", \"score\", 0)", "field(select_best4(c0, c1, c2, c3), \"state\")"), "b"),
   t("bit ops band", "band(6, 3)", 2),
   t("bit ops bor", "bor(6, 3)", 7),
