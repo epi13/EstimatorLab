@@ -14,9 +14,13 @@ export function createEvaluator({
   function normalizeEvalOptions(options){
     if (!options || typeof options !== "object") return null;
     const out = Object.create(null);
-    if (typeof options.allowedEffects === "number") out.allowedEffects = options.allowedEffects;
+    const effectsAllowed = options.effectsAllowed ?? options.allowedEffects;
+    if (typeof effectsAllowed === "number") out.allowedEffects = effectsAllowed;
     if (typeof options.traceExpressions === "boolean") out.traceExpressions = options.traceExpressions;
+    if (options.mode === "trace") out.traceExpressions = true;
     if (typeof options.expressionTraceSink === "function") out.expressionTraceSink = options.expressionTraceSink;
+    if (Array.isArray(options.contextPath)) out.contextPath = options.contextPath.slice();
+    if (Array.isArray(options.provenance)) out.provenance = options.provenance;
     return out;
   }
 
