@@ -1,4 +1,11 @@
 import { STATEMENT_TYPE, isBlockNode, isStatementNode } from "./repl-ast.js";
+import {
+  cloneEnv,
+  createExecutionState,
+  isExecutionState,
+  stateWithContext,
+  withExecutionState,
+} from "./repl-runtime-state.js";
 
 export function withScopedVar(env, name, fn){
   const hadVar = Object.prototype.hasOwnProperty.call(env, name);
@@ -12,15 +19,21 @@ export function withScopedVar(env, name, fn){
 }
 
 function normalizeOptions(options = {}){
-  return {
-    allowedEffects: options.allowedEffects,
+  return createExecutionState({
+    env: options.env || Object.create(null),
+    mode: options.mode || "commit",
+    effectsAllowed: options.effectsAllowed ?? options.allowedEffects,
+    contextPath: Array.isArray(options.contextPath) ? options.contextPath : [],
+    trace: Array.isArray(options.trace) ? options.trace : [],
+    diagnostics: Array.isArray(options.diagnostics) ? options.diagnostics : [],
+    provenance: Array.isArray(options.provenance) ? options.provenance : [],
+    score: typeof options.score === "number" ? options.score : undefined,
     allowCommands: Boolean(options.allowCommands),
     wrapErrors: Boolean(options.wrapErrors),
     traceExpressions: Boolean(options.traceExpressions),
-    contextPath: Array.isArray(options.contextPath) ? options.contextPath : [],
     captureResults: options.captureResults !== false,
     commandErrorMessage: options.commandErrorMessage,
-  };
+  });
 }
 
 function makeStatementResult(type, value = null, extra = {}){
@@ -67,6 +80,29 @@ function wrapExecutionError(err, stmt, stmtIdx, contextPath = []){
   return new Error(`Loop error at ${where}stmt#${stmtIdx + 1} ${rendered}: ${msg}`);
 }
 
+function withModeAppliedState(state, envOverride = null){
+  const incoming = withExecutionState(state);
+  const primaryEnv = envOverride || incoming.env;
+  if (!primaryEnv || typeof primaryEnv !== "object"){
+    throw new Error("ExecutionState.env must be an object.");
+  }
+
+  const mode = incoming.mode || "commit";
+  const shouldClone = mode === "speculate" || mode === "plan";
+  const workingEnv = shouldClone ? cloneEnv(primaryEnv) : primaryEnv;
+  return {
+    ...incoming,
+    env: workingEnv,
+    mode,
+    primaryEnv,
+    allowCommands: Boolean(incoming.allowCommands),
+    wrapErrors: Boolean(incoming.wrapErrors),
+    traceExpressions: Boolean(incoming.traceExpressions || mode === "trace"),
+    captureResults: incoming.captureResults !== false,
+    commandErrorMessage: incoming.commandErrorMessage,
+  };
+}
+
 export function createReplExecutor({
   runExpressionWithContext,
   solveEquation,
@@ -79,30 +115,23 @@ export function createReplExecutor({
   makeQty,
   maxLoopIterations = 100000,
 }){
-  function extendContext(options, ...labels){
-    const ctx = Array.isArray(options?.contextPath) ? options.contextPath : [];
-    const nextLabels = labels.filter((label) => typeof label === "string" && label.trim());
-    return {
-      ...options,
-      contextPath: [...ctx, ...nextLabels],
-    };
-  }
-
-  const runExpression = (expr, env, options, traceBuffer = null) => {
+  const runExpression = (expr, execState, traceBuffer = null) => {
     const traceSink = Array.isArray(traceBuffer)
       ? (entry) => traceBuffer.push(entry)
       : null;
-    return runExpressionWithContext(expr, env, {
-      ...(options || {}),
-      traceExpressions: Boolean(options?.traceExpressions),
+    return runExpressionWithContext(expr, execState.env, {
+      ...execState,
+      allowedEffects: execState.effectsAllowed,
+      effectsAllowed: execState.effectsAllowed,
+      traceExpressions: Boolean(execState.traceExpressions || execState.mode === "trace"),
       expressionTraceSink: traceSink,
     });
   };
 
-  function resolveForRange(parsed, env, options){
-    const startVal = runExpression(parsed.startExpr, env, options);
-    const endVal = runExpression(parsed.endExpr, env, options);
-    const stepVal = parsed.stepExpr ? runExpression(parsed.stepExpr, env, options) : 1;
+  function resolveForRange(parsed, execState){
+    const startVal = runExpression(parsed.startExpr, execState);
+    const endVal = runExpression(parsed.endExpr, execState);
+    const stepVal = parsed.stepExpr ? runExpression(parsed.stepExpr, execState) : 1;
     let start;
     let end;
     let step;
@@ -133,94 +162,131 @@ export function createReplExecutor({
     return { start, end, step, loopKind };
   }
 
-  function executeSource(source, env, options = {}){
-    const opts = normalizeOptions(options);
+  function executeSource(source, envOrState, options = {}){
     const statements = Array.isArray(source)
       ? source
       : (isBlockNode(source) ? source.statements : null);
     if (!statements){
       throw new Error("executeSource expects AST block nodes or statement-node arrays.");
     }
+
+    const baseState = isExecutionState(envOrState)
+      ? withModeAppliedState(envOrState)
+      : withModeAppliedState({ ...(options || {}), env: envOrState || options.env || Object.create(null) });
+
     const blockResult = {
       lastValue: null,
       results: [],
+      nextState: baseState,
     };
 
+    let currentState = baseState;
     for (let stmtIdx = 0; stmtIdx < statements.length; stmtIdx++){
       const stmt = statements[stmtIdx];
       if (!stmt) continue;
 
       try{
-        const statementResult = executeStatement(stmt, env, opts);
-        blockResult.lastValue = statementResult?.value ?? blockResult.lastValue;
+        const { nextState, record } = executeStatement(stmt, currentState);
+        currentState = nextState;
+        blockResult.nextState = nextState;
+        blockResult.lastValue = record?.value ?? blockResult.lastValue;
 
-        if (opts.captureResults){
-          blockResult.results.push(statementResult);
+        if (currentState.captureResults){
+          blockResult.results.push(record);
         }
       }catch (err){
-        if (!opts.wrapErrors) throw err;
-        throw wrapExecutionError(err, stmt, stmtIdx, opts.contextPath);
+        if (!currentState.wrapErrors) throw err;
+        throw wrapExecutionError(err, stmt, stmtIdx, currentState.contextPath);
       }
     }
 
     return blockResult;
   }
 
-  function executeStatement(parsed, env, options = {}){
-    if (!parsed) return makeStatementResult("noop", null);
-    if (!isStatementNode(parsed)){
+  function executeStatement(statementNode, state){
+    const execState = withModeAppliedState(state);
+    if (!statementNode) return { nextState: execState, record: makeStatementResult("noop", null) };
+    if (!isStatementNode(statementNode)){
       throw new Error("executeStatement expects an AST statement node.");
     }
-    const expressionTrace = options.traceExpressions ? [] : null;
+    const expressionTrace = execState.traceExpressions ? [] : null;
+    const env = execState.env;
 
-    if (parsed.kind === STATEMENT_TYPE.CMD){
-      if (!options.allowCommands){
-        throw new Error(options.commandErrorMessage || "Commands are not supported in this context.");
+    const provenanceEntry = {
+      kind: statementNode.kind,
+      contextPath: execState.contextPath.slice(),
+      statement: statementNode.stmt || "",
+    };
+
+    const finalize = (record) => {
+      const nextState = {
+        ...execState,
+        trace: [...(execState.trace || []), record],
+      };
+      if (execState.mode === "trace"){
+        nextState.provenance = [...(execState.provenance || []), provenanceEntry];
+        record.provenance = provenanceEntry;
+      }
+      if (execState.mode === "plan"){
+        const candidate = createExecutionState({
+          ...nextState,
+          env: cloneEnv(nextState.env),
+          mode: "plan",
+          score: typeof nextState.score === "number" ? nextState.score : undefined,
+        });
+        record.candidates = [candidate];
+      }
+      return { nextState, record };
+    };
+
+    if (statementNode.kind === STATEMENT_TYPE.CMD){
+      if (!execState.allowCommands){
+        throw new Error(execState.commandErrorMessage || "Commands are not supported in this context.");
       }
       const value = typeof cmdRunner === "function"
-        ? cmdRunner(parsed.cmd, parsed.arg)
+        ? cmdRunner(statementNode.cmd, statementNode.arg)
         : null;
-      return makeStatementResult("cmd", value, {
+      return finalize(makeStatementResult("cmd", value, {
         meta: {
-          command: parsed.cmd,
-          arg: parsed.arg,
+          command: statementNode.cmd,
+          arg: statementNode.arg,
         },
-      });
+      }));
     }
 
-    if (parsed.kind === STATEMENT_TYPE.DEF){
+    if (statementNode.kind === STATEMENT_TYPE.DEF){
       if (typeof defineUserFn === "function"){
-        defineUserFn(parsed.name, parsed.params, parsed.expr);
+        defineUserFn(statementNode.name, statementNode.params, statementNode.expr);
       }
-      return makeStatementResult("def", null, {
-        changedSymbols: [parsed.name],
-      });
+      return finalize(makeStatementResult("def", null, {
+        changedSymbols: [statementNode.name],
+      }));
     }
 
-    if (parsed.kind === STATEMENT_TYPE.ASSY){
-      const assembly = createAssembly(parsed.name, parsed.fields, env, options);
-      env[parsed.name] = assembly;
-      return makeStatementResult("assy", assembly, {
-        changedSymbols: [parsed.name],
-      });
+    if (statementNode.kind === STATEMENT_TYPE.ASSY){
+      const assembly = createAssembly(statementNode.name, statementNode.fields, env, execState);
+      env[statementNode.name] = assembly;
+      return finalize(makeStatementResult("assy", assembly, {
+        changedSymbols: [statementNode.name],
+      }));
     }
 
-    if (parsed.kind === STATEMENT_TYPE.ASSIGN){
-      const value = runExpression(parsed.exprIr || parsed.expr, env, options, expressionTrace);
-      env[parsed.name] = value;
-      return makeStatementResult("assign", value, {
+    if (statementNode.kind === STATEMENT_TYPE.ASSIGN){
+      const value = runExpression(statementNode.exprIr || statementNode.expr, execState, expressionTrace);
+      env[statementNode.name] = value;
+      return finalize(makeStatementResult("assign", value, {
         meta: {
-          assignedName: parsed.name,
+          assignedName: statementNode.name,
           expressionTrace: expressionTrace || [],
         },
-        changedSymbols: [parsed.name],
-      });
+        changedSymbols: [statementNode.name],
+      }));
     }
 
-    if (parsed.kind === STATEMENT_TYPE.EQUATION){
-      const solved = solveEquation(parsed.left, parsed.right);
+    if (statementNode.kind === STATEMENT_TYPE.EQUATION){
+      const solved = solveEquation(statementNode.left, statementNode.right);
       if (solved.unknown.unitToken){
-        return makeStatementResult(
+        return finalize(makeStatementResult(
           "equation",
           makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind),
           {
@@ -230,59 +296,58 @@ export function createReplExecutor({
               expressionTrace: expressionTrace || [],
             },
           }
-        );
+        ));
       }
       env[solved.unknown.name] = solved.value;
-      return makeStatementResult("equation", solved.value, {
+      return finalize(makeStatementResult("equation", solved.value, {
         meta: {
           unknownName: solved.unknown.name,
           usedUnitToken: false,
           expressionTrace: expressionTrace || [],
         },
         changedSymbols: [solved.unknown.name],
-      });
+      }));
     }
 
-    if (parsed.kind === STATEMENT_TYPE.IF){
-      const cond = runExpression(parsed.condition, env, options, expressionTrace);
+    if (statementNode.kind === STATEMENT_TYPE.IF){
+      const cond = runExpression(statementNode.condition, execState, expressionTrace);
 
-      let branchResult = { lastValue: null, results: [] };
+      let branchResult = { lastValue: null, results: [], nextState: execState };
       let branchTaken = "none";
       if (isTruthy(cond)){
         branchTaken = "then";
-        branchResult = executeSource(parsed.thenBody, env, extendContext(options, "if:then"));
-      }else if (parsed.elseBody){
+        branchResult = executeSource(statementNode.thenBody, stateWithContext(execState, "if:then"));
+      }else if (statementNode.elseBody){
         branchTaken = "else";
-        branchResult = executeSource(parsed.elseBody, env, extendContext(options, "if:else"));
+        branchResult = executeSource(statementNode.elseBody, stateWithContext(execState, "if:else"));
       }
 
-      return makeStatementResult("if", branchResult.lastValue, {
+      return finalize(makeStatementResult("if", branchResult.lastValue, {
         meta: {
           branchTaken,
           expressionTrace: expressionTrace || [],
         },
         results: branchResult.results,
         changedSymbols: mergeChangedSymbols(branchResult.results),
-      });
+      }));
     }
 
-    if (parsed.kind === STATEMENT_TYPE.FOR){
-      const { start, end, step, loopKind } = resolveForRange(parsed, env, options);
+    if (statementNode.kind === STATEMENT_TYPE.FOR){
+      const { start, end, step, loopKind } = resolveForRange(statementNode, execState);
       const forward = step > 0;
       let iter = 0;
       const nestedResults = [];
 
-      return withScopedVar(env, parsed.varName, () => {
+      const record = withScopedVar(env, statementNode.varName, () => {
         for (let i = start; forward ? i <= end : i >= end; i += step){
           iter += 1;
           if (iter > maxLoopIterations){
             throw new Error(`for loop exceeded ${maxLoopIterations} iterations`);
           }
-          env[parsed.varName] = loopKind ? makeQty(i, loopKind) : i;
+          env[statementNode.varName] = loopKind ? makeQty(i, loopKind) : i;
           const iterResult = executeSource(
-            parsed.body,
-            env,
-            extendContext(options, `for:${parsed.varName}`, `iter:${iter}`)
+            statementNode.body,
+            stateWithContext(execState, `for:${statementNode.varName}`, `iter:${iter}`)
           );
           nestedResults.push(iterResult);
         }
@@ -307,10 +372,12 @@ export function createReplExecutor({
           changedSymbols: mergeChangedSymbols(flattened),
         });
       });
+
+      return finalize(record);
     }
 
-    if (parsed.kind === STATEMENT_TYPE.REPEAT){
-      const countVal = runExpression(parsed.countExpr, env, options, expressionTrace);
+    if (statementNode.kind === STATEMENT_TYPE.REPEAT){
+      const countVal = runExpression(statementNode.countExpr, execState, expressionTrace);
       const count = normalizeCompare(countVal, 0)[0];
       if (!Number.isFinite(count) || count < 0) throw new Error("repeat count must be >= 0");
       const n = Math.floor(count);
@@ -320,9 +387,8 @@ export function createReplExecutor({
       const nestedResults = [];
       for (let i = 0; i < n; i++){
         const iterResult = executeSource(
-          parsed.body,
-          env,
-          extendContext(options, "repeat", `iter:${i + 1}`)
+          statementNode.body,
+          stateWithContext(execState, "repeat", `iter:${i + 1}`)
         );
         nestedResults.push(iterResult);
       }
@@ -332,7 +398,7 @@ export function createReplExecutor({
         ? nestedResults[nestedResults.length - 1].lastValue
         : null;
 
-      return makeStatementResult("repeat", lastValue, {
+      return finalize(makeStatementResult("repeat", lastValue, {
         meta: {
           repeatCount: n,
           expressionTrace: expressionTrace || [],
@@ -346,19 +412,19 @@ export function createReplExecutor({
         nestedResults,
         results: flattened,
         changedSymbols: mergeChangedSymbols(flattened),
-      });
+      }));
     }
 
-    if (parsed.kind === STATEMENT_TYPE.EXPR){
-      const value = runExpression(parsed.exprIr || parsed.expr, env, options, expressionTrace);
-      return makeStatementResult("expr", value, {
+    if (statementNode.kind === STATEMENT_TYPE.EXPR){
+      const value = runExpression(statementNode.exprIr || statementNode.expr, execState, expressionTrace);
+      return finalize(makeStatementResult("expr", value, {
         meta: {
           expressionTrace: expressionTrace || [],
         },
-      });
+      }));
     }
 
-    return makeStatementResult(parsed.kind || "unknown", null);
+    return finalize(makeStatementResult(statementNode.kind || "unknown", null));
   }
 
   return {
