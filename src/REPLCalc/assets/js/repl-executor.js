@@ -1,4 +1,5 @@
 import { STATEMENT_TYPE, isBlockNode, isStatementNode } from "./repl-ast.js";
+import { createTransition } from "./repl-transitions.js";
 import {
   cloneEnv,
   createExecutionState,
@@ -243,11 +244,14 @@ export function createReplExecutor({
   }
 
   function executeStatement(statementNode, state){
-    const execState = withModeAppliedState(state);
-    if (!statementNode){
+    const transitions = expandStatement(statementNode, state);
+    const transition = selectTransitionForMode(transitions, state?.mode);
+    if (!transition){
+      const execState = withModeAppliedState(state);
       return {
         nextState: execState,
         record: makeExecutionRecord({
+          statementNode,
           type: "noop",
           mode: execState.mode,
           before: snapshotStateRef(execState),
@@ -255,12 +259,44 @@ export function createReplExecutor({
         }),
       };
     }
-    if (!isStatementNode(statementNode)){
-      throw new Error("executeStatement expects an AST statement node.");
+    return {
+      nextState: transition.toState || withModeAppliedState(state),
+      record: transition.record || null,
+      transition,
+    };
+  }
+
+  function selectTransitionForMode(transitions, mode = "commit"){
+    if (!Array.isArray(transitions) || transitions.length === 0) return null;
+    if (mode === "commit"){
+      return transitions[0];
     }
-    const expressionTrace = execState.traceExpressions ? [] : null;
-    const env = execState.env;
+    return transitions[0];
+  }
+
+  function expandStatement(statementNode, traversalState){
+    const execState = withModeAppliedState(traversalState);
     const beforeStateRef = snapshotStateRef(execState);
+    const env = execState.env;
+    const expressionTrace = execState.traceExpressions ? [] : null;
+
+    if (!statementNode){
+      const record = makeExecutionRecord({
+        type: "noop",
+        mode: execState.mode,
+        before: beforeStateRef,
+        after: snapshotStateRef(execState),
+      });
+      return [createTransition({
+        transitionType: "noop",
+        fromState: beforeStateRef,
+        toState: execState,
+        record,
+      })];
+    }
+    if (!isStatementNode(statementNode)){
+      throw new Error("expandStatement expects an AST statement node.");
+    }
 
     const provenanceEntry = {
       kind: statementNode.kind,
@@ -269,7 +305,7 @@ export function createReplExecutor({
       statement: statementNode.stmt || "",
     };
 
-    const finalize = (recordInput) => {
+    const finalizeTransition = (recordInput, transitionInput = {}) => {
       const record = makeExecutionRecord({
         statementNode,
         mode: execState.mode,
@@ -294,7 +330,13 @@ export function createReplExecutor({
         });
         record.candidates = [candidate];
       }
-      return { nextState, record };
+      return [createTransition({
+        transitionType: record.type || statementNode.kind || "unknown",
+        fromState: beforeStateRef,
+        toState: nextState,
+        record,
+        ...transitionInput,
+      })];
     };
 
     if (statementNode.kind === STATEMENT_TYPE.CMD){
@@ -304,7 +346,7 @@ export function createReplExecutor({
       const value = typeof cmdRunner === "function"
         ? cmdRunner(statementNode.cmd, statementNode.arg)
         : null;
-      return finalize({
+      return finalizeTransition({
         type: "cmd",
         value,
         meta: {
@@ -318,7 +360,7 @@ export function createReplExecutor({
       if (typeof defineUserFn === "function"){
         defineUserFn(statementNode.name, statementNode.params, statementNode.expr);
       }
-      return finalize({
+      return finalizeTransition({
         type: "def",
         value: null,
         changedSymbols: [statementNode.name],
@@ -329,7 +371,7 @@ export function createReplExecutor({
     if (statementNode.kind === STATEMENT_TYPE.ASSY){
       const assembly = createAssembly(statementNode.name, statementNode.fields, env, execState);
       env[statementNode.name] = assembly;
-      return finalize({
+      return finalizeTransition({
         type: "assy",
         value: assembly,
         changedSymbols: [statementNode.name],
@@ -340,7 +382,7 @@ export function createReplExecutor({
     if (statementNode.kind === STATEMENT_TYPE.ASSIGN){
       const value = runExpression(statementNode.exprIr || statementNode.expr, execState, expressionTrace);
       env[statementNode.name] = value;
-      return finalize({
+      return finalizeTransition({
         type: "assign",
         value,
         meta: {
@@ -355,7 +397,7 @@ export function createReplExecutor({
     if (statementNode.kind === STATEMENT_TYPE.EQUATION){
       const solved = solveEquation(statementNode.left, statementNode.right);
       if (solved.unknown.unitToken){
-        return finalize({
+        return finalizeTransition({
           type: "equation",
           value: makeQty(solved.value * solved.unknown.toBase, solved.unknown.kind),
           meta: {
@@ -366,7 +408,7 @@ export function createReplExecutor({
         });
       }
       env[solved.unknown.name] = solved.value;
-      return finalize({
+      return finalizeTransition({
         type: "equation",
         value: solved.value,
         meta: {
@@ -393,7 +435,7 @@ export function createReplExecutor({
       }
 
       const branchChildren = Array.isArray(branchResult.results) ? branchResult.results : [];
-      return finalize({
+      return finalizeTransition({
         type: "if",
         value: branchResult.lastValue,
         meta: {
@@ -457,7 +499,7 @@ export function createReplExecutor({
         };
       });
 
-      return finalize(record);
+      return finalizeTransition(record);
     }
 
     if (statementNode.kind === STATEMENT_TYPE.REPEAT){
@@ -495,7 +537,7 @@ export function createReplExecutor({
         ? iterationRecords[iterationRecords.length - 1].value
         : null;
 
-      return finalize({
+      return finalizeTransition({
         type: "repeat",
         value: lastValue,
         meta: {
@@ -509,7 +551,7 @@ export function createReplExecutor({
 
     if (statementNode.kind === STATEMENT_TYPE.EXPR){
       const value = runExpression(statementNode.exprIr || statementNode.expr, execState, expressionTrace);
-      return finalize({
+      return finalizeTransition({
         type: "expr",
         value,
         meta: {
@@ -518,7 +560,7 @@ export function createReplExecutor({
       });
     }
 
-    return finalize({
+    return finalizeTransition({
       type: statementNode.kind || "unknown",
       value: null,
     });
@@ -527,6 +569,7 @@ export function createReplExecutor({
   return {
     executeSource,
     executeStatement,
+    expandStatement,
     withScopedVar,
     normalizeOptions,
     mergeChangedSymbols,
