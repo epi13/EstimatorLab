@@ -66,7 +66,7 @@ export function attachRateBuiltins(baseFns, {
       })();
       if (entries){
         for (const entry of entries){
-          factors[entry.key] = ctx.evalString(entry.expr, factors);
+          factors[entry.key] = ctx.evalExpr(entry.expr, factors);
         }
       }
     }
@@ -134,7 +134,7 @@ export function attachRateBuiltins(baseFns, {
       })();
       if (entries){
         for (const entry of entries){
-          factors[entry.key] = ctx.evalString(entry.expr, factors);
+          factors[entry.key] = ctx.evalExpr(entry.expr, factors);
         }
       }
     }
@@ -239,7 +239,7 @@ export function attachRateBuiltins(baseFns, {
     ],
     returns: { kinds: ["assy"] },
   }, (ctx, duration, dt, expr) => {
-    if (!ctx || typeof ctx.evalString !== "function") throw new Error("tsim requires evalString support");
+    if (!ctx || typeof ctx.evalExpr !== "function") throw new Error("tsim requires evalExpr support");
     if (typeof expr !== "string") throw new Error("tsim expects expression string");
 
     const durS = asTimeScalar(duration, "tsim duration");
@@ -251,7 +251,7 @@ export function attachRateBuiltins(baseFns, {
     let acc = null;
     let last = 0;
     for (let i = 0; i < steps; i++){
-      const v = ctx.evalString(expr, {
+      const v = ctx.evalExpr(expr, {
         t: makeQty(t, "time"),
         dt: makeQty(dtS, "time"),
         i,

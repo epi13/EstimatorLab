@@ -37,11 +37,11 @@ export function attachScenarioBuiltins(baseFns, {
   }
 
   function resolveScenario(ctx, scenario){
-    if (!ctx || typeof ctx.evalString !== "function") throw new Error("scenario requires evalString support");
+    if (!ctx || typeof ctx.evalExpr !== "function") throw new Error("scenario requires evalExpr support");
     const sc = requireScenario(scenario, "scenario");
     const resolved = Object.create(null);
     for (const entry of sc.entries || []){
-      resolved[entry.key] = ctx.evalString(entry.expr, resolved);
+      resolved[entry.key] = ctx.evalExpr(entry.expr, resolved);
     }
     return resolved;
   }
@@ -62,7 +62,7 @@ export function attachScenarioBuiltins(baseFns, {
     const sc = requireScenario(scenario, "sc_eval");
     if (typeof expr !== "string") throw new Error("sc_eval expects expression string");
     const resolved = resolveScenario(ctx, sc);
-    return ctx.evalString(expr, resolved);
+    return ctx.evalExpr(expr, resolved);
   });
 
   baseFns.sc_resolve = defFnCtx("sc_resolve", 1, {
@@ -124,8 +124,8 @@ export function attachScenarioBuiltins(baseFns, {
     const ra = resolveScenario(ctx, sa);
     const rb = resolveScenario(ctx, sb);
 
-    const va = ctx.evalString(expr, ra);
-    const vb = ctx.evalString(expr, rb);
+    const va = ctx.evalExpr(expr, ra);
+    const vb = ctx.evalExpr(expr, rb);
 
     const delta = sub(vb, va);
     let pct = null;

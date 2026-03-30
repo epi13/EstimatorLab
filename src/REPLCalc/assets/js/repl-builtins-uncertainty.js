@@ -389,10 +389,10 @@ export function attachUncertaintyBuiltins(baseFns, {
       return summarizeSamples(samples);
     }
     if (typeof exprOrRange === "string"){
-      if (!ctx || typeof ctx.evalString !== "function") throw new Error("mc(expr) requires evalString support");
+      if (!ctx || typeof ctx.evalExpr !== "function") throw new Error("mc(expr) requires evalExpr support");
       const samples = [];
       for (let i = 0; i < count; i++){
-        const v = ctx.evalString(exprOrRange);
+        const v = ctx.evalExpr(exprOrRange);
         samples.push(v);
       }
       return summarizeSamples(samples);

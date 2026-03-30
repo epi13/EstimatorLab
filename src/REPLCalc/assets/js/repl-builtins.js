@@ -667,7 +667,7 @@ export function createBaseFns(){
     args: [],
     returns: { kinds: ["assy"] },
   }, (ctx, ...args) => {
-    if (!ctx || typeof ctx.evalString !== "function") throw new Error("scan_while requires evalString support");
+    if (!ctx || typeof ctx.evalExpr !== "function") throw new Error("scan_while requires evalExpr support");
     if (args.length !== 3 && args.length !== 5) throw new Error("scan_while expects (s, i, pred) or (s, i, pred, acc0, accExpr)");
     const [s, i, pred] = args;
     const acc0 = args.length === 5 ? args[3] : undefined;
@@ -683,10 +683,10 @@ export function createBaseFns(){
       const ch = s[j];
       const cls = charClass(code);
       const locals = args.length === 5 ? { s, i: j, code, ch, cls, acc } : { s, i: j, code, ch, cls };
-      const ok = ctx.evalString(pred, locals);
+      const ok = ctx.evalExpr(pred, locals);
       if (!isTruthy(ok)) break;
       if (args.length === 5){
-        acc = ctx.evalString(accExpr, locals);
+        acc = ctx.evalExpr(accExpr, locals);
       }
       j += 1;
     }
@@ -921,7 +921,7 @@ export function createBaseFns(){
       })();
       if (entries){
         for (const entry of entries){
-          meta[entry.key] = ctx.evalString(entry.expr, meta);
+          meta[entry.key] = ctx.evalExpr(entry.expr, meta);
         }
       }
     }
@@ -1031,13 +1031,13 @@ export function createBaseFns(){
     ],
     returns: { kinds: ["assy"] },
   }, (ctx, expr, varName) => {
-    if (!ctx || typeof ctx.evalString !== "function") throw new Error("lin_coeff requires evalString support");
+    if (!ctx || typeof ctx.evalExpr !== "function") throw new Error("lin_coeff requires evalExpr support");
     if (typeof expr !== "string") throw new Error("lin_coeff expects expression string");
     if (typeof varName !== "string") throw new Error("lin_coeff expects variable name string");
     const v = varName.trim();
     if (!v) throw new Error("lin_coeff expects non-empty variable name");
-    const f0 = ctx.evalString(expr, { [v]: 0 });
-    const f1 = ctx.evalString(expr, { [v]: 1 });
+    const f0 = ctx.evalExpr(expr, { [v]: 0 });
+    const f1 = ctx.evalExpr(expr, { [v]: 1 });
     const a = sub(f1, f0);
     const b = f0;
     return buildAssy("lin", {
@@ -1055,15 +1055,15 @@ export function createBaseFns(){
     ],
     returns: { kinds: ["scalar", "dim"] },
   }, (ctx, leftExpr, rightExpr, varName) => {
-    if (!ctx || typeof ctx.evalString !== "function") throw new Error("solve_linear requires evalString support");
+    if (!ctx || typeof ctx.evalExpr !== "function") throw new Error("solve_linear requires evalExpr support");
     if (typeof leftExpr !== "string" || typeof rightExpr !== "string") throw new Error("solve_linear expects expression strings");
     if (typeof varName !== "string") throw new Error("solve_linear expects variable name string");
     const v = varName.trim();
     if (!v) throw new Error("solve_linear expects non-empty variable name");
 
     const diffExpr = `(${leftExpr}) - (${rightExpr})`;
-    const f0 = ctx.evalString(diffExpr, { [v]: 0 });
-    const f1 = ctx.evalString(diffExpr, { [v]: 1 });
+    const f0 = ctx.evalExpr(diffExpr, { [v]: 0 });
+    const f1 = ctx.evalExpr(diffExpr, { [v]: 1 });
     const a = sub(f1, f0);
     const b = f0;
     const av = normalizeCompare(a, 0)[0];
@@ -1102,7 +1102,7 @@ export function createBaseFns(){
   }
 
   function gridSearch(ctx, mode, name, lo, hi, step, expr){
-    if (!ctx || typeof ctx.evalString !== "function") throw new Error(`${mode} requires evalString support`);
+    if (!ctx || typeof ctx.evalExpr !== "function") throw new Error(`${mode} requires evalExpr support`);
     if (typeof name !== "string") throw new Error(`${mode} expects var name as string`);
     if (typeof expr !== "string") throw new Error(`${mode} expects expression string`);
     const v = name.trim();
@@ -1130,7 +1130,7 @@ export function createBaseFns(){
       it += 1;
       if (it > maxIter) throw new Error(`${mode} exceeded max iterations`);
       const x = isQty(loV) ? makeQty(t, loV.kind) : t;
-      const y = ctx.evalString(expr, { [v]: x });
+      const y = ctx.evalExpr(expr, { [v]: x });
       const yNum = normalizeCompare(y, 0)[0];
       if (!Number.isFinite(yNum)) continue;
       if (bestY === null){

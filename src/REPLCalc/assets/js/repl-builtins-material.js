@@ -24,7 +24,7 @@ export function attachMaterialBuiltins(baseFns, {
     })();
     const props = Object.create(null);
     for (const entry of entries){
-      props[entry.key] = ctx.evalString(entry.expr, props);
+      props[entry.key] = ctx.evalExpr(entry.expr, props);
     }
     return { __material: true, name: matName, props };
   });
