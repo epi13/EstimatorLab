@@ -1,4 +1,5 @@
 import { STATEMENT_TYPE } from "./repl-statement-schema.js";
+import { isBlockNode } from "./repl-ast.js";
 
 export function createTests({
   state,
@@ -23,13 +24,16 @@ export function createTests({
   }
 
   function applyModuleSource(source, label){
-    const ast = frontend.parseSource(source);
-    for (const stmt of ast.statements || []){
+    const programBlock = frontend.parseSource(source);
+    if (!isBlockNode(programBlock)){
+      throw new Error(`${label}: expected parser to return an AST block node.`);
+    }
+    for (const stmt of programBlock.statements || []){
       if (stmt.type === STATEMENT_TYPE.IF || stmt.type === STATEMENT_TYPE.FOR || stmt.type === STATEMENT_TYPE.REPEAT){
         throw new Error(`${label} may not contain flow statements`);
       }
     }
-    executeProgram(ast, state.vars, "commit", {
+    executeProgram(programBlock, state.vars, "commit", {
       allowCommands: false,
       wrapErrors: false,
       captureResults: false,
@@ -150,10 +154,13 @@ export function createTests({
   }
 
   function evaluateTestStatements(source){
-    const ast = frontend.parseSource(source);
-    const cmdStmt = (ast.statements || []).find((stmt) => stmt.type === STATEMENT_TYPE.CMD);
+    const programBlock = frontend.parseSource(source);
+    if (!isBlockNode(programBlock)){
+      throw new Error("Tests: expected parser to return an AST block node.");
+    }
+    const cmdStmt = (programBlock.statements || []).find((stmt) => stmt.type === STATEMENT_TYPE.CMD);
     if (cmdStmt) throw new Error(`Test cannot use command :${cmdStmt.cmd}`);
-    return executeProgram(ast, state.vars, "commit", {
+    return executeProgram(programBlock, state.vars, "commit", {
       allowCommands: false,
       wrapErrors: false,
       captureResults: true,
