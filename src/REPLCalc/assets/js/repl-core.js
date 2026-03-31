@@ -41,6 +41,11 @@ export function initRepl(){
       traversal: { nodeBudget: 96, expansionBudget: 96, frontierBudget: 128 },
       gfx: { internalScaleMin: 0.5, internalScaleMax: 1, qualityTier: "performance" },
     }),
+    performance: Object.freeze({
+      cpuMsPerFrame: 10,
+      traversal: { nodeBudget: 96, expansionBudget: 96, frontierBudget: 128 },
+      gfx: { internalScaleMin: 0.5, internalScaleMax: 1, qualityTier: "performance" },
+    }),
     balanced: Object.freeze({
       cpuMsPerFrame: 12,
       traversal: { nodeBudget: 192, expansionBudget: 192, frontierBudget: 224 },
