@@ -5,8 +5,8 @@
 # - map_width(map)
 # - map_height(map)
 
-# Coordinate validation
-so in_bounds(map, x, y) = x >= 0 && y >= 0 && x < map_width(map) && y < map_height(map)
+# Coordinate validation is provided by the runtime:
+# - in_bounds(map, x, y)
 
 # Safe tile access with bounds checking
 so safe_get(map, x, y) = if(in_bounds(map, x, y), mget(map, x, y), 0)
