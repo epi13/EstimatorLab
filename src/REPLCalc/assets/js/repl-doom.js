@@ -14,7 +14,7 @@ async function fetchText(url){
 }
 
 async function ensureDoomModulesLoaded({ state, executeProgram, writeLine }){
-  const DOOM_MODULES_VERSION = 4;
+  const DOOM_MODULES_VERSION = 5;
   if (state.__doomModulesLoaded && state.__doomModulesVersion === DOOM_MODULES_VERSION){
     state.__doomModulesLoaded = true;
     return;
@@ -46,9 +46,6 @@ async function ensureDoomModulesLoaded({ state, executeProgram, writeLine }){
   const geometrySource = await fetchText("assets/est/geometry/geometry-helpers.est");
   applyModuleSource(geometrySource, "geometry helpers");
 
-  const traversalSource = await fetchText("assets/est/traversal/map-traversal.est");
-  applyModuleSource(traversalSource, "map traversal");
-
   const playerSource = await fetchText("assets/est/systems/player-system.est");
   applyModuleSource(playerSource, "player system");
 
@@ -75,7 +72,9 @@ async function ensureDoomModulesLoaded({ state, executeProgram, writeLine }){
 
   state.__doomModulesVersion = DOOM_MODULES_VERSION;
   state.__doomModulesLoaded = true;
-  if (typeof writeLine === "function") writeLine("Loaded Doom modules: math, geometry, traversal, systems, textures", "ok");
+  if (typeof writeLine === "function"){
+    writeLine("Loaded Doom modules: math, geometry, systems, textures (using runtime traversal built-ins)", "ok");
+  }
 }
 
 async function loadDoomDemoScript(){

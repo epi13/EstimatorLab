@@ -244,7 +244,7 @@ if doom_metrics_dirty == 1:
   doom_flooring = construction.flooring
   doom_base = construction.base
 
-  mep = calculate_mep_metrics(analysis, tile, mw(doom_map))
+  mep = calculate_mep_metrics(analysis, tile, map_width(doom_map))
   doom_light_fix = mep.light_fix
   doom_lt_2x4 = mep.lt_2x4
   doom_lt_2x2 = mep.lt_2x2
@@ -262,8 +262,8 @@ if doom_metrics_dirty == 1:
   doom_treads = mep.treads
   doom_risers = mep.risers
 
-  mw0 = mw(doom_map)
-  mh0 = mh(doom_map)
+  mw0 = map_width(doom_map)
+  mh0 = map_height(doom_map)
   doom_rect_area = area_rect(mw0 * tile, mh0 * tile)
   doom_rect_perim = perim_rect(mw0 * tile, mh0 * tile)
   doom_shell_poly = poly(pt(0 ft, 0 ft), pt(mw0 * tile, 0 ft), pt(mw0 * tile, mh0 * tile), pt(0 ft, mh0 * tile))
