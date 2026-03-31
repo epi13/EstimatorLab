@@ -21,9 +21,9 @@ so render_3d_view(map, px, py, yaw, w, h) = {
   fill(0, 0, w, cam.mid, "muted");
   fill(0, cam.mid, w, h - cam.mid, "text");
   raycast_tex(map, px, py, yaw, cam.fov, h, cam.max_d, cam.ray_step, cam.ray_steps, cam.ray_col_step, { 
-    floor_step: cam.floor_step; 
-    ceil_step: cam.ceil_step; 
-    tex_res: cam.tex_res 
+    floor_step: cam.floor_step,
+    ceil_step: cam.ceil_step,
+    tex_res: cam.tex_res
   });
   cxh = floor(w / 2);
   cyh = floor(h / 2);
