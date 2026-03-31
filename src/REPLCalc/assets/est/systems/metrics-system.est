@@ -24,7 +24,9 @@ so analyze_map_tiles(map) = {
   wall_edges = 0;
   wall_line_tiles = 0;
   wall_positions = find_if(map, def(tile) = tile_wallish(tile) == 1);
-  for pos in wall_positions:
+  wall_positions_n = len(wall_positions);
+  for i in 0..(wall_positions_n - 1):
+    pos = wall_positions[i];
     x = field(pos, "x");
     y = field(pos, "y");
     edge_n = if(tile_wallish(safe_get(map, x, y - 1)) == 0, 1, 0);

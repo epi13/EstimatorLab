@@ -86,7 +86,9 @@ so flood_fill(map, start_x, start_y, predicate) = {
       result = result + [pos];
       
       neighbors = get_neighbors(map, pos.x, pos.y);
-      for n in neighbors:
+      neighbors_n = len(neighbors);
+      for i in 0..(neighbors_n - 1):
+        n = neighbors[i];
         queue = queue + [{x: n.x, y: n.y}];
     else:
       0
