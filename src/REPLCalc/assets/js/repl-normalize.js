@@ -2,6 +2,7 @@ import { IR_KIND, toCanonicalIRNode } from "./repl-expression-ir.js";
 
 const COMMUTATIVE_ASSOCIATIVE_OPS = new Set(["+", "*"]);
 const COMMUTATIVE_ONLY_OPS = new Set(["==", "!="]);
+const NULL_ALIAS_MAP = Object.freeze({ __nullAliasMap: true });
 
 function isPlainObject(value){
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -53,6 +54,21 @@ function stableSerialize(value, context = null){
 }
 
 export function createReplNormalize(){
+  const normalizedRootCacheByAlias = new WeakMap();
+
+  function getAliasCacheKey(aliasMap){
+    return aliasMap && typeof aliasMap === "object" ? aliasMap : NULL_ALIAS_MAP;
+  }
+
+  function getRootCache(aliasMap){
+    const key = getAliasCacheKey(aliasMap);
+    let cache = normalizedRootCacheByAlias.get(key);
+    if (!cache){
+      cache = new WeakMap();
+      normalizedRootCacheByAlias.set(key, cache);
+    }
+    return cache;
+  }
 
   function normalizeIdentifier(name, aliasMap = null){
     let next = String(name || "").trim();
@@ -76,54 +92,62 @@ export function createReplNormalize(){
   }
 
   function normalizeExpressionIR(ir, aliasMap = null){
+    const rootCache = getRootCache(aliasMap);
+    if (ir && typeof ir === "object" && rootCache.has(ir)) return rootCache.get(ir);
+
     const root = toCanonicalIRNode(ir);
     if (!root) return null;
+
+    const nodeCache = new WeakMap();
+    const keyCache = new WeakMap();
+
+    function canonicalKeyForNode(node){
+      if (!node || typeof node !== "object") return stableSerialize(node);
+      if (keyCache.has(node)) return keyCache.get(node);
+      const key = stableSerialize(node);
+      keyCache.set(node, key);
+      return key;
+    }
 
     function normalizeNode(node){
       const canonical = toCanonicalIRNode(node);
       if (!canonical) return null;
+      if (nodeCache.has(node)) return nodeCache.get(node);
 
+      let normalized;
       if (canonical.kind === IR_KIND.LITERAL){
-        return {
+        normalized = {
           ...canonical,
           valueType: canonical.valueType,
           value: canonical.value,
           children: [],
         };
-      }
-
-      if (canonical.kind === IR_KIND.IDENTIFIER){
-        return {
+      }else if (canonical.kind === IR_KIND.IDENTIFIER){
+        normalized = {
           ...canonical,
           name: normalizeIdentifier(canonical.name, aliasMap),
           children: [],
         };
-      }
-
-      if (canonical.kind === IR_KIND.CALL){
+      }else if (canonical.kind === IR_KIND.CALL){
         const args = Array.isArray(canonical.args) ? canonical.args.map((arg) => normalizeNode(arg)) : [];
-        return {
+        normalized = {
           ...canonical,
           name: normalizeIdentifier(canonical.name, aliasMap),
           args,
           children: args,
         };
-      }
-
-      if (canonical.kind === IR_KIND.CONDITIONAL){
+      }else if (canonical.kind === IR_KIND.CONDITIONAL){
         const cond = normalizeNode(canonical.cond);
         const thenBranch = normalizeNode(canonical.then);
         const elseBranch = normalizeNode(canonical.else);
-        return {
+        normalized = {
           ...canonical,
           cond,
           then: thenBranch,
           else: elseBranch,
           children: [cond, thenBranch, elseBranch].filter(Boolean),
         };
-      }
-
-      if (canonical.kind === IR_KIND.BINARY){
+      }else if (canonical.kind === IR_KIND.BINARY){
         const left = normalizeNode(canonical.left);
         const right = normalizeNode(canonical.right);
         const op = canonical.op;
@@ -140,11 +164,9 @@ export function createReplNormalize(){
           };
           collect(left);
           collect(right);
+
           const keyed = flattened
-            .map((node) => ({
-              node,
-              key: canonicalExpressionKey(node, aliasMap),
-            }))
+            .map((entry) => ({ node: entry, key: canonicalKeyForNode(entry) }))
             .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
 
           let next = keyed[0]?.node || null;
@@ -156,37 +178,40 @@ export function createReplNormalize(){
               children: [next, keyed[i].node],
             };
           }
-          return next;
-        }
-
-        if (COMMUTATIVE_ONLY_OPS.has(op)){
-          const leftKey = canonicalExpressionKey(left, aliasMap);
-          const rightKey = canonicalExpressionKey(right, aliasMap);
+          normalized = next;
+        }else if (COMMUTATIVE_ONLY_OPS.has(op)){
+          const leftKey = canonicalKeyForNode(left);
+          const rightKey = canonicalKeyForNode(right);
           const [orderedLeft, orderedRight] = leftKey < rightKey ? [left, right] : leftKey > rightKey ? [right, left] : [left, right];
-          return {
+          normalized = {
             ...canonical,
             left: orderedLeft,
             right: orderedRight,
             children: [orderedLeft, orderedRight],
           };
+        }else{
+          normalized = {
+            ...canonical,
+            left,
+            right,
+            children: [left, right].filter(Boolean),
+          };
         }
-
-        return {
+      }else{
+        const children = (canonical.children || []).map((child) => normalizeNode(child));
+        normalized = {
           ...canonical,
-          left,
-          right,
-          children: [left, right].filter(Boolean),
+          children,
         };
       }
 
-      const children = (canonical.children || []).map((child) => normalizeNode(child));
-      return {
-        ...canonical,
-        children,
-      };
+      nodeCache.set(node, normalized);
+      return normalized;
     }
 
-    return normalizeNode(root);
+    const normalizedRoot = normalizeNode(root);
+    if (ir && typeof ir === "object") rootCache.set(ir, normalizedRoot);
+    return normalizedRoot;
   }
 
   function normalizeStatementNode(statement, aliasMap = null){
