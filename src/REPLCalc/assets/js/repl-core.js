@@ -56,6 +56,26 @@ export function initRepl(){
     forcedSymbols: new Map(),
     currentUsage: null,
     loadingProfileSymbol: false,
+    traversalConfig: {
+      output: {
+        mode: "summary",
+      },
+      maxTraceNodes: 256,
+      maxTraceEdges: 512,
+      maxDiagnostics: 256,
+      streamBufferSize: 64,
+      bestKFrontier: 8,
+    },
+    traversalDebugConfig: {
+      output: {
+        mode: "full",
+      },
+      maxTraceNodes: 4096,
+      maxTraceEdges: 8192,
+      maxDiagnostics: 2048,
+      streamBufferSize: 256,
+      bestKFrontier: 32,
+    },
   };
   state.resolver = state.symbolTable;
 
@@ -191,6 +211,7 @@ export function initRepl(){
   const traversal = createReplTraversal({
     expandStatement: expander.expandStatement,
     canonicalStateKey: lowering.canonicalKey.state,
+    defaultRunConfig: state.traversalConfig,
   });
   state.traversal = traversal;
 
