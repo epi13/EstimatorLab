@@ -834,7 +834,9 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       ? "quality"
       : rawMode === "performance"
         ? "performance"
-        : "off";
+        : rawMode === "auto"
+          ? "auto"
+          : "off";
     const debug = Number(vars?.doom_dlss_debug || 0) === 1;
     const nBlend = Number(vars?.doom_dlss_blend);
     let blend = Number.isFinite(nBlend) ? nBlend : GFX_TEMPORAL_BLEND_DEFAULT;
@@ -843,6 +845,26 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     }
     blend = Math.max(GFX_TEMPORAL_BLEND_MIN, Math.min(GFX_TEMPORAL_BLEND_MAX, blend));
     return { mode, debug, blend };
+  }
+
+  function isDoomRuntime(vars){
+    return Number(vars?.doom_init || 0) === 1
+      || Number.isFinite(Number(vars?.doom_px))
+      || Number.isFinite(Number(vars?.doom_py))
+      || Number.isFinite(Number(vars?.doom_yaw));
+  }
+
+  function getDoomUpscalingConfig(vars, buffer){
+    const profile = turboQuantState.mode === "auto" ? turboQuantState.effectiveProfile : turboQuantState.profile;
+    const pressure = Number.isFinite(Number(vars?.doom_tq_pressure)) ? (Number(vars.doom_tq_pressure) | 0) : 0;
+    const internalScale = Number.isFinite(buffer?.internalScale?.value) ? Number(buffer.internalScale.value) : 1;
+    const prefersPerformance = pressure > 0 || profile === "eco" || profile === "performance" || internalScale < 0.86;
+    return {
+      mode: prefersPerformance ? "performance" : "quality",
+      blend: prefersPerformance ? 0.16 : 0.22,
+      sharpen: prefersPerformance ? 0.35 : 0.18,
+      filter: prefersPerformance ? "nearest" : "linear",
+    };
   }
 
   function getLightingSignature(vars){
@@ -873,14 +895,17 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     const vars = state.vars || Object.create(null);
     const cfg = getTemporalConfig(vars);
     const temporal = buffer.temporal;
-    temporal.enabled = cfg.mode !== "off";
-    temporal.mode = cfg.mode;
+    const resolvedMode = cfg.mode === "auto"
+      ? getDoomUpscalingConfig(vars, buffer).mode
+      : cfg.mode;
+    temporal.enabled = resolvedMode !== "off";
+    temporal.mode = resolvedMode;
     temporal.debug = cfg.debug;
     temporal.blend = cfg.blend;
-    if (temporal.lastMode && temporal.lastMode !== cfg.mode){
+    if (temporal.lastMode && temporal.lastMode !== resolvedMode){
       resetTemporalHistory(buffer, "mode-switch");
     }
-    temporal.lastMode = cfg.mode;
+    temporal.lastMode = resolvedMode;
 
     const pixelCount = w * h;
     if (!temporal.enabled){
@@ -1763,7 +1788,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     state.vars.doom_tq_effective = turboQuantState.effectiveProfile;
     state.vars.doom_tq_pressure = turboQuantState.pressure;
     if (!state.vars.doom_dlss_lite){
-      state.vars.doom_dlss_lite = "off";
+      state.vars.doom_dlss_lite = isDoomRuntime(state.vars) ? "auto" : "off";
     }
     if (!Number.isFinite(Number(state.vars.doom_dlss_debug))){
       state.vars.doom_dlss_debug = 0;
@@ -1789,6 +1814,16 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     state.vars.mouse_locked = mouseState.locked ? 1 : 0;
     mouseState.dx = 0;
     mouseState.dy = 0;
+    if (isDoomRuntime(state.vars)){
+      const doomUpscale = getDoomUpscalingConfig(state.vars, state.gfx);
+      if (!Number.isFinite(Number(state.vars.doom_dlss_blend))){
+        state.vars.doom_dlss_blend = doomUpscale.blend;
+      }
+      if (state.gfx?.upscale){
+        state.gfx.upscale.filter = doomUpscale.filter;
+        state.gfx.upscale.sharpen = doomUpscale.sharpen;
+      }
+    }
     loopState.stageMs.traversalExpandMs = 0;
     loopState.stageMs.raycastMs = 0;
     loopState.stageMs.temporalBlendMs = 0;
