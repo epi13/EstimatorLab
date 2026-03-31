@@ -2,8 +2,30 @@ function clonePath(path){
   return Array.isArray(path) ? path.slice() : [];
 }
 
+function flattenEnv(env){
+  const source = env && typeof env === "object" ? env : Object.create(null);
+  const flattened = Object.create(null);
+  for (const key in source){
+    flattened[key] = source[key];
+  }
+  return flattened;
+}
+
 export function cloneEnv(env){
-  return Object.assign(Object.create(null), env || Object.create(null));
+  return flattenEnv(env);
+}
+
+export function createEnvOverlay(baseEnv){
+  const parent = baseEnv && typeof baseEnv === "object" ? baseEnv : Object.create(null);
+  return Object.create(parent);
+}
+
+export function materializeExecutionEnv(stateLike){
+  const state = withExecutionState(stateLike);
+  return {
+    ...state,
+    env: cloneEnv(state.env),
+  };
 }
 
 export function isExecutionState(value){

@@ -1,4 +1,4 @@
-import { cloneEnv, withExecutionState } from "./repl-runtime-state.js";
+import { createEnvOverlay, withExecutionState } from "./repl-runtime-state.js";
 import {
   createTraversalNode,
   deriveTraversalCanonicalKey,
@@ -92,6 +92,12 @@ function makeBudget(options = {}){
   const maxDiagnostics = clampPositiveInt(options.maxDiagnostics, 256);
   const streamBufferSize = clampPositiveInt(options.streamBufferSize, 64);
   const bestKFrontier = clampPositiveInt(options.bestKFrontier, 8);
+  const minBudgetScale = Number.isFinite(options.minBudgetScale) ? Math.max(0.2, Math.min(1, options.minBudgetScale)) : 0.35;
+  const pressureTargetFrameMs = Number.isFinite(options.pressureTargetFrameMs) ? Math.max(4, options.pressureTargetFrameMs) : 16.7;
+  const memoryWatermark = Number.isFinite(options.memoryWatermark) ? Math.max(0.1, Math.min(1, options.memoryWatermark)) : 0.85;
+  const queuePressureWeight = Number.isFinite(options.queuePressureWeight) ? Math.max(0, options.queuePressureWeight) : 0.4;
+  const framePressureWeight = Number.isFinite(options.framePressureWeight) ? Math.max(0, options.framePressureWeight) : 0.35;
+  const memoryPressureWeight = Number.isFinite(options.memoryPressureWeight) ? Math.max(0, options.memoryPressureWeight) : 0.25;
   return {
     nodeBudget,
     expansionBudget,
@@ -102,6 +108,49 @@ function makeBudget(options = {}){
     maxDiagnostics,
     streamBufferSize,
     bestKFrontier,
+    minBudgetScale,
+    pressureTargetFrameMs,
+    memoryWatermark,
+    queuePressureWeight,
+    framePressureWeight,
+    memoryPressureWeight,
+  };
+}
+
+function estimateMemoryPressure(memoryWatermark){
+  if (typeof performance === "undefined" || !performance?.memory?.usedJSHeapSize || !performance?.memory?.jsHeapSizeLimit){
+    return 0;
+  }
+  const ratio = performance.memory.usedJSHeapSize / performance.memory.jsHeapSizeLimit;
+  if (!Number.isFinite(ratio) || ratio <= memoryWatermark) return 0;
+  return Math.min(1, (ratio - memoryWatermark) / Math.max(0.05, 1 - memoryWatermark));
+}
+
+function deriveAdaptiveBudget(baseBudget, runtimeSignals = {}, frontierSize = 0){
+  const targetFrame = baseBudget.pressureTargetFrameMs;
+  const frameTime = Number.isFinite(runtimeSignals.frameTimeMs) ? runtimeSignals.frameTimeMs : 0;
+  const framePressure = frameTime > targetFrame ? Math.min(1, (frameTime - targetFrame) / targetFrame) : 0;
+  const queueRatio = baseBudget.frontierBudget > 0 ? frontierSize / baseBudget.frontierBudget : 0;
+  const queuePressure = Number.isFinite(runtimeSignals.queuePressure)
+    ? Math.max(0, runtimeSignals.queuePressure)
+    : Math.max(0, queueRatio - 0.75);
+  const memoryPressure = Number.isFinite(runtimeSignals.memoryPressure)
+    ? Math.max(0, runtimeSignals.memoryPressure)
+    : estimateMemoryPressure(baseBudget.memoryWatermark);
+  const totalWeight = baseBudget.queuePressureWeight + baseBudget.framePressureWeight + baseBudget.memoryPressureWeight;
+  const normalizedPressure = totalWeight > 0
+    ? Math.min(1, (
+      (queuePressure * baseBudget.queuePressureWeight)
+      + (framePressure * baseBudget.framePressureWeight)
+      + (memoryPressure * baseBudget.memoryPressureWeight)
+    ) / totalWeight)
+    : 0;
+  const scale = Math.max(baseBudget.minBudgetScale, 1 - (normalizedPressure * 0.7));
+  return {
+    pressure: normalizedPressure,
+    nodeBudget: Math.max(1, Math.floor(baseBudget.nodeBudget * scale)),
+    expansionBudget: Math.max(1, Math.floor(baseBudget.expansionBudget * scale)),
+    frontierBudget: Math.max(1, Math.floor(baseBudget.frontierBudget * scale)),
   };
 }
 
@@ -240,7 +289,7 @@ export function createReplTraversal({
 
     const transitions = Array.isArray(expansions) ? expansions : [];
     return transitions.map((transition) => {
-      const nextExec = withExecutionState(transition?.toState || baseState.execState, cloneEnv(baseState.execState.env));
+      const nextExec = withExecutionState(transition?.toState || baseState.execState, createEnvOverlay(baseState.execState.env));
       const score = scoreTransitionFn(transition, baseState.score);
       const confidence = confidenceTransitionFn(transition, baseState.confidence);
       return buildWrapper({
@@ -254,6 +303,9 @@ export function createReplTraversal({
         transitionId: transition?.id || null,
         viaTransitionId: transition?.id || null,
         canonicalKey: deriveTraversalCanonicalKey(nextExec, canonicalStateKey, null),
+        transitionCost: toNumber(transition?.cost ?? transition?.meta?.cost, 0),
+        transitionConfidence: toNumber(transition?.confidence, 1),
+        transitionMeta: transition?.meta || null,
         status: TRAVERSAL_NODE_STATUSES.PENDING,
       });
     });
@@ -290,7 +342,7 @@ export function createReplTraversal({
     const nextStatementIndex = baseState.statementIndex + 1;
 
     return transitions.map((transition) => {
-      const nextExec = withExecutionState(transition?.toState || baseState.execState, cloneEnv(baseState.execState.env));
+      const nextExec = withExecutionState(transition?.toState || baseState.execState, createEnvOverlay(baseState.execState.env));
       const score = scoreTransitionFn(transition, baseState.score);
       const confidence = confidenceTransitionFn(transition, baseState.confidence);
       const isTerminal = nextStatementIndex >= statements.length;
@@ -303,6 +355,9 @@ export function createReplTraversal({
         statementIndex: nextStatementIndex,
         parentId: baseState.id,
         transitionId: transition?.id || null,
+        transitionCost: toNumber(transition?.cost ?? transition?.meta?.cost, 0),
+        transitionConfidence: toNumber(transition?.confidence, 1),
+        transitionMeta: transition?.meta || null,
         isTerminal,
         terminationReason: isTerminal ? "end-of-block" : null,
       });
@@ -341,6 +396,8 @@ export function createReplTraversal({
     prune = null,
     mode = "speculate",
     output = null,
+    runtimeSignals = null,
+    pruning = null,
   } = {}) => {
     const runConfig = {
       ...(defaultRunConfig && typeof defaultRunConfig === "object" ? defaultRunConfig : {}),
@@ -414,16 +471,27 @@ export function createReplTraversal({
       traceGraph.edges.push(edge);
     };
 
-    if (start.canonicalKey) visited.set(start.canonicalKey, start);
+    if (start.canonicalKey){
+      visited.set(start.canonicalKey, {
+        rank: rankState(start),
+        score: start.score,
+        confidence: start.confidence,
+        depth: start.depth,
+        stateId: start.id,
+      });
+    }
     frontier.pushAll([start]);
 
     let expansions = 0;
     let pruned = 0;
+    let peakPressure = 0;
 
     while (frontier.size() > 0){
+      const adaptiveBudget = deriveAdaptiveBudget(normalizedBudget, runtimeSignals || {}, frontier.size());
+      if (adaptiveBudget.pressure > peakPressure) peakPressure = adaptiveBudget.pressure;
       const expandedCount = expanded ? expanded.length : expansions;
-      if (expandedCount >= normalizedBudget.nodeBudget) break;
-      if (expansions >= normalizedBudget.expansionBudget) break;
+      if (expandedCount >= adaptiveBudget.nodeBudget) break;
+      if (expansions >= adaptiveBudget.expansionBudget) break;
 
       const popped = frontier.pop();
       const current = popped ? transitionTraversalNodeStatus(popped, TRAVERSAL_NODE_STATUSES.EXPANDED) : null;
@@ -443,8 +511,29 @@ export function createReplTraversal({
 
       const successors = expandTraversalState(statementNode, current, { mode });
       const accepted = [];
+      const pruneConfig = pruning && typeof pruning === "object" ? pruning : {};
+      const minConfidence = Number.isFinite(pruneConfig.minTransitionConfidence) ? pruneConfig.minTransitionConfidence : 0.08;
+      const maxCost = Number.isFinite(pruneConfig.maxTransitionCost) ? pruneConfig.maxTransitionCost : Number.POSITIVE_INFINITY;
+      const costWeight = Number.isFinite(pruneConfig.costWeight) ? pruneConfig.costWeight : 0.4;
 
       for (const successor of successors){
+        const expectedUtility = (toNumber(successor.score, 0) + toNumber(successor.transitionConfidence, 1))
+          - (toNumber(successor.transitionCost, 0) * costWeight);
+        if (successor.transitionConfidence < minConfidence){
+          pruned += 1;
+          pushDiagnostic({ kind: "pruned", stateId: successor.id, parentId: current.id, reason: "low-confidence", confidence: successor.transitionConfidence });
+          continue;
+        }
+        if (successor.transitionCost > maxCost){
+          pruned += 1;
+          pushDiagnostic({ kind: "pruned", stateId: successor.id, parentId: current.id, reason: "high-cost", cost: successor.transitionCost });
+          continue;
+        }
+        if (expectedUtility < (rankState(bestExpanded) - 2)){
+          pruned += 1;
+          pushDiagnostic({ kind: "pruned", stateId: successor.id, parentId: current.id, reason: "low-utility", utility: expectedUtility });
+          continue;
+        }
         if (typeof prune === "function" && prune(successor, current)){
           pruned += 1;
           pushDiagnostic({ kind: "pruned", stateId: successor.id, parentId: current.id, reason: "predicate" });
@@ -453,12 +542,18 @@ export function createReplTraversal({
 
         if (successor.canonicalKey){
           const seen = visited.get(successor.canonicalKey);
-          if (seen && rankState(seen) >= rankState(successor)){
+          if (seen && seen.rank >= rankState(successor)){
             pruned += 1;
             pushDiagnostic({ kind: "pruned", stateId: successor.id, parentId: current.id, reason: "visited" });
             continue;
           }
-          visited.set(successor.canonicalKey, successor);
+          visited.set(successor.canonicalKey, {
+            rank: rankState(successor),
+            score: successor.score,
+            confidence: successor.confidence,
+            depth: successor.depth,
+            stateId: successor.id,
+          });
         }
 
         const frontierSuccessor = updateTraversalNodeMetadata(
@@ -484,7 +579,7 @@ export function createReplTraversal({
       }
 
       frontier.pushAll(accepted);
-      frontier.trim(normalizedBudget.frontierBudget);
+      frontier.trim(adaptiveBudget.frontierBudget);
       if (streamBuffers){
         const frontierView = frontier.toArray().slice(0, normalizedBudget.bestKFrontier).map(projectTraversalNode);
         streamBuffers.frontier.push(frontierView);
@@ -526,6 +621,7 @@ export function createReplTraversal({
         expandedCount: expansions,
         visitedCount: visited.size,
         prunedCount: pruned,
+        peakPressure,
         droppedDiagnostics,
         traceNodesDropped: traceGraph.dropped.nodes,
         traceEdgesDropped: traceGraph.dropped.edges,

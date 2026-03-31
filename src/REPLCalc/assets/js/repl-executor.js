@@ -2,6 +2,7 @@ import { isBlockNode } from "./repl-ast.js";
 import { EFFECT } from "./repl-effects.js";
 import {
   cloneEnv,
+  createEnvOverlay,
   createExecutionState,
   isExecutionState,
   withExecutionState,
@@ -142,7 +143,7 @@ function withModeAppliedState(state, envOverride = null){
 
   const mode = incoming.mode || "commit";
   const shouldClone = mode === "speculate" || mode === "plan";
-  const workingEnv = shouldClone ? cloneEnv(primaryEnv) : primaryEnv;
+  const workingEnv = shouldClone ? createEnvOverlay(primaryEnv) : primaryEnv;
   return {
     ...incoming,
     env: workingEnv,
@@ -346,7 +347,7 @@ function createReplExecutor({
 
     let nextState = withExecutionState(transition.toState || base, base.env);
     if (mode === "speculate" || mode === "plan"){
-      nextState = { ...nextState, env: cloneEnv(nextState.env || Object.create(null)) };
+      nextState = { ...nextState, env: createEnvOverlay(nextState.env || Object.create(null)) };
     }else if (mode === "commit" && base.primaryEnv && nextState.env !== base.primaryEnv){
       const nextEnv = nextState.env || Object.create(null);
       for (const key of Object.keys(base.primaryEnv)){

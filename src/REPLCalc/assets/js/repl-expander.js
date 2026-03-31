@@ -1,6 +1,6 @@
 import { STATEMENT_TYPE, isStatementNode } from "./repl-ast.js";
 import { createTransition } from "./repl-transitions.js";
-import { cloneEnv, createExecutionState, withExecutionState } from "./repl-runtime-state.js";
+import { cloneEnv, createEnvOverlay, createExecutionState, withExecutionState } from "./repl-runtime-state.js";
 
 export function createReplExpander({
   runExpression,
@@ -29,7 +29,7 @@ export function createReplExpander({
       ...incoming,
       mode,
       primaryEnv,
-      env: shouldClone ? cloneEnv(primaryEnv) : primaryEnv,
+      env: shouldClone ? createEnvOverlay(primaryEnv) : primaryEnv,
       traceExpressions: Boolean(incoming.traceExpressions || mode === "trace"),
     };
   },
