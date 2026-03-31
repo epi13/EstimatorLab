@@ -27,6 +27,58 @@ export const GFX_COLOR_TOKENS = [
   "muted",
 ];
 
+const TURBO_QUANT_PROFILES = Object.freeze({
+  ultra: Object.freeze({
+    rayStepsMul: 1.2,
+    colStepMul: 1,
+    lightSamples: 7,
+    occlusionChecks: 12,
+    expensiveMathStride: 1,
+    floorStep: 1,
+    ceilStep: 1,
+    coarseShading: 0,
+    allowSecondary: 1,
+  }),
+  balanced: Object.freeze({
+    rayStepsMul: 1,
+    colStepMul: 1,
+    lightSamples: 5,
+    occlusionChecks: 8,
+    expensiveMathStride: 2,
+    floorStep: 2,
+    ceilStep: 2,
+    coarseShading: 0,
+    allowSecondary: 1,
+  }),
+  performance: Object.freeze({
+    rayStepsMul: 0.75,
+    colStepMul: 1.5,
+    lightSamples: 3,
+    occlusionChecks: 4,
+    expensiveMathStride: 3,
+    floorStep: 3,
+    ceilStep: 3,
+    coarseShading: 1,
+    allowSecondary: 0,
+  }),
+  eco: Object.freeze({
+    rayStepsMul: 0.5,
+    colStepMul: 2,
+    lightSamples: 2,
+    occlusionChecks: 2,
+    expensiveMathStride: 5,
+    floorStep: 4,
+    ceilStep: 4,
+    coarseShading: 1,
+    allowSecondary: 0,
+  }),
+});
+
+const TURBO_QUANT_FPS_BANDS = Object.freeze({
+  downshift: Object.freeze({ performance: 0.92, eco: 0.74 }),
+  upshift: Object.freeze({ balanced: 0.98, ultra: 1.08 }),
+});
+
 export function createGfxTools({ state, terminalEl, writeLine }){
   let gfxPaletteCache = null;
   let gfxPalettePackedCache = null;
@@ -70,6 +122,21 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     fpsLastTs: 0,
     fpsFrames: 0,
     fpsMeasured: 0,
+  };
+
+  const turboQuantState = {
+    mode: "auto",
+    profile: "balanced",
+    effectiveProfile: "balanced",
+    pressure: 0,
+    streak: 0,
+    holdFrames: 0,
+    cooloff: 0,
+  };
+
+  const turboQuantCaches = {
+    falloffByProfile: new Map(),
+    brightnessBandsByProfile: new Map(),
   };
 
   function getGfxColorContext(){
@@ -1043,6 +1110,95 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     runLoopStatement = fn;
   }
 
+  function normalizeTurboQuantProfileName(value){
+    const key = String(value || "").trim().toLowerCase();
+    if (key === "auto") return "auto";
+    if (Object.prototype.hasOwnProperty.call(TURBO_QUANT_PROFILES, key)) return key;
+    throw new Error(`Unknown TurboQuant profile "${value}". Expected ultra, balanced, performance, eco, or auto.`);
+  }
+
+  function getTurboQuantProfileConfig(name){
+    return TURBO_QUANT_PROFILES[name] || TURBO_QUANT_PROFILES.balanced;
+  }
+
+  function buildFalloffLut(name){
+    const profile = getTurboQuantProfileConfig(name);
+    const cacheKey = `${name}:${profile.expensiveMathStride}:${profile.occlusionChecks}:${profile.lightSamples}`;
+    if (turboQuantCaches.falloffByProfile.has(cacheKey)) return turboQuantCaches.falloffByProfile.get(cacheKey);
+    const lut = new Float32Array(512);
+    const stride = Math.max(1, profile.expensiveMathStride | 0);
+    for (let i = 0; i < lut.length; i++){
+      const d2 = i / 24;
+      let p = 1.04 + (profile.lightSamples > 4 ? 0 : 0.06);
+      if (stride >= 3) p += 0.04;
+      lut[i] = 1 / Math.pow(1 + d2, p);
+    }
+    turboQuantCaches.falloffByProfile.set(cacheKey, lut);
+    return lut;
+  }
+
+  function buildLightingBands(name){
+    const cacheKey = `${name}:bands`;
+    if (turboQuantCaches.brightnessBandsByProfile.has(cacheKey)) return turboQuantCaches.brightnessBandsByProfile.get(cacheKey);
+    const coarse = getTurboQuantProfileConfig(name).coarseShading ? 6 : 12;
+    const bands = new Float32Array(coarse);
+    for (let i = 0; i < coarse; i++){
+      bands[i] = i / Math.max(1, coarse - 1);
+    }
+    turboQuantCaches.brightnessBandsByProfile.set(cacheKey, bands);
+    return bands;
+  }
+
+  function setTurboQuantProfile(name){
+    const normalized = normalizeTurboQuantProfileName(name);
+    turboQuantState.mode = normalized === "auto" ? "auto" : "manual";
+    turboQuantState.profile = normalized === "auto" ? turboQuantState.profile : normalized;
+    turboQuantState.effectiveProfile = normalized === "auto" ? turboQuantState.effectiveProfile : normalized;
+    turboQuantState.streak = 0;
+    turboQuantState.holdFrames = 0;
+    turboQuantState.cooloff = 0;
+    state.vars.doom_tq_mode = turboQuantState.mode;
+    state.vars.doom_tq_profile = turboQuantState.profile;
+    state.vars.doom_tq_effective = turboQuantState.effectiveProfile;
+    return turboQuantState.mode === "auto" ? "auto" : turboQuantState.profile;
+  }
+
+  function updateTurboQuantAutoProfile(){
+    if (turboQuantState.mode !== "auto") return;
+    const targetFps = Math.max(1, loopState.fps || GFX_LOOP_DEFAULT_FPS);
+    const measured = Number.isFinite(loopState.fpsMeasured) && loopState.fpsMeasured > 0 ? loopState.fpsMeasured : targetFps;
+    const ratio = measured / targetFps;
+    const current = turboQuantState.effectiveProfile;
+    let next = current;
+
+    if (turboQuantState.cooloff > 0){
+      turboQuantState.cooloff -= 1;
+      return;
+    }
+    if (ratio < TURBO_QUANT_FPS_BANDS.downshift.eco){
+      next = "eco";
+    }else if (ratio < TURBO_QUANT_FPS_BANDS.downshift.performance){
+      next = current === "ultra" ? "balanced" : "performance";
+    }else if (ratio > TURBO_QUANT_FPS_BANDS.upshift.ultra){
+      next = "ultra";
+    }else if (ratio > TURBO_QUANT_FPS_BANDS.upshift.balanced){
+      next = "balanced";
+    }
+
+    if (next !== current){
+      turboQuantState.streak += 1;
+      if (turboQuantState.streak >= 3 && turboQuantState.holdFrames >= 10){
+        turboQuantState.effectiveProfile = next;
+        turboQuantState.streak = 0;
+        turboQuantState.holdFrames = 0;
+        turboQuantState.cooloff = 20;
+      }
+    }else{
+      turboQuantState.streak = 0;
+      turboQuantState.holdFrames += 1;
+    }
+  }
+
   function runLoopScript(){
     if (!runLoopStatement && !runExpressionWithContext){
       throw new Error("Loop runner not ready.");
@@ -1064,6 +1220,14 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     state.vars.time = frame / fps;
     state.vars.dt = 1 / fps;
     state.vars.fps_actual = (loopState.fpsMeasured && Number.isFinite(loopState.fpsMeasured)) ? loopState.fpsMeasured : fps;
+    const tqTarget = Math.max(1, fps);
+    const tqActual = Number.isFinite(loopState.fpsMeasured) && loopState.fpsMeasured > 0 ? loopState.fpsMeasured : tqTarget;
+    const tqRatio = tqActual / tqTarget;
+    turboQuantState.pressure = tqRatio < 0.8 ? 2 : (tqRatio < 0.95 ? 1 : 0);
+    state.vars.doom_tq_mode = turboQuantState.mode;
+    state.vars.doom_tq_profile = turboQuantState.profile;
+    state.vars.doom_tq_effective = turboQuantState.effectiveProfile;
+    state.vars.doom_tq_pressure = turboQuantState.pressure;
     state.vars.key_w = keyState.down.w ? 1 : 0;
     state.vars.key_a = keyState.down.a ? 1 : 0;
     state.vars.key_s = keyState.down.s ? 1 : 0;
@@ -1117,6 +1281,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       loopState.fpsMeasured = (loopState.fpsFrames * 1000) / fpsWindow;
       loopState.fpsFrames = 0;
       loopState.fpsLastTs = timestamp;
+      updateTurboQuantAutoProfile();
     }
 
     if (!loopState.lastTick) loopState.lastTick = timestamp;
@@ -1347,8 +1512,6 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         const vh = Math.max(1, Math.min(h, Math.floor(nViewH)));
         const md = Math.max(0.1, nMaxD);
         const st = Math.max(0.001, nStep);
-        const nSteps = Math.max(1, Math.floor(nStepsIn));
-        const cs = Math.max(1, Math.floor(nColStep));
 
         const vars = ctx?.vars || Object.create(null);
         const wallFinish = typeof vars.doom_wall_finish === "string" ? vars.doom_wall_finish : "DRYWALL_PRIMED";
@@ -1409,8 +1572,27 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         }
 
         const optObj = (opts && typeof opts === "object" && opts.__obj && typeof opts.raw === "string") ? opts.raw : null;
-        let floorStep = 2;
-        let ceilStep = 2;
+        const tqOverride = normalizeTurboQuantProfileName(vars.doom_tq_profile || "auto");
+        if (tqOverride === "auto"){
+          turboQuantState.mode = "auto";
+        }else{
+          turboQuantState.mode = "manual";
+          turboQuantState.profile = tqOverride;
+          turboQuantState.effectiveProfile = tqOverride;
+        }
+        const tqProfileName = turboQuantState.mode === "auto" ? turboQuantState.effectiveProfile : turboQuantState.profile;
+        const tqProfile = getTurboQuantProfileConfig(tqProfileName);
+        const falloffLut = buildFalloffLut(tqProfileName);
+        const lightingBands = buildLightingBands(tqProfileName);
+        const pressure = Number.isFinite(vars.doom_tq_pressure) ? (vars.doom_tq_pressure | 0) : 0;
+        const useCoarsePath = tqProfile.coarseShading || pressure > 0;
+
+        let floorStep = tqProfile.floorStep;
+        let ceilStep = tqProfile.ceilStep;
+        if (useCoarsePath){
+          floorStep = Math.max(floorStep, 3);
+          ceilStep = Math.max(ceilStep, 3);
+        }
         let texRes = 1;
         if (optObj && typeof ctx?.evalString === "function"){
           try{
@@ -1429,6 +1611,9 @@ fn fs(in: VSOut) -> @location(0) vec4f {
             if (Number.isFinite(ntr) && ntr >= 1) texRes = Math.min(8, Math.floor(ntr));
           }catch{}
         }
+
+        const nSteps = Math.max(1, Math.floor(nStepsIn * tqProfile.rayStepsMul));
+        const cs = Math.max(1, Math.floor(nColStep * tqProfile.colStepMul));
 
         function sampleTile(x, y){
           const ix = x | 0;
@@ -1455,11 +1640,12 @@ fn fs(in: VSOut) -> @location(0) vec4f {
           };
 
           const isOccluded = (lx, ly, wx, wy) => {
+            if (!tqProfile.allowSecondary || tqProfile.occlusionChecks <= 0) return false;
             const dx = wx - lx;
             const dy = wy - ly;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (!(dist > 0.75)) return false;
-            const steps = Math.min(12, Math.max(2, Math.ceil(dist / 0.25)));
+            const steps = Math.min(tqProfile.occlusionChecks, Math.max(2, Math.ceil(dist / 0.25)));
             const inv = 1 / steps;
             for (let i = 1; i < steps; i++){
               const sx = lx + dx * (i * inv);
@@ -1470,7 +1656,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
             return false;
           };
 
-          const r = 3;
+          const r = tqProfile.lightSamples;
           for (let oy = -r; oy <= r; oy++){
             const ty = cy + oy;
             if (ty < 0 || ty >= mapH) continue;
@@ -1486,7 +1672,8 @@ fn fs(in: VSOut) -> @location(0) vec4f {
               const dy = worldY - ly;
               const d2 = dx * dx + dy * dy;
               if (isOccluded(lx, ly, worldX, worldY)) continue;
-              light += lp.i / Math.pow(1 + d2 * lp.f, lp.p);
+              const lutIndex = Math.max(0, Math.min(falloffLut.length - 1, (d2 * (22 * lp.f)) | 0));
+              light += lp.i * falloffLut[lutIndex];
             }
           }
           return light;
@@ -1582,7 +1769,9 @@ fn fs(in: VSOut) -> @location(0) vec4f {
           const fog = Math.max(0, Math.min(1, (bestD - 1.6) / Math.max(0.001, (md - 1.6))));
           const ambient = 0.34;
           const localLight = lightAt(hx, hy);
-          const bright = Math.max(0, Math.min(1, ambient + localLight - fog * 0.45));
+          const brightRaw = Math.max(0, Math.min(1, ambient + localLight - fog * 0.45));
+          const bandIdx = Math.max(0, Math.min(lightingBands.length - 1, Math.round(brightRaw * (lightingBands.length - 1))));
+          const bright = lightingBands[bandIdx];
 
           for (let dx = 0; dx < cs; dx++){
             const xi = x + dx;
@@ -1624,7 +1813,9 @@ fn fs(in: VSOut) -> @location(0) vec4f {
                     packed = sampleFinishTexture(floorTex.id, u, v);
                   }
                   const fFog = Math.max(0, Math.min(1, (rowDist - 1.6) / Math.max(0.001, (md - 1.6))));
-                  const fBright = Math.max(0, Math.min(1, ambient + lightAt(worldX, worldY) - fFog * 0.55));
+                  const fBrightRaw = useCoarsePath ? Math.max(0, Math.min(1, ambient - fFog * 0.55)) : Math.max(0, Math.min(1, ambient + lightAt(worldX, worldY) - fFog * 0.55));
+                  const fBand = Math.max(0, Math.min(lightingBands.length - 1, Math.round(fBrightRaw * (lightingBands.length - 1))));
+                  const fBright = lightingBands[fBand];
                   packed = applyBrightnessToRgba(packed, fBright * 0.9);
                   lastFloorPacked = rgbaBEToU32(packed);
                 }
@@ -1652,7 +1843,9 @@ fn fs(in: VSOut) -> @location(0) vec4f {
                     packed = sampleFinishTexture(ceilTex.id, u, v);
                   }
                   const cFog = Math.max(0, Math.min(1, (rowDist - 1.6) / Math.max(0.001, (md - 1.6))));
-                  const cBright = Math.max(0, Math.min(1, ambient + lightAt(worldX, worldY) - cFog * 0.55));
+                  const cBrightRaw = useCoarsePath ? Math.max(0, Math.min(1, ambient - cFog * 0.55)) : Math.max(0, Math.min(1, ambient + lightAt(worldX, worldY) - cFog * 0.55));
+                  const cBand = Math.max(0, Math.min(lightingBands.length - 1, Math.round(cBrightRaw * (lightingBands.length - 1))));
+                  const cBright = lightingBands[cBand];
                   packed = applyBrightnessToRgba(packed, cBright * 0.95);
                   lastCeilPacked = rgbaBEToU32(packed);
                 }
@@ -1816,8 +2009,22 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         const vh = Math.max(1, Math.min(h, Math.floor(nViewH)));
         const md = Math.max(0.1, nMaxD);
         const st = Math.max(0.001, nStep);
-        const nSteps = Math.max(1, Math.floor(nStepsIn));
-        const cs = Math.max(1, Math.floor(nColStep));
+        const tqOverride = normalizeTurboQuantProfileName(state.vars?.doom_tq_profile || "auto");
+        if (tqOverride === "auto"){
+          turboQuantState.mode = "auto";
+        }else{
+          turboQuantState.mode = "manual";
+          turboQuantState.profile = tqOverride;
+          turboQuantState.effectiveProfile = tqOverride;
+        }
+        const tqProfileName = turboQuantState.mode === "auto" ? turboQuantState.effectiveProfile : turboQuantState.profile;
+        const tqProfile = getTurboQuantProfileConfig(tqProfileName);
+        const falloffLut = buildFalloffLut(tqProfileName);
+        const lightingBands = buildLightingBands(tqProfileName);
+        const pressure = Number.isFinite(state.vars?.doom_tq_pressure) ? (state.vars.doom_tq_pressure | 0) : 0;
+        const useCoarsePath = tqProfile.coarseShading || pressure > 0;
+        const nSteps = Math.max(1, Math.floor(nStepsIn * tqProfile.rayStepsMul));
+        const cs = Math.max(1, Math.floor(nColStep * tqProfile.colStepMul));
 
         function sampleTile(x, y){
           const ix = x | 0;
@@ -1857,11 +2064,12 @@ fn fs(in: VSOut) -> @location(0) vec4f {
           };
 
           const isOccluded = (lx, ly, wx, wy) => {
+            if (!tqProfile.allowSecondary || tqProfile.occlusionChecks <= 0) return false;
             const dx = wx - lx;
             const dy = wy - ly;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (!(dist > 0.75)) return false;
-            const steps = Math.min(12, Math.max(2, Math.ceil(dist / 0.25)));
+            const steps = Math.min(tqProfile.occlusionChecks, Math.max(2, Math.ceil(dist / 0.25)));
             const inv = 1 / steps;
             for (let i = 1; i < steps; i++){
               const sx = lx + dx * (i * inv);
@@ -1872,7 +2080,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
             return false;
           };
 
-          const r = 3;
+          const r = tqProfile.lightSamples;
           for (let oy = -r; oy <= r; oy++){
             const ty = cy + oy;
             if (ty < 0 || ty >= mapH) continue;
@@ -1888,7 +2096,8 @@ fn fs(in: VSOut) -> @location(0) vec4f {
               const dy = worldY - ly;
               const d2 = dx * dx + dy * dy;
               if (isOccluded(lx, ly, worldX, worldY)) continue;
-              light += lp.i / Math.pow(1 + d2 * lp.f, lp.p);
+              const lutIndex = Math.max(0, Math.min(falloffLut.length - 1, (d2 * (22 * lp.f)) | 0));
+              light += lp.i * falloffLut[lutIndex];
             }
           }
           return light;
@@ -1940,10 +2149,12 @@ fn fs(in: VSOut) -> @location(0) vec4f {
           const hy = nPy + rs * bestD;
           const fog = Math.max(0, Math.min(1, (bestD - 1.6) / Math.max(0.001, (md - 1.6))));
           const ambient = 0.34;
-          const localLight = lightAt(hx, hy);
-          const bright = Math.max(0, Math.min(1, ambient + localLight - fog * 0.45));
+          const localLight = useCoarsePath ? 0 : lightAt(hx, hy);
+          const brightRaw = Math.max(0, Math.min(1, ambient + localLight - fog * 0.45));
           const texJitter = (((Math.floor(hx * 3) + Math.floor(hy * 2)) & 1) ? 0.08 : 0);
-          const brightTex = Math.max(0, Math.min(1, bright - texJitter));
+          const brightBase = Math.max(0, Math.min(1, brightRaw - texJitter));
+          const brightBand = Math.max(0, Math.min(lightingBands.length - 1, Math.round(brightBase * (lightingBands.length - 1))));
+          const brightTex = lightingBands[brightBand];
           const base = bestT === 2 ? "warn" : "accent";
           const shade = shadeByBrightness(brightTex, base);
           for (let dx = 0; dx < cs; dx++){
@@ -1951,7 +2162,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
           }
 
           const spriteCorr = spriteD * Math.cos(ray - nYaw);
-          if (spriteT !== 0 && spriteCorr > 0.1 && spriteCorr < dd){
+          if (tqProfile.allowSecondary && spriteT !== 0 && spriteCorr > 0.1 && spriteCorr < dd){
             const sd = Math.max(0.25, spriteCorr);
             const sh = Math.floor(vh / sd);
             const sy0 = Math.floor((vh - sh) / 2);
@@ -1959,7 +2170,9 @@ fn fs(in: VSOut) -> @location(0) vec4f {
             const sx = nPx + rc * spriteD;
             const sy = nPy + rs * spriteD;
             const sFog = Math.max(0, Math.min(1, (spriteD - 1.2) / Math.max(0.001, (md - 1.2))));
-            const sBright = Math.max(0, Math.min(1, 0.34 + lightAt(sx, sy) - sFog * 0.45));
+            const sBrightRaw = Math.max(0, Math.min(1, 0.34 + lightAt(sx, sy) - sFog * 0.45));
+            const sBand = Math.max(0, Math.min(lightingBands.length - 1, Math.round(sBrightRaw * (lightingBands.length - 1))));
+            const sBright = lightingBands[sBand];
             const spriteColor = (() => {
               if (spriteT === 5) return shadeByBrightness(sBright, "err");
               if (spriteT === 6) return shadeByBrightness(sBright, "ok");
@@ -2060,6 +2273,15 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         returns: { kinds: ["string"] },
         effects: EFFECT.IO_GFX,
       }, (name) => setActiveBackend(name)),
+      tqprofile: defFn("tqprofile", 1, {
+        args: [{ label: "name", kinds: ["string"] }],
+        returns: { kinds: ["string"] },
+        effects: EFFECT.IO_GFX,
+      }, (name) => setTurboQuantProfile(name)),
+      tqstate: defFn("tqstate", 0, {
+        returns: { kinds: ["string"] },
+        effects: EFFECT.IO_GFX,
+      }, () => `mode=${turboQuantState.mode}; profile=${turboQuantState.profile}; effective=${turboQuantState.effectiveProfile}; pressure=${turboQuantState.pressure}`),
     };
   }
 
@@ -2074,6 +2296,8 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     resetLoop,
     setLoopFps,
     getLoopStatus,
+    setTurboQuantProfile,
+    getTurboQuantState: () => ({ ...turboQuantState }),
     setActiveBackend,
     setRunExpressionWithContext,
     setRunLoopStatementRunner,

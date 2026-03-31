@@ -88,6 +88,7 @@ export async function runDoomDemo({ gfx, writeLine, writeInputEcho, state, execu
   writeLine("Click the canvas to capture the mouse.", "muted");
   writeLine("Controls: Mouse look • WASD move/strafe • Shift run • Space use • LMB shoot • E view • Q panel • F upgrade", "muted");
   writeLine("Loop UI: P play/pause (when mouse not captured) • Arrows step/fps • R reset", "muted");
+  writeLine("TurboQuant: tqprofile(\"ultra|balanced|performance|eco|auto\") • tqstate()", "muted");
 
   if (!state || typeof executeProgram !== "function"){
     throw new Error("runDoomDemo requires state/executeProgram (update caller to pass these)");
@@ -120,6 +121,20 @@ export async function runDoomDemo({ gfx, writeLine, writeInputEcho, state, execu
     buf2.presentWidth = DOOM_W;
     buf2.presentHeight = DOOM_H;
     buf2.presentScale = DOOM_SCALE;
+  }
+
+  state.vars.doom_tq_profile = typeof state.vars.doom_tq_profile === "string" ? state.vars.doom_tq_profile : "auto";
+  state.vars.doom_tq_mode = state.vars.doom_tq_profile === "auto" ? "auto" : "manual";
+  state.vars.doom_tq_effective = typeof state.vars.doom_tq_effective === "string" ? state.vars.doom_tq_effective : "balanced";
+  state.vars.doom_tq_pressure = Number.isFinite(state.vars.doom_tq_pressure) ? state.vars.doom_tq_pressure : 0;
+  if (typeof gfx.setTurboQuantProfile === "function"){
+    try{
+      gfx.setTurboQuantProfile(state.vars.doom_tq_profile);
+    }catch{
+      gfx.setTurboQuantProfile("auto");
+      state.vars.doom_tq_profile = "auto";
+      state.vars.doom_tq_mode = "auto";
+    }
   }
 
   gfx.configureLoop(script, DOOM_DEFAULT_FPS);
