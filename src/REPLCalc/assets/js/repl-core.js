@@ -35,6 +35,29 @@ import { parseParams } from "./repl-parser.js";
 import { createBlockNode, isBlockNode } from "./repl-ast.js";
 
 export function initRepl(){
+  const budgetPolicyPresets = Object.freeze({
+    interactive: Object.freeze({
+      cpuMsPerFrame: 10,
+      traversal: { nodeBudget: 96, expansionBudget: 96, frontierBudget: 128 },
+      gfx: { internalScaleMin: 0.5, internalScaleMax: 1, qualityTier: "performance" },
+    }),
+    balanced: Object.freeze({
+      cpuMsPerFrame: 12,
+      traversal: { nodeBudget: 192, expansionBudget: 192, frontierBudget: 224 },
+      gfx: { internalScaleMin: 0.6, internalScaleMax: 1, qualityTier: "balanced" },
+    }),
+    cinematic: Object.freeze({
+      cpuMsPerFrame: 16,
+      traversal: { nodeBudget: 320, expansionBudget: 320, frontierBudget: 384 },
+      gfx: { internalScaleMin: 0.8, internalScaleMax: 1, qualityTier: "ultra" },
+    }),
+    "headless-batch": Object.freeze({
+      cpuMsPerFrame: 20,
+      traversal: { nodeBudget: 512, expansionBudget: 512, frontierBudget: 640 },
+      gfx: { internalScaleMin: 0.5, internalScaleMax: 0.8, qualityTier: "eco" },
+    }),
+  });
+
   const state = {
     vars: Object.create(null),
     history: [],
@@ -75,6 +98,35 @@ export function initRepl(){
       maxDiagnostics: 2048,
       streamBufferSize: 256,
       bestKFrontier: 32,
+    },
+    budgetManager: {
+      policyPreset: "balanced",
+      policyPresets: budgetPolicyPresets,
+      cpuMsPerFrame: 12,
+      qualityTier: "balanced",
+      traversalBudget: {
+        nodeBudget: 192,
+        expansionBudget: 192,
+        frontierBudget: 224,
+      },
+      gfxBudget: {
+        internalScaleMin: 0.6,
+        internalScaleMax: 1,
+      },
+      telemetry: {
+        frame: 0,
+        traversalExpandMs: 0,
+        raycastMs: 0,
+        upscaleMs: 0,
+        temporalBlendMs: 0,
+        totalFrameMs: 0,
+        frameHeadroomMs: 0,
+        traversalPressure: 0,
+        memoryUsedBytes: 0,
+        memoryLimitBytes: 0,
+        memoryPressure: 0,
+      },
+      debugHud: false,
     },
   };
   state.resolver = state.symbolTable;

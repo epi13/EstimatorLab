@@ -14,6 +14,7 @@ const GFX_INTERNAL_SCALE_MAX = 1;
 const GFX_INTERNAL_SCALE_STEP = 0.1;
 const GFX_INTERNAL_SCALE_COOLDOWN_MS = 900;
 const GFX_INTERNAL_SCALE_HYSTERESIS_FRAMES = 4;
+const GFX_INTERNAL_SCALE_ADAPTIVE_STEP = 0.05;
 const GFX_FRAME_TIME_SMOOTHING = 0.2;
 const GFX_TEMPORAL_HISTORY_MAX_PIXELS = 512 * 512;
 const GFX_TEMPORAL_BLEND_DEFAULT = 0.18;
@@ -91,6 +92,13 @@ const TURBO_QUANT_FPS_BANDS = Object.freeze({
   upshift: Object.freeze({ balanced: 0.98, ultra: 1.08 }),
 });
 
+const BUDGET_POLICY_TQ = Object.freeze({
+  interactive: "performance",
+  balanced: "balanced",
+  cinematic: "ultra",
+  "headless-batch": "eco",
+});
+
 export function createGfxTools({ state, terminalEl, writeLine }){
   let gfxPaletteCache = null;
   let gfxPalettePackedCache = null;
@@ -135,6 +143,12 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     fpsFrames: 0,
     fpsMeasured: 0,
     frameTimeMs: 0,
+    stageMs: {
+      traversalExpandMs: 0,
+      raycastMs: 0,
+      temporalBlendMs: 0,
+      upscaleMs: 0,
+    },
   };
 
   const turboQuantState = {
@@ -164,6 +178,73 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     lightDelta: 0,
     sceneReset: false,
   };
+
+  function nowMs(){
+    return (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+  }
+
+  function getBudgetManager(){
+    if (!state.budgetManager || typeof state.budgetManager !== "object"){
+      state.budgetManager = {};
+    }
+    const mgr = state.budgetManager;
+    mgr.telemetry = mgr.telemetry && typeof mgr.telemetry === "object" ? mgr.telemetry : {};
+    mgr.traversalBudget = mgr.traversalBudget && typeof mgr.traversalBudget === "object" ? mgr.traversalBudget : {};
+    mgr.gfxBudget = mgr.gfxBudget && typeof mgr.gfxBudget === "object" ? mgr.gfxBudget : {};
+    if (!mgr.policyPreset) mgr.policyPreset = "balanced";
+    if (!mgr.qualityTier) mgr.qualityTier = "balanced";
+    if (!Number.isFinite(mgr.cpuMsPerFrame)) mgr.cpuMsPerFrame = 12;
+    return mgr;
+  }
+
+  function recordTelemetry(update = {}){
+    const mgr = getBudgetManager();
+    Object.assign(mgr.telemetry, update);
+  }
+
+  function captureMemorySnapshot(){
+    if (typeof performance === "undefined" || !performance?.memory?.usedJSHeapSize || !performance?.memory?.jsHeapSizeLimit){
+      return { used: 0, limit: 0, pressure: 0 };
+    }
+    const used = Number(performance.memory.usedJSHeapSize) || 0;
+    const limit = Number(performance.memory.jsHeapSizeLimit) || 0;
+    return {
+      used,
+      limit,
+      pressure: limit > 0 ? Math.max(0, Math.min(1, used / limit)) : 0,
+    };
+  }
+
+  function applyBudgetPolicyPreset(name){
+    const mgr = getBudgetManager();
+    const presets = mgr.policyPresets || {};
+    if (!Object.prototype.hasOwnProperty.call(presets, name)){
+      throw new Error(`Unknown budget policy "${name}"`);
+    }
+    const preset = presets[name];
+    mgr.policyPreset = name;
+    mgr.cpuMsPerFrame = Number.isFinite(preset.cpuMsPerFrame) ? preset.cpuMsPerFrame : mgr.cpuMsPerFrame;
+    mgr.traversalBudget = {
+      ...mgr.traversalBudget,
+      ...(preset.traversal || {}),
+    };
+    mgr.gfxBudget = {
+      ...mgr.gfxBudget,
+      ...(preset.gfx || {}),
+    };
+    mgr.qualityTier = preset.gfx?.qualityTier || mgr.qualityTier || "balanced";
+    state.traversalConfig = {
+      ...(state.traversalConfig || {}),
+      ...(preset.traversal || {}),
+    };
+    state.vars.doom_tq_profile = BUDGET_POLICY_TQ[name] || mgr.qualityTier || "balanced";
+    setTurboQuantProfile(state.vars.doom_tq_profile);
+    if (state.gfx?.internalScale){
+      state.gfx.internalScale.min = Number.isFinite(mgr.gfxBudget.internalScaleMin) ? mgr.gfxBudget.internalScaleMin : state.gfx.internalScale.min;
+      state.gfx.internalScale.max = Number.isFinite(mgr.gfxBudget.internalScaleMax) ? mgr.gfxBudget.internalScaleMax : state.gfx.internalScale.max;
+    }
+    return name;
+  }
 
   function getGfxColorContext(){
     if (!gfxColorContext){
@@ -788,6 +869,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
   }
 
   function applyTemporalBlend(buffer, src, w, h){
+    const tStart = nowMs();
     const vars = state.vars || Object.create(null);
     const cfg = getTemporalConfig(vars);
     const temporal = buffer.temporal;
@@ -803,10 +885,12 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     const pixelCount = w * h;
     if (!temporal.enabled){
       resetTemporalHistory(buffer, "mode-off");
+      loopState.stageMs.temporalBlendMs += (nowMs() - tStart);
       return src;
     }
     if (pixelCount > GFX_TEMPORAL_HISTORY_MAX_PIXELS){
       resetTemporalHistory(buffer, "history-cap");
+      loopState.stageMs.temporalBlendMs += (nowMs() - tStart);
       return src;
     }
     if (
@@ -914,6 +998,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     temporal.stats.rejected = rejected;
     temporal.stats.rejectionRatio = pixelCount > 0 ? (rejected / pixelCount) : 0;
     temporal.stats.confidence = pixelCount > 0 ? (confidenceSum / pixelCount) : 0;
+    loopState.stageMs.temporalBlendMs += (nowMs() - tStart);
     return out;
   }
 
@@ -943,13 +1028,16 @@ fn fs(in: VSOut) -> @location(0) vec4f {
   }
 
   function getUpscaleSourceRgba(buffer){
+    const start = nowMs();
     const src = buildRgba(buffer);
     const w = buffer.width | 0;
     const h = buffer.height | 0;
     let out = applyTemporalBlend(buffer, src, w, h);
     out = drawTemporalDebugOverlay(out, w, h, buffer);
     const sharpen = buffer.upscale?.sharpen || 0;
-    return sharpen > 0 ? applySharpenPass(out, w, h, sharpen) : out;
+    const finalOut = sharpen > 0 ? applySharpenPass(out, w, h, sharpen) : out;
+    loopState.stageMs.upscaleMs += (nowMs() - start);
+    return finalOut;
   }
 
   function renderWebgl2(buffer, canvas, dpr){
@@ -1118,6 +1206,26 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       ctx.setTransform(dpr * sx, 0, 0, dpr * sy, 0, 0);
       ctx.drawImage(buffer.offscreenCanvas, 0, 0);
       ctx.setTransform(1, 0, 0, 1, 0, 0);
+      const mgr = getBudgetManager();
+      if (mgr.debugHud){
+        const tel = mgr.telemetry || {};
+        const lines = [
+          `policy ${mgr.policyPreset || "balanced"} • q ${mgr.qualityTier || "balanced"}`,
+          `trv ${Number(tel.traversalExpandMs || 0).toFixed(2)}ms • ray ${Number(tel.raycastMs || 0).toFixed(2)}ms`,
+          `tmp ${Number(tel.temporalBlendMs || 0).toFixed(2)}ms • up ${Number(tel.upscaleMs || 0).toFixed(2)}ms`,
+          `frame ${Number(tel.totalFrameMs || 0).toFixed(2)}ms • head ${Number(tel.frameHeadroomMs || 0).toFixed(2)}ms`,
+          `mem ${(Number(tel.memoryUsedBytes || 0) / (1024 * 1024)).toFixed(1)} / ${(Number(tel.memoryLimitBytes || 0) / (1024 * 1024)).toFixed(1)} MB`,
+        ];
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.fillRect(6, 6, 280, 72);
+        ctx.fillStyle = "#d8f6ff";
+        ctx.font = "11px monospace";
+        for (let i = 0; i < lines.length; i++){
+          ctx.fillText(lines[i], 10, 18 + (i * 13));
+        }
+        ctx.restore();
+      }
     }
   }
 
@@ -1681,9 +1789,15 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     state.vars.mouse_locked = mouseState.locked ? 1 : 0;
     mouseState.dx = 0;
     mouseState.dy = 0;
-    const frameStart = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    loopState.stageMs.traversalExpandMs = 0;
+    loopState.stageMs.raycastMs = 0;
+    loopState.stageMs.temporalBlendMs = 0;
+    loopState.stageMs.upscaleMs = 0;
+    const frameStart = nowMs();
     try{
+      const traversalStart = nowMs();
       runLoopScript();
+      loopState.stageMs.traversalExpandMs += (nowMs() - traversalStart);
       updateTemporalFrameState();
       flushGfxOutput();
     }catch(err){
@@ -1694,13 +1808,55 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         writeLine(rendered, "err");
       }
     }
-    const frameEnd = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    const frameEnd = nowMs();
     const elapsedMs = Math.max(0.01, frameEnd - frameStart);
     if (!loopState.frameTimeMs || !Number.isFinite(loopState.frameTimeMs)){
       loopState.frameTimeMs = elapsedMs;
     }else{
       loopState.frameTimeMs = (loopState.frameTimeMs * (1 - GFX_FRAME_TIME_SMOOTHING)) + (elapsedMs * GFX_FRAME_TIME_SMOOTHING);
     }
+    const mgr = getBudgetManager();
+    const targetMs = Number.isFinite(mgr.cpuMsPerFrame) ? mgr.cpuMsPerFrame : (1000 / Math.max(1, loopState.fps || GFX_LOOP_DEFAULT_FPS));
+    const headroom = targetMs - elapsedMs;
+    const traversalPressure = Math.max(0, Math.min(1, loopState.stageMs.traversalExpandMs / Math.max(0.001, targetMs * 0.5)));
+    const memory = captureMemorySnapshot();
+    if (state.gfx?.internalScale){
+      const ctl = state.gfx.internalScale;
+      ctl.min = Number.isFinite(mgr.gfxBudget?.internalScaleMin) ? mgr.gfxBudget.internalScaleMin : ctl.min;
+      ctl.max = Number.isFinite(mgr.gfxBudget?.internalScaleMax) ? mgr.gfxBudget.internalScaleMax : ctl.max;
+      if (traversalPressure > 0.8 || headroom < -(targetMs * 0.12)){
+        const next = Math.max(ctl.min, (ctl.value || 1) - GFX_INTERNAL_SCALE_ADAPTIVE_STEP);
+        setInternalRenderScale(state.gfx, next);
+        if (mgr.qualityTier === "ultra") mgr.qualityTier = "balanced";
+        else if (mgr.qualityTier === "balanced") mgr.qualityTier = "performance";
+        else mgr.qualityTier = "eco";
+      }else if (traversalPressure < 0.25 && headroom > targetMs * 0.2){
+        const next = Math.min(ctl.max, (ctl.value || 1) + GFX_INTERNAL_SCALE_ADAPTIVE_STEP);
+        setInternalRenderScale(state.gfx, next);
+        if (mgr.qualityTier === "eco") mgr.qualityTier = "performance";
+        else if (mgr.qualityTier === "performance") mgr.qualityTier = "balanced";
+        else mgr.qualityTier = "ultra";
+      }
+      state.vars.doom_tq_profile = String(mgr.qualityTier || "balanced");
+      setTurboQuantProfile(state.vars.doom_tq_profile);
+    }
+    state.traversalConfig = {
+      ...(state.traversalConfig || {}),
+      ...(mgr.traversalBudget || {}),
+    };
+    recordTelemetry({
+      frame: loopState.frame,
+      traversalExpandMs: loopState.stageMs.traversalExpandMs,
+      raycastMs: loopState.stageMs.raycastMs,
+      temporalBlendMs: loopState.stageMs.temporalBlendMs,
+      upscaleMs: loopState.stageMs.upscaleMs,
+      totalFrameMs: elapsedMs,
+      frameHeadroomMs: headroom,
+      traversalPressure,
+      memoryUsedBytes: memory.used,
+      memoryLimitBytes: memory.limit,
+      memoryPressure: memory.pressure,
+    });
   }
 
   function normalizeGfxKey(key){
@@ -1990,6 +2146,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         returns: { kinds: ["scalar"] },
         effects: EFFECT.IO_GFX,
       }, (ctx, mapObj, px, py, yaw, fov, viewH, maxD, step, steps, colStep, opts) => {
+        const stageStart = nowMs();
         const buffer = requireGfxBuffer();
         if (!mapObj || typeof mapObj !== "object" || !mapObj.__map || !mapObj.data){
           throw new Error("raycast_tex expects a map() as the first argument");
@@ -2362,6 +2519,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         }
 
         markGfxDirty();
+        loopState.stageMs.raycastMs += (nowMs() - stageStart);
         return 1;
       }),
       bg: defFn("bg", 1, {
@@ -2488,6 +2646,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         returns: { kinds: ["scalar"] },
         effects: EFFECT.IO_GFX,
       }, (mapObj, px, py, yaw, fov, viewH, maxD, step, steps, colStep) => {
+        const stageStart = nowMs();
         const buffer = requireGfxBuffer();
         if (!mapObj || typeof mapObj !== "object" || !mapObj.__map || !mapObj.data){
           throw new Error("raycast expects a map() as the first argument");
@@ -2694,6 +2853,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
           }
         }
         markGfxDirty();
+        loopState.stageMs.raycastMs += (nowMs() - stageStart);
         return 1;
       }),
       plot: defFn("plot", 4, {
@@ -2787,7 +2947,51 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         returns: { kinds: ["string"] },
         effects: EFFECT.IO_GFX,
       }, () => `mode=${turboQuantState.mode}; profile=${turboQuantState.profile}; effective=${turboQuantState.effectiveProfile}; pressure=${turboQuantState.pressure}`),
+      budgetpolicy: defFn("budgetpolicy", 1, {
+        args: [{ label: "name", kinds: ["string"] }],
+        returns: { kinds: ["string"] },
+        effects: EFFECT.IO_GFX,
+      }, (name) => {
+        const normalized = String(name || "").trim().toLowerCase();
+        return applyBudgetPolicyPreset(normalized);
+      }),
+      budgethud: defFn("budgethud", 1, {
+        args: [{ label: "enabled", kinds: ["scalar"] }],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, (enabled) => {
+        const mgr = getBudgetManager();
+        const value = isQty(enabled) ? enabled.value : enabled;
+        mgr.debugHud = Number(value) > 0;
+        markGfxDirty();
+        return mgr.debugHud ? 1 : 0;
+      }),
+      budgetstats: defFn("budgetstats", 0, {
+        returns: { kinds: ["string"] },
+        effects: EFFECT.IO_GFX,
+      }, () => {
+        const mgr = getBudgetManager();
+        const tel = mgr.telemetry || {};
+        return [
+          `policy=${mgr.policyPreset || "balanced"}`,
+          `quality=${mgr.qualityTier || "balanced"}`,
+          `cpuMsPerFrame=${Number(mgr.cpuMsPerFrame || 0).toFixed(2)}`,
+          `traversalExpandMs=${Number(tel.traversalExpandMs || 0).toFixed(3)}`,
+          `raycastMs=${Number(tel.raycastMs || 0).toFixed(3)}`,
+          `upscaleMs=${Number(tel.upscaleMs || 0).toFixed(3)}`,
+          `temporalBlendMs=${Number(tel.temporalBlendMs || 0).toFixed(3)}`,
+          `frameMs=${Number(tel.totalFrameMs || 0).toFixed(3)}`,
+          `headroomMs=${Number(tel.frameHeadroomMs || 0).toFixed(3)}`,
+          `memory=${Math.round(Number(tel.memoryUsedBytes || 0))}/${Math.round(Number(tel.memoryLimitBytes || 0))}`,
+        ].join("; ");
+      }),
     };
+  }
+
+  try{
+    applyBudgetPolicyPreset(getBudgetManager().policyPreset || "balanced");
+  }catch{
+    // Keep startup resilient if presets are partially configured.
   }
 
   return {
