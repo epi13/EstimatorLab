@@ -1,4 +1,5 @@
 import { EFFECT } from "./repl-effects.js";
+import { MODULE_REGISTRY, markModuleIdentityLoaded } from "./repl-module-registry.js";
 
 const DOOM_W = 256;
 const DOOM_H = 144;
@@ -34,8 +35,9 @@ async function ensureDoomModulesLoaded({ state, executeProgram, writeLine }){
     commandErrorMessage: `${label} may not contain commands`,
   });
 
-  const ltwSource = await fetchText("assets/est/math/latent-mux-walker.est");
-  applyModuleSource(ltwSource, "latent mux walker");
+  const ltwSource = await fetchText(MODULE_REGISTRY.latentMuxWalker.path);
+  applyModuleSource(ltwSource, MODULE_REGISTRY.latentMuxWalker.label);
+  markModuleIdentityLoaded(state, MODULE_REGISTRY.latentMuxWalker);
 
   const constantsSource = await fetchText("assets/est/core/constants.est");
   applyModuleSource(constantsSource, "constants");
