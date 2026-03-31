@@ -9,6 +9,12 @@ const GFX_LOOP_MIN_FPS = 1;
 const GFX_LOOP_MAX_FPS = 60;
 const GFX_LOOP_MAX_CATCHUP_STEPS = 5;
 const GFX_LOOP_MAX_CATCHUP_MS = 250;
+const GFX_INTERNAL_SCALE_MIN = 0.5;
+const GFX_INTERNAL_SCALE_MAX = 1;
+const GFX_INTERNAL_SCALE_STEP = 0.1;
+const GFX_INTERNAL_SCALE_COOLDOWN_MS = 900;
+const GFX_INTERNAL_SCALE_HYSTERESIS_FRAMES = 4;
+const GFX_FRAME_TIME_SMOOTHING = 0.2;
 const GFX_BACKENDS = [
   "auto",
   "2d",
@@ -122,6 +128,7 @@ export function createGfxTools({ state, terminalEl, writeLine }){
     fpsLastTs: 0,
     fpsFrames: 0,
     fpsMeasured: 0,
+    frameTimeMs: 0,
   };
 
   const turboQuantState = {
@@ -298,7 +305,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     const w = buffer.width | 0;
     const h = buffer.height | 0;
     ensureWebgpuTexture(buffer, w, h);
-    const rgba = buildRgba(buffer);
+    const rgba = getUpscaleSourceRgba(buffer);
     uploadWebgpuTexture(buffer, rgba);
 
     const encoder = device.createCommandEncoder();
@@ -668,6 +675,47 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     return out;
   }
 
+  function clampInternalScale(value){
+    if (!Number.isFinite(value)) return 1;
+    return Math.max(GFX_INTERNAL_SCALE_MIN, Math.min(GFX_INTERNAL_SCALE_MAX, value));
+  }
+
+  function quantizeInternalScale(value){
+    const clamped = clampInternalScale(value);
+    return Math.round(clamped / GFX_INTERNAL_SCALE_STEP) * GFX_INTERNAL_SCALE_STEP;
+  }
+
+  function applySharpenPass(src, w, h, amount){
+    if (!(src instanceof Uint8Array) || amount <= 0 || w <= 2 || h <= 2){
+      return src;
+    }
+    const out = new Uint8Array(src.length);
+    out.set(src);
+    const strength = Math.max(0, Math.min(1, amount));
+    for (let y = 1; y < h - 1; y++){
+      for (let x = 1; x < w - 1; x++){
+        const idx = (y * w + x) * 4;
+        for (let c = 0; c < 3; c++){
+          const center = src[idx + c];
+          const left = src[idx - 4 + c];
+          const right = src[idx + 4 + c];
+          const up = src[idx - (w * 4) + c];
+          const down = src[idx + (w * 4) + c];
+          const edge = (center * 5) - left - right - up - down;
+          const mixed = center + ((edge - center) * strength * 0.35);
+          out[idx + c] = Math.max(0, Math.min(255, mixed | 0));
+        }
+      }
+    }
+    return out;
+  }
+
+  function getUpscaleSourceRgba(buffer){
+    const src = buildRgba(buffer);
+    const sharpen = buffer.upscale?.sharpen || 0;
+    return sharpen > 0 ? applySharpenPass(src, buffer.width | 0, buffer.height | 0, sharpen) : src;
+  }
+
   function renderWebgl2(buffer, canvas, dpr){
     initWebgl2(buffer, canvas);
     const gl = buffer.gl;
@@ -683,8 +731,11 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
-    const rgba = buildRgba(buffer);
+    const rgba = getUpscaleSourceRgba(buffer);
+    const upscaleFilter = buffer.upscale?.filter === "linear" ? gl.LINEAR : gl.NEAREST;
     gl.bindTexture(gl.TEXTURE_2D, buffer.glTex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, upscaleFilter);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, upscaleFilter);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
 
     gl.viewport(0, 0, canvas.width, canvas.height);
@@ -754,12 +805,13 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     const loopLabel = loopState.expr
       ? ` • loop ${loopState.playing ? "playing" : "paused"} @ ${loopState.fps} fps (${Math.round(loopState.fpsMeasured || 0)} actual) • frame ${loopState.frame}`
       : "";
-    const pw = (buffer.presentWidth | 0) || (buffer.width | 0);
-    const ph = (buffer.presentHeight | 0) || (buffer.height | 0);
-    const ps = (buffer.presentScale | 0) || (buffer.scale | 0);
-    const showPresent = Boolean(buffer.presentLocked && (pw !== buffer.width || ph !== buffer.height || ps !== buffer.scale));
+    const pw = (buffer.present?.width | 0) || (buffer.width | 0);
+    const ph = (buffer.present?.height | 0) || (buffer.height | 0);
+    const ps = (buffer.present?.scale | 0) || (buffer.scale | 0);
+    const showPresent = pw !== buffer.width || ph !== buffer.height || ps !== buffer.scale;
+    const internalScale = Number.isFinite(buffer.internalScale?.value) ? buffer.internalScale.value : 1;
     const presentLabel = showPresent ? ` → ${pw}x${ph} • scale ${ps}` : "";
-    label.textContent = `gfx ${buffer.width}x${buffer.height} • scale ${buffer.scale}${presentLabel}${backendLabel}${loopLabel}`;
+    label.textContent = `gfx ${buffer.width}x${buffer.height} • internal ${internalScale.toFixed(2)}x${presentLabel}${backendLabel}${loopLabel}`;
     hint.textContent = loopState.expr
       ? "P play/pause • ←/→ step • ↑/↓ speed • R reset"
       : "";
@@ -810,7 +862,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         buffer.imageData = offCtx.createImageData(buffer.width, buffer.height);
       }
       const data = buffer.imageData.data;
-      const rgba = buildRgba(buffer);
+      const rgba = getUpscaleSourceRgba(buffer);
       data.set(rgba);
       offCtx.putImageData(buffer.imageData, 0, 0);
     }
@@ -819,7 +871,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     if (ctx && buffer.offscreenCanvas){
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.imageSmoothingEnabled = false;
+      ctx.imageSmoothingEnabled = buffer.upscale?.filter === "linear";
       if (typeof ctx.imageSmoothingQuality === "string"){
         ctx.imageSmoothingQuality = "high";
       }
@@ -871,10 +923,30 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       width,
       height,
       scale,
-      presentWidth: width,
-      presentHeight: height,
-      presentScale: scale,
-      presentLocked: false,
+      present: {
+        width,
+        height,
+        scale,
+        locked: false,
+      },
+      internalScale: {
+        mode: "auto",
+        value: 1,
+        min: GFX_INTERNAL_SCALE_MIN,
+        max: GFX_INTERNAL_SCALE_MAX,
+        step: GFX_INTERNAL_SCALE_STEP,
+        cooldownMs: GFX_INTERNAL_SCALE_COOLDOWN_MS,
+        hysteresisFrames: GFX_INTERNAL_SCALE_HYSTERESIS_FRAMES,
+        downshiftRatio: 1.08,
+        upshiftRatio: 0.72,
+        downStreak: 0,
+        upStreak: 0,
+        lastAdjustTs: 0,
+      },
+      upscale: {
+        filter: "nearest",
+        sharpen: 0,
+      },
       pixels: new Uint32Array(width * height),
       bg: null,
       backend: null,
@@ -921,12 +993,22 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     buffer.width = w;
     buffer.height = h;
     buffer.scale = scale;
-    if (!buffer.presentLocked){
-      buffer.presentWidth = w;
-      buffer.presentHeight = h;
-      buffer.presentScale = scale;
+    if (!buffer.present?.locked){
+      buffer.present = {
+        width: w,
+        height: h,
+        scale,
+        locked: false,
+      };
+    }else{
+      buffer.present.scale = scale;
     }
-    buffer.pixels = new Uint32Array(w * h);
+    const targetScale = clampInternalScale(buffer.internalScale?.value ?? 1);
+    const targetW = Math.max(1, Math.round((buffer.present?.width || w) * targetScale));
+    const targetH = Math.max(1, Math.round((buffer.present?.height || h) * targetScale));
+    buffer.width = targetW;
+    buffer.height = targetH;
+    buffer.pixels = new Uint32Array(targetW * targetH);
     buffer.rgba = null;
     buffer.imageData = null;
     buffer.offscreenCanvas = null;
@@ -936,6 +1018,61 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     buffer.gpuTexW = 0;
     buffer.gpuTexH = 0;
     return buffer;
+  }
+
+  function setInternalRenderScale(buffer, scaleValue){
+    if (!buffer || !buffer.__gfx) return;
+    const present = buffer.present || { width: buffer.width, height: buffer.height };
+    const scale = quantizeInternalScale(scaleValue);
+    const w = Math.max(1, Math.round((present.width || 1) * scale));
+    const h = Math.max(1, Math.round((present.height || 1) * scale));
+    if (buffer.width === w && buffer.height === h) return;
+    buffer.internalScale.value = scale;
+    buffer.width = w;
+    buffer.height = h;
+    buffer.pixels = new Uint32Array(w * h);
+    buffer.rgba = null;
+    buffer.imageData = null;
+    buffer.offscreenCanvas = null;
+    buffer.offscreenCtx = null;
+    buffer.glSizeW = 0;
+    buffer.glSizeH = 0;
+    buffer.gpuTexW = 0;
+    buffer.gpuTexH = 0;
+    markGfxDirty();
+  }
+
+  function updateInternalScaleController(buffer, timestamp){
+    if (!buffer || !buffer.__gfx || buffer.internalScale?.mode !== "auto") return;
+    const frameMs = loopState.frameTimeMs;
+    if (!Number.isFinite(frameMs) || frameMs <= 0) return;
+    const targetMs = 1000 / Math.max(1, loopState.fps || GFX_LOOP_DEFAULT_FPS);
+    const ctl = buffer.internalScale;
+    if ((timestamp - (ctl.lastAdjustTs || 0)) < ctl.cooldownMs) return;
+    if (frameMs > targetMs * ctl.downshiftRatio){
+      ctl.downStreak += 1;
+      ctl.upStreak = 0;
+      if (ctl.downStreak >= ctl.hysteresisFrames){
+        const next = Math.max(ctl.min, ctl.value - ctl.step);
+        setInternalRenderScale(buffer, next);
+        ctl.lastAdjustTs = timestamp;
+        ctl.downStreak = 0;
+      }
+      return;
+    }
+    if (frameMs < targetMs * ctl.upshiftRatio){
+      ctl.upStreak += 1;
+      ctl.downStreak = 0;
+      if (ctl.upStreak >= ctl.hysteresisFrames){
+        const next = Math.min(ctl.max, ctl.value + ctl.step);
+        setInternalRenderScale(buffer, next);
+        ctl.lastAdjustTs = timestamp;
+        ctl.upStreak = 0;
+      }
+      return;
+    }
+    ctl.downStreak = 0;
+    ctl.upStreak = 0;
   }
 
   function requireGfxBuffer(){
@@ -1249,6 +1386,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     state.vars.mouse_locked = mouseState.locked ? 1 : 0;
     mouseState.dx = 0;
     mouseState.dy = 0;
+    const frameStart = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
     try{
       runLoopScript();
       flushGfxOutput();
@@ -1259,6 +1397,13 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         const rendered = msg.startsWith("GFX loop error:") ? msg : `GFX loop error: ${msg}`;
         writeLine(rendered, "err");
       }
+    }
+    const frameEnd = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+    const elapsedMs = Math.max(0.01, frameEnd - frameStart);
+    if (!loopState.frameTimeMs || !Number.isFinite(loopState.frameTimeMs)){
+      loopState.frameTimeMs = elapsedMs;
+    }else{
+      loopState.frameTimeMs = (loopState.frameTimeMs * (1 - GFX_FRAME_TIME_SMOOTHING)) + (elapsedMs * GFX_FRAME_TIME_SMOOTHING);
     }
   }
 
@@ -1296,6 +1441,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         loopState.frame += 1;
         loopState.fpsFrames += 1;
         runLoopFrame();
+        updateInternalScaleController(state.gfx, timestamp);
         if (!loopState.playing) return;
       }
     }
@@ -1316,6 +1462,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     loopState.fpsLastTs = 0;
     loopState.fpsFrames = 0;
     loopState.fpsMeasured = 0;
+    loopState.frameTimeMs = 0;
     ensureVisibilityListener();
     if (fps !== undefined){
       loopState.fps = normalizeLoopFps(fps);
@@ -1330,6 +1477,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     loopState.lastTick = 0;
     loopState.fpsLastTs = 0;
     loopState.fpsFrames = 0;
+    loopState.frameTimeMs = 0;
     loopState.rafId = window.requestAnimationFrame(tickLoop);
     markGfxDirty();
     flushGfxOutput();
@@ -1340,6 +1488,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     loopState.lastTick = 0;
     loopState.fpsLastTs = 0;
     loopState.fpsFrames = 0;
+    loopState.frameTimeMs = 0;
     if (loopState.rafId){
       window.cancelAnimationFrame(loopState.rafId);
       loopState.rafId = null;
@@ -1379,6 +1528,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       playing: loopState.playing,
       fps: loopState.fps,
       fpsMeasured: loopState.fpsMeasured || 0,
+      frameTimeMs: loopState.frameTimeMs || 0,
       frame: loopState.frame,
     };
   }
@@ -1444,6 +1594,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         const height = normalizeGfxDimension(h, "height");
         const sc = (scale === null || scale === undefined) ? GFX_DEFAULT_SCALE : normalizeGfxScale(isQty(scale) ? scale.value : scale);
         state.gfx = resizeGfxBuffer(state.gfx, width, height, sc);
+        setInternalRenderScale(state.gfx, 1);
         markGfxDirty();
         return state.gfx;
       }),
@@ -1453,9 +1604,58 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         effects: EFFECT.IO_GFX,
       }, (scale) => {
         const buffer = requireGfxBuffer();
-        buffer.scale = normalizeGfxScale(scale);
+        const normalized = normalizeGfxScale(scale);
+        buffer.scale = normalized;
+        if (!buffer.present){
+          buffer.present = { width: buffer.width, height: buffer.height, scale: normalized, locked: false };
+        }else{
+          buffer.present.scale = normalized;
+        }
         markGfxDirty();
-        return buffer.scale;
+        return normalized;
+      }),
+      gfxiscale: defFn("gfxiscale", 1, {
+        args: [{ label: "scale", kinds: ["scalar"] }],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, (scale) => {
+        const buffer = requireGfxBuffer();
+        const value = isQty(scale) ? scale.value : scale;
+        if (!Number.isFinite(value)) throw new Error("gfxiscale expects numeric scale");
+        buffer.internalScale.mode = "manual";
+        const clamped = Math.max(buffer.internalScale.min, Math.min(buffer.internalScale.max, value));
+        setInternalRenderScale(buffer, clamped);
+        return buffer.internalScale.value;
+      }),
+      gfxiauto: defFn("gfxiauto", 1, {
+        args: [{ label: "enabled", kinds: ["scalar"] }],
+        returns: { kinds: ["scalar"] },
+        effects: EFFECT.IO_GFX,
+      }, (enabled) => {
+        const buffer = requireGfxBuffer();
+        const value = isQty(enabled) ? enabled.value : enabled;
+        buffer.internalScale.mode = Number(value) > 0 ? "auto" : "manual";
+        return buffer.internalScale.mode === "auto" ? 1 : 0;
+      }),
+      gfxupscale: defFn("gfxupscale", -1, {
+        args: [
+          { label: "filter", kinds: ["string"] },
+          { label: "sharpen", kinds: ["scalar"] },
+        ],
+        returns: { kinds: ["string"] },
+        effects: EFFECT.IO_GFX,
+      }, (filter = "nearest", sharpen = 0) => {
+        const buffer = requireGfxBuffer();
+        const normalizedFilter = String(filter || "nearest").trim().toLowerCase();
+        if (normalizedFilter !== "nearest" && normalizedFilter !== "linear" && normalizedFilter !== "bilinear"){
+          throw new Error("gfxupscale filter must be nearest or linear");
+        }
+        const sharpenValue = isQty(sharpen) ? sharpen.value : sharpen;
+        const clampedSharpen = Number.isFinite(sharpenValue) ? Math.max(0, Math.min(1, sharpenValue)) : 0;
+        buffer.upscale.filter = normalizedFilter === "bilinear" ? "linear" : normalizedFilter;
+        buffer.upscale.sharpen = clampedSharpen;
+        markGfxDirty();
+        return `${buffer.upscale.filter};sharpen=${buffer.upscale.sharpen.toFixed(2)}`;
       }),
       cls: defFn("cls", 0, {
         returns: { kinds: ["scalar"] },
@@ -2309,6 +2509,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
       const w = normalizeGfxDimension(width, "width");
       const h = normalizeGfxDimension(height, "height");
       state.gfx = resizeGfxBuffer(state.gfx, w, h, normalizeGfxScale(scale));
+      setInternalRenderScale(state.gfx, 1);
       markGfxDirty();
       flushGfxOutput();
       return state.gfx;
