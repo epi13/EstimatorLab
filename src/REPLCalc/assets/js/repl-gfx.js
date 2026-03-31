@@ -105,6 +105,7 @@ export function createGfxTools({ state, terminalEl, writeLine }){
   let gfxColorContext = null;
   let runExpressionWithContext = null;
   let runLoopStatement = null;
+  let parseProgramSource = null;
   let gfxBackend = "auto";
   let pointerLockListenerAttached = false;
   let visibilityListenerAttached = false;
@@ -1638,6 +1639,10 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     runLoopStatement = fn;
   }
 
+  function setProgramSourceParser(fn){
+    parseProgramSource = fn;
+  }
+
   function normalizeTurboQuantProfileName(value){
     const key = String(value || "").trim().toLowerCase();
     if (key === "auto") return "auto";
@@ -1941,7 +1946,9 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     if (!script) throw new Error("gfxloop requires a non-empty script");
     requireGfxBuffer();
     loopState.expr = script;
-    loopState.programAst = null;
+    loopState.programAst = (typeof parseProgramSource === "function")
+      ? parseProgramSource(script)
+      : null;
     loopState.frame = 0;
     loopState.playing = false;
     loopState.lastTick = 0;
@@ -3045,6 +3052,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     setActiveBackend,
     setRunExpressionWithContext,
     setRunLoopStatementRunner,
+    setProgramSourceParser,
     handleGfxKeydown,
     getBuffer: () => state.gfx,
     getCanvas: () => state.gfx?.canvasEl || null,
