@@ -3,59 +3,37 @@
 
 # Count tiles by type across the entire map
 so analyze_map_tiles(map) = {
+  floor_tiles = count_if(map, def(tile) = tile_wallish(tile) == 0);
+  doors = count_tiles(map, 2);
+  monsters = count_tiles(map, 5);
+  keys = count_tiles(map, 3);
+  exits = count_tiles(map, 4);
+  light_2x4 = count_tiles(map, 8);
+  light_track = count_tiles(map, 9);
+  light_2x2 = count_tiles(map, 12);
+  light_dl = count_tiles(map, 13);
+  light_lin = count_tiles(map, 16);
+  light_hb = count_tiles(map, 17);
+  light_wp = count_tiles(map, 18);
+  light_exit = count_tiles(map, 19);
+  lights = light_2x4 + light_track + light_2x2 + light_dl + light_lin + light_hb + light_wp + light_exit;
+  diffusers = count_tiles(map, 20);
+  returns = count_tiles(map, 21);
+  stairs = count_tiles(map, 10) + count_tiles(map, 11);
+
   wall_edges = 0;
   wall_line_tiles = 0;
-  floor_tiles = 0;
-  doors = 0;
-  monsters = 0;
-  keys = 0;
-  exits = 0;
-  lights = 0;
-  light_2x4 = 0;
-  light_track = 0;
-  light_2x2 = 0;
-  light_dl = 0;
-  light_lin = 0;
-  light_hb = 0;
-  light_wp = 0;
-  light_exit = 0;
-  diffusers = 0;
-  returns = 0;
-  stairs = 0;
-  
-  mw0 = mw(map);
-  mh0 = mh(map);
-  
-  for y in 0..(mh0 - 1):
-    for x in 0..(mw0 - 1):
-      tt = mget(map, x, y);
-      
-      if tile_wallish(tt) == 0: floor_tiles = floor_tiles + 1 else: 0
-      if tt == 2: doors = doors + 1 else: 0
-      if tt == 3: keys = keys + 1 else: 0
-      if tt == 4: exits = exits + 1 else: 0
-      if tt == 5: monsters = monsters + 1 else: 0
-      if tt == 8: lights = lights + 1; light_2x4 = light_2x4 + 1 else: 0
-      if tt == 9: lights = lights + 1; light_track = light_track + 1 else: 0
-      if tt == 12: lights = lights + 1; light_2x2 = light_2x2 + 1 else: 0
-      if tt == 13: lights = lights + 1; light_dl = light_dl + 1 else: 0
-      if tt == 16: lights = lights + 1; light_lin = light_lin + 1 else: 0
-      if tt == 17: lights = lights + 1; light_hb = light_hb + 1 else: 0
-      if tt == 18: lights = lights + 1; light_wp = light_wp + 1 else: 0
-      if tt == 19: lights = lights + 1; light_exit = light_exit + 1 else: 0
-      if tt == 20: diffusers = diffusers + 1 else: 0
-      if tt == 21: returns = returns + 1 else: 0
-      if tt == 10 || tt == 11: stairs = stairs + 1 else: 0
-      
-      if tile_wallish(tt) == 1:
-        if tile_wallish(mget(map, x + 1, y)) == 0 || tile_wallish(mget(map, x - 1, y)) == 0 || tile_wallish(mget(map, x, y + 1)) == 0 || tile_wallish(mget(map, x, y - 1)) == 0: 
-          wall_line_tiles = wall_line_tiles + 1 else: 0
-        if tile_wallish(mget(map, x + 1, y)) == 0: wall_edges = wall_edges + 1 else: 0
-        if tile_wallish(mget(map, x - 1, y)) == 0: wall_edges = wall_edges + 1 else: 0
-        if tile_wallish(mget(map, x, y + 1)) == 0: wall_edges = wall_edges + 1 else: 0
-        if tile_wallish(mget(map, x, y - 1)) == 0: wall_edges = wall_edges + 1 else: 0
-      else:
-        0
+  wall_positions = find_if(map, def(tile) = tile_wallish(tile) == 1);
+  for pos in wall_positions:
+    x = field(pos, "x");
+    y = field(pos, "y");
+    edge_n = if(tile_wallish(safe_get(map, x, y - 1)) == 0, 1, 0);
+    edge_s = if(tile_wallish(safe_get(map, x, y + 1)) == 0, 1, 0);
+    edge_e = if(tile_wallish(safe_get(map, x + 1, y)) == 0, 1, 0);
+    edge_w = if(tile_wallish(safe_get(map, x - 1, y)) == 0, 1, 0);
+    edge_count = edge_n + edge_s + edge_e + edge_w;
+    wall_edges = wall_edges + edge_count;
+    if edge_count > 0: wall_line_tiles = wall_line_tiles + 1 else: 0
   
   {
     wall_edges, wall_line_tiles, floor_tiles, doors, monsters, keys, exits,
