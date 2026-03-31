@@ -340,6 +340,7 @@ export function initRepl(){
     };
     return executeProgram(source, state.vars, "commit", opts);
   });
+  gfx.setProgramSourceParser((source) => frontend.parseSource(source));
 
   editor = createEditor({
     state,
