@@ -8,7 +8,7 @@ function isPlainObject(value){
 }
 
 function stableSortStrings(values){
-  return [...values].sort((a, b) => a.localeCompare(b));
+  return [...values].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
 function stableSerialize(value, context = null){
@@ -140,15 +140,20 @@ export function createReplNormalize(){
           };
           collect(left);
           collect(right);
-          flattened.sort((a, b) => canonicalExpressionKey(a, aliasMap).localeCompare(canonicalExpressionKey(b, aliasMap)));
+          const keyed = flattened
+            .map((node) => ({
+              node,
+              key: canonicalExpressionKey(node, aliasMap),
+            }))
+            .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
 
-          let next = flattened[0] || null;
-          for (let i = 1; i < flattened.length; i++){
+          let next = keyed[0]?.node || null;
+          for (let i = 1; i < keyed.length; i++){
             next = {
               ...canonical,
               left: next,
-              right: flattened[i],
-              children: [next, flattened[i]],
+              right: keyed[i].node,
+              children: [next, keyed[i].node],
             };
           }
           return next;
@@ -157,7 +162,7 @@ export function createReplNormalize(){
         if (COMMUTATIVE_ONLY_OPS.has(op)){
           const leftKey = canonicalExpressionKey(left, aliasMap);
           const rightKey = canonicalExpressionKey(right, aliasMap);
-          const [orderedLeft, orderedRight] = leftKey <= rightKey ? [left, right] : [right, left];
+          const [orderedLeft, orderedRight] = leftKey < rightKey ? [left, right] : leftKey > rightKey ? [right, left] : [left, right];
           return {
             ...canonical,
             left: orderedLeft,
