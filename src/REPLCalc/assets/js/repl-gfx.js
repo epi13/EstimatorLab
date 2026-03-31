@@ -15,6 +15,12 @@ const GFX_INTERNAL_SCALE_STEP = 0.1;
 const GFX_INTERNAL_SCALE_COOLDOWN_MS = 900;
 const GFX_INTERNAL_SCALE_HYSTERESIS_FRAMES = 4;
 const GFX_FRAME_TIME_SMOOTHING = 0.2;
+const GFX_TEMPORAL_HISTORY_MAX_PIXELS = 512 * 512;
+const GFX_TEMPORAL_BLEND_DEFAULT = 0.18;
+const GFX_TEMPORAL_BLEND_MIN = 0.05;
+const GFX_TEMPORAL_BLEND_MAX = 0.4;
+const GFX_TEMPORAL_REJECT_LUMA = 0.24;
+const GFX_TEMPORAL_REJECT_CHROMA = 110;
 const GFX_BACKENDS = [
   "auto",
   "2d",
@@ -144,6 +150,19 @@ export function createGfxTools({ state, terminalEl, writeLine }){
   const turboQuantCaches = {
     falloffByProfile: new Map(),
     brightnessBandsByProfile: new Map(),
+  };
+
+  const temporalFrameState = {
+    prevFrame: null,
+    prevPlayerX: null,
+    prevPlayerY: null,
+    prevYaw: null,
+    prevLightSig: null,
+    playerDx: 0,
+    playerDy: 0,
+    yawDelta: 0,
+    lightDelta: 0,
+    sceneReset: false,
   };
 
   function getGfxColorContext(){
@@ -710,10 +729,227 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     return out;
   }
 
+  function resetTemporalHistory(buffer, reason = "unknown"){
+    if (!buffer || !buffer.temporal) return;
+    buffer.temporal.historyRgba = null;
+    buffer.temporal.historyLuma = null;
+    buffer.temporal.width = 0;
+    buffer.temporal.height = 0;
+    buffer.temporal.frames = 0;
+    buffer.temporal.lastResetReason = reason;
+    buffer.temporal.stats.accepted = 0;
+    buffer.temporal.stats.rejected = 0;
+    buffer.temporal.stats.rejectionRatio = 1;
+    buffer.temporal.stats.confidence = 0;
+  }
+
+  function computeLuma(r, g, b){
+    return ((r * 0.2126) + (g * 0.7152) + (b * 0.0722)) / 255;
+  }
+
+  function getTemporalConfig(vars){
+    const rawMode = String(vars?.doom_dlss_lite || "off").trim().toLowerCase();
+    const mode = rawMode === "quality" || rawMode === "on" || rawMode === "1"
+      ? "quality"
+      : rawMode === "performance"
+        ? "performance"
+        : "off";
+    const debug = Number(vars?.doom_dlss_debug || 0) === 1;
+    const nBlend = Number(vars?.doom_dlss_blend);
+    let blend = Number.isFinite(nBlend) ? nBlend : GFX_TEMPORAL_BLEND_DEFAULT;
+    if (mode === "performance"){
+      blend = Math.max(blend, 0.25);
+    }
+    blend = Math.max(GFX_TEMPORAL_BLEND_MIN, Math.min(GFX_TEMPORAL_BLEND_MAX, blend));
+    return { mode, debug, blend };
+  }
+
+  function getLightingSignature(vars){
+    const keys = [
+      "doom_light_fix",
+      "doom_light_2x4",
+      "doom_light_track",
+      "doom_light_2x2",
+      "doom_light_dl",
+      "doom_light_lin",
+      "doom_light_hb",
+      "doom_light_wp",
+      "doom_light_exit",
+      "doom_hash",
+    ];
+    let sig = 0;
+    for (let i = 0; i < keys.length; i++){
+      const n = Number(vars?.[keys[i]]);
+      if (Number.isFinite(n)){
+        sig += n * (i + 1);
+      }
+    }
+    return sig;
+  }
+
+  function applyTemporalBlend(buffer, src, w, h){
+    const vars = state.vars || Object.create(null);
+    const cfg = getTemporalConfig(vars);
+    const temporal = buffer.temporal;
+    temporal.enabled = cfg.mode !== "off";
+    temporal.mode = cfg.mode;
+    temporal.debug = cfg.debug;
+    temporal.blend = cfg.blend;
+    if (temporal.lastMode && temporal.lastMode !== cfg.mode){
+      resetTemporalHistory(buffer, "mode-switch");
+    }
+    temporal.lastMode = cfg.mode;
+
+    const pixelCount = w * h;
+    if (!temporal.enabled){
+      resetTemporalHistory(buffer, "mode-off");
+      return src;
+    }
+    if (pixelCount > GFX_TEMPORAL_HISTORY_MAX_PIXELS){
+      resetTemporalHistory(buffer, "history-cap");
+      return src;
+    }
+    if (
+      temporal.width !== w
+      || temporal.height !== h
+      || !temporal.historyRgba
+      || !temporal.historyLuma
+    ){
+      resetTemporalHistory(buffer, "resolution-jump");
+      temporal.width = w;
+      temporal.height = h;
+      temporal.historyRgba = new Uint8Array(src.length);
+      temporal.historyLuma = new Float32Array(pixelCount);
+    }
+    if (temporalFrameState.sceneReset){
+      resetTemporalHistory(buffer, "scene-reset");
+      temporal.width = w;
+      temporal.height = h;
+      temporal.historyRgba = new Uint8Array(src.length);
+      temporal.historyLuma = new Float32Array(pixelCount);
+    }
+
+    const out = temporal.output && temporal.output.length === src.length
+      ? temporal.output
+      : new Uint8Array(src.length);
+    temporal.output = out;
+    const hist = temporal.historyRgba;
+    const histLuma = temporal.historyLuma;
+    if (!(hist && histLuma)){
+      return src;
+    }
+
+    const pDx = temporalFrameState.playerDx || 0;
+    const pDy = temporalFrameState.playerDy || 0;
+    const yD = temporalFrameState.yawDelta || 0;
+    const lightDelta = temporalFrameState.lightDelta || 0;
+    const globalMotion = Math.abs(yD) * 1.8 + Math.hypot(pDx, pDy) * 0.8 + (Math.hypot(state.vars?.mouse_dx || 0, state.vars?.mouse_dy || 0) * 0.01);
+    const sceneShock = lightDelta > 0.2 || globalMotion > 0.85;
+    const reprojX = Math.round((-yD * w * 0.35) - (pDx * 0.75));
+    const reprojY = Math.round((pDy * h * 0.6));
+    const blendBase = sceneShock ? cfg.blend * 0.35 : cfg.blend;
+
+    let accepted = 0;
+    let rejected = 0;
+    let confidenceSum = 0;
+    for (let y = 0; y < h; y++){
+      for (let x = 0; x < w; x++){
+        const idxPx = y * w + x;
+        const idx = idxPx * 4;
+        const r = src[idx];
+        const g = src[idx + 1];
+        const b = src[idx + 2];
+        const a = src[idx + 3];
+        const lum = computeLuma(r, g, b);
+
+        const hx = Math.max(0, Math.min(w - 1, x + reprojX));
+        const hy = Math.max(0, Math.min(h - 1, y + reprojY));
+        const hIdxPx = hy * w + hx;
+        const hIdx = hIdxPx * 4;
+        const hr = hist[hIdx];
+        const hg = hist[hIdx + 1];
+        const hb = hist[hIdx + 2];
+        const ha = hist[hIdx + 3];
+        const hl = histLuma[hIdxPx] || 0;
+        const chromaDelta = Math.abs(r - hr) + Math.abs(g - hg) + Math.abs(b - hb);
+        const lumaDelta = Math.abs(lum - hl);
+
+        let confidence = 1 - (globalMotion * 0.45) - (lightDelta * 0.85);
+        if (ha < 8 || a < 8){
+          confidence = 0;
+        }
+        if (lumaDelta > GFX_TEMPORAL_REJECT_LUMA || chromaDelta > GFX_TEMPORAL_REJECT_CHROMA){
+          confidence *= 0.1;
+        }
+        if (sceneShock && (lumaDelta > 0.12 || chromaDelta > 45)){
+          confidence = 0;
+        }
+        confidence = Math.max(0, Math.min(1, confidence));
+
+        if (confidence > 0.35){
+          const amt = blendBase * confidence;
+          out[idx] = ((r * (1 - amt)) + (hr * amt)) | 0;
+          out[idx + 1] = ((g * (1 - amt)) + (hg * amt)) | 0;
+          out[idx + 2] = ((b * (1 - amt)) + (hb * amt)) | 0;
+          out[idx + 3] = a;
+          accepted += 1;
+        }else{
+          out[idx] = r;
+          out[idx + 1] = g;
+          out[idx + 2] = b;
+          out[idx + 3] = a;
+          rejected += 1;
+        }
+        confidenceSum += confidence;
+      }
+    }
+
+    hist.set(out);
+    for (let i = 0; i < pixelCount; i++){
+      const o = i * 4;
+      histLuma[i] = computeLuma(out[o], out[o + 1], out[o + 2]);
+    }
+    temporal.frames += 1;
+    temporal.stats.accepted = accepted;
+    temporal.stats.rejected = rejected;
+    temporal.stats.rejectionRatio = pixelCount > 0 ? (rejected / pixelCount) : 0;
+    temporal.stats.confidence = pixelCount > 0 ? (confidenceSum / pixelCount) : 0;
+    return out;
+  }
+
+  function drawTemporalDebugOverlay(rgba, w, h, buffer){
+    if (!(rgba instanceof Uint8Array) || !buffer?.temporal?.debug) return rgba;
+    const out = (rgba === buffer.temporal.output)
+      ? rgba
+      : new Uint8Array(rgba);
+    const stats = buffer.temporal.stats || {};
+    const ratio = Math.max(0, Math.min(1, Number(stats.rejectionRatio) || 0));
+    const barW = Math.max(16, Math.min(w - 2, Math.floor(w * 0.35)));
+    const barH = Math.max(4, Math.min(10, Math.floor(h * 0.06)));
+    const x0 = 1;
+    const y0 = 1;
+    const acceptW = Math.floor(barW * (1 - ratio));
+    for (let y = 0; y < barH; y++){
+      for (let x = 0; x < barW; x++){
+        const idx = ((y0 + y) * w + (x0 + x)) * 4;
+        const isAccepted = x < acceptW;
+        out[idx] = isAccepted ? 48 : 220;
+        out[idx + 1] = isAccepted ? 200 : 56;
+        out[idx + 2] = isAccepted ? 92 : 56;
+        out[idx + 3] = 255;
+      }
+    }
+    return out;
+  }
+
   function getUpscaleSourceRgba(buffer){
     const src = buildRgba(buffer);
+    const w = buffer.width | 0;
+    const h = buffer.height | 0;
+    let out = applyTemporalBlend(buffer, src, w, h);
+    out = drawTemporalDebugOverlay(out, w, h, buffer);
     const sharpen = buffer.upscale?.sharpen || 0;
-    return sharpen > 0 ? applySharpenPass(src, buffer.width | 0, buffer.height | 0, sharpen) : src;
+    return sharpen > 0 ? applySharpenPass(out, w, h, sharpen) : out;
   }
 
   function renderWebgl2(buffer, canvas, dpr){
@@ -947,6 +1183,26 @@ fn fs(in: VSOut) -> @location(0) vec4f {
         filter: "nearest",
         sharpen: 0,
       },
+      temporal: {
+        enabled: false,
+        mode: "off",
+        lastMode: "off",
+        blend: GFX_TEMPORAL_BLEND_DEFAULT,
+        debug: false,
+        frames: 0,
+        width: 0,
+        height: 0,
+        historyRgba: null,
+        historyLuma: null,
+        output: null,
+        lastResetReason: "init",
+        stats: {
+          accepted: 0,
+          rejected: 0,
+          rejectionRatio: 1,
+          confidence: 0,
+        },
+      },
       pixels: new Uint32Array(width * height),
       bg: null,
       backend: null,
@@ -1017,6 +1273,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     buffer.glSizeH = 0;
     buffer.gpuTexW = 0;
     buffer.gpuTexH = 0;
+    resetTemporalHistory(buffer, "resize");
     return buffer;
   }
 
@@ -1039,6 +1296,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     buffer.glSizeH = 0;
     buffer.gpuTexW = 0;
     buffer.gpuTexH = 0;
+    resetTemporalHistory(buffer, "internal-scale");
     markGfxDirty();
   }
 
@@ -1347,6 +1605,37 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     runExpressionWithContext(loopState.expr, state.vars);
   }
 
+  function updateTemporalFrameState(){
+    const vars = state.vars || Object.create(null);
+    const frame = Number(vars.frame);
+    const px = Number(vars.doom_px);
+    const py = Number(vars.doom_py);
+    const yaw = Number(vars.doom_yaw);
+    const lightSig = getLightingSignature(vars);
+    const frameReset = Number.isFinite(frame)
+      && Number.isFinite(temporalFrameState.prevFrame)
+      && frame <= temporalFrameState.prevFrame;
+    const explicitReset = Number(vars.doom_scene_reset || vars.doom_regen || 0) === 1;
+    temporalFrameState.sceneReset = Boolean(frameReset || explicitReset);
+    temporalFrameState.playerDx = (Number.isFinite(px) && Number.isFinite(temporalFrameState.prevPlayerX))
+      ? (px - temporalFrameState.prevPlayerX)
+      : 0;
+    temporalFrameState.playerDy = (Number.isFinite(py) && Number.isFinite(temporalFrameState.prevPlayerY))
+      ? (py - temporalFrameState.prevPlayerY)
+      : 0;
+    temporalFrameState.yawDelta = (Number.isFinite(yaw) && Number.isFinite(temporalFrameState.prevYaw))
+      ? (yaw - temporalFrameState.prevYaw)
+      : 0;
+    temporalFrameState.lightDelta = Number.isFinite(temporalFrameState.prevLightSig)
+      ? Math.min(1, Math.abs(lightSig - temporalFrameState.prevLightSig) / 250)
+      : 0;
+    temporalFrameState.prevFrame = Number.isFinite(frame) ? frame : temporalFrameState.prevFrame;
+    temporalFrameState.prevPlayerX = Number.isFinite(px) ? px : temporalFrameState.prevPlayerX;
+    temporalFrameState.prevPlayerY = Number.isFinite(py) ? py : temporalFrameState.prevPlayerY;
+    temporalFrameState.prevYaw = Number.isFinite(yaw) ? yaw : temporalFrameState.prevYaw;
+    temporalFrameState.prevLightSig = lightSig;
+  }
+
   function runLoopFrame(){
     if (!loopState.expr) return;
     const fps = normalizeLoopFps(loopState.fps);
@@ -1365,6 +1654,12 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     state.vars.doom_tq_profile = turboQuantState.profile;
     state.vars.doom_tq_effective = turboQuantState.effectiveProfile;
     state.vars.doom_tq_pressure = turboQuantState.pressure;
+    if (!state.vars.doom_dlss_lite){
+      state.vars.doom_dlss_lite = "off";
+    }
+    if (!Number.isFinite(Number(state.vars.doom_dlss_debug))){
+      state.vars.doom_dlss_debug = 0;
+    }
     state.vars.key_w = keyState.down.w ? 1 : 0;
     state.vars.key_a = keyState.down.a ? 1 : 0;
     state.vars.key_s = keyState.down.s ? 1 : 0;
@@ -1389,6 +1684,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     const frameStart = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
     try{
       runLoopScript();
+      updateTemporalFrameState();
       flushGfxOutput();
     }catch(err){
       pauseLoop();
@@ -1463,6 +1759,13 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     loopState.fpsFrames = 0;
     loopState.fpsMeasured = 0;
     loopState.frameTimeMs = 0;
+    temporalFrameState.prevFrame = null;
+    temporalFrameState.prevPlayerX = null;
+    temporalFrameState.prevPlayerY = null;
+    temporalFrameState.prevYaw = null;
+    temporalFrameState.prevLightSig = null;
+    temporalFrameState.sceneReset = true;
+    resetTemporalHistory(state.gfx, "mode-switch");
     ensureVisibilityListener();
     if (fps !== undefined){
       loopState.fps = normalizeLoopFps(fps);
@@ -1514,6 +1817,8 @@ fn fs(in: VSOut) -> @location(0) vec4f {
   function resetLoop(){
     if (!loopState.expr) throw new Error("No gfx loop configured.");
     loopState.frame = 0;
+    temporalFrameState.sceneReset = true;
+    resetTemporalHistory(state.gfx, "scene-reset");
     runLoopFrame();
   }
 
