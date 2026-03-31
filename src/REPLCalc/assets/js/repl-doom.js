@@ -96,10 +96,11 @@ export async function runDoomDemo({ gfx, writeLine, writeInputEcho, state, execu
 
   if (typeof gfx.setActiveBackend === "function"){
     try{
-      gfx.setActiveBackend("webgl2");
+      // Prefer the 2D backend for :doom to avoid GPU/driver WebGL instability.
+      gfx.setActiveBackend("2d");
     }catch{}
   }
-  
+
   const status = typeof gfx.getLoopStatus === "function" ? gfx.getLoopStatus() : null;
   if (status?.playing && typeof gfx.pauseLoop === "function"){
     gfx.pauseLoop();
