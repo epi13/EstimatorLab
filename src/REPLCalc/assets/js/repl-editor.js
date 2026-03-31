@@ -81,7 +81,7 @@ const FN_DOCS = {
   rect: { usage: "rect(x, y, w, h, color)", doc: "Draw a rectangle outline." },
   fill: { usage: "fill(x, y, w, h, color)", doc: "Draw a filled rectangle." },
   plot: { usage: "plot(x, y, \"dx,dy|...\", color)", doc: "Plot relative vector steps from a start." },
-  budgetpolicy: { usage: "budgetpolicy(\"balanced\")", doc: "Set global budget policy: interactive, balanced, cinematic, headless-batch." },
+  budgetpolicy: { usage: "budgetpolicy(\"balanced\")", doc: "Set global budget policy: interactive, performance, balanced, cinematic, headless-batch." },
   budgetstats: { usage: "budgetstats()", doc: "Show per-stage budget telemetry and memory snapshot." },
   budgethud: { usage: "budgethud(1)", doc: "Toggle on-canvas budget debug HUD." },
 };
