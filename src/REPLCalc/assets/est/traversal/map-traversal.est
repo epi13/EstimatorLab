@@ -8,8 +8,8 @@
 # Coordinate validation is provided by the runtime:
 # - in_bounds(map, x, y)
 
-# Safe tile access with bounds checking
-so safe_get(map, x, y) = if(in_bounds(map, x, y), mget(map, x, y), 0)
+# Safe tile access helper is now provided by the runtime:
+# - safe_get(map, x, y)
 
 # Count tiles of specific type
 so count_tiles(map, tile_type) = {
