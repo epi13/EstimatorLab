@@ -1,5 +1,12 @@
 import { unbox } from "./repl-values.js";
 import { EFFECT } from "./repl-effects.js";
+import {
+  MODULE_REGISTRY,
+  isModuleIdentityLoaded,
+  markModuleIdentityLoaded,
+} from "./repl-module-registry.js";
+
+const LATENT_MODULE = MODULE_REGISTRY.latentMuxWalker;
 
 async function fetchText(url){
   const res = await fetch(url, { cache: "no-cache" });
@@ -14,21 +21,21 @@ export async function ensureLatentModuleLoaded({
   executeProgram,
   recordSymbolDefinition,
   writeLine,
-  url = "assets/est/latent-mux-walker.est",
+  moduleMeta = LATENT_MODULE,
 }){
-  if (state.__latentMuxWalkerLoaded) return;
+  if (isModuleIdentityLoaded(state, moduleMeta)) return false;
   if (Object.prototype.hasOwnProperty.call(state.userFns || {}, "ltw_step")){
-    state.__latentMuxWalkerLoaded = true;
-    return;
+    markModuleIdentityLoaded(state, moduleMeta);
+    return false;
   }
 
-  const source = await fetchText(url);
+  const source = await fetchText(moduleMeta.path);
   const parsed = executeProgram(source, state.vars, "commit", {
     allowedEffects: EFFECT.ALL,
     allowCommands: false,
     wrapErrors: false,
     captureResults: true,
-    commandErrorMessage: "latent module may not contain commands",
+    commandErrorMessage: `${moduleMeta.label} module may not contain commands`,
   });
   for (const record of parsed.results || []){
     if (record.type === "assy"){
@@ -53,8 +60,45 @@ export async function ensureLatentModuleLoaded({
     }
   }
 
-  state.__latentMuxWalkerLoaded = true;
+  markModuleIdentityLoaded(state, moduleMeta);
   if (typeof writeLine === "function") writeLine("Loaded latent mux walker.", "ok");
+  return true;
+}
+
+function runLatentSelfBenchmark({ state, executeProgram, writeLine }){
+  const csi = "03 30 00";
+  const benchmarkBudget = {
+    rounds: 8,
+    steps: 16,
+  };
+  const tmpName = "__latent_tmp";
+  let passes = 0;
+
+  for (let round = 0; round < benchmarkBudget.rounds; round += 1){
+    const seed = round;
+    const s1 = executeProgram(`${tmpName} = ltw_seek_csi(${seed}, ${JSON.stringify(csi)}, ${benchmarkBudget.steps})`, state.vars, "commit", {
+      allowedEffects: EFFECT.ALL,
+      allowCommands: false,
+      wrapErrors: false,
+      captureResults: false,
+    }).lastValue;
+    state.vars[tmpName] = s1;
+    const s2 = executeProgram(`ltw_rewind_csi(${tmpName}, ${JSON.stringify(csi)}, ${benchmarkBudget.steps})`, state.vars, "commit", {
+      allowedEffects: EFFECT.ALL,
+      allowCommands: false,
+      wrapErrors: false,
+      captureResults: false,
+    }).lastValue;
+    const s2u = unbox(s2);
+    if (s2u === seed) passes += 1;
+  }
+
+  delete state.vars[tmpName];
+  if (passes === benchmarkBudget.rounds){
+    if (typeof writeLine === "function") writeLine(`latent bench ok (${passes}/${benchmarkBudget.rounds})`, "ok");
+  }else if (typeof writeLine === "function"){
+    writeLine(`latent bench failed (${passes}/${benchmarkBudget.rounds})`, "err");
+  }
 }
 
 export async function runLatentCommand({
@@ -64,65 +108,29 @@ export async function runLatentCommand({
   recordSymbolDefinition,
   writeLine,
 }){
-  const a = String(arg || "").trim();
+  const a = String(arg || "").trim().toLowerCase();
 
-  if (!a){
-    await runLatentCommand({
-      arg: "test",
+  if (!a || a === "load"){
+    const loaded = await ensureLatentModuleLoaded({
       state,
       executeProgram,
       recordSymbolDefinition,
       writeLine,
     });
+    if (!loaded && typeof writeLine === "function") writeLine("Latent mux walker already loaded; reusing cached module identity.", "muted");
     return;
   }
 
-  if (a === "load"){
+  if (a === "test" || a === "bench"){
     await ensureLatentModuleLoaded({
       state,
       executeProgram,
       recordSymbolDefinition,
       writeLine,
     });
-    if (typeof writeLine === "function") writeLine("Usage: :latent | :latent test", "muted");
+    runLatentSelfBenchmark({ state, executeProgram, writeLine });
     return;
   }
 
-  if (a === "test"){
-    await ensureLatentModuleLoaded({
-      state,
-      executeProgram,
-      recordSymbolDefinition,
-      writeLine,
-    });
-
-    const csi = "03 30 00";
-    const steps = 50;
-    const s0 = 0;
-    const tmpName = "__latent_tmp";
-    const s1 = executeProgram(`__latent_tmp = ltw_seek_csi(${s0}, ${JSON.stringify(csi)}, ${steps})`, state.vars, "commit", {
-      allowedEffects: EFFECT.ALL,
-      allowCommands: false,
-      wrapErrors: false,
-      captureResults: true,
-    }).lastValue;
-    state.vars[tmpName] = s1;
-    const s2 = executeProgram(`ltw_rewind_csi(${tmpName}, ${JSON.stringify(csi)}, ${steps})`, state.vars, "commit", {
-      allowedEffects: EFFECT.ALL,
-      allowCommands: false,
-      wrapErrors: false,
-      captureResults: true,
-    }).lastValue;
-    const s2u = unbox(s2);
-    delete state.vars[tmpName];
-
-    if (s2u === s0){
-      if (typeof writeLine === "function") writeLine("latent test ok", "ok");
-    }else{
-      if (typeof writeLine === "function") writeLine(`latent test failed: expected ${s0}, got ${s2u}`, "err");
-    }
-    return;
-  }
-
-  throw new Error("latent usage: :latent | :latent test");
+  throw new Error("latent usage: :latent | :latent load | :latent bench");
 }
