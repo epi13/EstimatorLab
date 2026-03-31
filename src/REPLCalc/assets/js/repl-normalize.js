@@ -11,7 +11,13 @@ function stableSortStrings(values){
   return [...values].sort((a, b) => a.localeCompare(b));
 }
 
-function stableSerialize(value){
+function stableSerialize(value, context = null){
+  const ctx = context || {
+    active: new WeakMap(),
+    cache: new WeakMap(),
+    nextRefId: 1,
+  };
+
   if (value === null) return "null";
   if (value === undefined) return "undefined";
   if (typeof value === "number"){
@@ -21,11 +27,27 @@ function stableSerialize(value){
   }
   if (typeof value === "string") return JSON.stringify(value);
   if (typeof value === "boolean") return value ? "true" : "false";
-  if (Array.isArray(value)) return `[${value.map((item) => stableSerialize(item)).join(",")}]`;
+  if (Array.isArray(value)){
+    if (ctx.cache.has(value)) return ctx.cache.get(value);
+    if (ctx.active.has(value)) return `{"$ref":${ctx.active.get(value)}}`;
+    const refId = ctx.nextRefId++;
+    ctx.active.set(value, refId);
+    const serialized = `[${value.map((item) => stableSerialize(item, ctx)).join(",")}]`;
+    ctx.active.delete(value);
+    ctx.cache.set(value, serialized);
+    return serialized;
+  }
   if (typeof value === "object"){
+    if (ctx.cache.has(value)) return ctx.cache.get(value);
+    if (ctx.active.has(value)) return `{"$ref":${ctx.active.get(value)}}`;
+    const refId = ctx.nextRefId++;
+    ctx.active.set(value, refId);
     const keys = stableSortStrings(Object.keys(value));
-    const pairs = keys.map((key) => `${JSON.stringify(key)}:${stableSerialize(value[key])}`);
-    return `{${pairs.join(",")}}`;
+    const pairs = keys.map((key) => `${JSON.stringify(key)}:${stableSerialize(value[key], ctx)}`);
+    const serialized = `{${pairs.join(",")}}`;
+    ctx.active.delete(value);
+    ctx.cache.set(value, serialized);
+    return serialized;
   }
   return JSON.stringify(String(value));
 }
