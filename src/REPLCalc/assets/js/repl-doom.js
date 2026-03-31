@@ -1,10 +1,10 @@
 import { EFFECT } from "./repl-effects.js";
 import { MODULE_REGISTRY, markModuleIdentityLoaded } from "./repl-module-registry.js";
 
-const DOOM_W = 256;
-const DOOM_H = 144;
+const DOOM_W = 192;
+const DOOM_H = 108;
 const DOOM_SCALE = 3;
-const DOOM_DEFAULT_FPS = 18;
+const DOOM_DEFAULT_FPS = 12;
 
 async function fetchText(url){
   const res = await fetch(url, { cache: "no-cache" });
@@ -84,7 +84,7 @@ async function loadDoomDemoScript(){
 }
 
 export async function runDoomDemo({ gfx, writeLine, writeInputEcho, state, executeProgram }) {
-  writeLine("Doom level - playable EST DSL raycaster", "muted");
+  writeLine("Doom level - playable EST DSL raycaster (safe mode)", "muted");
   writeLine("Click the canvas to capture the mouse.", "muted");
   writeLine("Controls: Mouse look • WASD move/strafe • Shift run • Space use • LMB shoot • E view • Q panel • F upgrade", "muted");
   writeLine("Loop UI: P play/pause (when mouse not captured) • Arrows step/fps • R reset", "muted");
@@ -128,8 +128,11 @@ export async function runDoomDemo({ gfx, writeLine, writeInputEcho, state, execu
   state.vars.doom_tq_mode = state.vars.doom_tq_profile === "auto" ? "auto" : "manual";
   state.vars.doom_tq_effective = typeof state.vars.doom_tq_effective === "string" ? state.vars.doom_tq_effective : "balanced";
   state.vars.doom_tq_pressure = Number.isFinite(state.vars.doom_tq_pressure) ? state.vars.doom_tq_pressure : 0;
-  state.vars.doom_dlss_lite = typeof state.vars.doom_dlss_lite === "string" ? state.vars.doom_dlss_lite : "auto";
-  state.vars.doom_dlss_blend = Number.isFinite(Number(state.vars.doom_dlss_blend)) ? Number(state.vars.doom_dlss_blend) : 0.22;
+  state.vars.doom_dlss_lite = typeof state.vars.doom_dlss_lite === "string" ? state.vars.doom_dlss_lite : "performance";
+  state.vars.doom_dlss_blend = Number.isFinite(Number(state.vars.doom_dlss_blend)) ? Number(state.vars.doom_dlss_blend) : 0.30;
+  if (!Number.isFinite(Number(state.vars.gfx_internal_scale))){
+    state.vars.gfx_internal_scale = 0.8;
+  }
   if (typeof gfx.setTurboQuantProfile === "function"){
     try{
       gfx.setTurboQuantProfile(state.vars.doom_tq_profile);
