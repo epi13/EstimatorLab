@@ -220,6 +220,326 @@ robots/
 │   ├── ve-pricing-prompt.md
 │   └── email-clarification-prompt.md
 └── tools/
+
+File Types
+Instruction Files
+
+Instruction files describe how the LLM should behave.
+
+Examples:
+
+global-estimating-instructions.md
+hms-style-guide.md
+alaska-pricing-guidelines.md
+
+These files should be stable and broadly applicable.
+
+Workflow Files
+
+Workflow files describe a repeatable estimating task.
+
+Examples:
+
+Build a new estimate
+Upgrade a 65% estimate to 95%
+Compare a prior estimate to new documents
+Reconcile engineer quantities
+Review an estimate for missing scope
+
+These should be written as step-by-step procedures.
+
+Prompt Files
+
+Prompt files are copy/paste-ready prompts for ChatGPT, Codex, or another LLM.
+
+They should include:
+
+Role
+Inputs
+Task
+Required output
+Formatting rules
+Review requirements
+Assumptions and exclusions rules
+Template Files
+
+Template files define preferred output formats.
+
+Examples:
+
+CSI table layout
+Uniformat table layout
+Change log table
+Estimate line item table
+Clarification log
+VE summary table
+Tool Files
+
+Tool files may describe scripts, calculators, checklists, or validation logic that support estimating workflows.
+
+Examples:
+
+Quantity checks
+Unit conversion checks
+Duplicate scope checks
+Spreadsheet formatting checks
+PDF/drawing review checklists
+Standard LLM Behavior for Estimate Tasks
+
+When an LLM uses these files, it should generally follow this sequence:
+
+Identify the task type
+Identify the project type
+Identify the design level
+Identify the estimate format required
+Review the available source documents
+Review the prior estimate if one exists
+Extract scope from drawings, specifications, narratives, and addenda
+Compare source documents against existing estimate line items
+Identify added, deleted, changed, and unclear scope
+Update or create estimate line items
+Check for duplicate scope
+Flag assumptions and exclusions
+Produce output in a copy/paste-ready format
+Summarize major estimate impacts
+Standard Output Expectations
+
+Unless instructed otherwise, outputs should be practical and estimator-friendly.
+
+Preferred output formats include:
+
+Estimate Line Item Table
+Division / Section	Subsection	Description	Quantity	Unit	Material Unit Cost	Labor Unit Cost	Total	Notes
+Change Log Table
+Existing Line Item	Document Change	Action Required	Revised Quantity	Pricing Impact	Notes
+Missing Scope Table
+Source Document Reference	Missing Scope Item	Recommended Estimate Section	Quantity	Unit	Pricing Basis	Notes
+Clarification Log
+Item	Question	Reason It Matters	Suggested Assumption if Unanswered
+Naming Conventions
+
+Use clear file names that describe the task.
+
+Good examples:
+
+estimate-upgrade-65-to-95.md
+hms-csi-line-item-format.md
+remote-alaska-pricing-guidance.md
+engineer-quantity-reconciliation.md
+scope-gap-review.md
+
+Avoid vague names such as:
+
+prompt1.md
+test.md
+notes.md
+general.md
+Writing Style
+
+Instructions and prompts in this folder should be:
+
+Direct
+Practical
+Specific
+Estimator-oriented
+Written for repeatable use
+Focused on real project documents
+Clear about assumptions and limitations
+
+Avoid overly generic AI language.
+
+For example, prefer:
+
+Compare the existing estimate against the new drawing set and identify added, deleted, revised, and unclear scope.
+
+Instead of:
+
+Analyze the documents and provide helpful insights.
+
+HMS Estimating Style Notes
+
+When producing HMS-style estimate content:
+
+Use clear section headers
+Use clear subsection headers
+Use detailed line item descriptions
+Use LOT instead of LS
+Separate material and labor where practical
+Include totals
+Keep notes concise but useful
+Add assumptions where documents are incomplete
+Keep output easy to paste into a spreadsheet
+Do not bury important scope changes in paragraph form only
+CSI vs Uniformat
+
+Some projects should be organized by CSI MasterFormat divisions.
+
+Others should be organized by Uniformat or elemental categories.
+
+The required format should be identified at the start of a task.
+
+If the required format is not stated, the LLM should ask or make a reasonable assumption based on the project type and prior estimate format.
+
+CSI Use Cases
+
+CSI is preferred when the estimate is organized by trade or specification division.
+
+Examples:
+
+Division 02 – Existing Conditions
+Division 03 – Concrete
+Division 22 – Plumbing
+Division 26 – Electrical
+Division 31 – Earthwork
+Division 33 – Utilities
+Uniformat Use Cases
+
+Uniformat is preferred when the estimate is organized by building system or project element.
+
+Examples:
+
+Substructure
+Shell
+Interiors
+Services
+Equipment
+Sitework
+Document Review Expectations
+
+When reviewing project documents, the LLM should consider:
+
+Drawings
+Specifications
+Narratives
+Addenda
+Alternates
+Schedules
+Owner comments
+Engineer comments
+Supplemental quantity lists
+Prior estimates
+Prior assumptions
+Meeting notes or email direction
+
+The LLM should not rely on only one document type if others are available.
+
+For example, drawings may show a scope item that is not clearly described in the specifications, or specifications may require work not obvious on the drawings.
+
+Estimate Update Workflow
+
+When upgrading an estimate from one design level to another, the LLM should:
+
+Use the previous estimate as the baseline
+Review the new drawings and specifications
+Identify what changed
+Identify what was added
+Identify what was deleted
+Identify what remained generally unchanged
+Update quantities and pricing where appropriate
+Add new HMS-style line items for missing scope
+Remove or mark deleted scope as appropriate
+Flag uncertain items for review
+Produce a change log
+Produce copy/paste-ready estimate rows
+
+Do not create an entirely new estimate unless the new design is effectively a new design or the user specifically requests a rebuild.
+
+Engineer Quantity Reconciliation Workflow
+
+When an engineer provides quantities after an estimate has already been created:
+
+Review the engineer quantity list
+Compare each quantity to the existing estimate
+Determine whether the scope is already included
+Update existing line items where appropriate
+Add new lines only for missing scope
+Flag possible duplicated quantities
+Preserve the estimate layout
+Document what changed
+
+The primary goal is to incorporate the engineer’s quantities without double counting.
+
+Value Engineering Workflow
+
+For VE reviews, the LLM should:
+
+Identify the original scope
+Identify the proposed VE change
+Determine whether the change is additive, deductive, or a substitution
+Estimate the cost impact
+Clearly describe what is included
+Clearly describe what is excluded
+Note assumptions
+Provide a concise summary suitable for owner/design-team review
+
+VE pricing should be traceable and easy to review.
+
+Quality Control Checklist
+
+Before finalizing estimate output, check for:
+
+Missing major divisions or systems
+Duplicated scope
+Unit inconsistencies
+Quantity inconsistencies
+Unclear assumptions
+Missing alternates
+Missing mobilization or general requirements
+Missing freight or logistics impacts
+Missing demolition or temporary work
+Missing controls, electrical, or commissioning scope
+Specification requirements not shown in drawings
+Drawing scope not reflected in specifications
+Items shown in schedules but missing from line items
+Inconsistent use of LOT vs LS
+Formatting that is difficult to paste into a spreadsheet
+Assumptions and Limitations
+
+LLM-generated estimate content must be reviewed by a qualified estimator.
+
+These files are intended to improve consistency, speed, and completeness, but they do not replace professional judgment.
+
+The LLM may help identify scope, organize line items, compare documents, and draft pricing structure, but the estimator remains responsible for:
+
+Final quantities
+Final pricing
+Final assumptions
+Final exclusions
+Final deliverable quality
+Coordination with project documents and design team direction
+Future Development Ideas
+
+Possible future additions to this folder:
+
+Project-specific context files
+Agency-specific estimating instructions
+HMS estimate template examples
+Standard line item libraries
+Alaska freight adjustment guidance
+Remote project logistics checklists
+Reusable CSI division prompts
+Reusable Uniformat prompts
+Spreadsheet validation scripts
+PDF drawing review workflows
+Quantity extraction workflows
+Estimate comparison scripts
+Change log generators
+VE summary generators
+Maintenance Notes
+
+This folder should be updated as estimating workflows improve.
+
+When a prompt works well on a real project, save it here.
+
+When a prompt causes confusion, revise it.
+
+When a new recurring task appears, create a reusable workflow file.
+
+When project-specific assumptions become common across multiple estimates, consider turning them into a general instruction file.
+
+The goal is to build a durable estimating knowledge base that makes future LLM-assisted estimate work more consistent, accurate, and efficient.
+
+::contentReference[oaicite:1]{index=1}
     ├── quantity-checklist.md
     ├── estimate-review-checklist.md
     ├── document-comparison-checklist.md
