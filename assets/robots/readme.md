@@ -187,7 +187,7 @@ The goal is to make the estimate usable while still showing where judgment was r
 The folder may contain files organized like this:
 
 ```text
-llm-context/
+robots/
 ├── README.md
 ├── global-estimating-instructions.md
 ├── hms-style-guide.md
