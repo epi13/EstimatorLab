@@ -27,6 +27,7 @@ function makeDB(materials) {
     ...materials.sheet_goods,
     ...materials.trim,
     ...materials.foundation,
+    ...materials.exterior,
     ...materials.misc
   };
   return {
@@ -62,6 +63,18 @@ const fallbackMaterials = {
     "concrete":{desc:"Concrete",unit:"CY",base_price:285,freight_class:"heavy"},
     "rebar":{desc:"Rebar allowance",unit:"SF",base_price:1.25,freight_class:"heavy"},
     "vapor_barrier":{desc:"10 mil VB",unit:"SF",base_price:0.22,freight_class:"flat"}
+  },
+  exterior:{
+    "lap_siding_sf":{desc:"Factory-primed lap siding allowance",unit:"SF",base_price:2.85,freight_class:"flat"},
+    "bb_siding_sf":{desc:"Board-and-batten siding allowance",unit:"SF",base_price:3.35,freight_class:"flat"},
+    "panel_siding_sf":{desc:"T1-11 / panel siding allowance",unit:"SF",base_price:2.25,freight_class:"flat"},
+    "metal_roof_sf":{desc:"Ribbed metal roofing package",unit:"SF",base_price:4.75,freight_class:"flat"},
+    "shingle_roof_sf":{desc:"Asphalt shingle roofing package",unit:"SF",base_price:3.10,freight_class:"pallet"},
+    "membrane_roof_sf":{desc:"Low-slope membrane roofing package",unit:"SF",base_price:5.25,freight_class:"flat"},
+    "shed_door_single":{desc:"Prehung single shed door",unit:"EA",base_price:285,freight_class:"pallet"},
+    "shed_door_double":{desc:"Double shed door set",unit:"EA",base_price:425,freight_class:"pallet"},
+    "rollup_door":{desc:"Light-duty roll-up door",unit:"EA",base_price:780,freight_class:"pallet"},
+    "vinyl_window":{desc:"Vinyl shed window",unit:"EA",base_price:165,freight_class:"pallet"}
   },
   misc:{ "fasteners_ls":{desc:"Fasteners",unit:"LS",base_price:120,freight_class:"pallet"} }
 };

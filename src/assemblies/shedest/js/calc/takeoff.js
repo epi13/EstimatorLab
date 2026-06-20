@@ -90,7 +90,12 @@ export function buildTakeoff(state, db) {
   items.push(db.item(`${walls.studType.toUpperCase()}, Header ITEM (Budgetary headers, 8')`, lumberKey, wallFrame.headerSticksEA, "EA"));
 
   items.push(db.item(`4'x8', ${db.desc(walls.wallSheathKey)} ITEM (Wall sheathing)`, walls.wallSheathKey, wallSheets, "EA"));
+  const sidingKey = walls.sidingProfile === "boardbatten" ? "bb_siding_sf" : (walls.sidingProfile === "panel" ? "panel_siding_sf" : "lap_siding_sf");
+  items.push(db.item(`SF, ${db.desc(sidingKey)} ITEM (Exterior finish)`, sidingKey, netWallSheathArea, "SF"));
+
   items.push(db.item(`4'x8', ${db.desc(roof.roofSheathKey)} ITEM (Roof sheathing)`, roof.roofSheathKey, roofSheets, "EA"));
+  const roofFinishKey = roof.roofFinish === "shingle" ? "shingle_roof_sf" : (roof.roofFinish === "membrane" ? "membrane_roof_sf" : "metal_roof_sf");
+  items.push(db.item(`SF, ${db.desc(roofFinishKey)} ITEM (Roof finish)`, roofFinishKey, roofInfo.roofAreaSF, "SF"));
 
   // Roof framing
   items.push(db.item(`${walls.studType.toUpperCase()}, Rafter ITEM (Roof framing, 8')`, lumberKey, roofInfo.rafterSticksEA, "EA"));
@@ -115,7 +120,10 @@ export function buildTakeoff(state, db) {
     }
   }
 
-  // Openings trim
+  // Openings assemblies and trim
+  const doorKey = openings.doorStyle === "double" ? "shed_door_double" : (openings.doorStyle === "rollup" ? "rollup_door" : "shed_door_single");
+  if (openings.doorCount > 0) items.push(db.item(`EA, ${db.desc(doorKey)} ITEM`, doorKey, openings.doorCount, "EA"));
+  if (openings.winCount > 0) items.push(db.item(`EA, ${db.desc("vinyl_window")} ITEM`, "vinyl_window", openings.winCount, "EA"));
   if (openings.trimKey !== "none" && openInfo.trimLF > 0) {
     items.push(db.item(`LF, ${db.desc(openings.trimKey)} ITEM (Opening trim)`, openings.trimKey, openInfo.trimLF, "LF"));
   }
@@ -150,6 +158,8 @@ export function buildTakeoff(state, db) {
     ...wallFrame.notes,
     ...fnd.notes,
     `Wall sheathing net area: ${netWallSheathArea.toFixed(2)} SF (after openings)`,
+    `Exterior finish: ${walls.sidingProfile} siding, ${walls.wallColor} walls, ${walls.trimColor} trim`,
+    `Roof finish: ${roof.roofFinish}, ${roof.roofColor} color`,
     `Roof area: ${roofInfo.roofAreaSF.toFixed(2)} SF (incl overhang/slope)`,
     `Perimeter: ${perim.toFixed(2)} LF`
   ];
