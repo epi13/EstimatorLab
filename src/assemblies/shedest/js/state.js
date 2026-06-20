@@ -21,7 +21,11 @@ export function readStateFromUI(doc=document) {
       studSpacingIn: Number($("studSpacing").value),
       topPlate: $("topPlate").value,              // "single" | "double"
       cornerStyle: $("cornerStyle").value,        // "3-stud" | "california"
-      wallSheathKey: $("wallSheath").value
+      wallSheathKey: $("wallSheath").value,
+      sidingProfile: $("sidingProfile").value,
+      wallColor: $("wallColor").value,
+      trimColor: $("trimColor").value,
+      showStuds: $("showStuds").value === "yes"
     },
     openings: {
       doorCount: Number($("doorCount").value),
@@ -30,13 +34,17 @@ export function readStateFromUI(doc=document) {
       winCount: Number($("winCount").value),
       winWft: win.w,
       winHft: win.h,
-      trimKey: $("trimType").value
+      trimKey: $("trimType").value,
+      doorStyle: $("doorStyle").value,
+      windowLayout: $("windowLayout").value
     },
     roof: {
       type: $("roofType").value,                  // flat | shed | gable
       pitchX12: Number($("pitch").value),
       overhangFt: Number($("overhangFt").value),
       roofSheathKey: $("roofSheath").value,
+      roofFinish: $("roofFinish").value,
+      roofColor: $("roofColor").value,
       includeFasciaSoffit: $("includeFasciaSoffit").value === "yes",
       soffitWidthFt: Number($("soffitWidthFt").value)
     },
@@ -64,9 +72,9 @@ export function readStateFromUI(doc=document) {
 export function defaultState() {
   return {
     geom: { lenFt:10, widFt:10, htFt:8, includeFloor:true },
-    walls: { studType:"2x4", studSpacingIn:16, topPlate:"single", cornerStyle:"3-stud", wallSheathKey:"osb_7_16" },
-    openings: { doorCount:1, doorWft:3, doorHft:7, winCount:1, winWft:3, winHft:3, trimKey:"none" },
-    roof: { type:"flat", pitchX12:3, overhangFt:0.5, roofSheathKey:"osb_7_16", includeFasciaSoffit:true, soffitWidthFt:0.5 },
+    walls: { studType:"2x4", studSpacingIn:16, topPlate:"single", cornerStyle:"3-stud", wallSheathKey:"osb_7_16", sidingProfile:"lap", wallColor:"cedar", trimColor:"white", showStuds:false },
+    openings: { doorCount:1, doorWft:3, doorHft:7, winCount:1, winWft:3, winHft:3, trimKey:"none", doorStyle:"single", windowLayout:"balanced" },
+    roof: { type:"flat", pitchX12:3, overhangFt:0.5, roofSheathKey:"osb_7_16", roofFinish:"metal", roofColor:"galvalume", includeFasciaSoffit:true, soffitWidthFt:0.5 },
     foundation: { type:"skids", gravelDepthFt:0.5, slabThkIn:4, pierSpacingFt:6 },
     logistics: { shipMult:1.0, handlingPct:0.05 },
     labor: { tradeRateKey:"architectural", remoteFactor:1.15, mhPerSF:0.045, mhPerSheet:0.18, mhRoofPerSF:0.020, mhFoundationBase:4.0 }
@@ -85,17 +93,25 @@ export function applyStateToUI(state, doc=document) {
   $("topPlate").value = state.walls.topPlate;
   $("cornerStyle").value = state.walls.cornerStyle;
   $("wallSheath").value = state.walls.wallSheathKey;
+  $("sidingProfile").value = state.walls.sidingProfile;
+  $("wallColor").value = state.walls.wallColor;
+  $("trimColor").value = state.walls.trimColor;
+  $("showStuds").value = state.walls.showStuds ? "yes" : "no";
 
   $("doorCount").value = state.openings.doorCount;
   $("doorSize").value = `${state.openings.doorWft}x${state.openings.doorHft}`;
   $("winCount").value = state.openings.winCount;
   $("winSize").value = `${state.openings.winWft}x${state.openings.winHft}`;
   $("trimType").value = state.openings.trimKey;
+  $("doorStyle").value = state.openings.doorStyle;
+  $("windowLayout").value = state.openings.windowLayout;
 
   $("roofType").value = state.roof.type;
   $("pitch").value = state.roof.pitchX12;
   $("overhangFt").value = state.roof.overhangFt;
   $("roofSheath").value = state.roof.roofSheathKey;
+  $("roofFinish").value = state.roof.roofFinish;
+  $("roofColor").value = state.roof.roofColor;
   $("includeFasciaSoffit").value = state.roof.includeFasciaSoffit ? "yes" : "no";
   $("soffitWidthFt").value = state.roof.soffitWidthFt;
 

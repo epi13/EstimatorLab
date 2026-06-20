@@ -63,6 +63,7 @@
       backdrop-filter: blur(6px);
     }
     .smallbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .section-note{font-size:11px;color:#9ca3af;margin-top:4px;}
   </style>
 </head>
 <body>
@@ -139,6 +140,45 @@
       </div>
     </div>
 
+    <h2>Exterior Finish</h2>
+    <div class="row">
+      <div>
+        <label>Siding Profile</label>
+        <select id="sidingProfile">
+          <option value="lap" selected>Horizontal lap siding</option>
+          <option value="boardbatten">Board & batten</option>
+          <option value="panel">Sheet panel siding</option>
+        </select>
+      </div>
+      <div>
+        <label>Wall Color</label>
+        <select id="wallColor">
+          <option value="cedar" selected>Cedar tan</option>
+          <option value="barnred">Barn red</option>
+          <option value="sage">Sage green</option>
+          <option value="charcoal">Charcoal</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Trim Color</label>
+        <select id="trimColor">
+          <option value="white" selected>White</option>
+          <option value="black">Black</option>
+          <option value="cedar">Cedar</option>
+          <option value="charcoal">Charcoal</option>
+        </select>
+      </div>
+      <div>
+        <label>Show Stud Layout</label>
+        <select id="showStuds">
+          <option value="no" selected>No</option>
+          <option value="yes">Yes, ghosted</option>
+        </select>
+      </div>
+    </div>
+
     <h2>Openings</h2>
     <div class="row">
       <div><label>Door Count</label><input id="doorCount" type="number" min="0" step="1" value="1"></div>
@@ -160,6 +200,24 @@
           <option value="4x3">4' x 3'</option>
           <option value="3x4">3' x 4'</option>
           <option value="4x4">4' x 4'</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Door Style</label>
+        <select id="doorStyle">
+          <option value="single" selected>Single swing door</option>
+          <option value="double">Double shed doors</option>
+          <option value="rollup">Roll-up door</option>
+        </select>
+      </div>
+      <div>
+        <label>Window Layout</label>
+        <select id="windowLayout">
+          <option value="balanced" selected>Balanced sides</option>
+          <option value="front">Front wall only</option>
+          <option value="right">Right wall only</option>
         </select>
       </div>
     </div>
@@ -189,6 +247,25 @@
         <select id="roofSheath">
           <option value="osb_7_16" selected>7/16" OSB (4x8)</option>
           <option value="ply_1_2">1/2" Plywood (4x8)</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Roof Finish</label>
+        <select id="roofFinish">
+          <option value="metal" selected>Ribbed metal roofing</option>
+          <option value="shingle">Asphalt shingles</option>
+          <option value="membrane">Low-slope membrane</option>
+        </select>
+      </div>
+      <div>
+        <label>Roof Color</label>
+        <select id="roofColor">
+          <option value="galvalume" selected>Galvalume</option>
+          <option value="red">Red</option>
+          <option value="green">Green</option>
+          <option value="charcoal">Charcoal</option>
         </select>
       </div>
     </div>
