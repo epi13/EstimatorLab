@@ -52,31 +52,31 @@ function makeDB(materials) {
 
 // minimal fallbacks so the app still runs if JSON is blocked (e.g. file://)
 const fallbackMaterials = {
-  lumber:{ "2x4x8":{desc:"2x4x8",unit:"EA",base_price:6.5,freight_class:"bulk"}, "2x6x8":{desc:"2x6x8",unit:"EA",base_price:10.5,freight_class:"bulk"} },
-  sheet_goods:{ "osb_7_16":{desc:"4x8 7/16 OSB",unit:"EA",sf:32,base_price:22,freight_class:"flat"}, "ply_1_2":{desc:"4x8 1/2 Plywood",unit:"EA",sf:32,base_price:35,freight_class:"flat"}, "tg_ply_3_4":{desc:"4x8 3/4 T&G Plywood",unit:"EA",sf:32,base_price:68,freight_class:"flat"} },
-  trim:{ "trim_1x4":{desc:"1x4 Trim",unit:"LF",base_price:1.65,freight_class:"bulk"}, "trim_1x6":{desc:"1x6 Trim",unit:"LF",base_price:2.1,freight_class:"bulk"} },
+  lumber:{ "2x4x8":{desc:"2x4x8",unit:"EA",base_price:4.25,freight_class:"bulk"}, "2x6x8":{desc:"2x6x8",unit:"EA",base_price:8.95,freight_class:"bulk"} },
+  sheet_goods:{ "osb_7_16":{desc:"4x8 7/16 OSB",unit:"EA",sf:32,base_price:11.25,freight_class:"flat"}, "ply_1_2":{desc:"4x8 1/2 Plywood",unit:"EA",sf:32,base_price:27.50,freight_class:"flat"}, "tg_ply_3_4":{desc:"4x8 3/4 T&G Plywood",unit:"EA",sf:32,base_price:35.50,freight_class:"flat"} },
+  trim:{ "trim_1x4":{desc:"1x4 Trim",unit:"LF",base_price:1.15,freight_class:"bulk"}, "trim_1x6":{desc:"1x6 Trim",unit:"LF",base_price:1.55,freight_class:"bulk"} },
   foundation:{
-    "geotextile":{desc:"Geotextile",unit:"SF",base_price:0.55,freight_class:"pallet"},
-    "gravel":{desc:"Gravel",unit:"CY",base_price:85,freight_class:"heavy"},
-    "pt_skid_4x6x12":{desc:"PT 4x6x12",unit:"EA",base_price:52,freight_class:"bulk"},
-    "sonotube_12x4":{desc:"12in Sonotube x 4ft",unit:"EA",base_price:22,freight_class:"pallet"},
-    "concrete":{desc:"Concrete",unit:"CY",base_price:285,freight_class:"heavy"},
-    "rebar":{desc:"Rebar allowance",unit:"SF",base_price:1.25,freight_class:"heavy"},
-    "vapor_barrier":{desc:"10 mil VB",unit:"SF",base_price:0.22,freight_class:"flat"}
+    "geotextile":{desc:"Geotextile",unit:"SF",base_price:0.35,freight_class:"pallet"},
+    "gravel":{desc:"Gravel",unit:"CY",base_price:68,freight_class:"heavy"},
+    "pt_skid_4x6x12":{desc:"PT 4x6x12",unit:"EA",base_price:42,freight_class:"bulk"},
+    "sonotube_12x4":{desc:"12in Sonotube x 4ft",unit:"EA",base_price:17,freight_class:"pallet"},
+    "concrete":{desc:"Concrete",unit:"CY",base_price:245,freight_class:"heavy"},
+    "rebar":{desc:"Rebar allowance",unit:"SF",base_price:0.80,freight_class:"heavy"},
+    "vapor_barrier":{desc:"10 mil VB",unit:"SF",base_price:0.12,freight_class:"flat"}
   },
   exterior:{
-    "lap_siding_sf":{desc:"Factory-primed lap siding allowance",unit:"SF",base_price:2.85,freight_class:"flat"},
-    "bb_siding_sf":{desc:"Board-and-batten siding allowance",unit:"SF",base_price:3.35,freight_class:"flat"},
-    "panel_siding_sf":{desc:"T1-11 / panel siding allowance",unit:"SF",base_price:2.25,freight_class:"flat"},
-    "metal_roof_sf":{desc:"Ribbed metal roofing package",unit:"SF",base_price:4.75,freight_class:"flat"},
-    "shingle_roof_sf":{desc:"Asphalt shingle roofing package",unit:"SF",base_price:3.10,freight_class:"pallet"},
-    "membrane_roof_sf":{desc:"Low-slope membrane roofing package",unit:"SF",base_price:5.25,freight_class:"flat"},
-    "shed_door_single":{desc:"Prehung single shed door",unit:"EA",base_price:285,freight_class:"pallet"},
-    "shed_door_double":{desc:"Double shed door set",unit:"EA",base_price:425,freight_class:"pallet"},
-    "rollup_door":{desc:"Light-duty roll-up door",unit:"EA",base_price:780,freight_class:"pallet"},
-    "vinyl_window":{desc:"Vinyl shed window",unit:"EA",base_price:165,freight_class:"pallet"}
+    "lap_siding_sf":{desc:"Factory-primed lap siding allowance",unit:"SF",base_price:1.95,freight_class:"flat"},
+    "bb_siding_sf":{desc:"Board-and-batten siding allowance",unit:"SF",base_price:2.35,freight_class:"flat"},
+    "panel_siding_sf":{desc:"T1-11 / panel siding allowance",unit:"SF",base_price:1.35,freight_class:"flat"},
+    "metal_roof_sf":{desc:"Ribbed metal roofing package",unit:"SF",base_price:3.25,freight_class:"flat"},
+    "shingle_roof_sf":{desc:"Asphalt shingle roofing package",unit:"SF",base_price:1.45,freight_class:"pallet"},
+    "membrane_roof_sf":{desc:"Low-slope membrane roofing package",unit:"SF",base_price:3.75,freight_class:"flat"},
+    "shed_door_single":{desc:"Prehung single shed door",unit:"EA",base_price:185,freight_class:"pallet"},
+    "shed_door_double":{desc:"Double shed door set",unit:"EA",base_price:285,freight_class:"pallet"},
+    "rollup_door":{desc:"Light-duty roll-up door",unit:"EA",base_price:575,freight_class:"pallet"},
+    "vinyl_window":{desc:"Vinyl shed window",unit:"EA",base_price:105,freight_class:"pallet"}
   },
-  misc:{ "fasteners_ls":{desc:"Fasteners",unit:"LS",base_price:120,freight_class:"pallet"} }
+  misc:{ "fasteners_ls":{desc:"Fasteners",unit:"LS",base_price:75,freight_class:"pallet"} }
 };
 const fallbackFreight = { by_class_pct:{ bulk:0.18, flat:0.22, pallet:0.15, heavy:0.28 } };
 const fallbackRates = { civil:82, architectural:87, structural:90, mechanical:92, electrical:96 };
