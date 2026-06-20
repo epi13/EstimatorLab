@@ -3,13 +3,13 @@
     "2x4x8": {
       "desc": "2x4x8 SPF",
       "unit": "EA",
-      "base_price": 6.5,
+      "base_price": 4.25,
       "freight_class": "bulk"
     },
     "2x6x8": {
       "desc": "2x6x8 SPF",
       "unit": "EA",
-      "base_price": 10.5,
+      "base_price": 8.95,
       "freight_class": "bulk"
     }
   },
@@ -18,21 +18,21 @@
       "desc": "4x8 7/16 OSB",
       "unit": "EA",
       "sf": 32,
-      "base_price": 22.0,
+      "base_price": 11.25,
       "freight_class": "flat"
     },
     "ply_1_2": {
       "desc": "4x8 1/2 Plywood",
       "unit": "EA",
       "sf": 32,
-      "base_price": 35.0,
+      "base_price": 27.5,
       "freight_class": "flat"
     },
     "tg_ply_3_4": {
       "desc": "4x8 3/4 T&G Plywood",
       "unit": "EA",
       "sf": 32,
-      "base_price": 68.0,
+      "base_price": 35.5,
       "freight_class": "flat"
     }
   },
@@ -40,13 +40,13 @@
     "trim_1x4": {
       "desc": "1x4 Trim",
       "unit": "LF",
-      "base_price": 1.65,
+      "base_price": 1.15,
       "freight_class": "bulk"
     },
     "trim_1x6": {
       "desc": "1x6 Trim",
       "unit": "LF",
-      "base_price": 2.1,
+      "base_price": 1.55,
       "freight_class": "bulk"
     }
   },
@@ -54,43 +54,43 @@
     "geotextile": {
       "desc": "Geotextile Fabric",
       "unit": "SF",
-      "base_price": 0.55,
+      "base_price": 0.35,
       "freight_class": "pallet"
     },
     "gravel": {
       "desc": "Gravel Base (delivered)",
       "unit": "CY",
-      "base_price": 85.0,
+      "base_price": 68.0,
       "freight_class": "heavy"
     },
     "pt_skid_4x6x12": {
       "desc": "PT 4x6x12 Skid",
       "unit": "EA",
-      "base_price": 52.0,
+      "base_price": 42.0,
       "freight_class": "bulk"
     },
     "sonotube_12x4": {
       "desc": "12in Sonotube x 4ft",
       "unit": "EA",
-      "base_price": 22.0,
+      "base_price": 17.0,
       "freight_class": "pallet"
     },
     "concrete": {
       "desc": "Concrete (delivered)",
       "unit": "CY",
-      "base_price": 285.0,
+      "base_price": 245.0,
       "freight_class": "heavy"
     },
     "rebar": {
       "desc": "Rebar (allowance)",
       "unit": "SF",
-      "base_price": 1.25,
+      "base_price": 0.8,
       "freight_class": "heavy"
     },
     "vapor_barrier": {
       "desc": "10 mil Vapor Barrier",
       "unit": "SF",
-      "base_price": 0.22,
+      "base_price": 0.12,
       "freight_class": "flat"
     }
   },
@@ -98,7 +98,7 @@
     "fasteners_ls": {
       "desc": "Fasteners / Misc",
       "unit": "LS",
-      "base_price": 120.0,
+      "base_price": 75.0,
       "freight_class": "pallet"
     }
   },
@@ -106,61 +106,61 @@
     "lap_siding_sf": {
       "desc": "Factory-primed lap siding allowance",
       "unit": "SF",
-      "base_price": 2.85,
+      "base_price": 1.95,
       "freight_class": "flat"
     },
     "bb_siding_sf": {
       "desc": "Board-and-batten siding allowance",
       "unit": "SF",
-      "base_price": 3.35,
+      "base_price": 2.35,
       "freight_class": "flat"
     },
     "panel_siding_sf": {
       "desc": "T1-11 / panel siding allowance",
       "unit": "SF",
-      "base_price": 2.25,
+      "base_price": 1.35,
       "freight_class": "flat"
     },
     "metal_roof_sf": {
       "desc": "Ribbed metal roofing package",
       "unit": "SF",
-      "base_price": 4.75,
+      "base_price": 3.25,
       "freight_class": "flat"
     },
     "shingle_roof_sf": {
       "desc": "Asphalt shingle roofing package",
       "unit": "SF",
-      "base_price": 3.1,
+      "base_price": 1.45,
       "freight_class": "pallet"
     },
     "membrane_roof_sf": {
       "desc": "Low-slope membrane roofing package",
       "unit": "SF",
-      "base_price": 5.25,
+      "base_price": 3.75,
       "freight_class": "flat"
     },
     "shed_door_single": {
       "desc": "Prehung single shed door",
       "unit": "EA",
-      "base_price": 285.0,
+      "base_price": 185.0,
       "freight_class": "pallet"
     },
     "shed_door_double": {
       "desc": "Double shed door set",
       "unit": "EA",
-      "base_price": 425.0,
+      "base_price": 285.0,
       "freight_class": "pallet"
     },
     "rollup_door": {
       "desc": "Light-duty roll-up door",
       "unit": "EA",
-      "base_price": 780.0,
+      "base_price": 575.0,
       "freight_class": "pallet"
     },
     "vinyl_window": {
       "desc": "Vinyl shed window",
       "unit": "EA",
-      "base_price": 165.0,
+      "base_price": 105.0,
       "freight_class": "pallet"
     }
   }
