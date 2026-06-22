@@ -29,6 +29,7 @@ export function createScene(canvas) {
   const shedGroup = new THREE.Group();
   scene.add(shedGroup);
   const selectable = [];
+  const zoomDetailGroups = [];
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   let selectedMesh = null;
@@ -63,6 +64,7 @@ export function createScene(canvas) {
 
   function clearGroup() {
     selectable.length = 0;
+    zoomDetailGroups.length = 0;
     selectedMesh = null;
     while (shedGroup.children.length) shedGroup.remove(shedGroup.children[0]);
   }
@@ -95,6 +97,30 @@ export function createScene(canvas) {
     mesh.receiveShadow = true;
     shedGroup.add(mesh);
     return mesh;
+  }
+
+  function addDetailGroup(name, maxDistance) {
+    const group = new THREE.Group();
+    group.name = name;
+    group.userData.maxDistance = maxDistance;
+    shedGroup.add(group);
+    zoomDetailGroups.push(group);
+    return group;
+  }
+
+  function addBoxToGroup(group, L, H, W, position, color=0x2e2e2e, materialOpts={}) {
+    const geom = new THREE.BoxGeometry(L, H, W);
+    const mesh = new THREE.Mesh(geom, mat(color, materialOpts));
+    mesh.position.copy(position);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+    return mesh;
+  }
+
+  function updateZoomDetailVisibility() {
+    const distance = camera.position.distanceTo(controls.target);
+    for (const group of zoomDetailGroups) group.visible = distance <= group.userData.maxDistance;
   }
 
   function addEdges(mesh, color=0xd7d7d7) {
@@ -204,6 +230,35 @@ export function createScene(canvas) {
     }
   }
 
+  function addFloorFraming(L, W, spacingFt) {
+    const group = addDetailGroup("zoom-floor-framing", Math.max(L, W) * 2.4 + 10);
+    const memberMat = { transparent:true, opacity:0.78 };
+    for (let x = -L/2; x <= L/2 + 0.01; x += spacingFt) {
+      const joist = addBoxToGroup(group, 0.13, 0.24, W, new THREE.Vector3(x, 0.14, 0), 0xc49a6c, memberMat);
+      makeSelectable(joist, "Floor joist", `Internal floor framing at ${Math.round(spacingFt*12)} in. o.c.; visible as you zoom inside the shed.`);
+    }
+    for (const z of [-W/2, W/2]) {
+      const rim = addBoxToGroup(group, L, 0.28, 0.16, new THREE.Vector3(0, 0.16, z), 0xd6ad7c, memberMat);
+      makeSelectable(rim, "Rim joist", "Perimeter floor framing tying the joist ends together at the platform edge.");
+    }
+  }
+
+  function addWallPlatesAndBlocking(L, W, H, topPlateCount, opacity=0.78) {
+    const group = addDetailGroup("zoom-wall-members", Math.max(L, W) * 2.0 + 8);
+    const opts = { transparent:true, opacity };
+    for (const y of [0.16, H - 0.16]) {
+      for (const z of [-W/2, W/2]) makeSelectable(addBoxToGroup(group, L, 0.14, 0.14, new THREE.Vector3(0, y, z), 0xe0ba82, opts), y < 1 ? "Bottom plate" : "Top plate", "Continuous wall plate framing tying studs together around the shed perimeter.");
+      for (const x of [-L/2, L/2]) makeSelectable(addBoxToGroup(group, 0.14, 0.14, W, new THREE.Vector3(x, y, 0), 0xe0ba82, opts), y < 1 ? "Bottom plate" : "Top plate", "Continuous wall plate framing tying studs together around the shed perimeter.");
+    }
+    if (topPlateCount === "double") {
+      for (const z of [-W/2, W/2]) makeSelectable(addBoxToGroup(group, L, 0.12, 0.14, new THREE.Vector3(0, H + 0.02, z), 0xf0c98c, opts), "Double top plate", "Second top plate layer for wall tie and roof-load transfer.");
+      for (const x of [-L/2, L/2]) makeSelectable(addBoxToGroup(group, 0.14, 0.12, W, new THREE.Vector3(x, H + 0.02, 0), 0xf0c98c, opts), "Double top plate", "Second top plate layer for wall tie and roof-load transfer.");
+    }
+    for (let y = 2; y < H - 1; y += 2) {
+      for (const z of [-W/2, W/2]) makeSelectable(addBoxToGroup(group, L, 0.08, 0.1, new THREE.Vector3(0, y, z), 0xb98d5b, { transparent:true, opacity:0.45 }), "Wall blocking", "Horizontal blocking/nailer rows revealed at close zoom inside the wall skeleton.");
+    }
+  }
+
   function addStudGhosts(L, W, H, spacingFt, opacity=0.28) {
     const material = mat(0xf2d39b, { transparent:true, opacity });
     for (let x = -L/2; x <= L/2; x += spacingFt) {
@@ -216,6 +271,22 @@ export function createScene(canvas) {
     }
   }
 
+  function addGableEndStackedFraming(L, roofL, roofW, H, rise) {
+    if (rise <= 0.05) return;
+    const group = addDetailGroup("zoom-gable-stacked-framing", Math.max(L, roofW) * 2.2 + 10);
+    const opts = { transparent:true, opacity:0.82 };
+    for (const x of [-roofL/2, roofL/2]) {
+      for (let y = H + 0.35; y < H + rise; y += 0.42) {
+        const normalized = (y - H) / rise;
+        const stackWidth = Math.max(0.28, roofW * (1 - normalized));
+        const block = addBoxToGroup(group, 0.14, 0.12, stackWidth, new THREE.Vector3(x, y, 0), 0xf0c98c, opts);
+        makeSelectable(block, "Stacked gable framing", "Sloped roof void is shown as stacked framing members rather than a filled solid mass.");
+      }
+      const king = addBoxToGroup(group, 0.14, rise, 0.12, new THREE.Vector3(x, H + rise/2, 0), 0xe8c48a, opts);
+      makeSelectable(king, "Gable end stud", "Vertical gable-end framing supporting the stacked look under the sloped roof planes.");
+    }
+  }
+
   function addRoofFraming(state, L, W, H) {
     const over = state.roof.overhangFt || 0, pitch = state.roof.pitchX12 || 0;
     const spacing = state.walls.studSpacingIn / 12;
@@ -223,9 +294,20 @@ export function createScene(canvas) {
     const rise = state.roof.type === "gable" ? (roofW/2)*(pitch/12) : roofW*(pitch/12);
     const yBase = H + 0.12;
     for (let x = -roofL/2; x <= roofL/2 + .01; x += spacing) {
-      const rafter = addBox(0.12, 0.16, roofW, new THREE.Vector3(x, yBase + Math.max(rise, .1)/2, 0), 0xe8c48a, { transparent:true, opacity:0.72 });
-      if (state.roof.type === "shed") rafter.rotation.x = Math.atan2(rise, roofW);
-      makeSelectable(rafter, "Roof rafter", "Typical roof framing member: sloped 2x lumber at wall spacing, supports roof sheathing and finish.");
+      if (state.roof.type === "gable") {
+        const slopeLen = Math.hypot(roofW/2, rise);
+        const tilt = Math.atan2(rise, roofW/2);
+        const left = addBox(0.12, 0.16, slopeLen, new THREE.Vector3(x, yBase + rise/2, -roofW/4), 0xe8c48a, { transparent:true, opacity:0.72 });
+        left.rotation.x = -tilt;
+        makeSelectable(left, "Roof rafter", "Sloped gable rafter: one half of the roof frame, leaving the roof volume open and skeletonized.");
+        const right = addBox(0.12, 0.16, slopeLen, new THREE.Vector3(x, yBase + rise/2, roofW/4), 0xe8c48a, { transparent:true, opacity:0.72 });
+        right.rotation.x = tilt;
+        makeSelectable(right, "Roof rafter", "Sloped gable rafter: one half of the roof frame, leaving the roof volume open and skeletonized.");
+      } else {
+        const rafter = addBox(0.12, 0.16, roofW, new THREE.Vector3(x, yBase + Math.max(rise, .1)/2, 0), 0xe8c48a, { transparent:true, opacity:0.72 });
+        if (state.roof.type === "shed") rafter.rotation.x = Math.atan2(rise, roofW);
+        makeSelectable(rafter, "Roof rafter", "Typical roof framing member: sloped 2x lumber at wall spacing, supports roof sheathing and finish.");
+      }
     }
     if (state.roof.type === "gable") makeSelectable(addBox(roofL, 0.18, 0.16, new THREE.Vector3(0, H + rise + 0.12, 0), 0xf8d698, { transparent:true, opacity:0.82 }), "Ridge board", "Gable ridge board ties opposing rafters together at the roof peak.");
     addLabel("Roof build-up: rafters → sheathing → underlayment/finish → fascia/soffit", new THREE.Vector3(0, H + rise + 2.2, 0));
@@ -242,6 +324,8 @@ export function createScene(canvas) {
     addEdges(wall, 0x222222);
     addSidingLines(L, W, H, state.walls.sidingProfile);
     if (state.walls.showStuds || xray) addStudGhosts(L, W, H, state.walls.studSpacingIn / 12, mode === "skeleton" ? 0.8 : 0.32);
+    addFloorFraming(L, W, state.walls.studSpacingIn / 12);
+    addWallPlatesAndBlocking(L, W, H, state.walls.topPlate, mode === "skeleton" ? 0.86 : 0.68);
     addOpenings(state, L, W, H);
 
     const over = state.roof.overhangFt || 0, pitch = state.roof.pitchX12 || 0;
@@ -255,12 +339,23 @@ export function createScene(canvas) {
       roofMesh.rotation.x = tilt;
     } else {
       const roofW = W + 2*over, roofL = L + 2*over, rise = (roofW/2) * (pitch/12);
-      const shape = new THREE.Shape(); shape.moveTo(-roofW/2,0); shape.lineTo(0,rise); shape.lineTo(roofW/2,0); shape.lineTo(-roofW/2,0);
-      const geom = new THREE.ExtrudeGeometry(shape, { steps:1, depth:roofL, bevelEnabled:false }); geom.rotateY(Math.PI/2); geom.translate(-roofL/2,H,0);
-      roofMesh = new THREE.Mesh(geom, mat(roofColor, { metalness: state.roof.roofFinish === "metal" ? 0.35 : 0.05, transparent:xray, opacity:xray ? 0.42 : 1 })); shedGroup.add(roofMesh);
+      const slopeLen = Math.hypot(roofW/2, rise);
+      const tilt = Math.atan2(rise, roofW/2);
+      const left = addBox(roofL, 0.25, slopeLen, new THREE.Vector3(0, H + rise/2, -roofW/4), roofColor, { metalness: state.roof.roofFinish === "metal" ? 0.35 : 0.05, transparent:xray, opacity:xray ? 0.42 : 1 });
+      left.rotation.x = -tilt;
+      const right = addBox(roofL, 0.25, slopeLen, new THREE.Vector3(0, H + rise/2, roofW/4), roofColor, { metalness: state.roof.roofFinish === "metal" ? 0.35 : 0.05, transparent:xray, opacity:xray ? 0.42 : 1 });
+      right.rotation.x = tilt;
+      makeSelectable(left, "Left roof plane", `Sloped roof plane: ${state.roof.roofFinish} finish over ${state.roof.roofSheathKey.replaceAll("_", " ")} sheathing, ${state.roof.pitchX12}:12 pitch.`);
+      makeSelectable(right, "Right roof plane", `Sloped roof plane: ${state.roof.roofFinish} finish over ${state.roof.roofSheathKey.replaceAll("_", " ")} sheathing, ${state.roof.pitchX12}:12 pitch.`);
+      addEdges(left, 0x202020); addEdges(right, 0x202020);
+      addRoofRibs(left, state.roof.roofFinish); addRoofRibs(right, state.roof.roofFinish);
+      addGableEndStackedFraming(L, roofL, roofW, H, rise);
+      roofMesh = new THREE.Group(); shedGroup.add(roofMesh); roofMesh.add(left, right);
     }
-    makeSelectable(roofMesh, "Roof finish / sheathing", `Roof assembly: ${state.roof.roofFinish} finish over ${state.roof.roofSheathKey.replaceAll("_", " ")} sheathing, ${state.roof.pitchX12}:12 pitch, ${state.roof.overhangFt} ft overhang.`);
-    addEdges(roofMesh, 0x202020); addRoofRibs(roofMesh, state.roof.roofFinish);
+    if (roofMesh instanceof THREE.Mesh) {
+      makeSelectable(roofMesh, "Roof finish / sheathing", `Roof assembly: ${state.roof.roofFinish} finish over ${state.roof.roofSheathKey.replaceAll("_", " ")} sheathing, ${state.roof.pitchX12}:12 pitch, ${state.roof.overhangFt} ft overhang.`);
+      addEdges(roofMesh, 0x202020); addRoofRibs(roofMesh, state.roof.roofFinish);
+    }
     if (mode === "skeleton" || mode === "roof") addRoofFraming(state, L, W, H);
 
     const bounds = new THREE.Box3().setFromObject(shedGroup);
@@ -269,10 +364,10 @@ export function createScene(canvas) {
     const direction = camera.position.clone().sub(controls.target).normalize();
     camera.position.copy(center).add(direction.multiplyScalar(safeDim * 1.6 + 6));
     camera.near = 0.1; camera.far = (safeDim * 1.6 + 6) * 20; camera.updateProjectionMatrix();
-    controls.target.copy(center); controls.update(); resize();
+    controls.target.copy(center); controls.update(); updateZoomDetailVisibility(); resize();
   }
 
-  function tick() { controls.update(); renderer.render(scene, camera); requestAnimationFrame(tick); }
+  function tick() { controls.update(); updateZoomDetailVisibility(); renderer.render(scene, camera); requestAnimationFrame(tick); }
   tick();
   return { rebuild, resize };
 }
