@@ -31,7 +31,8 @@ tbody tr:hover,tbody tr.linked{background:rgba(56,213,255,.1);box-shadow:inset 3
 .viewport-toolbar{position:absolute;right:18px;top:18px;display:flex;gap:8px;z-index:3}
 .chip,.mode-rail button,.camera-rail button{border:1px solid rgba(147,197,253,.32);background:rgba(15,23,42,.62);color:#dbeafe;padding:8px 11px;border-radius:999px;font-size:12px;backdrop-filter:blur(14px)}
 .mode-rail{position:absolute;z-index:4;right:18px;top:70px;display:grid;gap:8px;width:190px}
-.camera-rail{position:absolute;z-index:4;left:50%;transform:translateX(-25%);bottom:18px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.camera-rail{position:absolute;z-index:4;right:18px;top:382px;bottom:auto;left:auto;transform:none;display:grid;grid-template-columns:1fr;gap:8px;width:190px;justify-content:stretch}
+.camera-rail button{min-height:35px}
 .trace-panel{position:absolute;z-index:4;right:18px;bottom:18px;width:min(360px,26vw);padding:14px 16px;border-radius:18px;border:1px solid rgba(96,165,250,.28);background:rgba(2,6,23,.66);backdrop-filter:blur(18px);box-shadow:var(--shadow);font-size:12px;color:var(--muted)}
 .trace-panel b{display:block;color:#e0f2fe;margin-bottom:5px}
 .info-card{margin-top:10px;padding:12px;border-radius:16px;border:1px solid rgba(56,213,255,.28);background:rgba(8,47,73,.42);font-size:12px;line-height:1.45;color:#dbeafe}
@@ -56,6 +57,6 @@ tbody tr:hover,tbody tr.linked{background:rgba(56,213,255,.1);box-shadow:inset 3
 .viewport-toolbar{display:none}
 .mode-rail{right:10px;top:62px;width:150px}
 .trace-panel{display:none}
-.camera-rail{left:10px;right:10px;transform:none;bottom:50vh}
+.camera-rail{left:auto;right:10px;top:330px;bottom:auto;transform:none;width:150px}
 .row{grid-template-columns:1fr}
 }
