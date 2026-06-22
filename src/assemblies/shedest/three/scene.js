@@ -4,6 +4,7 @@ import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.160.0/exampl
 const WALL_COLORS = { cedar:0xb98755, barnred:0x8f2f24, sage:0x7d8f68, charcoal:0x34373b };
 const TRIM_COLORS = { white:0xf2efe6, black:0x151515, cedar:0xb98755, charcoal:0x34373b };
 const ROOF_COLORS = { galvalume:0x9ba3a7, red:0x8d2722, green:0x385a42, charcoal:0x25282c };
+const SELECT_COLOR = 0x60a5fa;
 
 export function createScene(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
@@ -27,6 +28,10 @@ export function createScene(canvas) {
 
   const shedGroup = new THREE.Group();
   scene.add(shedGroup);
+  const selectable = [];
+  const raycaster = new THREE.Raycaster();
+  const pointer = new THREE.Vector2();
+  let selectedMesh = null;
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -40,6 +45,15 @@ export function createScene(canvas) {
   function mat(color, opts={}) { return new THREE.MeshStandardMaterial({ color, metalness:0.04, roughness:0.82, ...opts }); }
   function lineMat(color) { return new THREE.LineBasicMaterial({ color, transparent:true, opacity:0.75 }); }
 
+  canvas.addEventListener("pointerdown", (event) => {
+    const rect = canvas.getBoundingClientRect();
+    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hit = raycaster.intersectObjects(selectable, false)[0];
+    if (hit) announceSelection(hit.object);
+  });
+
   function resize() {
     const rect = canvas.getBoundingClientRect();
     renderer.setSize(rect.width, rect.height, false);
@@ -47,7 +61,31 @@ export function createScene(canvas) {
     camera.updateProjectionMatrix();
   }
 
-  function clearGroup() { while (shedGroup.children.length) shedGroup.remove(shedGroup.children[0]); }
+  function clearGroup() {
+    selectable.length = 0;
+    selectedMesh = null;
+    while (shedGroup.children.length) shedGroup.remove(shedGroup.children[0]);
+  }
+
+  function makeSelectable(mesh, label, detail) {
+    mesh.userData.selectLabel = label;
+    mesh.userData.selectDetail = detail;
+    selectable.push(mesh);
+    return mesh;
+  }
+
+  function announceSelection(mesh) {
+    if (selectedMesh?.material?.emissive) selectedMesh.material.emissive.setHex(selectedMesh.userData.oldEmissive ?? 0x000000);
+    selectedMesh = mesh;
+    if (mesh?.material?.emissive) {
+      mesh.userData.oldEmissive = mesh.material.emissive.getHex();
+      mesh.material.emissive.setHex(SELECT_COLOR);
+    }
+    canvas.dispatchEvent(new CustomEvent("shed-element-selected", { detail:{
+      label: mesh?.userData.selectLabel ?? "Shed",
+      text: mesh?.userData.selectDetail ?? "Selectable 3D shed element."
+    }}));
+  }
 
   function addBox(L, H, W, position, color=0x2e2e2e, materialOpts={}) {
     const geom = new THREE.BoxGeometry(L, H, W);
@@ -117,7 +155,7 @@ export function createScene(canvas) {
     const doorCount = Math.max(0, Math.floor(state.openings.doorCount));
     for (let i = 0; i < doorCount; i++) {
       const x = doorCount === 1 ? 0 : (i - (doorCount - 1) / 2) * (doorW + 0.5);
-      addPanel(x, doorH/2, W/2 + 0.055, doorW, doorH, "front", doorColor, 0.09);
+      makeSelectable(addPanel(x, doorH/2, W/2 + 0.055, doorW, doorH, "front", doorColor, 0.09), "Door opening", "Door package with rough opening, trim, hardware allowance, and shed access clearance.");
       addTrimAround(x, doorH/2, W/2 + 0.105, doorW, doorH, "front", trim);
     }
     const winCount = Math.max(0, Math.floor(state.openings.winCount));
@@ -126,11 +164,11 @@ export function createScene(canvas) {
       const w = state.openings.winWft, h = state.openings.winHft, y = Math.min(H - h/2 - 0.8, 4.5);
       if (face === "front") {
         const x = -L/3 + i * Math.min(w + 0.75, L/3);
-        addPanel(x, y, W/2 + 0.06, w, h, "front", 0x8fc5e8, 0.08); addTrimAround(x, y, W/2 + 0.11, w, h, "front", trim);
+        makeSelectable(addPanel(x, y, W/2 + 0.06, w, h, "front", 0x8fc5e8, 0.08), "Window opening", "Window unit with framed rough opening, casing/trim, and transparent glass area."); addTrimAround(x, y, W/2 + 0.11, w, h, "front", trim);
       } else {
         const z = face === "right" ? W/2 + 0.06 : -W/2 - 0.06;
         const x = ((i % 3) - 1) * Math.min(L/4, w + 0.75);
-        addPanel(x, y, z, w, h, "front", 0x8fc5e8, 0.08); addTrimAround(x, y, z + (face === "right" ? 0.05 : -0.05), w, h, "front", trim);
+        makeSelectable(addPanel(x, y, z, w, h, "front", 0x8fc5e8, 0.08), "Window opening", "Window unit with framed rough opening, casing/trim, and transparent glass area."); addTrimAround(x, y, z + (face === "right" ? 0.05 : -0.05), w, h, "front", trim);
       }
     }
   }
@@ -144,28 +182,53 @@ export function createScene(canvas) {
     }
   }
 
+  function addLabel(text, position) {
+    const canvas2 = document.createElement("canvas"); canvas2.width = 384; canvas2.height = 96;
+    const ctx = canvas2.getContext("2d"); ctx.fillStyle = "rgba(15,23,42,.78)"; ctx.fillRect(0,0,384,96);
+    ctx.strokeStyle = "rgba(147,197,253,.9)"; ctx.strokeRect(2,2,380,92);
+    ctx.fillStyle = "#e0f2fe"; ctx.font = "22px system-ui"; ctx.fillText(text, 16, 58);
+    const tex = new THREE.CanvasTexture(canvas2);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map:tex, transparent:true }));
+    sprite.position.copy(position); sprite.scale.set(4.8, 1.2, 1); shedGroup.add(sprite);
+  }
+
   function addFoundation(state, L, W) {
     if (state.foundation.type === "slab") {
-      addBox(L + 1, 0.35, W + 1, new THREE.Vector3(0, -0.18, 0), 0x777777);
+      makeSelectable(addBox(L + 1, 0.35, W + 1, new THREE.Vector3(0, -0.18, 0), 0x777777), "Slab foundation", "Concrete slab-on-grade: flat bearing surface below shed walls/floor.");
     } else if (state.foundation.type === "piers") {
       const spacing = Math.max(4, state.foundation.pierSpacingFt || 6);
-      for (let x = -L/2; x <= L/2 + 0.01; x += spacing) for (const z of [-W/2 + 0.7, W/2 - 0.7]) addBox(0.8, 1, 0.8, new THREE.Vector3(x, -0.5, z), 0x686868);
+      for (let x = -L/2; x <= L/2 + 0.01; x += spacing) for (const z of [-W/2 + 0.7, W/2 - 0.7]) makeSelectable(addBox(0.8, 1, 0.8, new THREE.Vector3(x, -0.5, z), 0x686868), "Pier foundation", "Pier support transferring floor beam loads to discrete concrete/post bearing points.");
     } else {
-      for (const z of [-W/3, W/3]) addBox(L + 1, 0.35, 0.35, new THREE.Vector3(0, -0.18, z), 0x5f4630);
+      for (const z of [-W/3, W/3]) makeSelectable(addBox(L + 1, 0.35, 0.35, new THREE.Vector3(0, -0.18, z), 0x5f4630), "PT skid", "Pressure-treated skid supporting floor joists over gravel.");
       addBox(L + 1.5, 0.08, W + 1.5, new THREE.Vector3(0, -0.42, 0), 0x4a4a4a);
     }
   }
 
-  function addStudGhosts(L, W, H, spacingFt) {
-    const material = mat(0xf2d39b, { transparent:true, opacity:0.28 });
+  function addStudGhosts(L, W, H, spacingFt, opacity=0.28) {
+    const material = mat(0xf2d39b, { transparent:true, opacity });
     for (let x = -L/2; x <= L/2; x += spacingFt) {
-      const a = new THREE.Mesh(new THREE.BoxGeometry(0.12, H, 0.12), material); a.position.set(x, H/2, W/2+0.09); shedGroup.add(a);
+      const a = makeSelectable(new THREE.Mesh(new THREE.BoxGeometry(0.12, H, 0.12), material), "Wall stud", `Vertical wall framing at ${Math.round(spacingFt*12)} in. o.c.; carries sheathing and roof load to foundation.`); a.position.set(x, H/2, W/2+0.09); shedGroup.add(a);
       const b = a.clone(); b.position.z = -W/2-0.09; shedGroup.add(b);
     }
     for (let z = -W/2; z <= W/2; z += spacingFt) {
-      const a = new THREE.Mesh(new THREE.BoxGeometry(0.12, H, 0.12), material); a.position.set(L/2+0.09, H/2, z); shedGroup.add(a);
+      const a = makeSelectable(new THREE.Mesh(new THREE.BoxGeometry(0.12, H, 0.12), material), "Wall stud", `Vertical wall framing at ${Math.round(spacingFt*12)} in. o.c.; carries sheathing and roof load to foundation.`); a.position.set(L/2+0.09, H/2, z); shedGroup.add(a);
       const b = a.clone(); b.position.x = -L/2-0.09; shedGroup.add(b);
     }
+  }
+
+  function addRoofFraming(state, L, W, H) {
+    const over = state.roof.overhangFt || 0, pitch = state.roof.pitchX12 || 0;
+    const spacing = state.walls.studSpacingIn / 12;
+    const roofW = W + 2*over, roofL = L + 2*over;
+    const rise = state.roof.type === "gable" ? (roofW/2)*(pitch/12) : roofW*(pitch/12);
+    const yBase = H + 0.12;
+    for (let x = -roofL/2; x <= roofL/2 + .01; x += spacing) {
+      const rafter = addBox(0.12, 0.16, roofW, new THREE.Vector3(x, yBase + Math.max(rise, .1)/2, 0), 0xe8c48a, { transparent:true, opacity:0.72 });
+      if (state.roof.type === "shed") rafter.rotation.x = Math.atan2(rise, roofW);
+      makeSelectable(rafter, "Roof rafter", "Typical roof framing member: sloped 2x lumber at wall spacing, supports roof sheathing and finish.");
+    }
+    if (state.roof.type === "gable") makeSelectable(addBox(roofL, 0.18, 0.16, new THREE.Vector3(0, H + rise + 0.12, 0), 0xf8d698, { transparent:true, opacity:0.82 }), "Ridge board", "Gable ridge board ties opposing rafters together at the roof peak.");
+    addLabel("Roof build-up: rafters → sheathing → underlayment/finish → fascia/soffit", new THREE.Vector3(0, H + rise + 2.2, 0));
   }
 
   function rebuild(state) {
@@ -173,28 +236,32 @@ export function createScene(canvas) {
     const L = state.geom.lenFt, W = state.geom.widFt, H = state.geom.htFt;
     addFoundation(state, L, W);
 
-    const wall = addBox(L, H, W, new THREE.Vector3(0, H/2, 0), WALL_COLORS[state.walls.wallColor] ?? WALL_COLORS.cedar);
+    const mode = state.walls.visualMode ?? "finished";
+    const xray = mode === "xray" || mode === "skeleton" || mode === "roof";
+    const wall = makeSelectable(addBox(L, H, W, new THREE.Vector3(0, H/2, 0), WALL_COLORS[state.walls.wallColor] ?? WALL_COLORS.cedar, xray ? { transparent:true, opacity: mode === "skeleton" ? 0.12 : 0.38 } : {}), "Wall shell", "Exterior wall assembly: studs, plates, sheathing, siding, and trim around openings." );
     addEdges(wall, 0x222222);
     addSidingLines(L, W, H, state.walls.sidingProfile);
-    if (state.walls.showStuds) addStudGhosts(L, W, H, state.walls.studSpacingIn / 12);
+    if (state.walls.showStuds || xray) addStudGhosts(L, W, H, state.walls.studSpacingIn / 12, mode === "skeleton" ? 0.8 : 0.32);
     addOpenings(state, L, W, H);
 
     const over = state.roof.overhangFt || 0, pitch = state.roof.pitchX12 || 0;
     const roofColor = ROOF_COLORS[state.roof.roofColor] ?? ROOF_COLORS.galvalume;
     let roofMesh;
     if (state.roof.type === "flat") {
-      roofMesh = addBox(L + 2*over, 0.25, W + 2*over, new THREE.Vector3(0, H + 0.125, 0), roofColor, { metalness: state.roof.roofFinish === "metal" ? 0.35 : 0.05 });
+      roofMesh = addBox(L + 2*over, 0.25, W + 2*over, new THREE.Vector3(0, H + 0.125, 0), roofColor, { metalness: state.roof.roofFinish === "metal" ? 0.35 : 0.05, transparent:xray, opacity:xray ? 0.42 : 1 });
     } else if (state.roof.type === "shed") {
       const roofW = W + 2*over, roofL = L + 2*over, rise = roofW * (pitch/12), tilt = Math.atan2(rise, roofW);
-      roofMesh = addBox(roofL, 0.25, roofW, new THREE.Vector3(0, H + 0.125 + rise/2, 0), roofColor, { metalness: state.roof.roofFinish === "metal" ? 0.35 : 0.05 });
+      roofMesh = addBox(roofL, 0.25, roofW, new THREE.Vector3(0, H + 0.125 + rise/2, 0), roofColor, { metalness: state.roof.roofFinish === "metal" ? 0.35 : 0.05, transparent:xray, opacity:xray ? 0.42 : 1 });
       roofMesh.rotation.x = tilt;
     } else {
       const roofW = W + 2*over, roofL = L + 2*over, rise = (roofW/2) * (pitch/12);
       const shape = new THREE.Shape(); shape.moveTo(-roofW/2,0); shape.lineTo(0,rise); shape.lineTo(roofW/2,0); shape.lineTo(-roofW/2,0);
       const geom = new THREE.ExtrudeGeometry(shape, { steps:1, depth:roofL, bevelEnabled:false }); geom.rotateY(Math.PI/2); geom.translate(-roofL/2,H,0);
-      roofMesh = new THREE.Mesh(geom, mat(roofColor, { metalness: state.roof.roofFinish === "metal" ? 0.35 : 0.05 })); shedGroup.add(roofMesh);
+      roofMesh = new THREE.Mesh(geom, mat(roofColor, { metalness: state.roof.roofFinish === "metal" ? 0.35 : 0.05, transparent:xray, opacity:xray ? 0.42 : 1 })); shedGroup.add(roofMesh);
     }
+    makeSelectable(roofMesh, "Roof finish / sheathing", `Roof assembly: ${state.roof.roofFinish} finish over ${state.roof.roofSheathKey.replaceAll("_", " ")} sheathing, ${state.roof.pitchX12}:12 pitch, ${state.roof.overhangFt} ft overhang.`);
     addEdges(roofMesh, 0x202020); addRoofRibs(roofMesh, state.roof.roofFinish);
+    if (mode === "skeleton" || mode === "roof") addRoofFraming(state, L, W, H);
 
     const bounds = new THREE.Box3().setFromObject(shedGroup);
     const size = bounds.getSize(new THREE.Vector3()); const center = bounds.getCenter(new THREE.Vector3());

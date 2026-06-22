@@ -27,7 +27,8 @@ export function readStateFromUI(doc=document) {
       sidingProfile: $("sidingProfile").value,
       wallColor: $("wallColor").value,
       trimColor: $("trimColor").value,
-      showStuds: $("showStuds").value === "yes"
+      showStuds: $("showStuds").value === "yes",
+      visualMode: $("visualMode").value
     },
     interior: {
       includeInsulation: $("includeInsulation").value === "yes",
@@ -84,7 +85,7 @@ export function readStateFromUI(doc=document) {
 export function defaultState() {
   return {
     geom: { lenFt:10, widFt:10, htFt:8, includeFloor:true },
-    walls: { studType:"2x4", studSpacingIn:16, topPlate:"single", cornerStyle:"3-stud", includeWallSheath:true, wallSheathKey:"osb_7_16", includeSiding:true, sidingProfile:"lap", wallColor:"cedar", trimColor:"white", showStuds:false },
+    walls: { studType:"2x4", studSpacingIn:16, topPlate:"single", cornerStyle:"3-stud", includeWallSheath:true, wallSheathKey:"osb_7_16", includeSiding:true, sidingProfile:"lap", wallColor:"cedar", trimColor:"white", showStuds:false, visualMode:"finished" },
     interior: { includeInsulation:false, insulationKey:"batt_r13", includeDrywall:false, drywallFinish:"hang_only" },
     openings: { doorCount:1, doorWft:3, doorHft:7, winCount:1, winWft:3, winHft:3, trimKey:"none", doorStyle:"single", windowLayout:"balanced" },
     roof: { type:"flat", pitchX12:3, overhangFt:0.5, includeRoofSheath:true, roofSheathKey:"osb_7_16", includeRoofFinish:true, roofFinish:"metal", roofColor:"galvalume", includeFasciaSoffit:true, soffitWidthFt:0.5 },
@@ -112,6 +113,7 @@ export function applyStateToUI(state, doc=document) {
   $("wallColor").value = state.walls.wallColor;
   $("trimColor").value = state.walls.trimColor;
   $("showStuds").value = state.walls.showStuds ? "yes" : "no";
+  $("visualMode").value = state.walls.visualMode ?? "finished";
 
   $("includeInsulation").value = state.interior.includeInsulation ? "yes" : "no";
   $("insulationType").value = state.interior.insulationKey;
