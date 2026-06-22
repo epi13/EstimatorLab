@@ -92,6 +92,18 @@
       "unit": "SF",
       "base_price": 0.12,
       "freight_class": "flat"
+    },
+    "ground_screw": {
+      "desc": "Helical ground screw",
+      "unit": "EA",
+      "base_price": 95.0,
+      "freight_class": "heavy"
+    },
+    "excavation": {
+      "desc": "Excavation / spoil handling allowance",
+      "unit": "CY",
+      "base_price": 38.0,
+      "freight_class": "heavy"
     }
   },
   "misc": {
@@ -161,6 +173,45 @@
       "desc": "Vinyl shed window",
       "unit": "EA",
       "base_price": 105.0,
+      "freight_class": "pallet"
+    }
+  },
+  "interior": {
+    "batt_r13": {
+      "desc": "R-13 fiberglass batt insulation",
+      "unit": "SF",
+      "base_price": 1.15,
+      "freight_class": "flat"
+    },
+    "batt_r19": {
+      "desc": "R-19 fiberglass batt insulation",
+      "unit": "SF",
+      "base_price": 1.45,
+      "freight_class": "flat"
+    },
+    "rigid_1in": {
+      "desc": "1in rigid foam insulation allowance",
+      "unit": "SF",
+      "base_price": 1.85,
+      "freight_class": "flat"
+    },
+    "drywall_1_2": {
+      "desc": "4x8 1/2 drywall",
+      "unit": "EA",
+      "sf": 32,
+      "base_price": 15.75,
+      "freight_class": "flat"
+    },
+    "drywall_finish_level3_sf": {
+      "desc": "Drywall tape / Level 3 finish allowance",
+      "unit": "SF",
+      "base_price": 0.85,
+      "freight_class": "pallet"
+    },
+    "drywall_finish_level4_sf": {
+      "desc": "Drywall Level 4 paint-ready finish allowance",
+      "unit": "SF",
+      "base_price": 1.2,
       "freight_class": "pallet"
     }
   }

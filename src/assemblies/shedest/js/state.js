@@ -21,11 +21,19 @@ export function readStateFromUI(doc=document) {
       studSpacingIn: Number($("studSpacing").value),
       topPlate: $("topPlate").value,              // "single" | "double"
       cornerStyle: $("cornerStyle").value,        // "3-stud" | "california"
+      includeWallSheath: $("includeWallSheath").value === "yes",
       wallSheathKey: $("wallSheath").value,
+      includeSiding: $("includeSiding").value === "yes",
       sidingProfile: $("sidingProfile").value,
       wallColor: $("wallColor").value,
       trimColor: $("trimColor").value,
       showStuds: $("showStuds").value === "yes"
+    },
+    interior: {
+      includeInsulation: $("includeInsulation").value === "yes",
+      insulationKey: $("insulationType").value,
+      includeDrywall: $("includeDrywall").value === "yes",
+      drywallFinish: $("drywallFinish").value
     },
     openings: {
       doorCount: Number($("doorCount").value),
@@ -42,7 +50,9 @@ export function readStateFromUI(doc=document) {
       type: $("roofType").value,                  // flat | shed | gable
       pitchX12: Number($("pitch").value),
       overhangFt: Number($("overhangFt").value),
+      includeRoofSheath: $("includeRoofSheath").value === "yes",
       roofSheathKey: $("roofSheath").value,
+      includeRoofFinish: $("includeRoofFinish").value === "yes",
       roofFinish: $("roofFinish").value,
       roofColor: $("roofColor").value,
       includeFasciaSoffit: $("includeFasciaSoffit").value === "yes",
@@ -63,6 +73,8 @@ export function readStateFromUI(doc=document) {
       remoteFactor: Number($("remoteFactor").value),
       mhPerSF: Number($("mhPerSF").value),
       mhPerSheet: Number($("mhPerSheet").value),
+      mhInsulationPerSF: Number($("mhInsulationPerSF").value),
+      mhDrywallPerSF: Number($("mhDrywallPerSF").value),
       mhRoofPerSF: Number($("mhRoofPerSF").value),
       mhFoundationBase: Number($("mhFoundationBase").value)
     }
@@ -72,12 +84,13 @@ export function readStateFromUI(doc=document) {
 export function defaultState() {
   return {
     geom: { lenFt:10, widFt:10, htFt:8, includeFloor:true },
-    walls: { studType:"2x4", studSpacingIn:16, topPlate:"single", cornerStyle:"3-stud", wallSheathKey:"osb_7_16", sidingProfile:"lap", wallColor:"cedar", trimColor:"white", showStuds:false },
+    walls: { studType:"2x4", studSpacingIn:16, topPlate:"single", cornerStyle:"3-stud", includeWallSheath:true, wallSheathKey:"osb_7_16", includeSiding:true, sidingProfile:"lap", wallColor:"cedar", trimColor:"white", showStuds:false },
+    interior: { includeInsulation:false, insulationKey:"batt_r13", includeDrywall:false, drywallFinish:"hang_only" },
     openings: { doorCount:1, doorWft:3, doorHft:7, winCount:1, winWft:3, winHft:3, trimKey:"none", doorStyle:"single", windowLayout:"balanced" },
-    roof: { type:"flat", pitchX12:3, overhangFt:0.5, roofSheathKey:"osb_7_16", roofFinish:"metal", roofColor:"galvalume", includeFasciaSoffit:true, soffitWidthFt:0.5 },
+    roof: { type:"flat", pitchX12:3, overhangFt:0.5, includeRoofSheath:true, roofSheathKey:"osb_7_16", includeRoofFinish:true, roofFinish:"metal", roofColor:"galvalume", includeFasciaSoffit:true, soffitWidthFt:0.5 },
     foundation: { type:"skids", gravelDepthFt:0.5, slabThkIn:4, pierSpacingFt:6 },
     logistics: { shipMult:1.0, handlingPct:0.05 },
-    labor: { tradeRateKey:"architectural", remoteFactor:1.15, mhPerSF:0.045, mhPerSheet:0.18, mhRoofPerSF:0.020, mhFoundationBase:4.0 }
+    labor: { tradeRateKey:"architectural", remoteFactor:1.15, mhPerSF:0.045, mhPerSheet:0.18, mhInsulationPerSF:0.018, mhDrywallPerSF:0.055, mhRoofPerSF:0.020, mhFoundationBase:4.0 }
   };
 }
 
@@ -92,11 +105,18 @@ export function applyStateToUI(state, doc=document) {
   $("studSpacing").value = state.walls.studSpacingIn;
   $("topPlate").value = state.walls.topPlate;
   $("cornerStyle").value = state.walls.cornerStyle;
+  $("includeWallSheath").value = state.walls.includeWallSheath ? "yes" : "no";
   $("wallSheath").value = state.walls.wallSheathKey;
+  $("includeSiding").value = state.walls.includeSiding ? "yes" : "no";
   $("sidingProfile").value = state.walls.sidingProfile;
   $("wallColor").value = state.walls.wallColor;
   $("trimColor").value = state.walls.trimColor;
   $("showStuds").value = state.walls.showStuds ? "yes" : "no";
+
+  $("includeInsulation").value = state.interior.includeInsulation ? "yes" : "no";
+  $("insulationType").value = state.interior.insulationKey;
+  $("includeDrywall").value = state.interior.includeDrywall ? "yes" : "no";
+  $("drywallFinish").value = state.interior.drywallFinish;
 
   $("doorCount").value = state.openings.doorCount;
   $("doorSize").value = `${state.openings.doorWft}x${state.openings.doorHft}`;
@@ -109,7 +129,9 @@ export function applyStateToUI(state, doc=document) {
   $("roofType").value = state.roof.type;
   $("pitch").value = state.roof.pitchX12;
   $("overhangFt").value = state.roof.overhangFt;
+  $("includeRoofSheath").value = state.roof.includeRoofSheath ? "yes" : "no";
   $("roofSheath").value = state.roof.roofSheathKey;
+  $("includeRoofFinish").value = state.roof.includeRoofFinish ? "yes" : "no";
   $("roofFinish").value = state.roof.roofFinish;
   $("roofColor").value = state.roof.roofColor;
   $("includeFasciaSoffit").value = state.roof.includeFasciaSoffit ? "yes" : "no";
@@ -127,6 +149,8 @@ export function applyStateToUI(state, doc=document) {
   $("remoteFactor").value = state.labor.remoteFactor;
   $("mhPerSF").value = state.labor.mhPerSF;
   $("mhPerSheet").value = state.labor.mhPerSheet;
+  $("mhInsulationPerSF").value = state.labor.mhInsulationPerSF;
+  $("mhDrywallPerSF").value = state.labor.mhDrywallPerSF;
   $("mhRoofPerSF").value = state.labor.mhRoofPerSF;
   $("mhFoundationBase").value = state.labor.mhFoundationBase;
 }
