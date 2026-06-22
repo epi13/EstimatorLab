@@ -10,6 +10,9 @@ export function createScene(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.08;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x09111f);
@@ -19,7 +22,10 @@ export function createScene(canvas) {
   camera.position.set(18, 14, 18);
 
   scene.add(new THREE.HemisphereLight(0xdbeafe, 0x182033, 0.82));
-  const dir = new THREE.DirectionalLight(0xffffff, 1.15);
+  const rim = new THREE.DirectionalLight(0x38d5ff, 0.55);
+  rim.position.set(-16, 10, -12);
+  scene.add(rim);
+  const dir = new THREE.DirectionalLight(0xffffff, 1.35);
   dir.position.set(10, 18, 8);
   dir.castShadow = true;
   scene.add(dir);
@@ -230,11 +236,18 @@ export function createScene(canvas) {
   }
 
   function addFoundation(state, L, W) {
+    if (state.foundation.type === "none") return;
     if (state.foundation.type === "slab") {
       makeSelectable(addBox(L + 1, 0.35, W + 1, new THREE.Vector3(0, -0.18, 0), 0x777777), "Slab foundation", "Concrete slab-on-grade: flat bearing surface below shed walls/floor.");
     } else if (state.foundation.type === "piers") {
       const spacing = Math.max(4, state.foundation.pierSpacingFt || 6);
       for (let x = -L/2; x <= L/2 + 0.01; x += spacing) for (const z of [-W/2 + 0.7, W/2 - 0.7]) makeSelectable(addBox(0.8, 1, 0.8, new THREE.Vector3(x, -0.5, z), 0x686868), "Pier foundation", "Pier support transferring floor beam loads to discrete concrete/post bearing points.");
+    } else if (state.foundation.type === "ground_screws") {
+      const spacing = Math.max(4, state.foundation.pierSpacingFt || 6);
+      for (let x = -L/2; x <= L/2 + 0.01; x += spacing) for (const z of [-W/2 + 0.7, W/2 - 0.7]) {
+        const screw = makeSelectable(addBox(0.38, 1.25, 0.38, new THREE.Vector3(x, -0.62, z), 0x5f7182, { metalness:0.45, roughness:0.36 }), "Ground screw foundation", "Helical ground screw support for remote sites where concrete logistics may be reduced.");
+        screw.rotation.y = Math.PI / 4;
+      }
     } else {
       for (const z of [-W/3, W/3]) makeSelectable(addBox(L + 1, 0.35, 0.35, new THREE.Vector3(0, -0.18, z), 0x5f4630), "PT skid", "Pressure-treated skid supporting floor joists over gravel.");
       addBox(L + 1.5, 0.08, W + 1.5, new THREE.Vector3(0, -0.42, 0), 0x4a4a4a);
@@ -333,8 +346,13 @@ export function createScene(canvas) {
     addDimensionLine(`${H}' wall`, new THREE.Vector3(-L/2-1.0, 0, W/2), new THREE.Vector3(-L/2-1.0, H, W/2));
 
     const mode = state.walls.visualMode ?? "finished";
-    const xray = mode === "xray" || mode === "skeleton" || mode === "roof";
-    const wall = makeSelectable(addBox(L, H, W, new THREE.Vector3(0, H/2, 0), WALL_COLORS[state.walls.wallColor] ?? WALL_COLORS.cedar, xray ? { transparent:true, opacity: mode === "skeleton" ? 0.12 : 0.38 } : {}), "Wall shell", "Exterior wall assembly: studs, plates, sheathing, siding, and trim around openings." );
+    const framingMode = mode === "framing" || mode === "skeleton";
+    const blueprintMode = mode === "blueprint";
+    const explodedMode = mode === "exploded";
+    const impactMode = mode === "impact";
+    const xray = mode === "xray" || framingMode || mode === "roof" || mode === "foundation" || explodedMode || impactMode || blueprintMode;
+    const wall = makeSelectable(addBox(L, H, W, new THREE.Vector3(0, H/2 + (explodedMode ? 0.25 : 0), explodedMode ? -0.55 : 0), blueprintMode ? 0x15365a : (WALL_COLORS[state.walls.wallColor] ?? WALL_COLORS.cedar), xray ? { transparent:true, opacity: framingMode ? 0.12 : (blueprintMode ? 0.18 : 0.38), wireframe: blueprintMode } : {}), "Wall shell", "Exterior wall assembly: studs, plates, sheathing, siding, and trim around openings." );
+    wall.userData.assembly = "walls";
     addEdges(wall, 0x222222);
     addSidingLines(L, W, H, state.walls.sidingProfile);
     if (mode === "xray") addLabel("Cutaway layers: siding → sheathing → studs → interior finish", new THREE.Vector3(0, H + 1.4, W/2 + 1.2));
@@ -360,7 +378,9 @@ export function createScene(canvas) {
       left.rotation.x = -tilt;
       const right = addBox(roofL, 0.25, slopeLen, new THREE.Vector3(0, H + rise/2, roofW/4), roofColor, { metalness: state.roof.roofFinish === "metal" ? 0.35 : 0.05, transparent:xray, opacity:xray ? 0.42 : 1 });
       right.rotation.x = tilt;
+      left.position.y += explodedMode ? 0.9 : 0; left.position.z -= explodedMode ? 0.45 : 0; left.userData.assembly = "roof";
       makeSelectable(left, "Left roof plane", `Sloped roof plane: ${state.roof.roofFinish} finish over ${state.roof.roofSheathKey.replaceAll("_", " ")} sheathing, ${state.roof.pitchX12}:12 pitch.`);
+      right.position.y += explodedMode ? 0.9 : 0; right.position.z += explodedMode ? 0.45 : 0; right.userData.assembly = "roof";
       makeSelectable(right, "Right roof plane", `Sloped roof plane: ${state.roof.roofFinish} finish over ${state.roof.roofSheathKey.replaceAll("_", " ")} sheathing, ${state.roof.pitchX12}:12 pitch.`);
       addEdges(left, 0x202020); addEdges(right, 0x202020);
       addRoofRibs(left, state.roof.roofFinish); addRoofRibs(right, state.roof.roofFinish);
@@ -368,10 +388,14 @@ export function createScene(canvas) {
       roofMesh = new THREE.Group(); shedGroup.add(roofMesh); roofMesh.add(left, right);
     }
     if (roofMesh instanceof THREE.Mesh) {
+      roofMesh.position.y += explodedMode ? 0.9 : 0; roofMesh.userData.assembly = "roof";
       makeSelectable(roofMesh, "Roof finish / sheathing", `Roof assembly: ${state.roof.roofFinish} finish over ${state.roof.roofSheathKey.replaceAll("_", " ")} sheathing, ${state.roof.pitchX12}:12 pitch, ${state.roof.overhangFt} ft overhang.`);
       addEdges(roofMesh, 0x202020); addRoofRibs(roofMesh, state.roof.roofFinish);
     }
-    if (mode === "skeleton" || mode === "roof") addRoofFraming(state, L, W, H);
+    if (framingMode || mode === "roof" || explodedMode || blueprintMode) addRoofFraming(state, L, W, H);
+
+    if (blueprintMode) addLabel("BLUEPRINT MODE · wireframe takeoff overlay", new THREE.Vector3(0, H + 2.4, 0));
+    if (impactMode) addLabel("ESTIMATE IMPACT · select line items to pulse linked assemblies", new THREE.Vector3(0, H + 2.4, 0));
 
     const bounds = new THREE.Box3().setFromObject(shedGroup);
     const size = bounds.getSize(new THREE.Vector3()); const center = bounds.getCenter(new THREE.Vector3());
@@ -382,7 +406,29 @@ export function createScene(canvas) {
     controls.target.copy(center); controls.update(); updateZoomDetailVisibility(); resize();
   }
 
+  function highlightAssembly(assembly) {
+    for (const obj of selectable) {
+      const label = `${obj.userData.selectLabel ?? ""}`.toLowerCase();
+      const inferred = obj.userData.assembly || (label.includes("roof") || label.includes("rafter") || label.includes("ridge") ? "roof" : label.includes("foundation") || label.includes("skid") || label.includes("pier") || label.includes("screw") || label.includes("slab") ? "foundation" : label.includes("door") || label.includes("window") ? "openings" : label.includes("floor") || label.includes("joist") ? "floor" : "walls");
+      if (obj.material?.emissive) obj.material.emissive.setHex(inferred === assembly ? SELECT_COLOR : 0x000000);
+    }
+  }
+
+  function setCameraPreset(preset) {
+    const box = new THREE.Box3().setFromObject(shedGroup);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const d = Math.max(size.x, size.y, size.z, 10) * 1.75;
+    const positions = {
+      front:[0, size.y * .55, d], side:[d, size.y * .55, 0], plan:[0, d, .01], framing:[d*.85, d*.55, d*.85], roof:[d*.55, d*.85, d*.25], foundation:[d*.75, d*.25, d*.75], orbit:[d*.7, d*.52, d*.7]
+    };
+    const pos = positions[preset] || positions.orbit;
+    camera.position.set(center.x + pos[0], center.y + pos[1], center.z + pos[2]);
+    controls.target.copy(center);
+    controls.update();
+  }
+
   function tick() { controls.update(); updateZoomDetailVisibility(); renderer.render(scene, camera); requestAnimationFrame(tick); }
   tick();
-  return { rebuild, resize };
+  return { rebuild, resize, highlightAssembly, setCameraPreset };
 }
