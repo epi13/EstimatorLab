@@ -5,7 +5,7 @@ import { roofTakeoff } from "./roof.js";
 import { foundationTakeoff } from "./foundation.js";
 
 export function buildTakeoff(state, db) {
-  const { geom, walls, openings, roof, foundation } = state;
+  const { geom, walls, interior, openings, roof, foundation } = state;
 
   const perim = perimeterFt(geom.lenFt, geom.widFt);
   const wallArea = wallAreaSF(perim, geom.htFt);
@@ -23,7 +23,7 @@ export function buildTakeoff(state, db) {
 
   // Wall sheathing after openings
   const netWallSheathArea = Math.max(0, wallArea - openInfo.openingAreaSF);
-  const wallSheets = ceilSheets(netWallSheathArea, db.sheetSF(walls.wallSheathKey), 0.10);
+  const wallSheets = walls.includeWallSheath ? ceilSheets(netWallSheathArea, db.sheetSF(walls.wallSheathKey), 0.10) : 0;
 
   // Baseline studs
   const baseStuds = studsCountForPerimeter(perim, walls.studSpacingIn, 0.10);
@@ -68,7 +68,7 @@ export function buildTakeoff(state, db) {
     soffitWidthFt: roof.soffitWidthFt
   });
 
-  const roofSheets = ceilSheets(roofInfo.roofAreaSF, db.sheetSF(roof.roofSheathKey), 0.10);
+  const roofSheets = roof.includeRoofSheath ? ceilSheets(roofInfo.roofAreaSF, db.sheetSF(roof.roofSheathKey), 0.10) : 0;
 
   // Foundation
   const fnd = foundationTakeoff({
@@ -89,13 +89,13 @@ export function buildTakeoff(state, db) {
   items.push(db.item(`${walls.studType.toUpperCase()}, Plate ITEM (Top+Bottom plates, 8')`, lumberKey, wallFrame.plateSticksEA, "EA"));
   items.push(db.item(`${walls.studType.toUpperCase()}, Header ITEM (Budgetary headers, 8')`, lumberKey, wallFrame.headerSticksEA, "EA"));
 
-  items.push(db.item(`4'x8', ${db.desc(walls.wallSheathKey)} ITEM (Wall sheathing)`, walls.wallSheathKey, wallSheets, "EA"));
+  if (walls.includeWallSheath) items.push(db.item(`4'x8', ${db.desc(walls.wallSheathKey)} ITEM (Wall sheathing)`, walls.wallSheathKey, wallSheets, "EA"));
   const sidingKey = walls.sidingProfile === "boardbatten" ? "bb_siding_sf" : (walls.sidingProfile === "panel" ? "panel_siding_sf" : "lap_siding_sf");
-  items.push(db.item(`SF, ${db.desc(sidingKey)} ITEM (Exterior finish)`, sidingKey, netWallSheathArea, "SF"));
+  if (walls.includeSiding) items.push(db.item(`SF, ${db.desc(sidingKey)} ITEM (Exterior finish)`, sidingKey, netWallSheathArea, "SF"));
 
-  items.push(db.item(`4'x8', ${db.desc(roof.roofSheathKey)} ITEM (Roof sheathing)`, roof.roofSheathKey, roofSheets, "EA"));
+  if (roof.includeRoofSheath) items.push(db.item(`4'x8', ${db.desc(roof.roofSheathKey)} ITEM (Roof sheathing)`, roof.roofSheathKey, roofSheets, "EA"));
   const roofFinishKey = roof.roofFinish === "shingle" ? "shingle_roof_sf" : (roof.roofFinish === "membrane" ? "membrane_roof_sf" : "metal_roof_sf");
-  items.push(db.item(`SF, ${db.desc(roofFinishKey)} ITEM (Roof finish)`, roofFinishKey, roofInfo.roofAreaSF, "SF"));
+  if (roof.includeRoofFinish) items.push(db.item(`SF, ${db.desc(roofFinishKey)} ITEM (Roof finish)`, roofFinishKey, roofInfo.roofAreaSF, "SF"));
 
   // Roof framing
   items.push(db.item(`${walls.studType.toUpperCase()}, Rafter ITEM (Roof framing, 8')`, lumberKey, roofInfo.rafterSticksEA, "EA"));
@@ -117,6 +117,20 @@ export function buildTakeoff(state, db) {
     // Soffit as SF geotextile placeholder? Better: treat as sheet goods later. For now: track only if >0.
     if (roofInfo.soffitSF > 0) {
       items.push({ name:`${roofInfo.soffitSF.toFixed(0)} SF, Soffit ITEM (Budgetary, material TBD)`, qty: roofInfo.soffitSF, unit:"SF", base:0, freight_class:"flat" });
+    }
+  }
+
+
+  // Interior finishes
+  if (interior.includeInsulation) {
+    items.push(db.item(`SF, ${db.desc(interior.insulationKey)} ITEM (Wall insulation)`, interior.insulationKey, netWallSheathArea, "SF"));
+  }
+  if (interior.includeDrywall) {
+    const drywallSheets = ceilSheets(netWallSheathArea, db.sheetSF("drywall_1_2"), 0.10);
+    items.push(db.item(`4'x8', ${db.desc("drywall_1_2")} ITEM (Interior drywall)`, "drywall_1_2", drywallSheets, "EA"));
+    if (interior.drywallFinish !== "hang_only") {
+      const finishKey = interior.drywallFinish === "level4" ? "drywall_finish_level4_sf" : "drywall_finish_level3_sf";
+      items.push(db.item(`SF, ${db.desc(finishKey)} ITEM (Drywall finish)`, finishKey, netWallSheathArea, "SF"));
     }
   }
 
@@ -144,11 +158,16 @@ export function buildTakeoff(state, db) {
     items.push(db.item(`CY, Gravel ITEM (Pads/base)`, "gravel", fnd.gravelCY, "CY"));
     items.push(db.item(`EA, Sonotube ITEM (Piers)`, "sonotube_12x4", fnd.pierCountEA, "EA"));
     items.push(db.item(`CY, Concrete ITEM (Piers)`, "concrete", fnd.pierCountEA * 0.15, "CY"));
-  } else {
+  } else if (fnd.type === "ground_screws") {
+    items.push(db.item(`CY, Gravel ITEM (Pads/base)`, "gravel", fnd.gravelCY, "CY"));
+    items.push(db.item(`EA, Ground Screw ITEM`, "ground_screw", fnd.groundScrewCountEA, "EA"));
+  } else if (fnd.type !== "none") {
     items.push(db.item(`CY, Gravel ITEM (Base)`, "gravel", fnd.gravelCY, "CY"));
     items.push(db.item(`SF, Vapor Barrier ITEM`, "vapor_barrier", fnd.vaporSF, "SF"));
     items.push(db.item(`SF, Rebar ITEM (Allowance)`, "rebar", fnd.rebarSF, "SF"));
     items.push(db.item(`CY, Concrete ITEM (Slab)`, "concrete", fnd.slabCY, "CY"));
+    if (fnd.wallCY > 0) items.push(db.item(`CY, Concrete ITEM (Foundation walls)`, "concrete", fnd.wallCY, "CY"));
+    if (fnd.excavationCY > 0) items.push(db.item(`CY, Excavation ITEM`, "excavation", fnd.excavationCY, "CY"));
   }
 
   items.push(db.item(`LS, Fasteners ITEM (Nails/screws/misc)`, "fasteners_ls", 1, "LS"));
@@ -158,7 +177,8 @@ export function buildTakeoff(state, db) {
     ...wallFrame.notes,
     ...fnd.notes,
     `Wall sheathing net area: ${netWallSheathArea.toFixed(2)} SF (after openings)`,
-    `Exterior finish: ${walls.sidingProfile} siding, ${walls.wallColor} walls, ${walls.trimColor} trim`,
+    walls.includeSiding ? `Exterior finish: ${walls.sidingProfile} siding, ${walls.wallColor} walls, ${walls.trimColor} trim` : `Exterior finish excluded`,
+    `Interior: insulation ${interior.includeInsulation ? interior.insulationKey : "excluded"}; drywall ${interior.includeDrywall ? interior.drywallFinish : "excluded"}`,
     `Roof finish: ${roof.roofFinish}, ${roof.roofColor} color`,
     `Roof area: ${roofInfo.roofAreaSF.toFixed(2)} SF (incl overhang/slope)`,
     `Perimeter: ${perim.toFixed(2)} LF`

@@ -27,6 +27,7 @@ function makeDB(materials) {
     ...materials.sheet_goods,
     ...materials.trim,
     ...materials.foundation,
+    ...(materials.interior ?? {}),
     ...materials.exterior,
     ...materials.misc
   };
@@ -62,7 +63,17 @@ const fallbackMaterials = {
     "sonotube_12x4":{desc:"12in Sonotube x 4ft",unit:"EA",base_price:17,freight_class:"pallet"},
     "concrete":{desc:"Concrete",unit:"CY",base_price:245,freight_class:"heavy"},
     "rebar":{desc:"Rebar allowance",unit:"SF",base_price:0.80,freight_class:"heavy"},
-    "vapor_barrier":{desc:"10 mil VB",unit:"SF",base_price:0.12,freight_class:"flat"}
+    "vapor_barrier":{desc:"10 mil VB",unit:"SF",base_price:0.12,freight_class:"flat"},
+    "ground_screw":{desc:"Helical ground screw",unit:"EA",base_price:95,freight_class:"heavy"},
+    "excavation":{desc:"Excavation / spoil handling allowance",unit:"CY",base_price:38,freight_class:"heavy"}
+  },
+  interior:{
+    "batt_r13":{desc:"R-13 fiberglass batt insulation",unit:"SF",base_price:1.15,freight_class:"flat"},
+    "batt_r19":{desc:"R-19 fiberglass batt insulation",unit:"SF",base_price:1.45,freight_class:"flat"},
+    "rigid_1in":{desc:"1in rigid foam insulation allowance",unit:"SF",base_price:1.85,freight_class:"flat"},
+    "drywall_1_2":{desc:"4x8 1/2 drywall",unit:"EA",sf:32,base_price:15.75,freight_class:"flat"},
+    "drywall_finish_level3_sf":{desc:"Drywall tape / Level 3 finish allowance",unit:"SF",base_price:0.85,freight_class:"pallet"},
+    "drywall_finish_level4_sf":{desc:"Drywall Level 4 paint-ready finish allowance",unit:"SF",base_price:1.20,freight_class:"pallet"}
   },
   exterior:{
     "lap_siding_sf":{desc:"Factory-primed lap siding allowance",unit:"SF",base_price:1.95,freight_class:"flat"},
