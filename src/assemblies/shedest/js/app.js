@@ -1,4 +1,5 @@
-import { readStateFromUI, defaultState, applyStateToUI } from "./state.js";
+import { readStateFromInputs, defaultState, applyStateToUI, updateState } from "./state.js";
+import { getShedWarnings } from "./warnings.js";
 import { createScene } from "../three/scene.js";
 import { buildTakeoff } from "./calc/takeoff.js";
 import { costItems } from "./calc/costing.js";
@@ -106,9 +107,20 @@ async function main() {
 
   const canvas = $("canvas");
   const scene = createScene(canvas);
+  let latestEstimateItems = [];
+  let latestWarnings = [];
+  let latestState = null;
+  let latestTotals = { material: 0, labor: 0, freight: 0, handling: 0, total: 0 };
+
+  canvas.addEventListener("shed-element-hovered", (event) => {
+    if (event.detail?.label) $("assemblyInspector").dataset.preview = event.detail.label;
+  });
   canvas.addEventListener("shed-element-selected", (event) => {
-    const { label, text } = event.detail;
+    const { label, text, assemblyId, objectId } = event.detail;
+    updateState({ ui: { selectedAssemblyId: assemblyId, selectedEstimateItemId: null } });
     $("selectedInfo").innerHTML = `<b>Selected element:</b> ${label}<br>${text}`;
+    renderAssemblyInspector({ type:"assembly", assemblyId, objectId, label, text });
+    highlightEstimateRowsForAssembly(assemblyId);
   });
 
   function render(state, takeoff, costs, labor, cutSheets) {
@@ -121,13 +133,24 @@ async function main() {
     $("outLabor").textContent = money(labor.laborCost);
     $("outTotal").textContent = money(costs.matDelivered + labor.laborCost);
 
+    latestState = state;
+    latestEstimateItems = enrichEstimateItems(takeoff.items, costs, labor, takeoff, state);
+    latestWarnings = getShedWarnings(state, latestEstimateItems);
+    latestTotals = { material: costs.matBase, labor: labor.laborCost, freight: costs.ship, handling: costs.handling, total: costs.matDelivered + labor.laborCost };
+    renderSummaryRail(latestTotals);
+    renderWarnings(latestWarnings);
+
     const tbody = $("takeoffBody");
     tbody.innerHTML = "";
-    for (const it of takeoff.items) {
+    for (const it of latestEstimateItems) {
       const tr = document.createElement("tr");
       const unit = it.unit === "LS" ? "LOT" : it.unit;
-      tr.dataset.assembly = classifyAssembly(it.name);
-      tr.innerHTML = `<td>${it.name}</td><td>${round2(it.qty)}</td><td>${unit}</td><td>${money(it.base)}</td>`;
+      tr.dataset.assembly = it.assemblyId;
+      tr.dataset.itemId = it.id;
+      tr.className = "estimate-row";
+      tr.innerHTML = `<td><span class="row-section">${it.section}</span>${it.item}<div class="muted mini-note">${it.quantityBasis}</div></td><td>${round2(it.quantity)}</td><td>${unit}</td><td>${money(it.materialCost)}</td>`;
+      tr.addEventListener("mouseenter", () => { tr.classList.add("estimate-row-linked"); scene.highlightAssembly?.(it.assemblyId); });
+      tr.addEventListener("mouseleave", () => tr.classList.remove("estimate-row-linked"));
       tr.addEventListener("click", () => selectEstimateLine(tr, it, costs, labor));
       tbody.appendChild(tr);
     }
@@ -163,10 +186,11 @@ async function main() {
     ["outMatBase","outShip","outHand","outMatDel","outMH","outLabor","outTotal"].forEach(id => { $(id).classList.remove("cost-pulse"); void $(id).offsetWidth; $(id).classList.add("cost-pulse"); });
 
     scene.rebuild(state);
+    renderAssemblyInspector();
   }
 
   function computeAndRender() {
-    const state = readStateFromUI(document);
+    const state = readStateFromInputs(document);
 
     const takeoff = buildTakeoff(state, db);
     const costs = costItems(takeoff.items, db, state.logistics, freightRules);
@@ -180,18 +204,108 @@ async function main() {
     const lower = name.toLowerCase();
     if (lower.includes("roof") || lower.includes("fascia") || lower.includes("soffit") || lower.includes("rafter")) return "roof";
     if (lower.includes("foundation") || lower.includes("gravel") || lower.includes("slab") || lower.includes("skid") || lower.includes("pier") || lower.includes("screw")) return "foundation";
-    if (lower.includes("door") || lower.includes("window") || lower.includes("trim")) return "openings";
+    if (lower.includes("door")) return "doors";
+    if (lower.includes("window")) return "windows";
+    if (lower.includes("trim")) return "openings";
     if (lower.includes("stud") || lower.includes("plate") || lower.includes("wall") || lower.includes("siding") || lower.includes("sheath")) return "walls";
     if (lower.includes("floor") || lower.includes("joist")) return "floor";
     return "shed";
   }
 
   function selectEstimateLine(row, item, costs, labor) {
-    document.querySelectorAll("#takeoffBody tr").forEach(tr => tr.classList.toggle("linked", tr === row));
+    document.querySelectorAll("#takeoffBody tr").forEach(tr => tr.classList.toggle("estimate-row-selected", tr === row));
     const assembly = row.dataset.assembly;
+    updateState({ ui: { selectedAssemblyId: assembly, selectedEstimateItemId: item.id } });
     scene.highlightAssembly?.(assembly);
-    $("tracePanel").innerHTML = `<b>Estimate Trace · ${assembly.toUpperCase()}</b><span>${item.name}: ${round2(item.qty)} ${item.unit === "LS" ? "LOT" : item.unit}, base ${money(item.base)}. Delivered material total ${money(costs.matDelivered)}; labor ${money(labor.laborCost)}.</span>`;
+    renderAssemblyInspector({ type:"estimate", itemId:item.id });
+    $("tracePanel").innerHTML = `<b>Estimate Trace · ${assembly.toUpperCase()}</b><span>${item.item}: ${round2(item.quantity)} ${item.unit === "LS" ? "LOT" : item.unit}, base ${money(item.materialCost)}. ${getTraceForEstimateItem(item.id)?.formula ?? item.quantityBasis}</span>`;
   }
+
+  function enrichEstimateItems(items, costs, labor, takeoff, state) {
+    const totalBase = items.reduce((sum, it) => sum + (it.base || 0), 0) || 1;
+    return items.map((it, index) => {
+      const assemblyId = classifyAssembly(it.name);
+      const share = (it.base || 0) / totalBase;
+      const laborHours = round2((labor.mh || 0) * share);
+      const materialCost = it.base || 0;
+      const freightCost = round2(((costs.ship || 0) + (costs.handling || 0)) * share);
+      const id = `${assemblyId}-${slugify(it.name)}-${index}`;
+      return {
+        ...it,
+        id,
+        section: sectionForAssembly(assemblyId),
+        assemblyId,
+        assemblyType: assemblyId,
+        linkedObjectIds: [`${assemblyId}-assembly`],
+        item: it.name,
+        quantity: it.qty,
+        materialCost,
+        laborHours,
+        laborCost: round2((labor.laborCost || 0) * share),
+        freightCost,
+        totalCost: materialCost + freightCost + round2((labor.laborCost || 0) * share),
+        quantityBasis: quantityBasisFor(it.name, takeoff, state),
+        assumptions: assumptionsFor(assemblyId, state)
+      };
+    });
+  }
+
+  function getEstimateItemsByAssembly(assemblyId) { return latestEstimateItems.filter(item => item.assemblyId === assemblyId); }
+  function getObjectsByEstimateItem(itemId) { return latestEstimateItems.find(item => item.id === itemId)?.linkedObjectIds ?? []; }
+  function getTraceForEstimateItem(itemId) {
+    const item = latestEstimateItems.find(row => row.id === itemId);
+    if (!item) return null;
+    return { itemId, formula: item.quantityBasis, inputs: { lengthFt: latestState?.geom.lenFt, widthFt: latestState?.geom.widFt, spacingIn: latestState?.walls.studSpacingIn }, result: item.quantity };
+  }
+  function getAssemblySummary(assemblyId) {
+    const rows = getEstimateItemsByAssembly(assemblyId);
+    return rows.reduce((sum, row) => ({ materialCost: sum.materialCost + row.materialCost, laborHours: sum.laborHours + row.laborHours, laborCost: sum.laborCost + row.laborCost, freightCost: sum.freightCost + row.freightCost, totalCost: sum.totalCost + row.totalCost }), { materialCost:0, laborHours:0, laborCost:0, freightCost:0, totalCost:0 });
+  }
+
+  function renderAssemblyInspector(selection={}) {
+    const panel = $("assemblyInspector");
+    if (!panel || !latestState) return;
+    if (selection.type === "estimate") {
+      const item = latestEstimateItems.find(row => row.id === selection.itemId);
+      const trace = getTraceForEstimateItem(selection.itemId);
+      panel.innerHTML = `<h2>Estimate Inspector</h2><h3>${item.item}</h3><div class="metric-grid"><div><b>${round2(item.quantity)}</b><span>${item.unit === "LS" ? "LOT" : item.unit}</span></div><div><b>${money(item.totalCost)}</b><span>Total</span></div></div><p>${item.quantityBasis}</p><b>Linked objects</b><p>${getObjectsByEstimateItem(item.id).join(", ")}</p><b>Calculation trace</b><pre>${JSON.stringify(trace, null, 2)}</pre>`;
+      return;
+    }
+    const assemblyId = selection.assemblyId;
+    const rows = assemblyId ? getEstimateItemsByAssembly(assemblyId) : [];
+    const summary = assemblyId ? getAssemblySummary(assemblyId) : latestTotals;
+    const warnings = latestWarnings.filter(w => !assemblyId || w.assemblyId === assemblyId);
+    panel.innerHTML = `<h2>Assembly Inspector</h2><h3>${selection.label ?? "Select a wall, roof, opening, or estimate row"}</h3><p class="muted">Current mode: ${latestState.walls.visualMode}. Shed ${latestState.geom.lenFt}' × ${latestState.geom.widFt}' × ${latestState.geom.htFt}'.</p><div class="metric-grid"><div><b>${money(summary.materialCost ?? latestTotals.material)}</b><span>Material</span></div><div><b>${round2(summary.laborHours ?? 0)}</b><span>Labor hrs</span></div><div><b>${money(summary.freightCost ?? latestTotals.freight)}</b><span>Freight/Handling</span></div><div><b>${money(summary.totalCost ?? latestTotals.total)}</b><span>Total</span></div></div><b>Related estimate items</b><ul>${(rows.length ? rows : latestEstimateItems.slice(0,4)).map(r=>`<li>${r.item} · ${money(r.totalCost)}</li>`).join("")}</ul><b>Assumptions / warnings</b><ul>${warnings.map(w=>`<li>${w.message}</li>`).join("") || "<li>No advisory warnings for this selection.</li>"}</ul>`;
+  }
+
+  function renderSummaryRail(totals) {
+    const target = $("estimateSummaryCompact");
+    if (!target) return;
+    target.innerHTML = `<div><span>Material</span><b>${money(totals.material)}</b></div><div><span>Labor</span><b>${money(totals.labor)}</b></div><div><span>Freight / Handling</span><b>${money(totals.freight + totals.handling)}</b></div><div><span>Total</span><b>${money(totals.total)}</b></div>`;
+  }
+
+  function renderWarnings(warnings) {
+    const html = warnings.map(w => `<li class="warning-${w.severity}">${w.message}</li>`).join("");
+    const left = $("warningsPanel"); if (left) left.innerHTML = html || "<li>No warnings.</li>";
+    const drawer = $("estimateAssumptions"); if (drawer) drawer.innerHTML = html || "<li>No advisory warnings.</li>";
+  }
+
+  function highlightEstimateRowsForAssembly(assemblyId) {
+    document.querySelectorAll("#takeoffBody tr").forEach(tr => tr.classList.toggle("estimate-row-linked", tr.dataset.assembly === assemblyId));
+  }
+
+  function sectionForAssembly(assembly) { return ({ foundation:"Foundation", floor:"Floor", walls:"Walls", doors:"Openings", windows:"Openings", openings:"Openings", roof:"Roof", logistics:"Logistics", shed:"Labor" })[assembly] ?? "Shed"; }
+  function slugify(text) { return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 42); }
+  function quantityBasisFor(name, takeoff, state) {
+    const lower = name.toLowerCase();
+    if (lower.includes("stud")) return "Wall length / stud spacing + corners + opening framing";
+    if (lower.includes("sheath")) return "Net assembly area divided by sheet coverage with waste factor";
+    if (lower.includes("roof")) return "Roof footprint adjusted for overhang and slope";
+    if (lower.includes("gravel") || lower.includes("concrete")) return "Foundation footprint, depth/thickness, and selected foundation type";
+    return "Quantity calculated by existing shed takeoff rules";
+  }
+  function assumptionsFor(assembly, state) { return [`${sectionForAssembly(assembly)} quantities preserve existing estimator formulas.`, `Freight multiplier ${state.logistics.shipMult}; handling ${round2(state.logistics.handlingPct * 100)}%.`]; }
+
 
   // listeners
   document.querySelectorAll("input, select").forEach(el => {
@@ -201,6 +315,7 @@ async function main() {
 
   $("btnReset").addEventListener("click", () => {
     applyStateToUI(defaultState(), document);
+    document.body.classList.remove("basic-mode");
     computeAndRender();
   });
 
@@ -212,12 +327,15 @@ async function main() {
 
   document.querySelectorAll("[data-camera]").forEach(btn => btn.addEventListener("click", () => scene.setCameraPreset?.(btn.dataset.camera)));
 
+  document.querySelectorAll(".config-section summary").forEach(summary => summary.addEventListener("click", () => { setTimeout(() => summary.parentElement.scrollIntoView({ block:"nearest" }), 0); }));
+  $("basicModeToggle")?.addEventListener("click", () => { document.body.classList.toggle("basic-mode"); computeAndRender(); });
+
   $("visualMode").addEventListener("change", () => {
     document.querySelectorAll(".mode-chip").forEach(b => b.classList.toggle("active", b.dataset.mode === $("visualMode").value));
   });
 
   $("btnCopyJson").addEventListener("click", async () => {
-    const state = readStateFromUI(document);
+    const state = readStateFromInputs(document);
     const text = JSON.stringify(state, null, 2);
     try {
       await navigator.clipboard.writeText(text);

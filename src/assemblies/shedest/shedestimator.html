@@ -7,13 +7,20 @@
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <aside id="panel" class="glass-panel">
+  <div class="app-shell">
+  <aside id="panel" class="glass-panel config-panel">
     <div class="chief-kicker">Chief-style model + takeoff</div>
     <h1>Shed Estimator</h1>
+    <button id="basicModeToggle" type="button" class="mode-toggle">Basic / Advanced</button>
     <div class="muted">
       Real-time 3D + Alaska-aware material (base + shipping + handling by freight class) + labor hours/cost.
     </div>
 
+    <h2>Project</h2>
+    <ul id="warningsPanel" class="warnings-list"><li>Warnings will appear after the first estimate.</li></ul>
+    <div id="estimateSummaryCompact" class="estimate-summary-compact"></div>
+
+    <details class="config-section" open><summary>Geometry</summary>
     <h2>Geometry</h2>
     <div class="row">
       <div><label>Length (ft)</label><input id="lenFt" type="number" min="4" step="0.5" value="10"></div>
@@ -30,6 +37,8 @@
       </div>
     </div>
 
+    </details>
+    <details class="config-section" open><summary>Walls</summary>
     <h2>Walls</h2>
     <div class="row">
       <div>
@@ -80,6 +89,8 @@
       </div>
     </div>
 
+    </details>
+    <details class="config-section" open><summary>Exterior Finish</summary>
     <h2>Exterior Finish</h2>
     <div class="row">
       <div>
@@ -153,6 +164,8 @@
     </div>
     <div class="section-note">Tip: click wall, roof, framing, opening, or foundation elements in the 3D view to inspect typical-build information.</div>
 
+    </details>
+    <details class="config-section" open><summary>Interior Finishes</summary>
     <h2>Interior Finishes</h2>
     <div class="row">
       <div>
@@ -189,6 +202,8 @@
       </div>
     </div>
 
+    </details>
+    <details class="config-section" open><summary>Openings</summary>
     <h2>Openings</h2>
     <div class="row">
       <div><label>Door Count</label><input id="doorCount" type="number" min="0" step="1" value="1"></div>
@@ -232,6 +247,8 @@
       </div>
     </div>
 
+    </details>
+    <details class="config-section" open><summary>Roof</summary>
     <h2>Roof</h2>
     <div class="row">
       <div>
@@ -311,6 +328,8 @@
       </div>
     </div>
 
+    </details>
+    <details class="config-section" open><summary>Foundation</summary>
     <h2>Foundation</h2>
     <div class="row">
       <div>
@@ -341,6 +360,8 @@
       </div>
     </div>
 
+    </details>
+    <details class="config-section" open><summary>Alaska Logistics</summary>
     <h2>Alaska Logistics</h2>
     <div class="row">
       <div>
@@ -353,6 +374,8 @@
       </div>
     </div>
 
+    </details>
+    <details class="config-section" open><summary>Labor</summary>
     <h2>Labor</h2>
     <div class="row">
       <div>
@@ -383,6 +406,8 @@
       <div><label>Foundation MH (base)</label><input id="mhFoundationBase" type="number" step="0.1" value="4.0"></div>
     </div>
 
+    </details>
+    <details class="config-section" open><summary>Outputs</summary>
     <h2>Outputs</h2>
     <div class="card">
       <div class="line"><span>Material (base)</span><b id="outMatBase">$0</b></div>
@@ -394,30 +419,41 @@
       <div class="line"><span>Total</span><b id="outTotal">$0</b></div>
     </div>
 
+    </details>
+    <details class="config-section" open><summary>Chief-Style Specification Deck</summary>
     <h2>Chief-Style Specification Deck</h2>
     <div id="specDeck" class="spec-deck"></div>
 
+    </details>
+    <details class="config-section" open><summary>Takeoff</summary>
     <h2>Takeoff</h2>
     <table>
       <thead><tr><th>Item</th><th style="width:70px;">Qty</th><th style="width:70px;">Unit</th><th style="width:110px;">Base $</th></tr></thead>
       <tbody id="takeoffBody"></tbody>
     </table>
 
+    </details>
+    <details class="config-section" open><summary>Cut Sheets</summary>
     <h2>Cut Sheets</h2>
     <table>
       <thead><tr><th>Assembly</th><th>Cut / Layout</th><th style="width:70px;">Qty</th><th style="width:140px;">Stock / Notes</th></tr></thead>
       <tbody id="cutSheetBody"></tbody>
     </table>
 
+    </details>
+    <details class="config-section" open><summary>Quick Actions</summary>
     <h2>Quick Actions</h2>
     <div class="smallbtns">
       <button id="btnReset">Reset defaults</button>
       <button id="btnCopyJson">Copy inputs JSON</button>
     </div>
 
+    </details>
+    <details class="config-section" open><summary>Notes</summary>
     <h2>Notes</h2>
     <div id="notes" class="muted"></div>
     <div id="selectedInfo" class="info-card"><b>Selected element:</b> Click a 3D part to view its role in the shed build.</div>
+    </details>
   </aside>
 
   <main id="viewport">
@@ -430,12 +466,16 @@
       <button type="button" class="mode-chip" data-mode="roof">Roof</button>
       <button type="button" class="mode-chip" data-mode="exploded">Exploded</button>
       <button type="button" class="mode-chip" data-mode="blueprint">Blueprint</button>
-      <button type="button" class="mode-chip" data-mode="impact">Estimate Impact</button>
+      <button type="button" class="mode-chip" data-mode="impact">Impact</button>
+      <button type="button" class="mode-chip" data-mode="xray">X-Ray</button>
+      <button type="button" class="mode-chip" data-mode="skeleton">Skeleton</button>
     </div>
     <div class="camera-rail" aria-label="Camera presets">
       <button type="button" data-camera="orbit">Orbit</button>
       <button type="button" data-camera="front">Front</button>
-      <button type="button" data-camera="side">Side</button>
+      <button type="button" data-camera="left">Left</button>
+      <button type="button" data-camera="right">Right</button>
+      <button type="button" data-camera="back">Back</button>
       <button type="button" data-camera="plan">Plan</button>
       <button type="button" data-camera="framing">Framing</button>
       <button type="button" data-camera="roof">Roof</button>
@@ -444,6 +484,17 @@
     <div class="trace-panel" id="tracePanel"><b>Estimate Trace</b><span> Select an assembly or line item to link model scope, quantities, and dollars.</span></div>
     <canvas id="canvas"></canvas>
   </main>
+
+  <aside id="assemblyInspector" class="trace-panel assembly-inspector">
+    <h2>Assembly Inspector</h2>
+    <p>Select a wall, roof, opening, foundation, or estimate row.</p>
+  </aside>
+
+  <section id="estimateDrawer" class="estimate-drawer">
+    <div><b>Estimate Trace</b><span> Row selection links cost, quantity basis, and visible model assemblies.</span></div>
+    <ul id="estimateAssumptions" class="warnings-list"><li>Estimate assumptions will appear here.</li></ul>
+  </section>
+  </div>
 
   <script type="importmap">
     {
