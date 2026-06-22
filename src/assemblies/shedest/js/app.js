@@ -125,7 +125,10 @@ async function main() {
     tbody.innerHTML = "";
     for (const it of takeoff.items) {
       const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${it.name}</td><td>${round2(it.qty)}</td><td>${it.unit}</td><td>${money(it.base)}</td>`;
+      const unit = it.unit === "LS" ? "LOT" : it.unit;
+      tr.dataset.assembly = classifyAssembly(it.name);
+      tr.innerHTML = `<td>${it.name}</td><td>${round2(it.qty)}</td><td>${unit}</td><td>${money(it.base)}</td>`;
+      tr.addEventListener("click", () => selectEstimateLine(tr, it, costs, labor));
       tbody.appendChild(tr);
     }
 
@@ -157,6 +160,7 @@ async function main() {
     $("badge").textContent =
       `Shed ${state.geom.lenFt}’×${state.geom.widFt}’×${state.geom.htFt}’ | ` +
       `Roof: ${state.roof.type} | Foundation: ${state.foundation.type} | Total: ${money(costs.matDelivered + labor.laborCost)}`;
+    ["outMatBase","outShip","outHand","outMatDel","outMH","outLabor","outTotal"].forEach(id => { $(id).classList.remove("cost-pulse"); void $(id).offsetWidth; $(id).classList.add("cost-pulse"); });
 
     scene.rebuild(state);
   }
@@ -172,6 +176,23 @@ async function main() {
     render(state, takeoff, costs, labor, cutSheets);
   }
 
+  function classifyAssembly(name="") {
+    const lower = name.toLowerCase();
+    if (lower.includes("roof") || lower.includes("fascia") || lower.includes("soffit") || lower.includes("rafter")) return "roof";
+    if (lower.includes("foundation") || lower.includes("gravel") || lower.includes("slab") || lower.includes("skid") || lower.includes("pier") || lower.includes("screw")) return "foundation";
+    if (lower.includes("door") || lower.includes("window") || lower.includes("trim")) return "openings";
+    if (lower.includes("stud") || lower.includes("plate") || lower.includes("wall") || lower.includes("siding") || lower.includes("sheath")) return "walls";
+    if (lower.includes("floor") || lower.includes("joist")) return "floor";
+    return "shed";
+  }
+
+  function selectEstimateLine(row, item, costs, labor) {
+    document.querySelectorAll("#takeoffBody tr").forEach(tr => tr.classList.toggle("linked", tr === row));
+    const assembly = row.dataset.assembly;
+    scene.highlightAssembly?.(assembly);
+    $("tracePanel").innerHTML = `<b>Estimate Trace · ${assembly.toUpperCase()}</b><span>${item.name}: ${round2(item.qty)} ${item.unit === "LS" ? "LOT" : item.unit}, base ${money(item.base)}. Delivered material total ${money(costs.matDelivered)}; labor ${money(labor.laborCost)}.</span>`;
+  }
+
   // listeners
   document.querySelectorAll("input, select").forEach(el => {
     el.addEventListener("input", computeAndRender);
@@ -181,6 +202,18 @@ async function main() {
   $("btnReset").addEventListener("click", () => {
     applyStateToUI(defaultState(), document);
     computeAndRender();
+  });
+
+  document.querySelectorAll(".mode-chip").forEach(btn => btn.addEventListener("click", () => {
+    $("visualMode").value = btn.dataset.mode;
+    document.querySelectorAll(".mode-chip").forEach(b => b.classList.toggle("active", b === btn));
+    computeAndRender();
+  }));
+
+  document.querySelectorAll("[data-camera]").forEach(btn => btn.addEventListener("click", () => scene.setCameraPreset?.(btn.dataset.camera)));
+
+  $("visualMode").addEventListener("change", () => {
+    document.querySelectorAll(".mode-chip").forEach(b => b.classList.toggle("active", b.dataset.mode === $("visualMode").value));
   });
 
   $("btnCopyJson").addEventListener("click", async () => {

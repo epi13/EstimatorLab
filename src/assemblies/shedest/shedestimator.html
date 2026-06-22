@@ -4,84 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Shed Estimator (3D + Takeoff)</title>
-  <style>
-    :root { color-scheme: dark; }
-    body{
-      margin:0; height:100vh; overflow:hidden;
-      display:grid; grid-template-columns: minmax(430px, 34vw) 1fr;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background:radial-gradient(circle at 70% 10%, #172033 0, #0b0f17 38%, #070707 100%); color:#eee;
-    }
-    #panel{
-      padding:16px; overflow:auto;
-      border-right:1px solid #252525;
-      background:linear-gradient(180deg,#181d29 0%,#10131a 45%,#0d0d0d 100%);
-    }
-    h1{font-size:22px;margin:0 0 6px;letter-spacing:.02em;}
-    .chief-kicker{color:#93c5fd;text-transform:uppercase;font-size:11px;letter-spacing:.16em;font-weight:700;}
-    h2{font-size:13px;margin:14px 0 8px;color:#d5d5d5;}
-    .muted{color:#b9b9b9;font-size:12px;line-height:1.35;}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-    label{display:block;font-size:12px;color:#c9c9c9;margin:8px 0 4px;}
-    input,select,button{
-      width:100%; box-sizing:border-box;
-      padding:8px 10px;
-      border-radius:12px;
-      border:1px solid #2b2b2b;
-      background:#0b0b0b;
-      color:#eee;
-      outline:none;
-    }
-    input:focus,select:focus{border-color:#5a5a5a;}
-    button{cursor:pointer;}
-    .card{
-      border:1px solid #2b2b2b; border-radius:14px;
-      background:linear-gradient(145deg,rgba(15,23,42,.92),rgba(2,6,23,.92)); padding:10px; box-shadow:0 16px 45px rgba(0,0,0,.22);
-    }
-    .line{display:flex;justify-content:space-between;gap:10px;font-size:13px;margin:6px 0;}
-    table{
-      width:100%;
-      border-collapse:collapse;
-      border:1px solid #2b2b2b;
-      border-radius:14px;
-      overflow:hidden;
-      font-size:12px;
-    }
-    th,td{padding:8px 10px;border-bottom:1px solid #232323;vertical-align:top;}
-    th{background:#101010;text-align:left;color:#dcdcdc;position:sticky;top:0;}
-    tr:last-child td{border-bottom:none;}
-    .pill{
-      display:inline-block;padding:6px 10px;border-radius:999px;
-      border:1px solid #2b2b2b;background:#0b0b0b;
-      font-size:12px;margin:6px 6px 0 0;
-    }
-    #viewport{position:relative;}
-    #canvas{width:100%;height:100%;display:block;}
-    .badge{
-      position:absolute;left:10px;top:10px;
-      background:#0b0b0bcc;border:1px solid #2b2b2b;
-      padding:8px 10px;border-radius:12px;font-size:12px;
-      backdrop-filter: blur(6px);
-    }
-    .smallbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-    .section-note{font-size:11px;color:#9ca3af;margin-top:4px;}
-    .spec-deck{display:grid;gap:8px;margin-top:10px;}
-    .spec-deck div{display:grid;grid-template-columns:130px 1fr;gap:8px;border:1px solid #263244;background:rgba(15,23,42,.72);border-radius:12px;padding:8px;}
-    .spec-deck b{color:#bfdbfe;}
-    .spec-deck span{color:#e5edf7;}
-    .mini-note{font-size:10px;margin-top:3px;line-height:1.25;}
-    .viewport-toolbar{position:absolute;right:14px;top:14px;display:flex;gap:8px;z-index:2;}
-    .viewport-toolbar .chip{border:1px solid rgba(147,197,253,.35);background:rgba(15,23,42,.72);color:#dbeafe;padding:8px 10px;border-radius:999px;font-size:12px;backdrop-filter:blur(8px);}
-    .info-card{
-      margin-top:8px;padding:10px;border-radius:14px;
-      border:1px solid #25445f;background:rgba(22,48,70,.35);
-      font-size:12px;line-height:1.45;color:#dbeafe;
-    }
-    .info-card b{color:#fff;}
-  </style>
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <div id="panel">
+  <aside id="panel" class="glass-panel">
     <div class="chief-kicker">Chief-style model + takeoff</div>
     <h1>Shed Estimator</h1>
     <div class="muted">
@@ -213,10 +139,15 @@
       <div>
         <label>3D View Detail</label>
         <select id="visualMode">
-          <option value="finished" selected>Finished exterior</option>
+          <option value="finished" selected>Finished View</option>
+          <option value="framing">Framing View</option>
+          <option value="foundation">Foundation View</option>
+          <option value="roof">Roof View</option>
+          <option value="exploded">Exploded Assembly View</option>
+          <option value="blueprint">Blueprint / Wireframe View</option>
+          <option value="impact">Estimate Impact View</option>
           <option value="xray">Transparent x-ray</option>
           <option value="skeleton">Framing skeleton</option>
-          <option value="roof">Roof build layers</option>
         </select>
       </div>
     </div>
@@ -487,13 +418,32 @@
     <h2>Notes</h2>
     <div id="notes" class="muted"></div>
     <div id="selectedInfo" class="info-card"><b>Selected element:</b> Click a 3D part to view its role in the shed build.</div>
-  </div>
+  </aside>
 
-  <div id="viewport">
+  <main id="viewport">
     <div class="badge" id="badge"></div>
     <div class="viewport-toolbar"><div class="chip">Orbit / Pan / Zoom</div><div class="chip">Click model parts</div><div class="chip">Zoom for framing detail</div></div>
+    <div class="mode-rail" aria-label="Immersive view modes">
+      <button type="button" class="mode-chip active" data-mode="finished">Finished</button>
+      <button type="button" class="mode-chip" data-mode="framing">Framing</button>
+      <button type="button" class="mode-chip" data-mode="foundation">Foundation</button>
+      <button type="button" class="mode-chip" data-mode="roof">Roof</button>
+      <button type="button" class="mode-chip" data-mode="exploded">Exploded</button>
+      <button type="button" class="mode-chip" data-mode="blueprint">Blueprint</button>
+      <button type="button" class="mode-chip" data-mode="impact">Estimate Impact</button>
+    </div>
+    <div class="camera-rail" aria-label="Camera presets">
+      <button type="button" data-camera="orbit">Orbit</button>
+      <button type="button" data-camera="front">Front</button>
+      <button type="button" data-camera="side">Side</button>
+      <button type="button" data-camera="plan">Plan</button>
+      <button type="button" data-camera="framing">Framing</button>
+      <button type="button" data-camera="roof">Roof</button>
+      <button type="button" data-camera="foundation">Foundation</button>
+    </div>
+    <div class="trace-panel" id="tracePanel"><b>Estimate Trace</b><span> Select an assembly or line item to link model scope, quantities, and dollars.</span></div>
     <canvas id="canvas"></canvas>
-  </div>
+  </main>
 
   <script type="importmap">
     {
