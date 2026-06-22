@@ -8,7 +8,9 @@ export function buildTakeoff(state, db) {
   const { geom, walls, interior, openings, roof, foundation } = state;
 
   const perim = perimeterFt(geom.lenFt, geom.widFt);
-  const wallArea = wallAreaSF(perim, geom.htFt);
+  const shedWallInfillRiseFt = roof.type === "shed" ? (geom.widFt * (roof.pitchX12 / 12)) : 0;
+  const shedWallInfillArea = roof.type === "shed" ? shedWallInfillRiseFt * (geom.lenFt + geom.widFt) : 0;
+  const wallArea = wallAreaSF(perim, geom.htFt) + shedWallInfillArea;
   const floorArea = geom.includeFloor ? floorAreaSF(geom.lenFt, geom.widFt) : 0;
 
   // Openings
@@ -37,7 +39,8 @@ export function buildTakeoff(state, db) {
     cornerStyle: walls.cornerStyle,
     perimFt: perim,
     baseStudsEA: baseStuds,
-    openingsInfo: openInfo
+    openingsInfo: openInfo,
+    shedWallInfill: { enabled: roof.type === "shed", riseFt: shedWallInfillRiseFt }
   });
 
   // Floor framing
@@ -88,6 +91,8 @@ export function buildTakeoff(state, db) {
   items.push(db.item(`${walls.studType.toUpperCase()}, Stud ITEM (Wall studs incl openings)`, lumberKey, wallFrame.studsEA, "EA"));
   items.push(db.item(`${walls.studType.toUpperCase()}, Plate ITEM (Top+Bottom plates, 8')`, lumberKey, wallFrame.plateSticksEA, "EA"));
   items.push(db.item(`${walls.studType.toUpperCase()}, Header ITEM (Budgetary headers, 8')`, lumberKey, wallFrame.headerSticksEA, "EA"));
+  if (wallFrame.shedInfillStudSticksEA > 0) items.push(db.item(`${walls.studType.toUpperCase()}, Cripple Stud ITEM (Shed roof wall infill, 8')`, lumberKey, wallFrame.shedInfillStudSticksEA, "EA"));
+  if (wallFrame.shedInfillPlateSticksEA > 0) items.push(db.item(`${walls.studType.toUpperCase()}, Sloped Plate ITEM (Shed roof wall infill, 8')`, lumberKey, wallFrame.shedInfillPlateSticksEA, "EA"));
 
   if (walls.includeWallSheath) items.push(db.item(`4'x8', ${db.desc(walls.wallSheathKey)} ITEM (Wall sheathing)`, walls.wallSheathKey, wallSheets, "EA"));
   const sidingKey = walls.sidingProfile === "boardbatten" ? "bb_siding_sf" : (walls.sidingProfile === "panel" ? "panel_siding_sf" : "lap_siding_sf");
@@ -176,7 +181,7 @@ export function buildTakeoff(state, db) {
     ...openInfo.notes,
     ...wallFrame.notes,
     ...fnd.notes,
-    `Wall sheathing net area: ${netWallSheathArea.toFixed(2)} SF (after openings)`,
+    `Wall sheathing net area: ${netWallSheathArea.toFixed(2)} SF (after openings${shedWallInfillArea > 0 ? `, incl ${shedWallInfillArea.toFixed(2)} SF shed-roof infill` : ""})`,
     walls.includeSiding ? `Exterior finish: ${walls.sidingProfile} siding, ${walls.wallColor} walls, ${walls.trimColor} trim` : `Exterior finish excluded`,
     `Interior: insulation ${interior.includeInsulation ? interior.insulationKey : "excluded"}; drywall ${interior.includeDrywall ? interior.drywallFinish : "excluded"}`,
     `Roof finish: ${roof.roofFinish}, ${roof.roofColor} color`,

@@ -1,4 +1,4 @@
-import { studsCountForPerimeter, sticksFromLF } from "./geometry.js";
+import { sticksFromLF } from "./geometry.js";
 
 export function wallsTakeoff({
   lenFt, widFt, htFt,
@@ -7,14 +7,10 @@ export function wallsTakeoff({
   topPlate, cornerStyle,
   perimFt,
   baseStudsEA,
-  openingsInfo
+  openingsInfo,
+  shedWallInfill = null
 }) {
-  const items = [];
   const notes = [];
-
-  // Corner studs: 4 corners
-  const studsPerCorner = (cornerStyle === "3-stud") ? 3 : 2;
-  const cornerStudsEA = studsPerCorner * 4;
 
   // Baseline studs from perimeter model
   // We already include some corner assumption in base calc, so here we treat corner style as additive adjustment:
@@ -44,10 +40,28 @@ export function wallsTakeoff({
   notes.push(`Top plate: ${topPlate} (top mult ${topMult})`);
   notes.push(`Plates: ${plateLF.toFixed(1)} LF ≈ ${plateSticksEA} sticks`);
 
+  let shedInfillStudSticksEA = 0;
+  let shedInfillPlateSticksEA = 0;
+  if (shedWallInfill?.enabled && shedWallInfill.riseFt > 0.05) {
+    const spacingFt = studSpacingIn / 12;
+    const highWallCripples = Math.ceil(lenFt / spacingFt) + 1;
+    const endWallCripples = 2 * (Math.ceil(widFt / spacingFt) + 1);
+    const avgEndCrippleHt = shedWallInfill.riseFt / 2;
+    const crippleLF = (highWallCripples * shedWallInfill.riseFt) + (endWallCripples * avgEndCrippleHt);
+    const slopedEndPlateLF = 2 * Math.hypot(widFt, shedWallInfill.riseFt);
+    const highWallPlateLF = lenFt;
+
+    shedInfillStudSticksEA = sticksFromLF(crippleLF, 8, 0.12);
+    shedInfillPlateSticksEA = sticksFromLF(slopedEndPlateLF + highWallPlateLF, 8, 0.12);
+    notes.push(`Shed roof wall infill: ${shedWallInfill.riseFt.toFixed(2)} ft rise adds ${shedInfillStudSticksEA} cripple stud sticks and ${shedInfillPlateSticksEA} sloped/top plate sticks`);
+  }
+
   return {
     studsEA,
     plateSticksEA,
     headerSticksEA,
+    shedInfillStudSticksEA,
+    shedInfillPlateSticksEA,
     notes
   };
 }
