@@ -105,6 +105,10 @@ async function main() {
 
   const canvas = $("canvas");
   const scene = createScene(canvas);
+  canvas.addEventListener("shed-element-selected", (event) => {
+    const { label, text } = event.detail;
+    $("selectedInfo").innerHTML = `<b>Selected element:</b> ${label}<br>${text}`;
+  });
 
   function render(state, takeoff, costs, labor) {
     $("outMatBase").textContent = money(costs.matBase);

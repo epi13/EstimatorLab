@@ -64,6 +64,12 @@
     }
     .smallbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
     .section-note{font-size:11px;color:#9ca3af;margin-top:4px;}
+    .info-card{
+      margin-top:8px;padding:10px;border-radius:14px;
+      border:1px solid #25445f;background:rgba(22,48,70,.35);
+      font-size:12px;line-height:1.45;color:#dbeafe;
+    }
+    .info-card b{color:#fff;}
   </style>
 </head>
 <body>
@@ -195,8 +201,17 @@
           <option value="yes">Yes, ghosted</option>
         </select>
       </div>
-      <div></div>
+      <div>
+        <label>3D View Detail</label>
+        <select id="visualMode">
+          <option value="finished" selected>Finished exterior</option>
+          <option value="xray">Transparent x-ray</option>
+          <option value="skeleton">Framing skeleton</option>
+          <option value="roof">Roof build layers</option>
+        </select>
+      </div>
     </div>
+    <div class="section-note">Tip: click wall, roof, framing, opening, or foundation elements in the 3D view to inspect typical-build information.</div>
 
     <h2>Interior Finishes</h2>
     <div class="row">
@@ -453,6 +468,7 @@
 
     <h2>Notes</h2>
     <div id="notes" class="muted"></div>
+    <div id="selectedInfo" class="info-card"><b>Selected element:</b> Click a 3D part to view its role in the shed build.</div>
   </div>
 
   <div id="viewport">
