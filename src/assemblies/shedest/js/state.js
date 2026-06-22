@@ -156,3 +156,67 @@ export function applyStateToUI(state, doc=document) {
   $("mhRoofPerSF").value = state.labor.mhRoofPerSF;
   $("mhFoundationBase").value = state.labor.mhFoundationBase;
 }
+
+export const defaultShedState = {
+  dimensions: { lengthFt: 10, widthFt: 10, wallHeightFt: 8 },
+  floor: { includeFloor: true },
+  walls: { studType: "2x4", studSpacingIn: 16, topPlate: "single", cornerStyle: "3-stud", includeWallSheathing: true, wallSheathing: "osb_7_16" },
+  exterior: { includeSiding: true, sidingProfile: "lap", wallColor: "cedar", trimType: "none", trimColor: "white" },
+  interior: { includeInsulation: false, insulationType: "batt_r13", includeDrywall: false, drywallFinish: "hang_only" },
+  openings: { doorCount: 1, doorSize: "3x7", doorStyle: "single", windowCount: 1, windowSize: "3x3", windowLayout: "balanced" },
+  roof: { roofType: "flat", pitch: 3, overhangFt: 0.5, includeRoofSheathing: true, roofSheathing: "osb_7_16", includeRoofFinish: true, roofFinish: "metal", roofColor: "galvalume", soffitWidthFt: 0.5, includeFasciaSoffit: true },
+  foundation: { foundationType: "skids", gravelDepthFt: 0.5, slabThicknessIn: 4, pierSpacingFt: 6 },
+  logistics: { shippingMultiplier: 1.0, handlingPct: 5 },
+  labor: { tradeRateKey: "architectural", remoteConditionsFactor: 1.15 },
+  ui: { visualMode: "finished", showStuds: false, selectedAssemblyId: null, selectedEstimateItemId: null, basicMode: false }
+};
+
+let currentState = defaultState();
+const stateListeners = new Set();
+
+export function readStateFromInputs(doc=document) {
+  currentState = readStateFromUI(doc);
+  return currentState;
+}
+
+export function writeStateToInputs(state, doc=document) {
+  currentState = state;
+  applyStateToUI(state, doc);
+  notifyState();
+}
+
+export function updateState(partial) {
+  currentState = deepMerge(currentState, partial);
+  notifyState();
+  return currentState;
+}
+
+export function subscribeToState(listener) {
+  stateListeners.add(listener);
+  return () => stateListeners.delete(listener);
+}
+
+export function getCurrentState() { return currentState; }
+
+export function legacyToNormalized(state=currentState) {
+  return {
+    dimensions: { lengthFt: state.geom.lenFt, widthFt: state.geom.widFt, wallHeightFt: state.geom.htFt },
+    floor: { includeFloor: state.geom.includeFloor },
+    walls: { studType: state.walls.studType, studSpacingIn: state.walls.studSpacingIn, topPlate: state.walls.topPlate, cornerStyle: state.walls.cornerStyle, includeWallSheathing: state.walls.includeWallSheath, wallSheathing: state.walls.wallSheathKey },
+    exterior: { includeSiding: state.walls.includeSiding, sidingProfile: state.walls.sidingProfile, wallColor: state.walls.wallColor, trimType: state.openings.trimKey, trimColor: state.walls.trimColor },
+    interior: { includeInsulation: state.interior.includeInsulation, insulationType: state.interior.insulationKey, includeDrywall: state.interior.includeDrywall, drywallFinish: state.interior.drywallFinish },
+    openings: { doorCount: state.openings.doorCount, doorSize: `${state.openings.doorWft}x${state.openings.doorHft}`, doorStyle: state.openings.doorStyle, windowCount: state.openings.winCount, windowSize: `${state.openings.winWft}x${state.openings.winHft}`, windowLayout: state.openings.windowLayout },
+    roof: { roofType: state.roof.type, pitch: state.roof.pitchX12, overhangFt: state.roof.overhangFt, includeRoofSheathing: state.roof.includeRoofSheath, roofSheathing: state.roof.roofSheathKey, includeRoofFinish: state.roof.includeRoofFinish, roofFinish: state.roof.roofFinish, roofColor: state.roof.roofColor, soffitWidthFt: state.roof.soffitWidthFt, includeFasciaSoffit: state.roof.includeFasciaSoffit },
+    foundation: { foundationType: state.foundation.type, gravelDepthFt: state.foundation.gravelDepthFt, slabThicknessIn: state.foundation.slabThkIn, pierSpacingFt: state.foundation.pierSpacingFt },
+    logistics: { shippingMultiplier: state.logistics.shipMult, handlingPct: state.logistics.handlingPct * 100 },
+    labor: { tradeRateKey: state.labor.tradeRateKey, remoteConditionsFactor: state.labor.remoteFactor },
+    ui: { visualMode: state.walls.visualMode, showStuds: state.walls.showStuds, selectedAssemblyId: null, selectedEstimateItemId: null, basicMode: document.body?.classList.contains("basic-mode") ?? false }
+  };
+}
+
+function notifyState() { for (const listener of stateListeners) listener(currentState); }
+function deepMerge(target, patch) {
+  const out = Array.isArray(target) ? [...target] : { ...target };
+  for (const [key, value] of Object.entries(patch ?? {})) out[key] = value && typeof value === "object" && !Array.isArray(value) ? deepMerge(out[key] ?? {}, value) : value;
+  return out;
+}

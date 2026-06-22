@@ -42,6 +42,7 @@ export function createScene(canvas) {
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   let selectedMesh = null;
+  let hoveredMesh = null;
 
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -55,14 +56,32 @@ export function createScene(canvas) {
   function mat(color, opts={}) { return new THREE.MeshStandardMaterial({ color, metalness:0.04, roughness:0.82, ...opts }); }
   function lineMat(color) { return new THREE.LineBasicMaterial({ color, transparent:true, opacity:0.75 }); }
 
+  canvas.addEventListener("pointermove", updateHover);
   canvas.addEventListener("pointerdown", (event) => {
+    const hit = pick(event);
+    if (hit) announceSelection(hit.object);
+  });
+
+  function pick(event) {
     const rect = canvas.getBoundingClientRect();
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
-    const hit = raycaster.intersectObjects(selectable, false)[0];
-    if (hit) announceSelection(hit.object);
-  });
+    return raycaster.intersectObjects(selectable, false)[0];
+  }
+
+  function updateHover(event) {
+    const hit = pick(event);
+    const next = hit?.object ?? null;
+    if (hoveredMesh && hoveredMesh !== selectedMesh && hoveredMesh.material?.emissive) hoveredMesh.material.emissive.setHex(hoveredMesh.userData.oldHoverEmissive ?? 0x000000);
+    hoveredMesh = next;
+    canvas.style.cursor = hoveredMesh ? "pointer" : "default";
+    if (hoveredMesh && hoveredMesh !== selectedMesh && hoveredMesh.material?.emissive) {
+      hoveredMesh.userData.oldHoverEmissive = hoveredMesh.material.emissive.getHex();
+      hoveredMesh.material.emissive.setHex(0x1d4ed8);
+      canvas.dispatchEvent(new CustomEvent("shed-element-hovered", { detail: hoveredMesh.userData }));
+    }
+  }
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
@@ -78,9 +97,19 @@ export function createScene(canvas) {
     while (shedGroup.children.length) shedGroup.remove(shedGroup.children[0]);
   }
 
-  function makeSelectable(mesh, label, detail) {
-    mesh.userData.selectLabel = label;
-    mesh.userData.selectDetail = detail;
+  function makeSelectable(mesh, label, detail, metadata={}) {
+    const assemblyId = metadata.assemblyId ?? inferAssembly(label);
+    mesh.userData = {
+      ...mesh.userData,
+      objectId: metadata.objectId ?? `${assemblyId}-assembly`,
+      assemblyId,
+      assemblyType: metadata.assemblyType ?? assemblyId,
+      phase: metadata.phase ?? inferPhase(label),
+      estimateItemIds: metadata.estimateItemIds ?? [`${assemblyId}-estimate`],
+      label,
+      selectLabel: label,
+      selectDetail: detail
+    };
     selectable.push(mesh);
     return mesh;
   }
@@ -94,7 +123,9 @@ export function createScene(canvas) {
     }
     canvas.dispatchEvent(new CustomEvent("shed-element-selected", { detail:{
       label: mesh?.userData.selectLabel ?? "Shed",
-      text: mesh?.userData.selectDetail ?? "Selectable 3D shed element."
+      text: mesh?.userData.selectDetail ?? "Selectable 3D shed element.",
+      assemblyId: mesh?.userData.assemblyId ?? mesh?.userData.assembly ?? "shed",
+      objectId: mesh?.userData.objectId
     }}));
   }
 
@@ -467,10 +498,27 @@ export function createScene(canvas) {
 
   function highlightAssembly(assembly) {
     for (const obj of selectable) {
-      const label = `${obj.userData.selectLabel ?? ""}`.toLowerCase();
-      const inferred = obj.userData.assembly || (label.includes("roof") || label.includes("rafter") || label.includes("ridge") ? "roof" : label.includes("foundation") || label.includes("skid") || label.includes("pier") || label.includes("screw") || label.includes("slab") ? "foundation" : label.includes("door") || label.includes("window") ? "openings" : label.includes("floor") || label.includes("joist") ? "floor" : "walls");
+      const inferred = obj.userData.assemblyId || obj.userData.assembly || inferAssembly(obj.userData.selectLabel);
       if (obj.material?.emissive) obj.material.emissive.setHex(inferred === assembly ? SELECT_COLOR : 0x000000);
     }
+  }
+
+  function inferAssembly(label="") {
+    const lower = `${label}`.toLowerCase();
+    if (lower.includes("roof") || lower.includes("rafter") || lower.includes("ridge")) return "roof";
+    if (lower.includes("foundation") || lower.includes("skid") || lower.includes("pier") || lower.includes("screw") || lower.includes("slab")) return "foundation";
+    if (lower.includes("door")) return "doors";
+    if (lower.includes("window")) return "windows";
+    if (lower.includes("floor") || lower.includes("joist") || lower.includes("rim")) return "floor";
+    return "walls";
+  }
+
+  function inferPhase(label="") {
+    const lower = `${label}`.toLowerCase();
+    if (lower.includes("stud") || lower.includes("plate") || lower.includes("rafter") || lower.includes("joist")) return "framing";
+    if (lower.includes("foundation") || lower.includes("slab") || lower.includes("pier") || lower.includes("skid")) return "foundation";
+    if (lower.includes("roof")) return "roof";
+    return "finish";
   }
 
   function setCameraPreset(preset) {
@@ -479,7 +527,7 @@ export function createScene(canvas) {
     const center = box.getCenter(new THREE.Vector3());
     const d = Math.max(size.x, size.y, size.z, 10) * 1.75;
     const positions = {
-      front:[0, size.y * .55, d], side:[d, size.y * .55, 0], plan:[0, d, .01], framing:[d*.85, d*.55, d*.85], roof:[d*.55, d*.85, d*.25], foundation:[d*.75, d*.25, d*.75], orbit:[d*.7, d*.52, d*.7]
+      front:[0, size.y * .55, d], left:[-d, size.y * .55, 0], right:[d, size.y * .55, 0], back:[0, size.y * .55, -d], side:[d, size.y * .55, 0], plan:[0, d, .01], isometric:[d*.7, d*.52, d*.7], framing:[d*.85, d*.55, d*.85], roof:[d*.55, d*.85, d*.25], foundation:[d*.75, d*.25, d*.75], orbit:[d*.7, d*.52, d*.7]
     };
     const pos = positions[preset] || positions.orbit;
     camera.position.set(center.x + pos[0], center.y + pos[1], center.z + pos[2]);
