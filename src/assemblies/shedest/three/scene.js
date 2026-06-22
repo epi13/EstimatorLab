@@ -295,6 +295,60 @@ export function createScene(canvas) {
     }
   }
 
+
+  function addShedWallInfill(L, W, H, rise, color, xray=false) {
+    if (rise <= 0.05) return null;
+    const verts = new Float32Array([
+      -L/2, H, -W/2,   L/2, H, -W/2,   L/2, H, W/2,   -L/2, H, W/2,
+      -L/2, H + rise, -W/2,   L/2, H + rise, -W/2,   L/2, H, W/2,   -L/2, H, W/2
+    ]);
+    const idx = [
+      0,1,2, 0,2,3,
+      4,7,6, 4,6,5,
+      0,4,5, 0,5,1,
+      1,5,6, 1,6,2,
+      3,7,4, 3,4,0
+    ];
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute("position", new THREE.BufferAttribute(verts, 3));
+    geom.setIndex(idx);
+    geom.computeVertexNormals();
+    const mesh = new THREE.Mesh(geom, mat(color, xray ? { transparent:true, opacity:0.38 } : {}));
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData.assembly = "walls";
+    shedGroup.add(mesh);
+    makeSelectable(mesh, "Shed roof wall infill", "Triangular/clerestory wall infill framed above the standard wall height to close the space under the shed roof plane.");
+    addEdges(mesh, 0x222222);
+    return mesh;
+  }
+
+  function addShedInfillFraming(L, W, H, rise, spacingFt, opacity=0.76) {
+    if (rise <= 0.05) return;
+    const group = addDetailGroup("zoom-shed-infill-framing", Math.max(L, W) * 2.2 + 10);
+    const opts = { transparent:true, opacity };
+    const highZ = -W/2;
+    const lowZ = W/2;
+    for (let x = -L/2; x <= L/2 + 0.01; x += spacingFt) {
+      const stud = addBoxToGroup(group, 0.12, rise, 0.12, new THREE.Vector3(x, H + rise/2, highZ), 0xf0c98c, opts);
+      makeSelectable(stud, "High-wall infill stud", "Cripple stud framing that raises the high side wall to meet the shed roof plane.");
+    }
+    for (const x of [-L/2, L/2]) {
+      for (let z = -W/2; z <= W/2 + 0.01; z += spacingFt) {
+        const localRise = rise * ((W/2 - z) / W);
+        if (localRise <= 0.08) continue;
+        const stud = addBoxToGroup(group, 0.12, localRise, 0.12, new THREE.Vector3(x, H + localRise/2, z), 0xe8c48a, opts);
+        makeSelectable(stud, "Sloped end-wall infill stud", "Graduated end-wall cripple stud cut to the shed roof slope.");
+      }
+      const slopeLen = Math.hypot(W, rise);
+      const plate = addBoxToGroup(group, 0.14, 0.14, slopeLen, new THREE.Vector3(x, H + rise/2, 0), 0xf8d698, opts);
+      plate.rotation.x = Math.atan2(rise, W);
+      makeSelectable(plate, "Sloped end-wall top plate", "Sloped top plate closes the rake-shaped wall extension under the shed roof.");
+    }
+    makeSelectable(addBoxToGroup(group, L, 0.14, 0.14, new THREE.Vector3(0, H + rise, highZ), 0xf8d698, opts), "High-wall top plate", "Continuous raised top plate for the high side of the shed roof wall infill.");
+    makeSelectable(addBoxToGroup(group, L, 0.12, 0.12, new THREE.Vector3(0, H + 0.06, lowZ), 0xd6ad7c, opts), "Low-wall roof bearing plate", "Low side roof bearing line where the shed roof plane starts at standard wall height.");
+  }
+
   function addGableEndStackedFraming(L, roofL, roofW, H, rise) {
     if (rise <= 0.05) return;
     const group = addDetailGroup("zoom-gable-stacked-framing", Math.max(L, roofW) * 2.2 + 10);
@@ -362,6 +416,11 @@ export function createScene(canvas) {
     addOpenings(state, L, W, H);
 
     const over = state.roof.overhangFt || 0, pitch = state.roof.pitchX12 || 0;
+    if (state.roof.type === "shed") {
+      const wallRise = W * (pitch / 12);
+      addShedWallInfill(L, W, H, wallRise, WALL_COLORS[state.walls.wallColor] ?? WALL_COLORS.cedar, xray);
+      addShedInfillFraming(L, W, H, wallRise, state.walls.studSpacingIn / 12, mode === "skeleton" ? 0.86 : 0.68);
+    }
     const roofColor = ROOF_COLORS[state.roof.roofColor] ?? ROOF_COLORS.galvalume;
     let roofMesh;
     if (state.roof.type === "flat") {
