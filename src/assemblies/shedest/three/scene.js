@@ -12,19 +12,22 @@ export function createScene(canvas) {
   renderer.shadowMap.enabled = true;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b0b0b);
+  scene.background = new THREE.Color(0x09111f);
+  scene.fog = new THREE.Fog(0x09111f, 36, 135);
 
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 2000);
   camera.position.set(18, 14, 18);
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x222222, 0.7));
-  const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+  scene.add(new THREE.HemisphereLight(0xdbeafe, 0x182033, 0.82));
+  const dir = new THREE.DirectionalLight(0xffffff, 1.15);
   dir.position.set(10, 18, 8);
   dir.castShadow = true;
   scene.add(dir);
 
-  const grid = new THREE.GridHelper(100, 100, 0x333333, 0x222222);
+  const grid = new THREE.GridHelper(120, 120, 0x35506d, 0x182033);
   scene.add(grid);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), new THREE.MeshStandardMaterial({ color:0x0d1726, roughness:0.9, metalness:0.02 }));
+  floor.rotation.x = -Math.PI/2; floor.position.y = -0.48; floor.receiveShadow = true; scene.add(floor);
 
   const shedGroup = new THREE.Group();
   scene.add(shedGroup);
@@ -199,6 +202,14 @@ export function createScene(canvas) {
     }
   }
 
+  function addDimensionLine(label, a, b, offset=new THREE.Vector3()) {
+    const group = new THREE.Group();
+    const geom = new THREE.BufferGeometry().setFromPoints([a.clone().add(offset), b.clone().add(offset)]);
+    group.add(new THREE.Line(geom, lineMat(0x93c5fd)));
+    addLabel(label, a.clone().add(b).multiplyScalar(0.5).add(offset).add(new THREE.Vector3(0, .45, 0)));
+    shedGroup.add(group);
+  }
+
   function addRoofRibs(mesh, finish, color=0x1d1d1d) {
     if (finish === "shingle") return;
     const box = new THREE.Box3().setFromObject(mesh);
@@ -317,12 +328,16 @@ export function createScene(canvas) {
     clearGroup();
     const L = state.geom.lenFt, W = state.geom.widFt, H = state.geom.htFt;
     addFoundation(state, L, W);
+    addDimensionLine(`${L}' length`, new THREE.Vector3(-L/2, .05, -W/2-1.2), new THREE.Vector3(L/2, .05, -W/2-1.2));
+    addDimensionLine(`${W}' width`, new THREE.Vector3(L/2+1.2, .05, -W/2), new THREE.Vector3(L/2+1.2, .05, W/2));
+    addDimensionLine(`${H}' wall`, new THREE.Vector3(-L/2-1.0, 0, W/2), new THREE.Vector3(-L/2-1.0, H, W/2));
 
     const mode = state.walls.visualMode ?? "finished";
     const xray = mode === "xray" || mode === "skeleton" || mode === "roof";
     const wall = makeSelectable(addBox(L, H, W, new THREE.Vector3(0, H/2, 0), WALL_COLORS[state.walls.wallColor] ?? WALL_COLORS.cedar, xray ? { transparent:true, opacity: mode === "skeleton" ? 0.12 : 0.38 } : {}), "Wall shell", "Exterior wall assembly: studs, plates, sheathing, siding, and trim around openings." );
     addEdges(wall, 0x222222);
     addSidingLines(L, W, H, state.walls.sidingProfile);
+    if (mode === "xray") addLabel("Cutaway layers: siding → sheathing → studs → interior finish", new THREE.Vector3(0, H + 1.4, W/2 + 1.2));
     if (state.walls.showStuds || xray) addStudGhosts(L, W, H, state.walls.studSpacingIn / 12, mode === "skeleton" ? 0.8 : 0.32);
     addFloorFraming(L, W, state.walls.studSpacingIn / 12);
     addWallPlatesAndBlocking(L, W, H, state.walls.topPlate, mode === "skeleton" ? 0.86 : 0.68);

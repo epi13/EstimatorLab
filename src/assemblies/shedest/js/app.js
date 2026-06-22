@@ -3,6 +3,7 @@ import { createScene } from "../three/scene.js";
 import { buildTakeoff } from "./calc/takeoff.js";
 import { costItems } from "./calc/costing.js";
 import { calcLaborHours } from "./calc/labor.js";
+import { buildCutSheets } from "./calc/cutsheets.js";
 
 async function safeFetchJson(path, fallback) {
   try {
@@ -110,7 +111,7 @@ async function main() {
     $("selectedInfo").innerHTML = `<b>Selected element:</b> ${label}<br>${text}`;
   });
 
-  function render(state, takeoff, costs, labor) {
+  function render(state, takeoff, costs, labor, cutSheets) {
     $("outMatBase").textContent = money(costs.matBase);
     $("outShip").textContent = money(costs.ship);
     $("outHand").textContent = money(costs.handling);
@@ -127,6 +128,23 @@ async function main() {
       tr.innerHTML = `<td>${it.name}</td><td>${round2(it.qty)}</td><td>${it.unit}</td><td>${money(it.base)}</td>`;
       tbody.appendChild(tr);
     }
+
+    const cutBody = $("cutSheetBody");
+    cutBody.innerHTML = "";
+    for (const cut of cutSheets) {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${cut.assembly}</td><td>${cut.cut}<div class="muted mini-note">${cut.layout}</div></td><td>${round2(cut.qty)}</td><td>${cut.stock}<div class="muted mini-note">${cut.notes}</div></td>`;
+      cutBody.appendChild(tr);
+    }
+
+    $("specDeck").innerHTML = `
+      <div><b>Plan footprint</b><span>${state.geom.lenFt}' × ${state.geom.widFt}'</span></div>
+      <div><b>Wall system</b><span>${state.walls.studType} @ ${state.walls.studSpacingIn}" o.c., ${state.walls.wallSheathKey.replaceAll("_", " ")}</span></div>
+      <div><b>Exterior palette</b><span>${state.walls.wallColor} ${state.walls.sidingProfile}, ${state.walls.trimColor} trim</span></div>
+      <div><b>Roof assembly</b><span>${state.roof.type} ${state.roof.pitchX12}:12, ${state.roof.roofFinish} over ${state.roof.roofSheathKey.replaceAll("_", " ")}</span></div>
+      <div><b>Foundation</b><span>${state.foundation.type.replaceAll("_", " ")}</span></div>
+      <div><b>Cut-sheet rows</b><span>${cutSheets.length} fabrication lines</span></div>
+    `;
 
     $("notes").innerHTML = `
       <div class="pill">Wall area: ${round2(takeoff.wallAreaSF)} SF</div>
@@ -149,8 +167,9 @@ async function main() {
     const takeoff = buildTakeoff(state, db);
     const costs = costItems(takeoff.items, db, state.logistics, freightRules);
     const labor = calcLaborHours(state, takeoff, laborRates);
+    const cutSheets = buildCutSheets(state, takeoff, db);
 
-    render(state, takeoff, costs, labor);
+    render(state, takeoff, costs, labor, cutSheets);
   }
 
   // listeners

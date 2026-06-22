@@ -8,16 +8,17 @@
     :root { color-scheme: dark; }
     body{
       margin:0; height:100vh; overflow:hidden;
-      display:grid; grid-template-columns: 420px 1fr;
+      display:grid; grid-template-columns: minmax(430px, 34vw) 1fr;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background:#0f0f0f; color:#eee;
+      background:radial-gradient(circle at 70% 10%, #172033 0, #0b0f17 38%, #070707 100%); color:#eee;
     }
     #panel{
       padding:16px; overflow:auto;
       border-right:1px solid #252525;
-      background:#131313;
+      background:linear-gradient(180deg,#181d29 0%,#10131a 45%,#0d0d0d 100%);
     }
-    h1{font-size:18px;margin:0 0 6px;}
+    h1{font-size:22px;margin:0 0 6px;letter-spacing:.02em;}
+    .chief-kicker{color:#93c5fd;text-transform:uppercase;font-size:11px;letter-spacing:.16em;font-weight:700;}
     h2{font-size:13px;margin:14px 0 8px;color:#d5d5d5;}
     .muted{color:#b9b9b9;font-size:12px;line-height:1.35;}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
@@ -35,7 +36,7 @@
     button{cursor:pointer;}
     .card{
       border:1px solid #2b2b2b; border-radius:14px;
-      background:#0b0b0b; padding:10px;
+      background:linear-gradient(145deg,rgba(15,23,42,.92),rgba(2,6,23,.92)); padding:10px; box-shadow:0 16px 45px rgba(0,0,0,.22);
     }
     .line{display:flex;justify-content:space-between;gap:10px;font-size:13px;margin:6px 0;}
     table{
@@ -64,6 +65,13 @@
     }
     .smallbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
     .section-note{font-size:11px;color:#9ca3af;margin-top:4px;}
+    .spec-deck{display:grid;gap:8px;margin-top:10px;}
+    .spec-deck div{display:grid;grid-template-columns:130px 1fr;gap:8px;border:1px solid #263244;background:rgba(15,23,42,.72);border-radius:12px;padding:8px;}
+    .spec-deck b{color:#bfdbfe;}
+    .spec-deck span{color:#e5edf7;}
+    .mini-note{font-size:10px;margin-top:3px;line-height:1.25;}
+    .viewport-toolbar{position:absolute;right:14px;top:14px;display:flex;gap:8px;z-index:2;}
+    .viewport-toolbar .chip{border:1px solid rgba(147,197,253,.35);background:rgba(15,23,42,.72);color:#dbeafe;padding:8px 10px;border-radius:999px;font-size:12px;backdrop-filter:blur(8px);}
     .info-card{
       margin-top:8px;padding:10px;border-radius:14px;
       border:1px solid #25445f;background:rgba(22,48,70,.35);
@@ -74,6 +82,7 @@
 </head>
 <body>
   <div id="panel">
+    <div class="chief-kicker">Chief-style model + takeoff</div>
     <h1>Shed Estimator</h1>
     <div class="muted">
       Real-time 3D + Alaska-aware material (base + shipping + handling by freight class) + labor hours/cost.
@@ -454,10 +463,19 @@
       <div class="line"><span>Total</span><b id="outTotal">$0</b></div>
     </div>
 
+    <h2>Chief-Style Specification Deck</h2>
+    <div id="specDeck" class="spec-deck"></div>
+
     <h2>Takeoff</h2>
     <table>
       <thead><tr><th>Item</th><th style="width:70px;">Qty</th><th style="width:70px;">Unit</th><th style="width:110px;">Base $</th></tr></thead>
       <tbody id="takeoffBody"></tbody>
+    </table>
+
+    <h2>Cut Sheets</h2>
+    <table>
+      <thead><tr><th>Assembly</th><th>Cut / Layout</th><th style="width:70px;">Qty</th><th style="width:140px;">Stock / Notes</th></tr></thead>
+      <tbody id="cutSheetBody"></tbody>
     </table>
 
     <h2>Quick Actions</h2>
@@ -473,6 +491,7 @@
 
   <div id="viewport">
     <div class="badge" id="badge"></div>
+    <div class="viewport-toolbar"><div class="chip">Orbit / Pan / Zoom</div><div class="chip">Click model parts</div><div class="chip">Zoom for framing detail</div></div>
     <canvas id="canvas"></canvas>
   </div>
 
