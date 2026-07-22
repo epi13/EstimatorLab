@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blueprint Sanitizer</title>
+  <link rel="stylesheet" href="../../css/base/index.css">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="../../lib/vendor/pdfjs/pdf.min.js"></script>
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <main class="sanitizer-app">
+    <header class="hero">
+      <p class="eyebrow">Utilities</p>
+      <h1>Blueprint Sanitizer</h1>
+      <p>Crop title blocks, black out fine details, and export a flattened PDF with the source document metadata and hidden layers removed.</p>
+    </header>
+
+    <section class="toolbar" aria-label="Blueprint sanitization controls">
+      <label class="file-button"><span>Choose PDF</span><input id="pdfInput" type="file" accept="application/pdf"></label>
+      <label>Page <select id="pageSelect" disabled aria-label="Page to edit"></select></label>
+      <button id="cropMode" type="button" disabled>Crop area</button>
+      <button id="redactMode" type="button" disabled>Blackout area</button>
+      <button id="undoRedaction" type="button" disabled>Undo blackout</button>
+      <button id="resetPage" type="button" class="secondary" disabled>Reset page</button>
+      <button id="download" type="button" class="download" disabled>Download clean PDF</button>
+    </section>
+
+    <section class="instructions" aria-label="Instructions">
+      <strong>How it works:</strong> choose the page to clean, then drag a crop box around the portion to keep or drag blackout boxes over small identifiers. Every exported page is rasterized, so searchable text, annotations, embedded files, scripts, and document metadata are not carried into the new PDF.
+    </section>
+
+    <section class="work-area">
+      <div id="emptyState" class="empty-state">Choose a PDF to begin. Processing happens locally in your browser.</div>
+      <div id="canvasWrap" class="canvas-wrap" hidden>
+        <canvas id="preview" aria-label="Blueprint preview"></canvas>
+        <div id="cropMask" class="crop-mask" hidden></div>
+      </div>
+    </section>
+    <p id="status" class="status" aria-live="polite">No PDF loaded.</p>
+  </main>
+</body>
+</html>
