@@ -24,7 +24,8 @@ const navigationData = [
            { label: 'Plan Diff', href: 'src/plandiff/index.html', keywords: 'plan diff' },   
            { label: 'MarkDown Editor', href: 'src/miscellaneous/MarkDownEditor/markdown.html', keywords: 'markdown editor' },
            { label: 'PDF JSON Extractor', href: 'src/miscellaneous/pdf-json-extractor/index.html', keywords: 'pdf ocr json extraction table' },
-           { label: 'PDF Combiner', href: 'src/miscellaneous/pdf-combiner/index.html', keywords: 'merge combine split documents' }
+           { label: 'PDF Combiner', href: 'src/miscellaneous/pdf-combiner/index.html', keywords: 'merge combine split documents' },
+           { label: 'Blueprint Sanitizer', href: 'src/miscellaneous/pdf-sanitizer/index.html', keywords: 'pdf blueprint redact crop anonymize deidentify metadata clean' }
         ]
       },
       {
